@@ -1,0 +1,115 @@
+# Nexus: System Architecture
+
+> **Last Updated:** 2026-06-03
+> **Status:** Pre-build reference. All sections describe planned architecture for Phase 1 unless stated otherwise.
+
+---
+
+## 1. System Overview
+
+Nexus is a real-time messaging platform built as a monorepo with a Next.js frontend and an Express backend. The client and server communicate over REST (for data operations) and WebSockets (for real-time events).
+
+```mermaid
+flowchart TD
+    Client["Next.js 16 (TypeScript)"]
+    Server["Express.js (TypeScript)"]
+    DB["Supabase PostgreSQL (via Prisma)"]
+    Cache["Upstash Redis (Presence)"]
+    Auth["Supabase Auth"]
+
+    Client <-->|REST + WebSocket| Server
+    Server --> DB
+    Server --> Cache
+    Client --> Auth
+    Server --> Auth
+```
+
+---
+
+## 2. Layer Summary
+
+### Client: Next.js 16 (planned for Phase 1)
+- App Router for routing and SSR
+- TanStack Query for server state (REST)
+- Zustand for UI/local state
+- Socket.io client for real-time events
+
+### Server: Express.js (planned for Phase 1)
+- Auth middleware validates Supabase JWTs on all protected routes
+- REST routes: `/auth`, `/conversations`, `/messages`
+- Socket.io server handles real-time events and room-based broadcasting
+
+### Data Layer (planned for Phase 1)
+- **Supabase PostgreSQL:** primary data store, accessed via Prisma ORM
+- **Upstash Redis:** ephemeral presence data (online status, socket count)
+- **Supabase Auth:** handles session management and JWT issuance
+
+### Infrastructure (planned for Phase 1)
+- Hosted on Render (frontend + backend as separate web services)
+- CI/CD via GitHub Actions (lint, typecheck, deploy)
+
+---
+
+## 3. Database Schema
+
+Core entities and their relationships:
+
+```mermaid
+erDiagram
+    USER ||--o{ CONVERSATION_MEMBER : has
+    USER ||--o{ MESSAGE : sends
+
+    CONVERSATION ||--o{ CONVERSATION_MEMBER : includes
+    CONVERSATION ||--o{ MESSAGE : contains
+
+    USER {
+        uuid id PK
+        string email
+        string name
+        string avatar_url
+    }
+
+    CONVERSATION {
+        uuid id PK
+        enum type "DM or CHANNEL"
+        boolean is_private
+    }
+
+    CONVERSATION_MEMBER {
+        uuid conversation_id FK
+        uuid user_id FK
+        datetime last_read_at
+    }
+
+    MESSAGE {
+        uuid id PK
+        string content
+        uuid conversation_id FK
+        uuid user_id FK
+        datetime created_at
+    }
+```
+
+> Phase 2 will add: `Workspace`, `WorkspaceMember`, `Reaction` tables.
+
+---
+
+## 4. Key Architectural Decisions
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| Unified conversation model | Single `Conversation` entity for DMs and Channels (Phase 1) | Avoids schema duplication; DM logic extends cleanly to Channels |
+| Read receipts | `last_read_at` on `ConversationMember` (Phase 1) | O(1) writes; no per-message read-status rows |
+| Auth | Supabase Auth (Phase 1) | Delegated session security, no custom token infrastructure |
+| Presence store | Upstash Redis (Phase 1) | Ephemeral data; sub-millisecond reads |
+| Real-time transport | Socket.io (Phase 1) | Rooms, auto-reconnect, better DX than raw WebSockets |
+
+---
+
+## 5. Phase Roadmap
+
+| Phase | Focus |
+|---|---|
+| Phase 1 | Auth, Direct Messaging, real-time via Socket.io, presence, read receipts |
+| Phase 2 | Workspaces, Channels, RBAC, emoji reactions, rich text |
+| Phase 3 | File uploads, full-text search, background jobs, voice/video (WebRTC) |
