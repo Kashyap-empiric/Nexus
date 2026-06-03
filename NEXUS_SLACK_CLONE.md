@@ -24,7 +24,7 @@ Subsequent phases extend this foundation with workspaces, public channels, priva
 | Socket.io | Powers the real-time communication layer, enabling instant bi-directional messaging and events. |
 | **Database & Auth** | |
 | Supabase PostgreSQL | Acts as the primary relational database, supporting complex queries and structured data models. |
-| Supabase Auth | Provides a secure, ready-to-use authentication system integrated directly with the database. |
+| Supabase Auth | Provides a secure, ready-to-use authentication system integrated directly with the database. Session lifecycle, token storage, and refresh handling are delegated entirely to Supabase Auth. |
 | Prisma ORM | Simplifies database interactions and schema migrations through a type-safe, intuitive client. |
 | **Infrastructure** | |
 | Upstash Redis | Manages user presence tracking for real-time online/offline status. |
@@ -136,8 +136,6 @@ The initial Phase 1 event contract supports real-time messaging, immediate read 
 **Client → Server:**
 * `conversation:join` - Subscribes to a conversation's real-time events.
 * `conversation:leave` - Unsubscribes from a conversation.
-* `message:send` - Delivers a new message payload to the server.
-* `message:read` - Emits a read receipt when the user views messages.
 
 **Server → Client:**
 * `message:new` - Broadcasts a new message to conversation participants.
@@ -158,22 +156,38 @@ The initial Phase 1 event contract supports real-time messaging, immediate read 
 **Example Flow:**
 1. User A joins `conversation:123`
 2. User B joins `conversation:123`
-3. User A sends message
+3. User A sends POST request to `/conversations/123/messages`
 4. Server persists message
-5. Server emits `message:new` to room `conversation:123`
+5. Server emits `message:new` to room `conversation:123` via Socket.io
+6. Server returns 201 Created to User A
 
 ## Core Features
 
 ### Phase 1: Core Foundation
 
 *   **Authentication**: Secure user registration and login utilizing Supabase Auth, supporting email/password and OAuth providers. Session management ensures secure access to protected resources.
+
+    > ⚠️ **Flaw — Auth sync:** Supabase Auth and Prisma/PostgreSQL are separate systems. On every successful registration and login, the app must upsert the user into the local `USER` table. If this sync fails, a ghost user exists in Supabase with no corresponding app record. Use a Supabase Auth webhook or an on-login upsert to guarantee consistency.
+
 *   **Direct Messages**: Private one-to-one conversations between users. This is the primary messaging unit for Phase 1, modeled using the Conversation entity.
+
+    > ⚠️ **Flaw — DM deduplication:** The schema does not prevent duplicate DM conversations between the same two users. A unique partial index on the sorted user pair (`WHERE type = 'DM'`) must be enforced at the database level, and the `/conversations` endpoint must do a lookup-before-create to prevent duplicates.
+
 *   **Real-time Messaging**: Instant delivery of messages and updates across connected clients using WebSockets (Socket.io). Ensures all users see the most current state immediately.
+
+    > ⚠️ **Flaw — Socket authentication:** Socket.io connections must be authenticated. The socket server must validate the Supabase Auth JWT during the handshake via Socket.io middleware before allowing any client to join a room. Without this, unauthenticated clients can connect and join any `conversation:{id}` room freely.
+
 *   **Message History**: Persistent storage of messages allowing users to view past conversations.
+
 *   **Read Receipts**: Documented using `ConversationMember.last_read_at`. This approach avoids storing a separate read record for every message and scales efficiently for direct-message conversations. The logic follows:
     *   **Unread messages**: `message.created_at > last_read_at`
     *   **Seen messages**: `message.created_at <= last_read_at`
+
+    > ⚠️ **Flaw — Cursor precision:** Using `created_at` as the read cursor has an edge case: two messages sent in the same millisecond will both flip read/unread state together. For higher reliability, use a monotonic message sequence number or the message ID as the read cursor instead of a timestamp.
+
 *   **Presence System**: Real-time indicators showing whether a user is currently online or offline. This system is driven by Socket connections, Socket disconnections, heartbeats (if implemented), and Redis presence storage. Presence is not a primary REST API feature; if a presence endpoint is retained, it is strictly optional and secondary to the real-time system.
+
+    > ⚠️ **Flaw — Presence race condition:** The Redis model tracks `socketCount` to handle multi-tab users but does not define a TTL or crash-recovery strategy. If the server crashes, `socketCount` never decrements and users appear permanently online. Mitigate by setting a TTL on each presence key and running a cleanup sweep on server restart.
 
 ### Phase 2: Collaboration Extensions
 
@@ -264,6 +278,9 @@ erDiagram
 The following entities are the Phase 1 implementation focus:
 *   **User**: Represents an authenticated individual using the platform. Key fields include `id`, `email`, and `name`.
 *   **Conversation**: The central entity for any communication stream. In Phase 1, this strictly handles Direct Messages (`type = DM`). **Constraint:** DM conversations must have exactly 2 members.
+
+    > ⚠️ **Flaw — DM uniqueness:** Add a unique partial index on the sorted user pair (`WHERE type = 'DM'`) at the database level to enforce the one-DM-per-user-pair constraint. Application-level checks alone are not sufficient.
+
 *   **ConversationMember**: A junction table defining which users are participants in a specific conversation. It tracks read receipts via the `last_read_at` field, ensuring users know when their messages are seen.
     *   *Index:* `INDEX(conversation_id, user_id)`
 *   **Message**: A single piece of communication sent by a user within a conversation. Messages are ordered by `created_at` ascending.
@@ -317,9 +334,13 @@ Supabase Auth provides tight integration with our PostgreSQL database, offering 
 * Application-specific data remains managed through Prisma and PostgreSQL.
 * Authentication session tables are intentionally omitted from the application ER diagram because they are owned and managed by Supabase.
 
+> ⚠️ **Flaw — Auth sync:** A reliable sync mechanism (Supabase Auth webhook or on-login upsert) is required to keep Supabase Auth user records and the Prisma `USER` table consistent. Registration and login flows must both trigger this upsert.
+
 ### Socket.io
 
 Socket.io was chosen over long polling or native WebSockets because it provides robust bi-directional communication with low latency. It supports real-time events, automatic reconnections, and multiplexing (namespaces/rooms), which results in a significantly better user experience when delivering instant messages and presence updates.
+
+> ⚠️ **Flaw — Socket authentication:** All socket connections must be authenticated via JWT validation middleware on the handshake before any room access is permitted. This prevents unauthenticated clients from subscribing to conversations.
 
 ### Redis
 
@@ -336,6 +357,8 @@ user:{id}
   socketCount: number
 ```
 
+> ⚠️ **Flaw — Presence race condition:** A TTL must be set on each presence key, and a cleanup sweep must run on server restart. Without this, a crashed server leaves `socketCount` permanently incremented and users appear stuck online.
+
 ## Development Roadmap
 
 ### Week 1 Deliverable
@@ -344,15 +367,16 @@ user:{id}
 * Registration
 * Login
 * Session Management
+* User sync to Prisma `USER` table on registration and login (upsert)
 * Protected Routes
 
 **Messaging:**
-* Direct Message Conversations
+* Direct Message Conversations (with duplicate DM prevention via unique partial index)
 * Message Persistence
 * Message History
-* Real-time Delivery via Socket.io
+* Real-time Delivery via Socket.io (with JWT auth middleware on socket handshake)
 * Read Receipts
-* Presence Tracking
+* Presence Tracking (with Redis TTL and server-restart cleanup)
 
 **Demo Scenario:**
 1. User A logs in
@@ -383,12 +407,12 @@ The objective of Week 1 is to validate the messaging foundation:
 All future collaboration features will be built on top of this validated messaging layer.
 
 ### Phase 1: Real-time Core
-*   **Foundation & Monorepo Setup**: Initialize the project structure, configure tooling, and establish CI/CD.
-*   **Authentication & User Sync**: Implement Supabase Auth, user registration, login, and syncing to the Prisma database.
-*   **Direct Messaging API**: Core REST endpoints for conversations and message history.
-*   **Socket.io Integration**: Real-time message delivery across connected clients.
+*   **Foundation & Project Setup**: Initialize the project structure, configure tooling, and establish CI/CD.
+*   **Authentication & User Sync**: Implement Supabase Auth, user registration, login, and reliable upsert sync to the Prisma database.
+*   **Direct Messaging API**: Core REST endpoints for conversations and message history, with duplicate DM prevention enforced at the database level.
+*   **Socket.io Integration**: Real-time message delivery with JWT authentication middleware on the socket handshake.
 *   **Read Receipts**: Unread indicators and tracking via `last_read_at` on `ConversationMember`.
-*   **Presence System**: Real-time online/offline status powered by Redis.
+*   **Presence System**: Real-time online/offline status powered by Redis, with TTL on presence keys and cleanup on server restart.
 
 ### Phase 2: Collaboration Extensions
 *   **Workspaces & Memberships**: Workspace creation, switching, and role-based access control.
