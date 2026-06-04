@@ -15,6 +15,7 @@
     "types": [
       "node"
     ],
+    "typeRoots": ["./node_modules/@types", "./src/types"],
     "esModuleInterop": true,
     "verbatimModuleSyntax": true,
     "sourceMap": true,

@@ -1,32 +1,33 @@
 import "dotenv/config";
-
 import http from "http";
-
 import app from "./app.js";
+import { Server } from "socket.io";
 
-// ── Config ─────────────────────────────────────────────────────────────────
-const PORT = Number(process.env.PORT ?? 3000);
+const PORT = Number(process.env.PORT ?? 3001);
 
-// ── HTTP server ────────────────────────────────────────────────────────────
-// We create an explicit http.Server so Socket.io can share the same port as
-// the Express app rather than requiring a separate WebSocket port.
 const httpServer = http.createServer(app);
 
-// ── Socket.io ──────────────────────────────────────────────────────────────
-// Initialised here once the http server exists. Socket setup (auth middleware,
-// room handlers, presence) is wired in src/socket/index.ts and imported below
-// when that file is built on Day 3.
-//
-// import { initSocket } from "./socket/index.js";
-// initSocket(httpServer);
-
-// ── Start ──────────────────────────────────────────────────────────────────
 httpServer.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Health check → http://localhost:${PORT}/health`);
 });
 
-// ── Graceful shutdown ──────────────────────────────────────────────────────
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.CLIENT_URL 
+      ? [process.env.CLIENT_URL] 
+      : ["http://localhost:3000", "http://localhost:3002"],
+    methods: ["GET", "POST"]
+  },
+});
+
+io.on("connection", (socket) => {
+  console.log(`[Socket.io] Client connected: ${socket.id}`);
+  socket.on("disconnect", () => {
+    console.log(`[Socket.io] Client disconnected: ${socket.id}`);
+  });
+});
+
 const shutdown = (signal: string) => {
   console.log(`\n${signal} received — shutting down gracefully`);
   httpServer.close(() => {

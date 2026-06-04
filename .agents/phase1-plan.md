@@ -1,0 +1,399 @@
+# Nexus — Phase 1 Plan (5-Day Sprint)
+
+> **Goal**: Deliver a working real-time DM platform with auth, messaging, read receipts, and presence by end of Day 5.
+> **Stack**: Next.js · Express.js · TypeScript · Supabase Auth · Prisma · PostgreSQL · Socket.io · Upstash Redis
+
+---
+
+## Project Structure
+
+Set up before Day 1:
+
+```
+nexus/
+  client/
+    src/
+      app/
+      components/
+      hooks/
+      lib/
+      store/
+      types/
+  server/
+    src/
+      modules/
+        auth/
+        conversations/
+        messages/
+      middlewares/
+      socket/
+      lib/
+      types/
+    prisma/
+```
+
+---
+
+## Day 1 — Foundation, Schema & Server Auth
+
+**Goal: schema migrated, Express running with auth middleware, protected routes return 200/401. No client work today.**
+
+The schema is the most expensive thing to get wrong — a bad migration costs hours to undo. Lock it in first before writing any application code.
+
+### Server
+
+```
+server/prisma/schema.prisma
+server/prisma/migrations/
+```
+
+**Schema models to define — complete, no placeholders:**
+
+| Model | Fields |
+|---|---|
+| `User` | `id` (String, UUIDv7, PK) · `email` · `name` · `avatarUrl` · `createdAt` |
+| `Conversation` | `id` (String, UUIDv7, PK) · `type` (enum: DM, CHANNEL) · `isPrivate` · `name` (nullable) · `workspaceId` (nullable) · `dmPair` (String?, unique) · `createdAt` |
+| `ConversationMember` | `id` (String, UUIDv7, PK) · `conversationId` (FK) · `userId` (FK) · `lastReadMessageId` (String?, FK → Message.id) |
+| `Message` | `id` (String, UUIDv7, PK) · `content` · `conversationId` (FK) · `userId` (FK) · `isEdited` (Boolean) · `createdAt` |
+
+**Indexes and constraints to enforce in schema:**
+
+- `ConversationMember`: `@@unique([conversationId, userId])` — prevents duplicate memberships
+- `ConversationMember`: `@@index([userId, conversationId])` — required for sidebar/inbox query
+- `Message`: `@@index([conversationId, id])` — message pagination ordered by UUIDv7 id
+- `Conversation.dmPair`: `@unique` — enforces one-DM-per-user-pair at DB level
+
+> ⚠️ **UUIDv7 generation:** All `id` fields must be generated using `import { uuidv7 } from 'uuidv7'` in the application layer before every `prisma.*.create()` call. Do **not** use `crypto.randomUUID()` — that produces UUIDv4 which is not monotonically ordered. Ordering and cursor comparison break silently if the wrong generator is used.
+
+```
+server/prisma/seed.ts                  ← 2 test users + 1 DM conversation + 3 messages,
+                                          all IDs generated with uuidv7()
+
+server/src/lib/prisma.ts
+server/src/lib/supabase.ts
+
+server/src/types/express.d.ts          ← extend Request with req.user
+server/src/types/shared.ts             ← User, Message, Conversation, ConversationMember,
+                                          socket payload types (MessageNewPayload,
+                                          MessageReadPayload, UserOnlinePayload,
+                                          UserOfflinePayload)
+
+server/src/middlewares/auth.ts         ← JWT validation + user upsert into User table
+server/src/middlewares/errorHandler.ts ← global error handler, consistent error shape
+server/src/middlewares/rateLimit.ts    ← stub only today: export placeholders for
+                                          generalLimiter and messageLimiter.
+                                          Wire in for real post-demo.
+
+server/src/modules/auth/
+  auth.controller.ts                   ← /me endpoint only
+  auth.routes.ts
+
+server/src/app.ts                      ← express app config, in this order:
+                                          1. CORS (origins: client URL, credentials: true)
+                                          2. JSON body parser
+                                          3. auth middleware on all /api/* routes
+                                          4. route registration
+                                          5. errorHandler (last)
+
+server/src/server.ts                   ← http.createServer(app), socket.io attach, listen
+```
+
+### End of Day 1 Checks
+
+- [ ] `npx prisma migrate dev` runs clean, all tables visible in Supabase
+- [ ] `npx prisma db seed` runs without errors
+- [ ] Seed script inserts 2 test users + 1 DM conversation + 3 messages — all IDs are UUIDv7
+- [ ] `GET /api/auth/me` with valid JWT returns 200 + user object
+- [ ] `GET /api/auth/me` with no token returns 401
+- [ ] `GET /api/auth/me` with valid JWT for a first-time user upserts them into the User table
+
+---
+
+## Day 2 — Client Auth + Conversation & Message API
+
+**Goal: client auth pages working, all REST endpoints implemented, sidebar and message view render real data. No real-time yet.**
+
+Day 2 splits into two halves: client auth in the morning (light, gets it out of the way), REST API in the afternoon (the bulk of the day).
+
+### Morning — Client Auth
+
+```
+client/src/lib/supabase.ts             ← supabase browser client
+client/src/lib/api.ts                  ← base fetch wrapper, attaches bearer token
+
+client/src/types/index.ts              ← manual mirror of server/src/types/shared.ts
+                                          ⚠️  Accepted tradeoff: no shared package.
+                                          Keep these two files in sync manually.
+                                          If they drift, runtime shape mismatches will
+                                          appear as silent bugs in the socket layer.
+
+client/src/app/(auth)/login/page.tsx
+client/src/app/(auth)/register/page.tsx
+client/src/app/(auth)/layout.tsx
+
+client/src/app/(protected)/layout.tsx  ← session guard, redirects to /login if not authed
+```
+
+### Afternoon — Conversation & Message API
+
+**Server**
+
+```
+server/src/lib/redis.ts                ← upstash redis client setup (just setup, not used yet)
+
+server/src/modules/conversations/
+  conversations.controller.ts
+  conversations.routes.ts
+
+server/src/modules/messages/
+  messages.controller.ts
+  messages.routes.ts
+```
+
+Endpoints to implement today, in this order:
+
+```
+GET    /conversations               ← sidebar list (join through ConversationMember)
+POST   /conversations               ← create DM: sort user IDs → dmPair → upsert
+GET    /conversations/:id           ← single conversation + members
+GET    /conversations/:id/messages  ← cursor-based, ?cursor=<messageId>&limit=50&direction=before
+                                      fetch limit+1 rows, trim last, set hasMore
+POST   /conversations/:id/messages  ← persist message (UUIDv7 id generated here), no socket yet
+PATCH  /conversations/:id/read      ← update ConversationMember.lastReadMessageId, no socket yet
+```
+
+**Client**
+
+```
+client/src/lib/queryKeys.ts           ← centralised query key factories:
+                                          conversationKeys.all, conversationKeys.detail(id),
+                                          messageKeys.list(conversationId)
+
+client/src/hooks/useConversations.ts
+client/src/hooks/useMessages.ts       ← useInfiniteQuery, cursor-based
+client/src/hooks/useSendMessage.ts    ← plain mutation today, no optimistic update yet
+                                          ↩ revisited on Day 3 to add optimistic update
+client/src/hooks/useMarkRead.ts
+
+client/src/app/(protected)/conversations/page.tsx       ← sidebar
+client/src/app/(protected)/conversations/layout.tsx
+client/src/app/(protected)/conversations/[id]/page.tsx  ← message view
+client/src/components/ConversationList.tsx
+client/src/components/ConversationItem.tsx
+client/src/components/MessageList.tsx  ← owns both scroll directions:
+                                          scroll-to-bottom on new message (Day 3/4 update)
+                                          scroll-up trigger: call fetchNextPage from useMessages
+                                          when user scrolls within ~200px of the top
+client/src/components/MessageItem.tsx
+client/src/components/MessageInput.tsx
+```
+
+### End of Day 2 Checks
+
+- [ ] Register via client UI, see user appear in Supabase Auth and Postgres User table
+- [ ] Login via client UI, session persists on refresh
+- [ ] Protected layout redirects unauthenticated users to /login
+- [ ] Create a DM between two users (Postman is fine), creating the same DM twice returns the existing one
+- [ ] Send a message, see it in the DB with a UUIDv7 id
+- [ ] Fetch message history — confirm cursor pagination returns correct page and hasMore flag
+- [ ] Sidebar renders conversation list
+- [ ] Message view renders history
+
+---
+
+## Day 3 — Real-time (Socket.io)
+
+**Goal: messages deliver instantly. This is the most integration-heavy day.**
+
+### Server
+
+```
+server/src/socket/index.ts                              ← io setup, attach to http server
+server/src/socket/middlewares/auth.ts                   ← JWT validation on handshake
+                                                           reject connection if invalid, no room access granted
+server/src/socket/handlers/conversation.handler.ts     ← conversation:join: verify ConversationMember
+                                                           in DB before socket.join(); emit error + return if not member
+                                                           conversation:leave: socket.leave()
+server/src/socket/handlers/message.handler.ts          ← not needed yet, broadcast happens from REST controller
+server/src/socket/handlers/presence.handler.ts         ← connect/disconnect skeleton only today,
+                                                           fleshed out on Day 4
+```
+
+Update:
+
+```
+server/src/modules/messages/messages.controller.ts  ← POST handler: after persist, emit message:new to room
+server/src/modules/messages/messages.controller.ts  ← PATCH read handler: after update, emit message:read to room
+```
+
+### Client
+
+```
+client/src/lib/socket.ts                        ← singleton socket instance, attaches bearer token
+                                                   in auth callback
+
+client/src/hooks/useSocket.ts                   ← connect on mount, disconnect on unmount,
+                                                   write socketStatus to uiStore
+
+client/src/hooks/useConversationSocket.ts       ← join room on conversationId change
+                                                   message:new → queryClient.setQueryData (inject into cache)
+                                                   message:read → queryClient.setQueryData (update receipt cache)
+                                                   no refetches — direct cache mutation only
+
+client/src/store/uiStore.ts                     ← activeConversationId
+                                                   socketStatus: 'connecting' | 'connected' | 'disconnected'
+                                                   drafts: Map<conversationId, string>
+```
+
+Update:
+
+```
+client/src/app/(protected)/conversations/[id]/page.tsx  ← call useConversationSocket
+
+client/src/hooks/useSendMessage.ts    ← add optimistic update:
+                                         onMutate: inject message with localId (UUIDv7) + status='pending'
+                                         onSuccess: replace localId entry with real server message, status='sent'
+                                         onError: set status='failed', restore cache snapshot from onMutate
+```
+
+### End of Day 3 Checks
+
+- [ ] Open two browser windows, log in as different users
+- [ ] Send a message in one window, see it appear instantly in the other without refresh
+- [ ] Message appears immediately in the sender's window (optimistic, pending state)
+- [ ] After server ack, pending state resolves to sent
+- [ ] Mark as read in one window, see the receipt update in the sender's window
+- [ ] Open browser devtools network tab — confirm no refetch fires on message:new
+
+---
+
+## Day 4 — Presence & Read Receipts UI
+
+**Goal: online/offline indicators work. Read receipt ticks visible in UI.**
+
+### Server
+
+```
+server/src/socket/handlers/presence.handler.ts  ← flesh out fully:
+                                                    on connect: SADD user:presence:{userId} {socketId}, reset TTL (24h)
+                                                                broadcast user:online if Set was previously empty
+                                                    on disconnect: SREM user:presence:{userId} {socketId}
+                                                                   if Set now empty → broadcast user:offline
+```
+
+Update:
+
+```
+server/src/socket/index.ts  ← on startup: flush all user:presence:* keys before accepting connections
+                               clients reconnect and re-establish presence automatically
+```
+
+### Client
+
+```
+client/src/hooks/usePresence.ts               ← listen for user:online / user:offline
+                                                 write to onlineUsers in uiStore
+
+client/src/store/uiStore.ts                   ← add onlineUsers: Set<string>
+
+client/src/components/PresenceIndicator.tsx   ← green dot, reads from onlineUsers
+client/src/components/MessageStatus.tsx       ← tick component: pending / sent / read
+client/src/components/UserAvatar.tsx          ← avatar + presence dot combined
+```
+
+Update:
+
+```
+client/src/components/ConversationItem.tsx  ← show PresenceIndicator per conversation partner
+client/src/components/MessageItem.tsx       ← show MessageStatus ticks
+client/src/components/MessageList.tsx       ← scroll to bottom on new message
+                                               trigger useMarkRead when conversation is open + new message arrives
+```
+
+### End of Day 4 Checks
+
+- [ ] User comes online, other user sees the green dot appear without refresh
+- [ ] User closes tab, other user sees them go offline
+- [ ] Sent message shows pending state immediately
+- [ ] Other user opens conversation, tick updates to read state
+- [ ] Failed message shows retry option in UI
+- [ ] Open two tabs as the same user — going offline only fires when both tabs close
+
+---
+
+## Day 5 — Integration, Polish & Demo Prep
+
+**Goal: the demo scenario runs without a single hitch. Nothing new gets built today.**
+
+### Morning — Run the full demo scenario yourself, solo
+
+```
+1.  Register User A
+2.  Register User B
+3.  Log in as User A (tab 1)
+4.  Log in as User B (tab 2)
+5.  User A creates DM with User B
+6.  User A sends a message
+7.  User B sees it instantly
+8.  User B opens the conversation
+9.  User A sees the read receipt update
+10. Close User B tab — User A sees offline
+11. Reopen User B tab — User A sees online
+```
+
+### Files to fix based on what breaks — common culprits
+
+```
+client/src/lib/socket.ts                        ← token not attaching correctly
+client/src/lib/api.ts                           ← CORS preflight failing, credentials not sent
+client/src/hooks/useConversationSocket.ts       ← cache shape mismatch on message:new
+                                                   (paginated cache structure differs from flat)
+client/src/hooks/useSendMessage.ts              ← localId not being swapped for server id on success
+client/src/components/MessageList.tsx           ← scroll-to-bottom fighting new message injection
+server/src/socket/middlewares/auth.ts           ← handshake header missing or CORS blocking upgrade
+server/src/app.ts                               ← CORS origin or credentials config wrong
+```
+
+### Afternoon — Demo environment
+
+```
+client/.env.local  ← confirm all env vars correct for demo
+server/.env        ← confirm all env vars correct for demo
+```
+
+Run the demo scenario a minimum of 3 times clean before calling it done. Demo to the TL only after 3 clean runs.
+
+---
+
+## Phase 1 Scope Boundary
+
+| Feature | In Scope | Out of Scope |
+|---|---|---|
+| Email/password auth | ✅ | |
+| OAuth (Google, GitHub) | | ❌ Phase 2 |
+| Direct Messages | ✅ | |
+| Real-time delivery | ✅ | |
+| Message history (paginated, cursor-based) | ✅ | |
+| Read receipts | ✅ | |
+| Presence (online/offline) | ✅ | |
+| Workspaces | | ❌ Phase 2 |
+| Public / Private Channels | | ❌ Phase 2 |
+| Reactions | | ❌ Phase 2 |
+| Rich text formatting | | ❌ Phase 2 |
+| File uploads | | ❌ v3 |
+| Search | | ❌ v3 |
+
+---
+
+## Explicitly Not Being Built This Week
+
+These are in the spec and will drop in cleanly after the demo. None affect the demo scenario.
+
+```
+Rate limiting              ← stub exists in middlewares/rateLimit.ts, wire in post-demo
+Socket token refresh       ← long session handling deferred
+Presence TTL crash recovery ← Redis Set model is correct, startup flush is in, TTL is set.
+                              Full crash-recovery hardening is post-demo.
+Error handling layer       ← beyond basic 401/403, deferred
+Any Phase 2 feature
+```
