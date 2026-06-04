@@ -41,11 +41,12 @@ flowchart LR
 
 ## 3. Authentication Flow
 
-1. Client submits login/register form.
-2. Supabase Auth returns a JWT access token.
-3. Client includes the JWT as a `Bearer` token on all API requests.
-4. Express auth middleware verifies the JWT with Supabase on every protected route.
-5. On first login, the server upserts the user into the Prisma `User` table to sync with Supabase Auth.
+1. Client submits login/register form (or OAuth).
+2. Supabase Auth returns a JWT access token stored securely via cookies.
+3. Next.js Edge Middleware checks the cookie to protect client-side routes.
+4. Client includes the JWT as a `Bearer` token on all API requests.
+5. Express auth middleware verifies the JWT locally using cached ES256 JWKS public keys.
+6. On successful verification, the server upserts the user into the Prisma `User` table to sync with Supabase Auth.
 
 ---
 
