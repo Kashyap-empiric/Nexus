@@ -24,7 +24,7 @@ Subsequent phases extend this foundation with workspaces, public channels, priva
 | Socket.io | Powers the real-time communication layer, enabling instant bi-directional messaging and events. |
 | **Database & Auth** | |
 | Supabase PostgreSQL | Acts as the primary relational database, supporting complex queries and structured data models. |
-| Supabase Auth | Provides a secure, ready-to-use authentication system integrated directly with the database. Session lifecycle, token storage, and refresh handling are delegated entirely to Supabase Auth. |
+| Supabase Auth | Provides a secure, ready-to-use authentication system integrated directly with the database. Session lifecycle, token storage, and refresh handling are delegated entirely to Supabase Auth. Server-side token verification uses ES256 JWKS local crypto for zero network overhead. |
 | Prisma ORM | Simplifies database interactions and schema migrations through a type-safe, intuitive client. |
 | **Infrastructure** | |
 | Upstash Redis | Manages user presence tracking for real-time online/offline status. |
@@ -210,7 +210,7 @@ The initial Phase 1 event contract supports real-time messaging, immediate read 
 
 ### Phase 1: Core Foundation
 
-*   **Authentication**: Secure user registration and login utilizing Supabase Auth, supporting email/password and OAuth providers. Session management ensures secure access to protected resources. On every successful registration and login, the app upserts the user into the local `USER` table via a Supabase Auth webhook or on-login upsert to guarantee consistency.
+*   **Authentication**: Secure user registration and login utilizing Supabase Auth, supporting email/password and OAuth providers. Session management ensures secure access to protected resources via Next.js Edge middleware. On every successful registration and login, the app upserts the user into the local `USER` table via a Supabase Auth webhook or on-login API request upsert to guarantee consistency. API routes verify JWTs locally using cached ES256 JWKS public keys.
 
 *   **Direct Messages**: Private one-to-one conversations between users. This is the primary messaging unit for Phase 1, modeled using the Conversation entity.
 
