@@ -2,6 +2,10 @@
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./dist",
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["./*"]
+    },
     "target": "ES2020",
     "module": "ESNext",
     "moduleResolution": "bundler",

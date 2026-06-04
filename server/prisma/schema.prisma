@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id
+  email     String   @unique
+  name      String
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Reverse Relations
+  conversations ConversationMember[]
+  messages      Message[]
+}
+
+enum ConversationType {
+  DM
+  CHANNEL
+}
+
+model Conversation {
+  id          String           @id
+  type        ConversationType @default(DM)
+  isPrivate   Boolean          @default(true)
+  name        String?
+  workspaceId String?
+  dmPair      String?          @unique
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  // Relations
+  members  ConversationMember[]
+  messages Message[]
+}
+
+model ConversationMember {
+  id                String   @id
+  conversationId    String
+  userId            String
+  lastReadMessageId String?
+  joinedAt          DateTime @default(now())
+
+  // Relations
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastReadMessage Message?     @relation("ConversationMemberLastRead", fields: [lastReadMessageId], references: [id])
+
+  @@unique([conversationId, userId])
+  @@index([userId, conversationId])
+}
+
+model Message {
+  id             String   @id
+  content        String
+  conversationId String
+  userId         String
+  isEdited       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  conversation  Conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readByMembers ConversationMember[] @relation("ConversationMemberLastRead")
+
+  @@index([conversationId, id])
+}
