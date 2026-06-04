@@ -30,12 +30,13 @@ flowchart TD
 
 ### Client: Next.js 16 (planned for Phase 1)
 - App Router for routing and SSR
+- Edge Middleware for route protection and auth redirects
 - TanStack Query for server state (REST)
 - Zustand for UI/local state
 - Socket.io client for real-time events
 
 ### Server: Express.js (planned for Phase 1)
-- Auth middleware validates Supabase JWTs on all protected routes
+- Auth middleware validates Supabase JWTs locally using ES256 JWKS crypto (zero network overhead)
 - REST routes: `/auth`, `/conversations`, `/messages`
 - Socket.io server handles real-time events and room-based broadcasting
 

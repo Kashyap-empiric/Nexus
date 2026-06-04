@@ -10,33 +10,22 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  console.log("Seeding database...");
+  console.log("Seeding conversations and messages...");
 
-  // 1. Create two users
-  const user1Id = uuidv7();
-  const user2Id = uuidv7();
-
-  const alice = await prisma.user.upsert({
+  // 1. Fetch Alice and Bob by email
+  const alice = await prisma.user.findUnique({
     where: { email: "alice@example.com" },
-    update: {},
-    create: {
-      id: user1Id,
-      email: "alice@example.com",
-      name: "Alice",
-      avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alice",
-    },
+  });
+  
+  const bob = await prisma.user.findUnique({
+    where: { email: "bob@example.com" },
   });
 
-  const bob = await prisma.user.upsert({
-    where: { email: "bob@example.com" },
-    update: {},
-    create: {
-      id: user2Id,
-      email: "bob@example.com",
-      name: "Bob",
-      avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bob",
-    },
-  });
+  if (!alice || !bob) {
+    throw new Error(
+      "Alice or Bob not found! Please register alice@example.com and bob@example.com in the UI first."
+    );
+  }
 
   // 2. Determine the unique dmPair string
   const [u1, u2] = [alice.id, bob.id].sort();

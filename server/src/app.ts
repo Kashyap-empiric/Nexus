@@ -1,30 +1,47 @@
 import "dotenv/config";
-
+import express, { type Request, type Response } from "express";
+import type { AuthRequest } from "./types/shared.js";
 import cors from "cors";
-import express from "express";
 import morgan from "morgan";
+import { errorHandler } from "./middlewares/errorHandler.js";
+import { authMiddleware } from "./middlewares/auth.js";
+import conversationsRoutes from "./modules/conversations/conversations.routes.js";
 
-import { errorHandler } from "@/middlewares/errorHandler";
+import { prisma } from "./lib/db.js";
 
 const app = express();
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL ?? "http://localhost:3000",
-    credentials: true,
-  })
-);
 
-app.use(morgan("dev"));
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:3002",
+  process.env.CLIENT_URL
+].filter(Boolean);
+
+app.use(cors({ origin: allowedOrigins as string[] }));
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-app.get("/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
+app.use(morgan("dev"));
+app.get("/health", (req: Request, res: Response) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-app.use((req, res) => {
-  res.status(404).json({ error: "Not found" });
+app.get("/api/me", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user?.id },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found in the database" });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
+
+app.use("/api/conversations", conversationsRoutes);
 app.use(errorHandler);
 
 export default app;

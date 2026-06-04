@@ -89,8 +89,7 @@ These are the variables required to run the project. Values are never committed 
 | Variable | Description |
 |---|---|
 | `DATABASE_URL` | Supabase PostgreSQL connection string (used by Prisma) |
-| `SUPABASE_URL` | Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (used server-side for JWT verification) |
+| `SUPABASE_URL` | Supabase project URL (used to fetch the JWKS public keys) |
 | `UPSTASH_REDIS_REST_URL` | Upstash Redis REST endpoint |
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis auth token |
 | `PORT` | Port the Express server listens on |
@@ -168,4 +167,3 @@ All authenticated routes expect `Authorization: Bearer <JWT>` header.
 | No notifications | No push or email notifications in Phase 1 |
 | Single Socket.io instance | No Redis Pub/Sub adapter; horizontal scaling of the socket server is not supported in Phase 1 |
 | DM only | No channels or workspaces until Phase 2 |
-| No OAuth in Phase 1 | Only email/password auth is in scope for Phase 1 |
