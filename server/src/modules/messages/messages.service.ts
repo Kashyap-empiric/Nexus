@@ -61,3 +61,11 @@ export const createMessage = async (conversationId: string, userId: string, cont
 
   return message;
 };
+
+export const getMessageById = async (messageId: string) => {
+  return prisma.message.findUnique({
+    where: {
+      id: messageId,
+    },
+  });
+};

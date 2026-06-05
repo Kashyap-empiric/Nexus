@@ -107,7 +107,7 @@ nexus/
 - [x] Client auth pages (register/login UI)
 - [x] Client DM list page
 - [x] Client conversation view (message history)
-- [ ] Read receipt logic (`lastReadMessageId`)
+- [x] Read receipt logic (`lastReadMessageId`)
 - [ ] Presence indicators (online/offline badges)
 
 ---
@@ -311,15 +311,13 @@ Value: {
 | # | Limitation | Impact | Resolution Plan |
 |---|---|---|---|
 | 1 | **Real-time handlers are skeletal** — Socket.io is attached but no auth, rooms, or broadcasts yet | Messages require refresh/polling instead of instant delivery | Day 3 work |
-| 2 | **Read receipt endpoint is missing** — `lastReadMessageId` exists in schema only | No unread/read state yet | Add `PATCH /api/conversations/:id/read` |
-| 3 | **Rate limiting is not implemented** | API has no brute-force/spam guard | Add `express-rate-limit` middleware |
-| 4 | **DM-only in Phase 1** — No workspaces or channels | Users can only have 1-on-1 conversations | By design; Phase 2 extends this |
-| 5 | **Message pagination shape is incomplete** — Current API returns `nextCursor` but no `hasMore`/`direction` | Client cannot fully distinguish older-page availability/direction | Align with Day 2 pagination contract |
-| 6 | **No offline queue** — Socket messages dropped if client disconnects mid-send | Potential message loss on flaky connections | Out of scope for Phase 1; consider BullMQ in Phase 3 |
-| 7 | **No file/image uploads** | Text-only messaging | Phase 3 — requires S3/Supabase Storage integration |
-| 8 | **No push notifications** | Users must have the app open to receive messages | Phase 3 — Web Push API or Resend |
-| 9 | **Single Socket.io server instance** — No Redis pub/sub adapter | Cannot horizontally scale the Socket.io server | Phase 3 — add `@socket.io/redis-adapter` backed by Upstash |
-| 10 | **No test coverage** — No unit or integration tests written | Regressions won't be caught automatically | Tests should be added alongside each Phase 1 feature |
+| 2 | **DM-only in Phase 1** — No workspaces or channels | Users can only have 1-on-1 conversations | By design; Phase 2 extends this |
+| 3 | **Message pagination shape is incomplete** — Current API returns `nextCursor` but no `hasMore`/`direction` | Client cannot fully distinguish older-page availability/direction | Align with Day 2 pagination contract |
+| 4 | **No offline queue** — Socket messages dropped if client disconnects mid-send | Potential message loss on flaky connections | Out of scope for Phase 1; consider BullMQ in Phase 3 |
+| 5 | **No file/image uploads** | Text-only messaging | Phase 3 — requires S3/Supabase Storage integration |
+| 6 | **No push notifications** | Users must have the app open to receive messages | Phase 3 — Web Push API or Resend |
+| 7 | **Single Socket.io server instance** — No Redis pub/sub adapter | Cannot horizontally scale the Socket.io server | Phase 3 — add `@socket.io/redis-adapter` backed by Upstash |
+| 8 | **No test coverage** — No unit or integration tests written | Regressions won't be caught automatically | Tests should be added alongside each Phase 1 feature |
 
 ---
 

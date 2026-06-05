@@ -113,3 +113,17 @@ export const createOrGetDM = async (userIdA: string, userIdB: string) => {
         throw error;
     }
 }
+
+export const updateLastReadMessage = async (conversationId: string, userId: string, messageId: string) => {
+    return prisma.conversationMember.update({
+        where: {
+            conversationId_userId: {
+                conversationId,
+                userId
+            }
+        },
+        data: {
+            lastReadMessageId: messageId
+        }
+    });
+};

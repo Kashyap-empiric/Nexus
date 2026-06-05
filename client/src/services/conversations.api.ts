@@ -16,3 +16,8 @@ export const createConversation = async (targetUserId: string) => {
   const response = await api.post<{ data: Conversation }>(API_ROUTES.CONVERSATIONS.BASE, { targetUserId });
   return response.data.data;
 };
+
+export const markConversationRead = async (conversationId: string, messageId: string) => {
+  const response = await api.patch<{ success: boolean }>(API_ROUTES.CONVERSATIONS.READ(conversationId), { messageId });
+  return response.data;
+};

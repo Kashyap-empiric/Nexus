@@ -48,3 +48,31 @@ export const createConversation = async (req: AuthRequest, res: Response): Promi
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+export const markConversationAsRead = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { id: conversationId } = req.params as { id: string };
+    const { messageId } = req.body as { messageId: string };
+
+    const { getMessageById } = await import("../messages/messages.service.js");
+    const message = await getMessageById(messageId);
+
+    if (!message) {
+      res.status(404).json({ error: "Message not found" });
+      return;
+    }
+
+    if (message.conversationId !== conversationId) {
+      res.status(400).json({ error: "Message does not belong to this conversation" });
+      return;
+    }
+
+    await conversationsService.updateLastReadMessage(conversationId, userId, messageId);
+    
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("Error marking conversation as read:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};

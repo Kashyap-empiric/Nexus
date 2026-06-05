@@ -9,3 +9,9 @@ export const createConversationSchema = z.object({
 });
 
 export type CreateConversationInput = z.infer<typeof createConversationSchema>;
+
+export const markReadSchema = z.object({
+  messageId: z.string().uuid("messageId must be a valid UUID"),
+});
+
+export type MarkReadInput = z.infer<typeof markReadSchema>;
