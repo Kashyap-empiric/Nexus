@@ -19,8 +19,8 @@ export const useAuth = () => {
 
       if (authError) throw authError;
 
-      // On success, redirect to conversations page
-      router.push("/conversations");
+      // On success, replace history with conversations page
+      router.replace("/conversations");
     } catch (err: any) {
       setError(err.message || "An error occurred during login.");
     } finally {
@@ -47,10 +47,10 @@ export const useAuth = () => {
 
       // If session is null, email confirmation is required before the user can log in
       if (!authData.session) {
-        router.push("/login?registered=true&confirm=true");
+        router.replace("/login?registered=true&confirm=true");
       } else {
         // Email confirmations are disabled — user is immediately signed in
-        router.push("/conversations");
+        router.replace("/conversations");
       }
     } catch (err: any) {
       setError(err.message || "An error occurred during registration.");
@@ -86,7 +86,7 @@ export const useAuth = () => {
     try {
       const { error: authError } = await supabase.auth.signOut();
       if (authError) throw authError;
-      router.push("/login");
+      router.replace("/login");
     } catch (err: any) {
       setError(err.message || "An error occurred during sign out.");
     } finally {

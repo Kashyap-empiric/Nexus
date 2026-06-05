@@ -5,7 +5,9 @@ import cors from "cors";
 import morgan from "morgan";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import { authMiddleware } from "./middlewares/auth.js";
+import { generalLimiter } from "./middlewares/rateLimiter.js";
 import conversationsRoutes from "./modules/conversations/conversations.routes.js";
+import usersRoutes from "./modules/users/users.routes.js";
 
 import { prisma } from "./lib/db.js";
 
@@ -23,6 +25,8 @@ app.use(morgan("dev"));
 app.get("/health", (req: Request, res: Response) => {
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
+
+app.use("/api", generalLimiter);
 
 app.get("/api/me", authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
@@ -42,6 +46,7 @@ app.get("/api/me", authMiddleware, async (req: AuthRequest, res: Response) => {
 });
 
 app.use("/api/conversations", conversationsRoutes);
+app.use("/api/users", usersRoutes);
 app.use(errorHandler);
 
 export default app;

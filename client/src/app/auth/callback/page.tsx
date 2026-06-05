@@ -16,7 +16,6 @@ export default function AuthCallback() {
   };
 
   useEffect(() => {
-    // Supabase automatically parses the hash fragment and sets the session.
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
         redirect();
@@ -30,13 +29,13 @@ export default function AuthCallback() {
         redirect();
       }
     };
-    
+
     checkSession();
 
     return () => {
       authListener.subscription.unsubscribe();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
