@@ -1,5 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-import { api } from "../lib/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import * as conversationsApi from "@/services/conversations.api";
+import { queryKeys } from "@/constants/queryKeys";
 
 export interface User {
   id: string;
@@ -23,12 +24,35 @@ export interface Conversation {
   updatedAt: string;
 }
 
-export const useConversations = () => {
+export const useConversationsQuery = () => {
   return useQuery({
-    queryKey: ["conversations"],
-    queryFn: async () => {
-      const response = await api.get<Conversation[]>("/conversations");
-      return response.data;
+    queryKey: queryKeys.conversations,
+    queryFn: conversationsApi.getConversations,
+  });
+};
+
+export const useConversationDetailsQuery = (id: string) => {
+  return useQuery({
+    queryKey: queryKeys.conversation(id),
+    queryFn: () => conversationsApi.getConversationDetails(id),
+    enabled: !!id,
+  });
+};
+
+export const useCreateConversationMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: conversationsApi.createConversation,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.conversations });
     },
+  });
+};
+
+export const useMarkConversationReadMutation = () => {
+  return useMutation({
+    mutationFn: ({ conversationId, messageId }: { conversationId: string; messageId: string }) =>
+      conversationsApi.markConversationRead(conversationId, messageId),
   });
 };

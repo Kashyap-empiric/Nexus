@@ -70,9 +70,9 @@ flowchart LR
 
 ## 6. Read Receipt Flow
 
-1. Client emits `message:read { conversationId }` when the user opens or scrolls to the bottom of a conversation.
-2. Server updates `last_read_at` on the `ConversationMember` row.
-3. Server broadcasts `message:read` to the room so other participants can update the "seen" indicator.
+1. Client calls `PATCH /api/conversations/:id/read` with `{ messageId }` when the user opens a conversation.
+2. Server validates the message ownership and updates `lastReadMessageId` on the `ConversationMember` row via Prisma.
+3. (Day 3 Update) Server broadcasts `message:read` to the room so other participants can update the "seen" indicator.
 
 ---
 

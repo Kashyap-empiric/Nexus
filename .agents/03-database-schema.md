@@ -6,7 +6,7 @@ This document details the exact PostgreSQL database schema for Phase 1 of the Ne
 
 1. **UUIDv7 Primary Keys**: All `id` fields across all tables are `String` storing UUIDv7 strings. This is critical for cursor-based pagination because UUIDv7 is time-ordered (monotonically sortable). We do **not** use `createdAt` for sorting. 
    - *Requirement*: Always generate IDs in the application layer using the `uuidv7` npm package before calling `prisma.model.create()`. Do not use `crypto.randomUUID()` (UUIDv4) or Prisma's default `@default(uuid())` as they break sorting.
-2. **Supabase Auth Separation**: Supabase handles authentication and issues JWTs. The Prisma `User` table is a mirror of the profile data, upserted upon successful token validation.
+2. **Supabase Auth Separation**: Supabase handles authentication and issues JWTs. The Prisma `User` table mirrors profile data through the Supabase `on_auth_user_created` database trigger in `server/prisma/SUPABASE_QUERIES.sql`, not through Express middleware upserts.
 
 ---
 
@@ -19,9 +19,10 @@ Stores the application profile for users authenticated via Supabase.
 |---|---|---|---|
 | `id` | `String` | `@id` | UUIDv7 (usually matches Supabase Auth UID if we enforce it, or generated if we decouple). For simplicity, we use the Supabase UID as the Prisma User ID. |
 | `email` | `String` | `@unique` | |
-| `name` | `String` | | Display name |
+| `username` | `String` | | Display name/handle synced from Supabase Auth metadata |
 | `avatarUrl` | `String?` | | Optional avatar image URL |
 | `createdAt` | `DateTime` | `@default(now())` | For display only |
+| `updatedAt` | `DateTime` | `@updatedAt` | Updated automatically by Prisma |
 
 ### 2. `Conversation`
 Represents a chat container. In Phase 1, this only supports DMs, but the schema allows for future expansion to Channels.

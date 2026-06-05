@@ -12,7 +12,7 @@ import Link from "next/link";
 
 export const RegisterForm = () => {
   const { register: registerUser, loginWithGithub, isLoading, error } = useAuth();
-  
+
   const { register, handleSubmit, formState: { errors } } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
   });
@@ -22,7 +22,7 @@ export const RegisterForm = () => {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto shadow-lg border-muted">
+    <Card className="w-full max-w-md border-0 shadow-none bg-transparent">
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-heading font-bold tracking-tight text-center">Create an account</CardTitle>
         <CardDescription className="text-center text-muted-foreground">
@@ -30,10 +30,10 @@ export const RegisterForm = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Button 
-          type="button" 
-          variant="outline" 
-          className="w-full" 
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
           onClick={loginWithGithub}
           disabled={isLoading}
         >
@@ -63,54 +63,54 @@ export const RegisterForm = () => {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           {error && (
             <div className="p-3 text-sm font-medium text-destructive bg-destructive/10 rounded-md border border-destructive/20">
               {error}
             </div>
           )}
-          
+
           <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
-            <Input 
-              id="username" 
-              placeholder="johndoe" 
+            <Label htmlFor="username" className={errors.username ? "text-destructive" : ""}>Username <span className="text-destructive">*</span></Label>
+            <Input
+              id="username"
+              placeholder="johndoe"
               {...register("username")}
-              className={errors.username ? "border-destructive" : ""}
+              aria-invalid={!!errors.username}
             />
             {errors.username && <p className="text-sm font-medium text-destructive">{errors.username.message}</p>}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input 
-              id="email" 
-              type="email" 
-              placeholder="name@example.com" 
+            <Label htmlFor="email" className={errors.email ? "text-destructive" : ""}>Email <span className="text-destructive">*</span></Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="name@example.com"
               {...register("email")}
-              className={errors.email ? "border-destructive" : ""}
+              aria-invalid={!!errors.email}
             />
             {errors.email && <p className="text-sm font-medium text-destructive">{errors.email.message}</p>}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input 
-              id="password" 
-              type="password" 
+            <Label htmlFor="password" className={errors.password ? "text-destructive" : ""}>Password <span className="text-destructive">*</span></Label>
+            <Input
+              id="password"
+              type="password"
               {...register("password")}
-              className={errors.password ? "border-destructive" : ""}
+              aria-invalid={!!errors.password}
             />
             {errors.password && <p className="text-sm font-medium text-destructive">{errors.password.message}</p>}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input 
-              id="confirmPassword" 
-              type="password" 
+            <Label htmlFor="confirmPassword" className={errors.confirmPassword ? "text-destructive" : ""}>Confirm Password <span className="text-destructive">*</span></Label>
+            <Input
+              id="confirmPassword"
+              type="password"
               {...register("confirmPassword")}
-              className={errors.confirmPassword ? "border-destructive" : ""}
+              aria-invalid={!!errors.confirmPassword}
             />
             {errors.confirmPassword && <p className="text-sm font-medium text-destructive">{errors.confirmPassword.message}</p>}
           </div>
