@@ -7,8 +7,9 @@ These instructions must be followed by all AI agents working on this project.
 - **Never** use `window.location.href` as it breaks the SPA experience and forces a hard reload.
 
 ## 2. Architecture & Backend Sync
-- **Do not invent custom sync endpoints.** The project relies on elegant, existing Supabase database triggers to map data from Supabase Auth to the PostgreSQL database (Prisma).
-- **Auth Chain:** The UI form collects `username` -> this is sent to Supabase Auth metadata as `full_name` -> the database trigger automatically extracts `full_name` and writes it to the Prisma `User.name` field. **Rely on the trigger.**
+- **Do not invent custom sync endpoints.** The project relies on an existing Supabase database trigger in `server/prisma/SUPABASE_QUERIES.sql` to map data from Supabase Auth to the PostgreSQL database used by Prisma.
+- **Auth Chain:** The UI form collects `username` -> this is sent to Supabase Auth metadata as `username` -> the database trigger writes it to the Prisma `User.username` field. If metadata is missing, the trigger falls back to the email prefix. **Rely on the trigger.**
+- **Current User Route:** Use the existing `GET /api/me` endpoint for server-side current-user reads. Do not create `/api/auth/me` unless the route structure is deliberately refactored.
 
 ## 3. UI & Styling (Shadcn UI)
 - **Stick strictly to the standard Shadcn UI Zinc theme.** 

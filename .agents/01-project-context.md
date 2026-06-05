@@ -2,7 +2,7 @@
 
 > This file is the single-source-of-truth context snapshot for any agent working on this project.
 > Read this file at the start of every session before touching code or docs.
-> **Last Updated:** 2026-06-03
+> **Last Updated:** 2026-06-05
 
 ---
 
@@ -24,15 +24,15 @@ The project is built in phases to ship a working messaging core first, then exte
 
 | Feature | Description | Status |
 |---|---|---|
-| **User Registration** | Email/password sign-up via Supabase Auth; user record synced to Prisma DB | ✅ Done |
+| **User Registration** | Email/password sign-up via Supabase Auth; Supabase DB trigger syncs user record to Prisma DB | ✅ Done |
 | **User Login** | Email/password login; Supabase issues JWT; client stores session via SDK | ✅ Done |
 | **Session Management** | Supabase SDK handles token refresh, persistence, and expiry automatically | ✅ Done |
 | **Protected Routes** | Next.js Edge middleware + Express auth middleware block unauthenticated access | ✅ Done |
-| **Direct Messages** | Create 1-on-1 DM conversations; each DM has exactly 2 ConversationMembers | 🚧 Planned |
-| **Message Persistence** | Messages saved to PostgreSQL before any real-time broadcast | 🚧 Planned |
-| **Message History** | Paginated fetch of past messages ordered by `created_at ASC` | 🚧 Planned |
+| **Direct Messages** | Create 1-on-1 DM conversations; each DM has exactly 2 ConversationMembers | ✅ Done |
+| **Message Persistence** | Messages saved to PostgreSQL before any real-time broadcast | ✅ Done |
+| **Message History** | Paginated fetch of past messages | ✅ Done |
 | **Real-time Messaging** | Socket.io rooms (`conversation:{id}`) deliver new messages instantly | 🚧 Planned |
-| **Read Receipts** | `last_read_at` on `ConversationMember` tracks when a user last read a conversation | 🚧 Planned |
+| **Read Receipts** | `lastReadMessageId` on `ConversationMember` tracks the latest read message | 🚧 Planned |
 | **Presence System** | Redis tracks online/offline per user; Socket connect/disconnect drives state | 🚧 Planned |
 
 ### Phase 2 — Collaboration Extensions (future)
@@ -93,18 +93,21 @@ nexus/
 - Express.js server setup with TypeScript
 - Prisma schema definition and migration
 - Supabase Auth integration (register, login, session, JWKS local verification)
+- Supabase trigger `on_auth_user_created` syncs new auth users into `public.User`
 - Next.js Edge middleware for route protection
-- REST auth endpoints: `/auth/register`, `/auth/login` (handled largely by Supabase)
+- Current-user REST endpoint: `GET /api/me`
+- Conversation REST endpoints: `GET/POST /api/conversations`, `GET /api/conversations/:id`
+- Message REST endpoints: `GET/POST /api/conversations/:conversationId/messages`
 
 ### 🚧 In Progress / Planned (Phase 1)
-- [ ] REST endpoints: `/conversations`, `/messages`
-- [ ] Socket.io server setup
+- [x] REST endpoints: `/api/conversations`, `/api/conversations/:conversationId/messages`
+- [x] Basic Socket.io server attachment
 - [ ] Socket.io rooms (`conversation:{id}`) and event handlers
 - [ ] Upstash Redis presence system
-- [ ] Client auth pages (register/login UI)
-- [ ] Client DM list page
-- [ ] Client conversation view (message history + real-time)
-- [ ] Read receipt logic (`last_read_at`)
+- [x] Client auth pages (register/login UI)
+- [x] Client DM list page
+- [x] Client conversation view (message history)
+- [ ] Read receipt logic (`lastReadMessageId`)
 - [ ] Presence indicators (online/offline badges)
 
 ---
@@ -126,7 +129,8 @@ Browser ←→ Socket.io Client ←→ Socket.io Server ←→ Upstash Redis (pr
 ### Auth Flow
 ```
 Browser → Supabase Auth SDK → Supabase Auth Service → JWT
-JWT → Express Auth Middleware → Verify locally using ES256 JWKS → Route Handler → Prisma (user sync via upsert)
+Supabase Database Trigger: `on_auth_user_created` automatically syncs new users to `public.User` table.
+JWT → Express Auth Middleware → Verify locally using ES256 JWKS → Route Handler (zero DB calls in middleware)
 ```
 
 ---
@@ -139,10 +143,10 @@ JWT → Express Auth Middleware → Verify locally using ES256 JWKS → Route Ha
 
 | Entity | Fields | Indexes |
 |---|---|---|
-| **User** | `id` (uuid PK), `email`, `name`, `avatar_url`, `created_at` | — |
-| **Conversation** | `id` (uuid PK), `workspace_id` (FK, nullable for DMs), `name` (nullable for DMs), `type` (DM\|CHANNEL), `is_private` (bool) | — |
-| **ConversationMember** | `id` (uuid PK), `conversation_id` (FK), `user_id` (FK), `last_read_at` (datetime) | `INDEX(conversation_id, user_id)` |
-| **Message** | `id` (uuid PK), `content` (text), `conversation_id` (FK), `user_id` (FK), `is_edited` (bool), `created_at` | `INDEX(conversation_id, created_at)` |
+| **User** | `id` (String PK), `email`, `username`, `avatarUrl`, `createdAt`, `updatedAt` | `UNIQUE(email)` |
+| **Conversation** | `id` (String PK), `workspaceId` (nullable), `name` (nullable), `type` (DM\|CHANNEL), `isPrivate`, `dmPair`, `createdAt`, `updatedAt` | `UNIQUE(dmPair)` |
+| **ConversationMember** | `id` (String PK), `conversationId` (FK), `userId` (FK), `lastReadMessageId` (FK nullable), `joinedAt` | `UNIQUE(conversationId, userId)`, `INDEX(userId, conversationId)` |
+| **Message** | `id` (String PK), `content`, `conversationId` (FK), `userId` (FK), `isEdited`, `createdAt`, `updatedAt` | `INDEX(conversationId, id)` |
 
 ### Phase 2 Entities (planned)
 
@@ -162,13 +166,13 @@ JWT → Express Auth Middleware → Verify locally using ES256 JWKS → Route Ha
 | `conversation:join` | `{ conversationId }` | Subscribe to a conversation room |
 | `conversation:leave` | `{ conversationId }` | Unsubscribe from a conversation room |
 | `message:send` | `{ conversationId, content }` | Send a new message |
-| `message:read` | `{ conversationId }` | Emit read receipt |
+| `message:read` | `{ conversationId, lastReadMessageId }` | Emit read receipt |
 
 ### Server → Client
 | Event | Payload | Description |
 |---|---|---|
 | `message:new` | `{ message }` | New message broadcast to room |
-| `message:read` | `{ userId, conversationId, lastReadAt }` | Read receipt broadcast |
+| `message:read` | `{ userId, conversationId, lastReadMessageId }` | Read receipt broadcast |
 | `user:online` | `{ userId }` | User connected |
 | `user:offline` | `{ userId, lastSeen }` | User disconnected |
 
@@ -179,31 +183,31 @@ JWT → Express Auth Middleware → Verify locally using ES256 JWKS → Route Ha
 > All REST endpoints require `Authorization: Bearer <JWT>` unless marked **Public**.
 > All responses: `{ data: ... }` on success | `{ error: string }` on failure.
 
-### REST — Auth (`/auth`)
+### REST — Auth
 
 | Method | Path | Auth | Request Body | Response | Description |
 |---|---|---|---|---|---|
-| POST | `/auth/register` | Public | `{ email, password, name }` | `{ data: { user, session } }` | Register new user via Supabase Auth; syncs to Prisma `users` table |
-| POST | `/auth/login` | Public | `{ email, password }` | `{ data: { user, session } }` | Login; Supabase returns JWT + refresh token |
-| POST | `/auth/logout` | 🔒 Required | — | `{ data: { success: true } }` | Invalidate current Supabase session |
+| GET | `/api/me` | 🔒 Required | — | `User` | Returns current Prisma user for a valid Supabase JWT |
 
-### REST — Conversations (`/conversations`)
+Registration, login, logout, OAuth, and session refresh are handled by the Supabase client SDK in the Next.js app. Do not add custom sync endpoints; `server/prisma/SUPABASE_QUERIES.sql` owns Auth → Prisma user sync.
+
+### REST — Conversations (`/api/conversations`)
 
 | Method | Path | Auth | Request Body | Response | Description |
 |---|---|---|---|---|---|
-| GET | `/conversations` | 🔒 Required | — | `{ data: Conversation[] }` | List all DM conversations for the authenticated user |
-| POST | `/conversations` | 🔒 Required | `{ targetUserId }` | `{ data: Conversation }` | Create a new DM; creates `Conversation` (type=DM) + 2 `ConversationMember` rows |
-| GET | `/conversations/:id` | 🔒 Required | — | `{ data: Conversation }` | Get details of a single conversation (members, metadata) |
-| PATCH | `/conversations/:id/read` | 🔒 Required | — | `{ data: { lastReadAt } }` | Set `last_read_at = NOW()` for the requesting user in this conversation |
+| GET | `/api/conversations` | 🔒 Required | — | `{ data: Conversation[] }` | List all DM conversations for the authenticated user |
+| POST | `/api/conversations` | 🔒 Required | `{ targetUserId }` | `{ data: Conversation }` | Create or return an existing DM |
+| GET | `/api/conversations/:id` | 🔒 Required | — | `{ data: Conversation }` | Get details of a single conversation after membership check |
+| PATCH | `/api/conversations/:id/read` | 🔒 Required | `{ lastReadMessageId }` | `{ data: ConversationMember }` | Planned read receipt endpoint |
 
-### REST — Messages (`/messages`)
+### REST — Messages (`/api/conversations/:conversationId/messages`)
 
 | Method | Path | Auth | Request Body / Query | Response | Description |
 |---|---|---|---|---|---|
-| GET | `/messages` | 🔒 Required | `?conversationId=:id&cursor=:id&limit=50` | `{ data: Message[], nextCursor }` | Paginated message history, ordered `created_at ASC` |
-| POST | `/messages` | 🔒 Required | `{ conversationId, content }` | `{ data: Message }` | Persist message; server emits `message:new` via Socket.io after save |
-| PATCH | `/messages/:id` | 🔒 Required | `{ content }` | `{ data: Message }` | Edit message content; sets `is_edited = true` |
-| DELETE | `/messages/:id` | 🔒 Required | — | `{ data: { success: true } }` | Delete a message (hard delete) |
+| GET | `/api/conversations/:conversationId/messages` | 🔒 Required | `?cursor=:messageId&limit=50` | `{ data: Message[], nextCursor }` | Paginated message history |
+| POST | `/api/conversations/:conversationId/messages` | 🔒 Required | `{ content }` | `{ data: Message }` | Persist message; no socket broadcast yet |
+| PATCH | `/messages/:id` | 🔒 Required | `{ content }` | `{ data: Message }` | Planned edit endpoint |
+| DELETE | `/messages/:id` | 🔒 Required | — | `{ data: { success: true } }` | Planned delete endpoint |
 
 ### Socket.io Events — Client → Server
 
@@ -212,14 +216,14 @@ JWT → Express Auth Middleware → Verify locally using ES256 JWKS → Route Ha
 | `conversation:join` | `{ conversationId: string }` | Socket added to room `conversation:{id}` | Subscribe to a conversation's real-time stream |
 | `conversation:leave` | `{ conversationId: string }` | Socket removed from room | Unsubscribe from a conversation |
 | `message:send` | `{ conversationId: string, content: string }` | Triggers REST persist + `message:new` broadcast | Send a new message |
-| `message:read` | `{ conversationId: string }` | Triggers PATCH `/conversations/:id/read` + `message:read` broadcast | Mark conversation as read |
+| `message:read` | `{ conversationId: string, lastReadMessageId: string }` | Triggers planned PATCH `/conversations/:id/read` + `message:read` broadcast | Mark conversation as read |
 
 ### Socket.io Events — Server → Client
 
 | Event | Payload | Trigger | Description |
 |---|---|---|---|
 | `message:new` | `{ message: Message }` | New message saved to DB | Broadcast to all members in `conversation:{id}` room |
-| `message:read` | `{ userId, conversationId, lastReadAt }` | `message:read` client event processed | Broadcast updated read receipt to room |
+| `message:read` | `{ userId, conversationId, lastReadMessageId }` | `message:read` client event processed | Broadcast updated read receipt to room |
 | `user:online` | `{ userId: string }` | Socket connect | Broadcast to all connected clients |
 | `user:offline` | `{ userId: string, lastSeen: string }` | Socket disconnect + socketCount reaches 0 | Broadcast to all connected clients |
 
@@ -245,7 +249,7 @@ JWT → Express Auth Middleware → Verify locally using ES256 JWKS → Route Ha
 | `DATABASE_URL` | ✅ Yes | `postgresql://user:pass@host/db` | Prisma connection string — points to Supabase PostgreSQL |
 | `DIRECT_URL` | ✅ Yes | `postgresql://user:pass@host/db` | Direct (non-pooled) Prisma URL — used for migrations |
 | `SUPABASE_URL` | ✅ Yes | `https://xyz.supabase.co` | Supabase project URL — used by server-side Supabase client for auth verification |
-| `SUPABASE_SERVICE_ROLE_KEY` | ✅ Yes | `eyJ...` | Supabase service role key — **never expose to client**; used to verify JWTs server-side |
+| `SUPABASE_SERVICE_ROLE_KEY` | ❌ No | `eyJ...` | Not required for current JWKS-based auth; only add if server-side Supabase Admin operations are introduced |
 | `UPSTASH_REDIS_REST_URL` | ✅ Yes | `https://xyz.upstash.io` | Upstash Redis REST endpoint for presence reads/writes |
 | `UPSTASH_REDIS_REST_TOKEN` | ✅ Yes | `AX...` | Upstash Redis auth token |
 | `PORT` | ❌ Optional | `4000` | Express server port (defaults to 4000) |
@@ -295,7 +299,7 @@ Value: {
 - Socket.io events must match the event contract table above exactly — no ad-hoc event names
 - REST endpoints return `{ data: ... }` on success and `{ error: string }` on failure
 - All protected routes require the `Authorization: Bearer <token>` header
-- `last_read_at` is the single source of truth for read receipts — no per-message read table
+- `lastReadMessageId` is the single source of truth for read receipts — no per-message read table
 - Never hard-code secrets — all config via environment variables
 
 ---
@@ -306,11 +310,11 @@ Value: {
 
 | # | Limitation | Impact | Resolution Plan |
 |---|---|---|---|
-| 1 | **Server is empty** — Express, Prisma, Socket.io not yet set up | No backend functionality exists yet | Phase 1 Week 1 work |
-| 2 | **No authentication** — Supabase Auth not integrated | App has no login/register; all routes are unprotected | Phase 1 Week 1 work |
-| 3 | **No database schema** — Prisma schema not defined | No data persistence | Phase 1 Week 1 work |
+| 1 | **Real-time handlers are skeletal** — Socket.io is attached but no auth, rooms, or broadcasts yet | Messages require refresh/polling instead of instant delivery | Day 3 work |
+| 2 | **Read receipt endpoint is missing** — `lastReadMessageId` exists in schema only | No unread/read state yet | Add `PATCH /api/conversations/:id/read` |
+| 3 | **Rate limiting is not implemented** | API has no brute-force/spam guard | Add `express-rate-limit` middleware |
 | 4 | **DM-only in Phase 1** — No workspaces or channels | Users can only have 1-on-1 conversations | By design; Phase 2 extends this |
-| 5 | **No message pagination** — History fetch is unbounded in current design | Risk of loading thousands of messages at once | Cursor-based pagination must be implemented before launch |
+| 5 | **Message pagination shape is incomplete** — Current API returns `nextCursor` but no `hasMore`/`direction` | Client cannot fully distinguish older-page availability/direction | Align with Day 2 pagination contract |
 | 6 | **No offline queue** — Socket messages dropped if client disconnects mid-send | Potential message loss on flaky connections | Out of scope for Phase 1; consider BullMQ in Phase 3 |
 | 7 | **No file/image uploads** | Text-only messaging | Phase 3 — requires S3/Supabase Storage integration |
 | 8 | **No push notifications** | Users must have the app open to receive messages | Phase 3 — Web Push API or Resend |

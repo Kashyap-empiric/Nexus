@@ -16,7 +16,7 @@ export const LoginForm = () => {
   const searchParams = useSearchParams();
   const registered = searchParams.get("registered") === "true";
   const needsConfirmation = searchParams.get("confirm") === "true";
-  
+
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
@@ -26,7 +26,7 @@ export const LoginForm = () => {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto shadow-lg border-muted">
+    <Card className="w-full max-w-md border-0 shadow-none bg-transparent">
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-heading font-bold tracking-tight text-center">Welcome back</CardTitle>
         <CardDescription className="text-center text-muted-foreground">
@@ -34,10 +34,10 @@ export const LoginForm = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Button 
-          type="button" 
-          variant="outline" 
-          className="w-full" 
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
           onClick={loginWithGithub}
           disabled={isLoading}
         >
@@ -67,13 +67,12 @@ export const LoginForm = () => {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           {registered && (
-            <div className={`p-3 text-sm font-medium rounded-md border ${
-              needsConfirmation
+            <div className={`p-3 text-sm font-medium rounded-md border ${needsConfirmation
                 ? "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-300 dark:bg-blue-950/30 dark:border-blue-800"
                 : "text-green-700 bg-green-50 border-green-200 dark:text-green-300 dark:bg-green-950/30 dark:border-green-800"
-            }`}>
+              }`}>
               {needsConfirmation
                 ? "Account created! Please check your email to confirm your account before signing in."
                 : "Account created successfully! You can now sign in."}
@@ -85,31 +84,31 @@ export const LoginForm = () => {
               {error}
             </div>
           )}
-          
+
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input 
-              id="email" 
-              type="email" 
-              placeholder="name@example.com" 
+            <Label htmlFor="email" className={errors.email ? "text-destructive" : ""}>Email <span className="text-destructive">*</span></Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="name@example.com"
               {...register("email")}
-              className={errors.email ? "border-destructive" : ""}
+              aria-invalid={!!errors.email}
             />
             {errors.email && <p className="text-sm font-medium text-destructive">{errors.email.message}</p>}
           </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className={errors.password ? "text-destructive" : ""}>Password <span className="text-destructive">*</span></Label>
               <Link href="/forgot-password" className="text-sm font-medium text-primary hover:underline">
                 Forgot password?
               </Link>
             </div>
-            <Input 
-              id="password" 
-              type="password" 
+            <Input
+              id="password"
+              type="password"
               {...register("password")}
-              className={errors.password ? "border-destructive" : ""}
+              aria-invalid={!!errors.password}
             />
             {errors.password && <p className="text-sm font-medium text-destructive">{errors.password.message}</p>}
           </div>
