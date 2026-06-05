@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useMessagesInfiniteQuery } from "@/hooks/useMessages";
+import { useMarkConversationReadMutation } from "@/hooks/useConversations";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface MessageListProps {
@@ -9,13 +10,29 @@ interface MessageListProps {
 
 export function MessageList({ conversationId, currentUserId }: MessageListProps) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, error } = useMessagesInfiniteQuery(conversationId);
+  const { mutate: markRead } = useMarkConversationReadMutation();
+  
   const bottomRef = useRef<HTMLDivElement>(null);
   const observerTarget = useRef<HTMLDivElement>(null);
+  const hasMarkedReadFor = useRef<string | null>(null);
+
+  const latestMessageId = data?.pages?.[0]?.data?.[0]?.id;
 
   // Auto-scroll to bottom on conversation change or new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [data?.pages?.[0]?.data?.[0]?.id, conversationId]); // Scroll when the newest message changes or conversation changes
+  }, [latestMessageId, conversationId]); // Scroll when the newest message changes or conversation changes
+
+  // Mark conversation as read when entering (restricted to fire once per conversation load to avoid noisy pagination updates)
+  useEffect(() => {
+    if (!latestMessageId || hasMarkedReadFor.current === conversationId) return;
+
+    markRead({
+      conversationId,
+      messageId: latestMessageId,
+    });
+    hasMarkedReadFor.current = conversationId;
+  }, [conversationId, latestMessageId, markRead]);
 
   // Intersection observer for infinite scroll up
   useEffect(() => {

@@ -5,8 +5,9 @@ import {
   createConversation,
   getConversations,
   getConversationDetails,
+  markConversationAsRead
 } from "./conversations.controller.js";
-import { createConversationSchema } from "./conversations.schema.js";
+import { createConversationSchema, markReadSchema } from "./conversations.schema.js";
 import { requireConversationMember } from "../../middlewares/requireConversationMember.js";
 
 import messagesRoutes from "../messages/messages.routes.js";
@@ -33,6 +34,14 @@ router.get(
   authMiddleware,
   requireConversationMember({ paramName: "id" }),
   getConversationDetails
+);
+
+router.patch(
+  "/:id/read",
+  authMiddleware,
+  validate({ body: markReadSchema }),
+  requireConversationMember({ paramName: "id" }),
+  markConversationAsRead
 );
 
 export default router;

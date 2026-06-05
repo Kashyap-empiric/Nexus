@@ -49,3 +49,10 @@ export const useCreateConversationMutation = () => {
     },
   });
 };
+
+export const useMarkConversationReadMutation = () => {
+  return useMutation({
+    mutationFn: ({ conversationId, messageId }: { conversationId: string; messageId: string }) =>
+      conversationsApi.markConversationRead(conversationId, messageId),
+  });
+};

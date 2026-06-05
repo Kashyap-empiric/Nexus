@@ -188,14 +188,14 @@ client/src/components/MessageInput.tsx
 
 ### End of Day 2 Checks
 
-- [ ] Register via client UI, see user appear in Supabase Auth and Postgres User table
-- [ ] Login via client UI, session persists on refresh
-- [ ] Protected layout redirects unauthenticated users to /login
-- [ ] Create a DM between two users (Postman is fine), creating the same DM twice returns the existing one
-- [ ] Send a message, see it in the DB with a UUIDv7 id
-- [ ] Fetch message history — confirm cursor pagination returns correct page and hasMore flag
-- [ ] Sidebar renders conversation list
-- [ ] Message view renders history
+- [x] Register via client UI, see user appear in Supabase Auth and Postgres User table
+- [x] Login via client UI, session persists on refresh
+- [x] Protected layout redirects unauthenticated users to /login
+- [x] Create a DM between two users (Postman is fine), creating the same DM twice returns the existing one
+- [x] Send a message, see it in the DB with a UUIDv7 id
+- [x] Fetch message history — confirm cursor pagination returns correct page and hasMore flag
+- [x] Sidebar renders conversation list
+- [x] Message view renders history
 
 ---
 
