@@ -5,7 +5,7 @@
   "main": "src/server.ts",
   "scripts": {
     "dev": "nodemon --exec tsx src/server.ts",
-    "build": "prisma generate && tsc && tsc-alias",
+    "build": "prisma generate && tsup",
     "start": "node dist/server.js"
   },
   "keywords": [],
@@ -30,7 +30,6 @@
     "pg": "^8.21.0",
     "prisma": "^7.8.0",
     "socket.io": "^4.8.3",
-    "tsc-alias": "^1.8.17",
     "typescript": "^6.0.3",
     "uuidv7": "^1.2.1",
     "zod": "^4.4.3"
@@ -42,6 +41,7 @@
     "@types/morgan": "^1.9.10",
     "@types/node": "^25.9.1",
     "@types/pg": "^8.20.0",
+    "tsup": "^8.5.1",
     "tsx": "^4.22.4"
   }
 }
