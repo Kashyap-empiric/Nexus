@@ -7,6 +7,7 @@ import { NewConversationModal } from "./NewConversationModal";
 import { useConversationsQuery } from "../hooks/useConversations";
 import { useAuth } from "@/modules/auth";
 import { supabase } from "@/shared/lib/supabase";
+import { Input } from "@/shared/components/ui/input";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
@@ -36,11 +37,10 @@ export function Sidebar() {
         {/* Top: Search */}
         <div className="h-14 border-b flex items-center px-3 shrink-0 shadow-sm">
           <div className="relative w-full">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
               placeholder="Find or start a conversation"
-              className="w-full bg-background dark:bg-zinc-950/50 border-none rounded-md pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="pl-9 py-1.5 bg-muted/50 border-transparent hover:border-border focus-visible:border-border focus-visible:ring-1"
             />
           </div>
         </div>
@@ -65,6 +65,15 @@ export function Sidebar() {
                   const otherMember = chat.members.find((m) => m.userId !== currentAuthUser?.id);
                   const name = otherMember?.user.username || "Unknown User";
                   const isActive = chat.id === activeId;
+                  
+                  const myMember = chat.members.find((m) => m.userId === currentAuthUser?.id);
+                  const latestMessage = chat.messages?.[0];
+                  let isUnread = false;
+                  if (latestMessage && latestMessage.userId !== currentAuthUser?.id) {
+                    if (!myMember?.lastReadMessageId || latestMessage.id > myMember.lastReadMessageId) {
+                      isUnread = true;
+                    }
+                  }
 
                   return (
                     <Link
@@ -79,7 +88,10 @@ export function Sidebar() {
                         <AvatarImage src={otherMember?.user.avatarUrl || undefined} className="rounded-md" />
                         <AvatarFallback className="text-[10px] leading-none bg-primary/20 text-primary rounded-md font-medium">{name[0]?.toUpperCase()}</AvatarFallback>
                       </Avatar>
-                      <span className="truncate leading-none">{name}</span>
+                      <span className={`truncate leading-none flex-1 ${isUnread && !isActive ? 'font-bold text-foreground' : ''}`}>{name}</span>
+                      {isUnread && !isActive && (
+                        <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                      )}
                     </Link>
                   );
                 })}

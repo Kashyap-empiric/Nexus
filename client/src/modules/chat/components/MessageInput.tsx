@@ -43,9 +43,9 @@ export function MessageInput({ conversationId, currentUser }: MessageInputProps)
           disabled={!content.trim() || isPending}
           size="icon"
           variant="ghost"
-          className={`shrink-0 h-8 w-8 rounded-md transition-all flex items-center justify-center hover:bg-muted ${content.trim() ? "text-primary" : "text-muted-foreground opacity-50"}`}
+          className={`shrink-0 h-9 w-9 rounded-md transition-all flex items-center justify-center hover:bg-muted ${content.trim() ? "text-primary" : "text-muted-foreground opacity-50"}`}
         >
-          <SendHorizontal className="h-5 w-5" />
+          <SendHorizontal className="h-6 w-6" />
           <span className="sr-only">Send</span>
         </Button>
       </div>
