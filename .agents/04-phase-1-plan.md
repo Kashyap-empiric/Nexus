@@ -14,11 +14,10 @@ nexus/
   client/
     src/
       app/
-      components/
-      hooks/
-      lib/
-      store/
-      types/
+      constants/
+      modules/
+      providers/
+      shared/
   server/
     src/
       modules/
@@ -117,7 +116,7 @@ Day 2 splits into two halves: client auth in the morning (light, gets it out of 
 
 ```
 client/src/lib/supabase.ts             ← supabase browser client
-client/src/lib/api.ts                  ← base fetch wrapper, attaches bearer token
+client/src/shared/lib/api.ts                  ← base fetch wrapper, attaches bearer token
 
 client/src/types/index.ts              ← manual mirror of server/src/types/shared.ts
                                           ⚠️  Accepted tradeoff: no shared package.
@@ -163,27 +162,27 @@ PATCH  /conversations/:id/read      ← update ConversationMember.lastReadMessag
 **Client**
 
 ```
-client/src/lib/queryKeys.ts           ← centralised query key factories:
+client/src/constants/queryKeys.ts           ← centralised query key factories:
                                           conversationKeys.all, conversationKeys.detail(id),
                                           messageKeys.list(conversationId)
 
-client/src/hooks/useConversations.ts
-client/src/hooks/useMessages.ts       ← useInfiniteQuery, cursor-based
-client/src/hooks/useSendMessage.ts    ← plain mutation today, no optimistic update yet
+client/src/modules/chat/hooks/useConversations.ts
+client/src/modules/chat/hooks/useMessages.ts       ← useInfiniteQuery, cursor-based
+client/src/modules/chat/hooks/useSendMessage.ts    ← plain mutation today, no optimistic update yet
                                           ↩ revisited on Day 3 to add optimistic update
-client/src/hooks/useMarkRead.ts
+client/src/modules/chat/hooks/useMarkRead.ts
 
 client/src/app/(protected)/conversations/page.tsx       ← sidebar
 client/src/app/(protected)/conversations/layout.tsx
 client/src/app/(protected)/conversations/[id]/page.tsx  ← message view
-client/src/components/ConversationList.tsx
-client/src/components/ConversationItem.tsx
-client/src/components/MessageList.tsx  ← owns both scroll directions:
+client/src/modules/chat/components/ConversationList.tsx
+client/src/modules/chat/components/ConversationItem.tsx
+client/src/modules/chat/components/MessageList.tsx  ← owns both scroll directions:
                                           scroll-to-bottom on new message (Day 3/4 update)
                                           scroll-up trigger: call fetchNextPage from useMessages
                                           when user scrolls within ~200px of the top
-client/src/components/MessageItem.tsx
-client/src/components/MessageInput.tsx
+client/src/modules/chat/components/MessageItem.tsx
+client/src/modules/chat/components/MessageInput.tsx
 ```
 
 ### End of Day 2 Checks
@@ -227,18 +226,18 @@ server/src/modules/messages/messages.controller.ts  ← PATCH read handler: afte
 ### Client
 
 ```
-client/src/lib/socket.ts                        ← singleton socket instance, attaches bearer token
+client/src/shared/lib/socket.ts                        ← singleton socket instance, attaches bearer token
                                                    in auth callback
 
-client/src/hooks/useSocket.ts                   ← connect on mount, disconnect on unmount,
+client/src/shared/hooks/useSocket.ts                   ← connect on mount, disconnect on unmount,
                                                    write socketStatus to uiStore
 
-client/src/hooks/useConversationSocket.ts       ← join room on conversationId change
+client/src/modules/chat/hooks/useConversationSocket.ts       ← join room on conversationId change
                                                    message:new → queryClient.setQueryData (inject into cache)
                                                    message:read → queryClient.setQueryData (update receipt cache)
                                                    no refetches — direct cache mutation only
 
-client/src/store/uiStore.ts                     ← activeConversationId
+client/src/modules/chat/store/chatStore.ts                     ← activeConversationId
                                                    socketStatus: 'connecting' | 'connected' | 'disconnected'
                                                    drafts: Map<conversationId, string>
 ```
@@ -248,7 +247,7 @@ Update:
 ```
 client/src/app/(protected)/conversations/[id]/page.tsx  ← call useConversationSocket
 
-client/src/hooks/useSendMessage.ts    ← add optimistic update:
+client/src/modules/chat/hooks/useSendMessage.ts    ← add optimistic update:
                                          onMutate: inject message with localId (UUIDv7) + status='pending'
                                          onSuccess: replace localId entry with real server message, status='sent'
                                          onError: set status='failed', restore cache snapshot from onMutate
@@ -289,22 +288,22 @@ server/src/socket/index.ts  ← on startup: flush all user:presence:* keys befor
 ### Client
 
 ```
-client/src/hooks/usePresence.ts               ← listen for user:online / user:offline
+client/src/modules/users/hooks/usePresence.ts               ← listen for user:online / user:offline
                                                  write to onlineUsers in uiStore
 
-client/src/store/uiStore.ts                   ← add onlineUsers: Set<string>
+client/src/modules/chat/store/chatStore.ts                   ← add onlineUsers: Set<string>
 
-client/src/components/PresenceIndicator.tsx   ← green dot, reads from onlineUsers
-client/src/components/MessageStatus.tsx       ← tick component: pending / sent / read
-client/src/components/UserAvatar.tsx          ← avatar + presence dot combined
+client/src/modules/chat/components/PresenceIndicator.tsx   ← green dot, reads from onlineUsers
+client/src/modules/chat/components/MessageStatus.tsx       ← tick component: pending / sent / read
+client/src/components/ui/UserAvatar.tsx          ← avatar + presence dot combined
 ```
 
 Update:
 
 ```
-client/src/components/ConversationItem.tsx  ← show PresenceIndicator per conversation partner
-client/src/components/MessageItem.tsx       ← show MessageStatus ticks
-client/src/components/MessageList.tsx       ← scroll to bottom on new message
+client/src/modules/chat/components/ConversationItem.tsx  ← show PresenceIndicator per conversation partner
+client/src/modules/chat/components/MessageItem.tsx       ← show MessageStatus ticks
+client/src/modules/chat/components/MessageList.tsx       ← scroll to bottom on new message
                                                trigger useMarkRead when conversation is open + new message arrives
 ```
 
@@ -342,12 +341,12 @@ client/src/components/MessageList.tsx       ← scroll to bottom on new message
 ### Files to fix based on what breaks — common culprits
 
 ```
-client/src/lib/socket.ts                        ← token not attaching correctly
-client/src/lib/api.ts                           ← CORS preflight failing, credentials not sent
-client/src/hooks/useConversationSocket.ts       ← cache shape mismatch on message:new
+client/src/shared/lib/socket.ts                        ← token not attaching correctly
+client/src/shared/lib/api.ts                           ← CORS preflight failing, credentials not sent
+client/src/modules/chat/hooks/useConversationSocket.ts       ← cache shape mismatch on message:new
                                                    (paginated cache structure differs from flat)
-client/src/hooks/useSendMessage.ts              ← localId not being swapped for server id on success
-client/src/components/MessageList.tsx           ← scroll-to-bottom fighting new message injection
+client/src/modules/chat/hooks/useSendMessage.ts              ← localId not being swapped for server id on success
+client/src/modules/chat/components/MessageList.tsx           ← scroll-to-bottom fighting new message injection
 server/src/socket/middlewares/auth.ts           ← handshake header missing or CORS blocking upgrade
 server/src/app.ts                               ← CORS origin or credentials config wrong
 ```

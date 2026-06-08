@@ -1,6 +1,6 @@
 # Module: Authentication
 
-> **Location:** `client/src/middleware.ts`, `server/src/middlewares/auth.ts`, `client/src/hooks/useAuth.ts`, `client/src/lib/api.ts`
+> **Location:** `client/src/proxy.ts`, `server/src/middlewares/auth.ts`, `client/src/modules/auth/hooks/useAuth.ts`, `client/src/shared/lib/api.ts`
 > **Type:** Authentication Flow
 > **Last Updated:** 2026-06-05
 > **Status:** ✅ Active
@@ -48,7 +48,7 @@ flowchart TD
 | Name | Type | Parameters | Returns | Description |
 |---|---|---|---|---|
 | `authMiddleware` | Express Middleware | `Request, Response, NextFunction` | `void` | Verifies JWT from header cryptographically, attaches `req.user.id`. |
-| `middleware` | Next.js Edge | `NextRequest` | `NextResponse` | Protects `/conversations` routes, redirects to `/login` if no session. |
+| `proxy` | Next.js Edge | `NextRequest` | `NextResponse` | Protects `/conversations` routes, redirects to `/login` if no session. |
 | `useAuth` | React Hook | - | `{ login, register, loginWithGithub, logout, isLoading, error }` | Manages auth state and Supabase Auth API calls. |
 | `api.interceptors` | Axios Interceptor | `AxiosRequestConfig` / `AxiosResponse` | `Promise` | Injects Bearer token on requests; handles 401 globally by redirecting to `/login`. |
 

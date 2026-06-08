@@ -1,7 +1,6 @@
 "use client";
 
-import { useConversationsQuery } from "@/hooks/useConversations";
-import { EmptyState } from "@/components/chat/EmptyState";
+import { useConversationsQuery, EmptyState } from "@/modules/chat";
 
 export default function ConversationsPage() {
   const { isLoading } = useConversationsQuery();

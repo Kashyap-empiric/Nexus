@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { ActiveConversation } from "@/components/chat/ActiveConversation";
+import { ActiveConversation } from "@/modules/chat";
 
 export default function ActiveConversationPage() {
   const params = useParams();
