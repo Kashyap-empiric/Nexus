@@ -1,0 +1,79 @@
+# Daily Logs
+
+## 4th June 2026
+- Initialized Express + TypeScript backend server.
+- Configured Prisma v7 with PostgreSQL adapter for Supabase.
+- Finalized database schema (Users, Conversations, Messages) and ran initial migrations/seeds.
+- Implemented and hardened end-to-end authentication flow using Supabase Auth.
+  - Added Next.js Edge middleware for route protection.
+  - Switched server-side API JWT verification to use ES256 JWKS local crypto (zero network overhead).
+  - Implemented automatic user upserting to Prisma DB on first API request (handles OAuth users).
+  - Added global 401 handling and disabled TanStack Query retries on 4xx.
+  - Hardened password complexity validation.
+  - Built forgot password flow (needs reset password page).
+
+**Date**: 4th June 2026
+
+**Completed**:
+- Initialized Express + TypeScript backend server.
+- Configured Prisma v7 with PostgreSQL adapter for Supabase.
+- Finalized database schema (Users, Conversations, Messages) and ran initial migrations/seeds.
+- Implemented and hardened end-to-end authentication flow using Supabase Auth (email/password & GitHub OAuth).
+- Added Next.js Edge middleware for client-side route protection.
+- Switched server-side API JWT verification to use ES256 JWKS local crypto (zero network overhead).
+- Implemented automatic user upserting to Prisma DB on first API request.
+- Added global 401 handling, disabled TanStack Query retries on 4xx, and hardened password complexity.
+- Built forgot password flow and resolved OAuth callback race conditions.
+
+**In Progress**:
+- Setting up the remaining REST API architecture for conversations and messaging.
+
+**Next Plan**:
+- Build `/conversations` REST endpoints (DM creation, fetching list and single DM).
+- Build `/messages` REST endpoints (send, fetch history with cursor pagination).
+- Integrate Socket.io for real-time messaging.
+- Integrate Upstash Redis for user presence tracking.
+- Build UI: DM list sidebar, conversation view, and message input.
+
+**Blockers**
+● Any issues or dependencies: None. Local environment, Supabase Auth, and Prisma are fully synced and operational.
+
+**Learning**
+● One new thing that you learned today: Successfully implemented zero-network-overhead JWT verification by caching Supabase's ES256 JWKS public keys in the Express backend using the `jose` library, significantly improving protected route latency.
+
+**Future Refactors (Tech Debt)**
+- Implement `supabase.auth.onAuthStateChange()` centralized listener once Socket.io is added.
+- Add TanStack Query cache clearing (`queryClient.clear()`) and socket disconnection on logout.
+- Update `api.ts` response interceptor to explicitly attempt a token refresh on 401 before forcing a logout.
+- Migrate auth state to a global Zustand store when needed for complex UI features (online status, workspace invites).
+
+---
+
+## 5th June 2026
+
+**Date**: 5th June 2026
+
+**Completed**:
+- Built the complete frontend authentication UI including functional Login and Register pages.
+- Established protected route layouts with Next.js router redirection.
+- Fully implemented the Day 2 REST backend: `GET /conversations`, `POST /conversations`, `GET /messages`, and `POST /messages`.
+- Built the primary chat UI: Sidebar with real-time user session profile widget, `ActiveConversation` layout, and paginated `MessageList`.
+- Implemented and wired up DM creation via a `NewConversationModal` that successfully searches and initiates chats.
+- Fixed a generic typography baseline shifting bug by migrating standard fonts to `Rubik`.
+- Designed and integrated complete REST-based **Read Receipts** architecture (`PATCH /api/conversations/:id/read` + React Query mutation strictly firing on conversation enter).
+- Implemented global API rate limiting for endpoints via in-memory IP mapping.
+
+**In Progress**:
+- Transitioning from REST architecture into real-time WebSockets logic.
+
+**Next Plan**:
+- Initialize Socket.io on the Express backend and establish client socket connections.
+- Broadcast real-time `NEW_MESSAGE` events across connected clients for instantaneous DMs.
+- Broadcast `READ_RECEIPT` events so clients can instantly see when their messages are read.
+- Introduce Upstash Redis for global user presence tracking (Online/Offline status).
+
+**Blockers**
+  Any issues or dependencies: None. We resolved a minor git stash / file synchronization conflict today flawlessly, and the codebase is completely stable.
+
+**Learning**
+  One new thing that you learned today: When relying heavily on React `useEffect` for triggering analytics or read-receipt style mutations inside complex lists, using a `useRef` to manually flag execution perfectly guards against noisy array-dependency updates without violating the Rules of Hooks.
