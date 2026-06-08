@@ -7,6 +7,7 @@ import { NewConversationModal } from "./NewConversationModal";
 import { useConversationsQuery } from "../hooks/useConversations";
 import { useAuth } from "@/modules/auth";
 import { supabase } from "@/shared/lib/supabase";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { Input } from "@/shared/components/ui/input";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -14,7 +15,7 @@ import { useParams } from "next/navigation";
 export function Sidebar() {
   const { logout } = useAuth();
   const { data: conversations, isLoading } = useConversationsQuery();
-  const [currentAuthUser, setCurrentAuthUser] = useState<any>(null);
+  const [currentAuthUser, setCurrentAuthUser] = useState<SupabaseUser | null>(null);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const params = useParams();
   const activeId = params?.id as string;
@@ -29,7 +30,9 @@ export function Sidebar() {
   const myProfile = conversations?.[0]?.members.find((m) => m.userId === currentAuthUser?.id)?.user;
 
 
-  const dms = conversations?.filter((c) => c.type === "DM") || [];
+  const dms = [...(conversations || [])]
+    .filter((c) => c.type === "DM")
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
   return (
     <>

@@ -4,8 +4,7 @@ import { useState } from "react";
 import { useSendMessageMutation } from "../hooks/useMessages";
 import { SendHorizontal } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
-import { Input } from "@/shared/components/ui/input";
-import type { User } from "../hooks/useConversations";
+import type { User } from "../types/conversation";
 
 interface MessageInputProps {
   conversationId: string;
@@ -21,7 +20,7 @@ export function MessageInput({ conversationId, currentUser }: MessageInputProps)
     if (!content.trim()) return;
 
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-    sendMessage({ content, tempId });
+    sendMessage({ conversationId, content, tempId });
     setContent("");
   };
 

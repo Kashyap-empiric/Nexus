@@ -1,4 +1,4 @@
-import type { Message } from "../hooks/useMessages";
+import type { Message } from "../types/message";
 
 export interface MessageGroup {
   id: string;

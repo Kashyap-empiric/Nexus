@@ -3,17 +3,13 @@ import * as messagesApi from "../api/messages.api";
 import { queryKeys } from "@/shared/constants/queryKeys";
 import { socket } from "@/shared/lib/socket";
 import { SOCKET_EVENTS } from "@/shared/socket-events";
-import type { User } from "./useConversations";
-
-export interface Message {
-  id: string;
-  content: string;
-  conversationId: string;
-  userId: string;
-  createdAt: string;
-  user: User;
-  optimistic?: boolean;
-}
+import type { User, Conversation } from "../types/conversation";
+import type { Message, MessagePage } from "../types/message";
+import type { SocketResponse, MessageSendPayload } from "../types/socket";
+import { InfiniteData } from "@tanstack/react-query";
+import { toast } from "sonner";
+import React from "react";
+import { AlertTriangle } from "lucide-react";
 
 export const useMessagesInfiniteQuery = (conversationId: string) => {
   return useInfiniteQuery({
@@ -29,9 +25,9 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ content, tempId }: { content: string; tempId: string }) => {
+    mutationFn: ({ content, tempId }: MessageSendPayload) => {
       return new Promise<Message>((resolve, reject) => {
-        socket.emit(SOCKET_EVENTS.MESSAGE_SEND, { conversationId, content, tempId }, (response: any) => {
+        socket.emit(SOCKET_EVENTS.MESSAGE_SEND, { conversationId, content, tempId }, (response: SocketResponse<Message>) => {
           if (response?.error) {
             reject(new Error(response.error));
           } else if (response?.success && response?.message) {
@@ -61,7 +57,7 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
         pending: true,
       };
 
-      queryClient.setQueryData(queryKeys.messages(conversationId), (old: any) => {
+      queryClient.setQueryData<InfiniteData<MessagePage>>(queryKeys.messages(conversationId), (old) => {
         if (!old || !old.pages || old.pages.length === 0) return old;
 
         const newPages = [...old.pages];
@@ -76,15 +72,28 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
         };
       });
 
+      // Optimistically update the conversations list to bring it to top
+      queryClient.setQueryData<Conversation[]>(queryKeys.conversations, (old) => {
+        if (!Array.isArray(old)) return old;
+        return old.map((conv) => {
+          if (conv.id !== conversationId) return conv;
+          return {
+            ...conv,
+            updatedAt: optimisticMessage.createdAt,
+            messages: [optimisticMessage as unknown as Message], // partial message for preview
+          };
+        });
+      });
+
       return { previousMessages, localId: tempId };
     },
     onSuccess: (realMessage, variables, context) => {
-      queryClient.setQueryData(queryKeys.messages(conversationId), (old: any) => {
+      queryClient.setQueryData<InfiniteData<MessagePage>>(queryKeys.messages(conversationId), (old) => {
         if (!old || !old.pages) return old;
 
-        const newPages = old.pages.map((page: any) => ({
+        const newPages = old.pages.map((page) => ({
           ...page,
-          data: page.data.map((m: any) =>
+          data: page.data.map((m) =>
             m.id === context?.localId ? realMessage : m
           )
         }));
@@ -98,6 +107,16 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
     onError: (err, variables, context) => {
       if (context?.previousMessages) {
         queryClient.setQueryData(queryKeys.messages(conversationId), context.previousMessages);
+      }
+      const errorMessage = err instanceof Error ? err.message : "Failed to send message";
+      if (errorMessage.includes("too quickly")) {
+        toast.error(errorMessage, {
+          style: { backgroundColor: "#ef4444", color: "white", borderColor: "#ef4444" },
+          icon: React.createElement(AlertTriangle, { color: "#fde047", size: 18 }),
+          position: "top-right"
+        });
+      } else {
+        toast.error(errorMessage);
       }
     },
   });

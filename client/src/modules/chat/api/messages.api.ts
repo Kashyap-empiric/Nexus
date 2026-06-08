@@ -1,6 +1,6 @@
 import { api } from "@/shared/lib/api";
 import { API_ROUTES } from "@/shared/constants/api_routes";
-import type { Message } from "../hooks/useMessages";
+import type { Message } from "../types/message";
 
 export interface MessagesResponse {
   data: Message[];

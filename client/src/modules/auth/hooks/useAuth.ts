@@ -28,8 +28,9 @@ export const useAuth = () => {
 
       // On success, replace history with conversations page
       router.replace("/conversations");
-    } catch (err: any) {
-      setError(err.message || "An error occurred during login.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An error occurred during login.";
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -56,8 +57,9 @@ export const useAuth = () => {
       } else {
         router.replace(APP_ROUTES.CONVERSATIONS.INDEX);
       }
-    } catch (err: any) {
-      setError(err.message || "An error occurred during registration.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An error occurred during registration.";
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -76,8 +78,9 @@ export const useAuth = () => {
 
       if (authError) throw authError;
       setIsLoading(false);
-    } catch (err: any) {
-      setError(err.message || "An error occurred during GitHub login.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An error occurred during GitHub login.";
+      setError(message);
       setIsLoading(false);
     }
   };
@@ -94,8 +97,9 @@ export const useAuth = () => {
       useChatStore.getState().clearAll();
 
       router.replace(APP_ROUTES.AUTH.LOGIN);
-    } catch (err: any) {
-      setError(err.message || "An error occurred during sign out.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An error occurred during sign out.";
+      setError(message);
     } finally {
       setIsLoading(false);
     }

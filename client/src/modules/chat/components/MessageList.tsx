@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import { useMessagesInfiniteQuery } from "../hooks/useMessages";
 import { useMarkConversationReadMutation } from "../hooks/useConversations";
 import { MessageGroupItem } from "./MessageGroupItem";
@@ -8,10 +8,9 @@ import { groupMessages } from "../utils/groupMessages";
 
 interface MessageListProps {
   conversationId: string;
-  currentUserId: string | null;
 }
 
-export function MessageList({ conversationId, currentUserId }: MessageListProps) {
+export function MessageList({ conversationId }: MessageListProps) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, error } = useMessagesInfiniteQuery(conversationId);
   const { mutate: markRead } = useMarkConversationReadMutation();
   

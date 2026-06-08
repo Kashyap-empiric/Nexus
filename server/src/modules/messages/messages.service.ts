@@ -38,23 +38,29 @@ export const getMessages = async (conversationId: string, cursor: string | undef
 };
 
 export const createMessage = async (conversationId: string, userId: string, content: string) => {
-  const message = await prisma.message.create({
-    data: {
-      id: uuidv7(),
-      conversationId,
-      userId,
-      content,
-    },
-    include: {
-      user: {
-        select: {
-          id: true,
-          username: true,
-          avatarUrl: true,
+  const [message] = await prisma.$transaction([
+    prisma.message.create({
+      data: {
+        id: uuidv7(),
+        conversationId,
+        userId,
+        content,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true,
+          },
         },
       },
-    },
-  });
+    }),
+    prisma.conversation.update({
+      where: { id: conversationId },
+      data: { updatedAt: new Date() }
+    })
+  ]);
 
   return message;
 };

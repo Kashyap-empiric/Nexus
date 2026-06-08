@@ -46,11 +46,11 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
 
   // Find the other member to display their name
   const isDM = conversation.type === "DM";
-  const otherMember = conversation.members.find((m: any) => m.userId !== currentUserId);
+  const otherMember = conversation.members.find((m) => m.userId !== currentUserId);
   const otherName = otherMember?.user?.username;
   const title = conversation.name || otherName || (isDM ? "Direct Message" : "Channel");
 
-  const myProfile = conversation.members.find((m: any) => m.userId === currentUserId)?.user;
+  const myProfile = conversation.members.find((m) => m.userId === currentUserId)?.user;
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background min-w-0">
@@ -67,7 +67,7 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
       </div>
 
       {/* Messages */}
-      <MessageList conversationId={conversationId} currentUserId={currentUserId} />
+      <MessageList conversationId={conversationId} />
 
       {/* Input */}
       <MessageInput conversationId={conversationId} currentUser={myProfile} />
