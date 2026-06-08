@@ -1,7 +1,7 @@
 # Nexus: Data Flow
 
-> **Last Updated:** 2026-06-03
-> **Status:** Pre-build reference (planned flows, not yet implemented)
+> **Last Updated:** 2026-06-08
+> **Status:** Active (Phase 1 Complete)
 
 ---
 
@@ -72,7 +72,7 @@ flowchart LR
 
 1. Client calls `PATCH /api/conversations/:id/read` with `{ messageId }` when the user opens a conversation.
 2. Server validates the message ownership and updates `lastReadMessageId` on the `ConversationMember` row via Prisma.
-3. (Day 3 Update) Server broadcasts `message:read` to the room so other participants can update the "seen" indicator.
+3. Server broadcasts `message:read` to the room so other participants can update the "seen" indicator.
 
 ---
 

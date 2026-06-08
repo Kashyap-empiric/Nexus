@@ -17,9 +17,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Link from "next/link";
+import { APP_ROUTES } from "@/constants/app_routes";
 
 const forgotPasswordSchema = z.object({
-  email: z.email({ message: "Please enter a valid email address." }),
+  email: z.string().email({ message: "Please enter a valid email address." }),
 });
 
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
@@ -110,7 +111,7 @@ export default function ForgotPasswordPage() {
           <p className="text-sm text-muted-foreground">
             Remember your password?{" "}
             <Link
-              href="/login"
+              href={APP_ROUTES.AUTH.LOGIN}
               className="font-semibold text-primary hover:underline"
             >
               Sign in

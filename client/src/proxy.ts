@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { APP_ROUTES } from "@/constants/app_routes";
 
 export async function proxy(req: NextRequest) {
   const res = NextResponse.next();
@@ -29,19 +30,17 @@ export async function proxy(req: NextRequest) {
 
   const { pathname } = req.nextUrl;
 
-  // Protected routes: redirect unauthenticated users to /login
-  const isProtectedRoute = pathname.startsWith("/conversations");
+  const isProtectedRoute = pathname.startsWith(APP_ROUTES.CONVERSATIONS.INDEX);
   if (isProtectedRoute && !session) {
     const loginUrl = req.nextUrl.clone();
-    loginUrl.pathname = "/login";
+    loginUrl.pathname = APP_ROUTES.AUTH.LOGIN;
     return NextResponse.redirect(loginUrl);
   }
 
-  // Auth routes: redirect already-authenticated users to /conversations
-  const isAuthRoute = pathname === "/login" || pathname === "/register";
+  const isAuthRoute = pathname === APP_ROUTES.AUTH.LOGIN || pathname === APP_ROUTES.AUTH.REGISTER;
   if (isAuthRoute && session) {
     const conversationsUrl = req.nextUrl.clone();
-    conversationsUrl.pathname = "/conversations";
+    conversationsUrl.pathname = APP_ROUTES.CONVERSATIONS.INDEX;
     return NextResponse.redirect(conversationsUrl);
   }
 
