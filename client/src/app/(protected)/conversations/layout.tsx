@@ -1,12 +1,15 @@
 "use client";
 
 import { Sidebar } from "@/components/chat/Sidebar";
+import { useSocket } from "@/hooks/useSocket";
 
 export default function ConversationsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  useSocket(); // Initializes global socket connection
+  
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar />

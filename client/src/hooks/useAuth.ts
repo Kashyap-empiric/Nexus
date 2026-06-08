@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "../lib/supabase";
-import type { LoginFormData, RegisterFormData } from "../schemas/auth";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { socket } from "@/lib/socket";
+import { useChatStore } from "@/store/chatStore";
+import type { LoginFormData, RegisterFormData } from "@/schemas/auth";
 
 export const useAuth = () => {
+// ... existing code, skipping lines to replace the uiStore clearAll call
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,6 +91,11 @@ export const useAuth = () => {
     try {
       const { error: authError } = await supabase.auth.signOut();
       if (authError) throw authError;
+      
+      queryClient.clear();
+      socket.disconnect();
+      useChatStore.getState().clearAll();
+      
       router.replace("/login");
     } catch (err: any) {
       setError(err.message || "An error occurred during sign out.");

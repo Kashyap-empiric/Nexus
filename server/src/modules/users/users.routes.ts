@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { authMiddleware } from "../../middlewares/auth.js";
-import { validate } from "../../middlewares/validate.js";
+import { authMiddleware } from "@/middlewares/auth.js";
+import { validate } from "@/middlewares/validate.js";
 import { searchUsers } from "./users.controller.js";
 import { searchUsersQuerySchema } from "./users.schema.js";
 

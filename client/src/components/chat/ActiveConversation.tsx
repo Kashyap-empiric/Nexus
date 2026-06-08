@@ -1,8 +1,9 @@
 "use client";
 
 import { useConversationDetailsQuery } from "@/hooks/useConversations";
-import { MessageList } from "@/components/chat/MessageList";
-import { MessageInput } from "@/components/chat/MessageInput";
+import { useConversationSocket } from "@/hooks/useConversationSocket";
+import { MessageList } from "./MessageList";
+import { MessageInput } from "./MessageInput";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -12,6 +13,7 @@ interface ActiveConversationProps {
 }
 
 export function ActiveConversation({ conversationId }: ActiveConversationProps) {
+  useConversationSocket(conversationId);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {

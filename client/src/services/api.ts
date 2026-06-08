@@ -15,11 +15,20 @@ api.interceptors.request.use(async (config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401) {
-      window.location.href = "/login";
+      // Attempt token refresh via Supabase
+      const { data, error: refreshError } = await supabase.auth.getSession();
+      
+      if (refreshError || !data.session) {
+        window.location.href = "/login";
+        return Promise.reject(error);
+      }
+
+      // Retry the original request with the new token
+      error.config.headers.Authorization = `Bearer ${data.session.access_token}`;
+      return axios.request(error.config);
     }
     return Promise.reject(error);
   }
 );
-

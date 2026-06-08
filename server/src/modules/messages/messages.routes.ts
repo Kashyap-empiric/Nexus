@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { authMiddleware } from "../../middlewares/auth.js";
-import { validate } from "../../middlewares/validate.js";
-import { requireConversationMember } from "../../middlewares/requireConversationMember.js";
-import { messageLimiter } from "../../middlewares/rateLimiter.js";
+import { authMiddleware } from "@/middlewares/auth.js";
+import { validate } from "@/middlewares/validate.js";
+import { requireConversationMember } from "@/middlewares/requireConversationMember.js";
+import { messageLimiter } from "@/middlewares/rateLimiter.js";
 import { createMessage, getMessages } from "./messages.controller.js";
 import { createMessageBodySchema, getMessagesQuerySchema, messageParamsSchema } from "./messages.schema.js";
 

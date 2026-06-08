@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Search, Plus, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { NewConversationModal } from "@/components/chat/NewConversationModal";
+import { NewConversationModal } from "./NewConversationModal";
 import { useConversationsQuery } from "@/hooks/useConversations";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
