@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { socket } from "@/shared/lib/socket";
 import { SOCKET_EVENTS } from "@/shared/socket-events";
-import { queryKeys } from "@/constants/queryKeys";
+import { queryKeys } from "@/shared/constants/queryKeys";
 
 export const useConversationSocket = (conversationId: string) => {
   const queryClient = useQueryClient();
@@ -14,7 +14,7 @@ export const useConversationSocket = (conversationId: string) => {
 
     const onMessageNew = (message: any) => {
       if (message.conversationId !== conversationId) return;
-      
+
       queryClient.setQueryData(
         queryKeys.messages(conversationId),
         (oldData: any) => {
@@ -48,7 +48,7 @@ export const useConversationSocket = (conversationId: string) => {
 
     const onMessageRead = (data: any) => {
       if (data.conversationId !== conversationId) return;
-      
+
       // Update read receipt cache if we implement it, or just invalidate
       // For now, no-op or specific cache mutation as needed
     };

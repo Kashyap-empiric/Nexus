@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { X, Search, Loader2 } from "lucide-react";
 import { useCreateConversationMutation } from "../hooks/useConversations";
 import { useUsersSearchQuery } from "@/modules/users";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/shared/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 
 interface NewConversationModalProps {
   isOpen: boolean;
@@ -47,7 +47,7 @@ export function NewConversationModal({ isOpen, onClose }: NewConversationModalPr
             <X className="h-5 w-5" />
           </button>
         </div>
-        
+
         <div className="p-4 border-b">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />

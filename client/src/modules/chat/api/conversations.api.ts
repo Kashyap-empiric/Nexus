@@ -1,5 +1,5 @@
 import { api } from "@/shared/lib/api";
-import { API_ROUTES } from "@/constants/api_routes";
+import { API_ROUTES } from "@/shared/constants/api_routes";
 import type { Conversation } from "../hooks/useConversations";
 
 export const getConversations = async () => {

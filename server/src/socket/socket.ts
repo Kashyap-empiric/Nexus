@@ -2,6 +2,7 @@ import { Server } from "socket.io";
 import type { Server as HttpServer } from "http";
 import { socketAuthMiddleware } from "./middlewares/auth.js";
 import { registerPresenceHandlers } from "./handlers/presence.handler.js";
+import { registerMessageHandlers } from "./handlers/message.handler.js";
 import { prisma } from "@/lib/db.js";
 
 let io: Server;
@@ -9,9 +10,7 @@ let io: Server;
 export const initSocket = (httpServer: HttpServer) => {
   io = new Server(httpServer, {
     cors: {
-      origin: process.env.CLIENT_URL 
-        ? [process.env.CLIENT_URL] 
-        : ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"],
+      origin: process.env.CLIENT_URL,
       methods: ["GET", "POST"]
     },
   });
@@ -28,7 +27,7 @@ export const initSocket = (httpServer: HttpServer) => {
           where: { userId: socket.data.user.id },
           select: { conversationId: true }
         });
-        
+
         const rooms = memberships.map(m => `conversation:${m.conversationId}`);
         if (rooms.length > 0) {
           socket.join(rooms);
@@ -40,6 +39,7 @@ export const initSocket = (httpServer: HttpServer) => {
     }
 
     registerPresenceHandlers(io, socket);
+    registerMessageHandlers(io, socket);
   });
 
   return io;

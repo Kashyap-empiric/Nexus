@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as conversationsApi from "../api/conversations.api";
-import { queryKeys } from "@/constants/queryKeys";
+import { queryKeys } from "@/shared/constants/queryKeys";
 
 export interface User {
   id: string;

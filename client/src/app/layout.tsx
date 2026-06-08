@@ -12,9 +12,9 @@ export const metadata: Metadata = {
   description: "A secure chat application",
 };
 
-import { ThemeProvider } from "@/providers/theme-provider";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { QueryProvider } from "@/providers/query-provider";
+import { ThemeProvider } from "@/shared/providers/theme-provider";
+import { QueryProvider } from "@/shared/providers/query-provider";
+import { AuthProvider } from "@/shared/providers/auth-provider";
 
 export default function RootLayout({
   children,
@@ -34,7 +34,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <QueryProvider>
-            {children}
+            <AuthProvider>
+              {children}
+            </AuthProvider>
           </QueryProvider>
         </ThemeProvider>
       </body>

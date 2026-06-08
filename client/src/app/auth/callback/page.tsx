@@ -2,8 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
-import { APP_ROUTES } from "@/constants/app_routes";
+import { supabase } from "@/shared/lib/supabase";
+import { APP_ROUTES } from "@/shared/constants/app_routes";
 
 export default function AuthCallback() {
   const router = useRouter();

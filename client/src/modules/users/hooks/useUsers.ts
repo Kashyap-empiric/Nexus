@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import * as usersApi from "../api/users.api";
-import { queryKeys } from "@/constants/queryKeys";
+import { queryKeys } from "@/shared/constants/queryKeys";
 
 export const useUsersSearchQuery = (query: string, isOpen: boolean) => {
   return useQuery({

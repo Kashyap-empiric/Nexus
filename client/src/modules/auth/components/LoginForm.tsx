@@ -4,12 +4,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, type LoginFormData } from "../schemas/auth";
 import { useAuth } from "../hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import Link from "next/link";
-import { APP_ROUTES } from "@/constants/app_routes";
+import { APP_ROUTES } from "@/shared/constants/app_routes";
 import { useSearchParams } from "next/navigation";
 
 export const LoginForm = () => {
@@ -71,8 +71,8 @@ export const LoginForm = () => {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           {registered && (
             <div className={`p-3 text-sm font-medium rounded-md border ${needsConfirmation
-                ? "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-300 dark:bg-blue-950/30 dark:border-blue-800"
-                : "text-green-700 bg-green-50 border-green-200 dark:text-green-300 dark:bg-green-950/30 dark:border-green-800"
+              ? "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-300 dark:bg-blue-950/30 dark:border-blue-800"
+              : "text-green-700 bg-green-50 border-green-200 dark:text-green-300 dark:bg-green-950/30 dark:border-green-800"
               }`}>
               {needsConfirmation
                 ? "Account created! Please check your email to confirm your account before signing in."
