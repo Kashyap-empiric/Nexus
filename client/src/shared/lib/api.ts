@@ -1,9 +1,9 @@
 import axios from "axios";
 import { supabase } from "@/shared/lib/supabase";
-import { APP_ROUTES } from "@/shared/constants/app_routes";
+import { ENV } from "@/config/env";
 
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: ENV.API_URL,
 });
 
 api.interceptors.request.use(async (config) => {

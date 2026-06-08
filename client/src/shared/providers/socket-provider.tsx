@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { socket } from "@/shared/lib/socket";
 import { useChatStore } from "@/modules/chat";
+import { toast } from "sonner";
 
 export function SocketProvider() {
   const setSocketStatus = useChatStore((state) => state.setSocketStatus);
@@ -14,7 +15,10 @@ export function SocketProvider() {
 
     const onConnect = () => setSocketStatus("connected");
     const onDisconnect = () => setSocketStatus("disconnected");
-    const onConnectError = () => setSocketStatus("disconnected");
+    const onConnectError = (error: Error) => {
+      setSocketStatus("disconnected");
+      toast.error(`Connection lost: ${error.message}`);
+    };
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
