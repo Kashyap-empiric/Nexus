@@ -33,14 +33,14 @@ export const useSendMessageMutation = (conversationId: string) => {
 
       const previousMessages = queryClient.getQueryData(queryKeys.messages(conversationId));
 
-      const optimisticMessage: Message = {
+      const optimisticMessage = {
         id: `temp-${Date.now()}`,
         content: newContent,
         conversationId,
         userId: "me",
         createdAt: new Date().toISOString(),
         user: { id: "me", username: "Me", avatarUrl: null },
-        optimistic: true,
+        pending: true,
       };
 
       queryClient.setQueryData(queryKeys.messages(conversationId), (old: any) => {
@@ -58,15 +58,29 @@ export const useSendMessageMutation = (conversationId: string) => {
         };
       });
 
-      return { previousMessages };
+      return { previousMessages, localId: optimisticMessage.id };
+    },
+    onSuccess: (realMessage, variables, context) => {
+      queryClient.setQueryData(queryKeys.messages(conversationId), (old: any) => {
+        if (!old || !old.pages) return old;
+
+        const newPages = old.pages.map((page: any) => ({
+          ...page,
+          data: page.data.map((m: any) => 
+            m.id === context?.localId ? realMessage : m
+          )
+        }));
+
+        return {
+          ...old,
+          pages: newPages,
+        };
+      });
     },
     onError: (err, newContent, context) => {
       if (context?.previousMessages) {
         queryClient.setQueryData(queryKeys.messages(conversationId), context.previousMessages);
       }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.messages(conversationId) });
     },
   });
 };

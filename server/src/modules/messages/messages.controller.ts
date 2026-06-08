@@ -1,5 +1,5 @@
 import type { Response } from "express";
-import type { AuthRequest } from "../../types/shared.js";
+import type { AuthRequest } from "@/types/shared.js";
 import * as messagesService from "./messages.service.js";
 import { getMessagesQuerySchema, type CreateMessageBody, type GetMessagesQuery } from "./messages.schema.js";
 

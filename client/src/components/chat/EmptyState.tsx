@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MessageSquarePlus } from "lucide-react";
-import { NewConversationModal } from "@/components/chat/NewConversationModal";
+import { NewConversationModal } from "./NewConversationModal";
 
 export function EmptyState() {
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
