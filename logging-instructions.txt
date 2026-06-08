@@ -1,0 +1,17 @@
+[CRITICAL INSTRUCTIONS]: Compare the progress of today with yesterday and log with this format:
+
+1. Daily Update (Mandatory)
+Every day before starting work, update in the following format:
+
+Date: <>
+
+Completed: <>
+
+In Progress: <>
+
+Next Plan: <>
+
+Blockers
+  Any issues or dependencies:
+Learning
+  One new thing that you learned today:
