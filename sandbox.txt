@@ -1,0 +1,39 @@
+DATE: 3rd June 2026
+
+PROMPT: 
+I have created a .docs folder.
+in that folder create:
+
+- a .txt file that shows daily progress, what was changed from previous day or what new thing was added.
+
+- a .txt file that updates folder/file structure, using tree, (obviously ignore node_modules).
+
+- an .md file each for explaining the exact functioning of each module is added, or update it when a module functioning changes. (use diagrams)
+
+- an .md file that explain and shows in a diagram - the data flow the entire project.
+
+- an .md file that shows the archiecture of the full project.
+
+create and .agents folder, you are free to decide what kind of files will be there:
+
+- it should have instructions for the agent to do the things I outlined earlier. The agent doesn't have to do it automatically, it only has to see these instructions when I tell the agent to update the docs, it's just I want to automate the process of updating the docs in a proper methodical manner so I don't have to write big prompts repeatedly, I can just tell agent to use these instructions.
+
+- also keep a file that allows the agent to see the context of whole project or the context of the relevant modules or file, depending on what context the agent might need.
+
+I will also attach a document that shows what is needed from me, so you can help me in your own way.
+
+
+DATE: 4th June 2026
+
+PROMPT:
+The database design working, right? So now, before we proceed, I want to create git branches- main (exists), staging, development, and feat: (whatever new modules we are working on) and finally a bugs-fix (suggest a good name for this) branch that will be used for bug fixing.
+this will the process:  create features in feat: (module_name) --> push to development if working, test full application --> push to staging if working, staging will be deployed, main will be ignored for now.
+Is this process correct?
+Don't make them by yourselves, I will make it, I am just asking you to review it.
+
+Also create a daily-logs.md file (put it in gitignore), we will log everyday, each log will be there when I push anything to development, create logs with about 3 or 4 lines.
+
+PROMPT:
+1. Add a conversations page as we talked about just now, redirected to after a successful login.
+2. Add a landing page with Modern UI, it should have two buttons on the top right corner in the nav bar, sign up and login, the rest you can make it visually appealing however you like.
+3. connect the auth with backend, thoroughly. Give proper implementation plan. whatever packages/library you are going to use.

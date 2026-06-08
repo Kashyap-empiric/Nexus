@@ -1,7 +1,7 @@
 # Nexus: System Architecture
 
-> **Last Updated:** 2026-06-03
-> **Status:** Pre-build reference. All sections describe planned architecture for Phase 1 unless stated otherwise.
+> **Last Updated:** 2026-06-08
+> **Status:** Active. All sections describe the current architecture for Phase 1.
 
 ---
 
@@ -28,23 +28,25 @@ flowchart TD
 
 ## 2. Layer Summary
 
-### Client: Next.js 16 (planned for Phase 1)
+### Client: Next.js 16 (implemented)
 - App Router for routing and SSR
+- Edge Middleware (`proxy.ts`) for route protection and auth redirects
 - TanStack Query for server state (REST)
 - Zustand for UI/local state
 - Socket.io client for real-time events
+- Modular structure (`modules/`, `shared/`, `providers/`) for scalable code organization
 
-### Server: Express.js (planned for Phase 1)
-- Auth middleware validates Supabase JWTs on all protected routes
-- REST routes: `/auth`, `/conversations`, `/messages`
+### Server: Express.js (implemented)
+- Auth middleware validates Supabase JWTs locally using ES256 JWKS crypto (zero network overhead)
+- REST routes: `/conversations`, `/messages`, `/users`
 - Socket.io server handles real-time events and room-based broadcasting
 
-### Data Layer (planned for Phase 1)
+### Data Layer (implemented)
 - **Supabase PostgreSQL:** primary data store, accessed via Prisma ORM
 - **Upstash Redis:** ephemeral presence data (online status, socket count)
 - **Supabase Auth:** handles session management and JWT issuance
 
-### Infrastructure (planned for Phase 1)
+### Infrastructure (implemented)
 - Hosted on Render (frontend + backend as separate web services)
 - CI/CD via GitHub Actions (lint, typecheck, deploy)
 
@@ -76,9 +78,10 @@ erDiagram
     }
 
     CONVERSATION_MEMBER {
+        uuid id PK
         uuid conversation_id FK
         uuid user_id FK
-        datetime last_read_at
+        uuid last_read_message_id FK
     }
 
     MESSAGE {

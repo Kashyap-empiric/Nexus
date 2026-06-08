@@ -1,7 +1,7 @@
 # Nexus: Data Flow
 
-> **Last Updated:** 2026-06-03
-> **Status:** Pre-build reference (planned flows, not yet implemented)
+> **Last Updated:** 2026-06-08
+> **Status:** Active (Phase 1 Complete)
 
 ---
 
@@ -31,7 +31,7 @@ flowchart LR
 
 | Concern | Transport | Example |
 |---|---|---|
-| Send a message | REST POST | `POST /messages` |
+| Send a message | Socket event (fallback REST) | `message:send` (`POST /messages`) |
 | Fetch message history | REST GET | `GET /messages?conversationId=...` |
 | Receive a new message in real-time | Socket event | `message:new` |
 | Mark conversation as read | Socket event | `message:read` |
@@ -41,21 +41,25 @@ flowchart LR
 
 ## 3. Authentication Flow
 
-1. Client submits login/register form.
-2. Supabase Auth returns a JWT access token.
-3. Client includes the JWT as a `Bearer` token on all API requests.
-4. Express auth middleware verifies the JWT with Supabase on every protected route.
-5. On first login, the server upserts the user into the Prisma `User` table to sync with Supabase Auth.
+1. Client submits login/register form (or OAuth).
+2. Supabase Auth returns a JWT access token stored securely via cookies.
+3. Next.js Edge Middleware checks the cookie to protect client-side routes.
+4. Client includes the JWT as a `Bearer` token on all API requests.
+5. Express auth middleware verifies the JWT locally using cached ES256 JWKS public keys.
+6. On successful verification, the server upserts the user into the Prisma `User` table to sync with Supabase Auth.
 
 ---
 
 ## 4. Send Message Flow
 
 1. User sends a message in the UI.
-2. Client calls `POST /messages` with `{ conversationId, content }`.
-3. Server persists the message via Prisma.
-4. After a successful DB write, the server emits `message:new` to the Socket.io room for that conversation.
-5. All clients in the room (including the sender) receive the event and update the UI.
+2. Client generates a deterministic `tempId` and instantly updates the local cache (Optimistic UI).
+3. Client emits a WebSocket event `message:send` with `{ tempId, conversationId, content }`.
+4. Server socket handler receives the event, authenticates the user, and persists the message to PostgreSQL via Prisma.
+5. After a successful DB write, the server emits `message:new` to the Socket.io room for that conversation.
+6. The server acknowledges the sender via the Socket callback, returning the official persisted message.
+7. The sender's client replaces the optimistic `tempId` message with the official message.
+8. *(Fallback)*: If WebSockets fail or for integration purposes, the client can alternatively call `POST /messages`, which follows the same DB persistence and broadcasting flow.
 
 ---
 
@@ -69,8 +73,8 @@ flowchart LR
 
 ## 6. Read Receipt Flow
 
-1. Client emits `message:read { conversationId }` when the user opens or scrolls to the bottom of a conversation.
-2. Server updates `last_read_at` on the `ConversationMember` row.
+1. Client calls `PATCH /api/conversations/:id/read` with `{ messageId }` when the user opens a conversation.
+2. Server validates the message ownership and updates `lastReadMessageId` on the `ConversationMember` row via Prisma.
 3. Server broadcasts `message:read` to the room so other participants can update the "seen" indicator.
 
 ---

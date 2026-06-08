@@ -24,12 +24,13 @@ Subsequent phases extend this foundation with workspaces, public channels, priva
 | Socket.io | Powers the real-time communication layer, enabling instant bi-directional messaging and events. |
 | **Database & Auth** | |
 | Supabase PostgreSQL | Acts as the primary relational database, supporting complex queries and structured data models. |
-| Supabase Auth | Provides a secure, ready-to-use authentication system integrated directly with the database. Session lifecycle, token storage, and refresh handling are delegated entirely to Supabase Auth. |
+| Supabase Auth | Provides a secure, ready-to-use authentication system integrated directly with the database. Session lifecycle, token storage, and refresh handling are delegated entirely to Supabase Auth. Server-side token verification uses ES256 JWKS local crypto for zero network overhead. |
 | Prisma ORM | Simplifies database interactions and schema migrations through a type-safe, intuitive client. |
 | **Infrastructure** | |
 | Upstash Redis | Manages user presence tracking for real-time online/offline status. |
 | GitHub Actions | Automates the CI/CD pipeline, ensuring consistent testing, linting, and deployment workflows. |
 | Render | Hosts the Next.js application and Express backend services on a fully managed cloud platform. |
+
 
 ## High-Level Architecture
 
@@ -103,6 +104,37 @@ Nexus follows a hybrid architecture, utilizing REST APIs for persistence and res
 * Reaction updates
 * Read receipts
 
+### Rate Limiting
+
+Rate limiting is a **hard requirement**, not optional. All limits are keyed per authenticated user ID, not per IP.
+
+| Scope | Rule |
+| :--- | :--- |
+| REST — General | 100 requests / minute per user |
+| REST — `POST /conversations/:id/messages` | 20 requests / 10 seconds per user |
+| Socket.io — Message events | 20 events / 10 seconds per socket connection |
+
+* The stricter message-send limit applies both at the REST layer and the Socket.io layer independently.
+* Requests exceeding the limit must receive a `429 Too Many Requests` response (REST) or an error event (Socket.io).
+
+### Message Pagination
+
+All message list endpoints use **cursor-based pagination**. Offset-based pagination (`page=1`, `page=2`) is explicitly forbidden — new messages arriving mid-scroll shift offsets and produce duplicates.
+
+**Endpoint:** `GET /conversations/:id/messages?cursor=<messageId>&limit=50&direction=before`
+
+* `cursor` — a `messageId` (UUIDv7). Returns messages older than this ID when `direction=before`.
+* `limit` — maximum number of messages to return (default 50).
+* `direction` — currently `before` only; reserved for future bidirectional scroll support.
+
+**Response shape:**
+```json
+{ "messages": [...], "nextCursor": "<messageId | null>", "hasMore": true }
+```
+
+* The server fetches `limit + 1` rows to determine `hasMore`, then trims the extra row before responding.
+* This must be implemented from day one, not added later.
+
 ```mermaid
 flowchart LR
     subgraph Client
@@ -143,12 +175,25 @@ The initial Phase 1 event contract supports real-time messaging, immediate read 
 * `user:online` - Broadcasts that a user has connected.
 * `user:offline` - Broadcasts that a user has disconnected.
 
+### Socket Room Authorization
+
+> 🔒 **Security Requirement:** Socket room access is protected by two independent layers. Both must pass before a client may join a room. This is not optional.
+
+**Layer 1 — Handshake JWT validation:**
+* Socket.io middleware validates the Supabase Auth JWT on every connection before any event handlers run.
+* Connections that fail JWT validation are rejected immediately with no room access.
+
+**Layer 2 — Membership check on `conversation:join`:**
+* Inside the `conversation:join` handler, the server queries the database to verify the authenticated user is an active `ConversationMember` of the requested conversation.
+* If the user is not a member, the server emits an `error` event (e.g., `{ code: 'FORBIDDEN', message: 'Not a member of this conversation' }`) and returns early without calling `socket.join()`.
+* This prevents a fully authenticated user from subscribing to a conversation they are not part of.
+
 ### Socket Room Strategy
 
 * Each Conversation maps directly to a Socket.IO room.
 * Room naming convention should follow: `conversation:{conversationId}`
   * Example: `conversation:123`
-* When users open a conversation, they join the corresponding room.
+* When users open a conversation, they join the corresponding room (subject to the two-layer authorization above).
 * New messages are emitted only to members of that room.
 * Read receipt events are emitted only to room participants.
 * This architecture naturally scales from Direct Messages to Channels because both are represented by the Conversation entity.
@@ -165,29 +210,24 @@ The initial Phase 1 event contract supports real-time messaging, immediate read 
 
 ### Phase 1: Core Foundation
 
-*   **Authentication**: Secure user registration and login utilizing Supabase Auth, supporting email/password and OAuth providers. Session management ensures secure access to protected resources.
-
-    > ⚠️ **Flaw — Auth sync:** Supabase Auth and Prisma/PostgreSQL are separate systems. On every successful registration and login, the app must upsert the user into the local `USER` table. If this sync fails, a ghost user exists in Supabase with no corresponding app record. Use a Supabase Auth webhook or an on-login upsert to guarantee consistency.
+*   **Authentication**: Secure user registration and login utilizing Supabase Auth, supporting email/password and OAuth providers. Session management ensures secure access to protected resources via Next.js Edge middleware. On every successful registration and login, the app upserts the user into the local `USER` table via a Supabase Auth webhook or on-login API request upsert to guarantee consistency. API routes verify JWTs locally using cached ES256 JWKS public keys.
 
 *   **Direct Messages**: Private one-to-one conversations between users. This is the primary messaging unit for Phase 1, modeled using the Conversation entity.
 
-    > ⚠️ **Flaw — DM deduplication:** The schema does not prevent duplicate DM conversations between the same two users. A unique partial index on the sorted user pair (`WHERE type = 'DM'`) must be enforced at the database level, and the `/conversations` endpoint must do a lookup-before-create to prevent duplicates.
 
 *   **Real-time Messaging**: Instant delivery of messages and updates across connected clients using WebSockets (Socket.io). Ensures all users see the most current state immediately.
 
-    > ⚠️ **Flaw — Socket authentication:** Socket.io connections must be authenticated. The socket server must validate the Supabase Auth JWT during the handshake via Socket.io middleware before allowing any client to join a room. Without this, unauthenticated clients can connect and join any `conversation:{id}` room freely.
 
-*   **Message History**: Persistent storage of messages allowing users to view past conversations.
+*   **Message History**: Persistent storage of messages allowing users to view past conversations. Messages are ordered by `id` ascending (UUIDv7), never by `created_at`.
 
-*   **Read Receipts**: Documented using `ConversationMember.last_read_at`. This approach avoids storing a separate read record for every message and scales efficiently for direct-message conversations. The logic follows:
-    *   **Unread messages**: `message.created_at > last_read_at`
-    *   **Seen messages**: `message.created_at <= last_read_at`
+*   **Read Receipts**: Tracked using `ConversationMember.lastReadMessageId` (a nullable FK to `Message.id`). This approach avoids storing a separate read record for every message and scales efficiently for direct-message conversations. The logic follows:
+    *   **Unread messages**: `message.id > lastReadMessageId` (relies on UUIDv7 monotonic ordering)
+    *   **Seen messages**: `message.id <= lastReadMessageId`
+    *   `created_at` is retained on the Message model for display purposes only (e.g., "sent 2 mins ago") and is never used for ordering or cursor comparison.
 
-    > ⚠️ **Flaw — Cursor precision:** Using `created_at` as the read cursor has an edge case: two messages sent in the same millisecond will both flip read/unread state together. For higher reliability, use a monotonic message sequence number or the message ID as the read cursor instead of a timestamp.
 
 *   **Presence System**: Real-time indicators showing whether a user is currently online or offline. This system is driven by Socket connections, Socket disconnections, heartbeats (if implemented), and Redis presence storage. Presence is not a primary REST API feature; if a presence endpoint is retained, it is strictly optional and secondary to the real-time system.
 
-    > ⚠️ **Flaw — Presence race condition:** The Redis model tracks `socketCount` to handle multi-tab users but does not define a TTL or crash-recovery strategy. If the server crashes, `socketCount` never decrements and users appear permanently online. Mitigate by setting a TTL on each presence key and running a cleanup sweep on server restart.
 
 ### Phase 2: Collaboration Extensions
 
@@ -216,6 +256,7 @@ erDiagram
     CONVERSATION ||--o{ MESSAGE : contains
     
     MESSAGE ||--o{ REACTION : receives
+    MESSAGE ||--o{ CONVERSATION_MEMBER : "lastReadMessageId"
     
     USER {
         uuid id PK
@@ -245,22 +286,23 @@ erDiagram
         string name "nullable for DMs"
         enum type "CHANNEL, DM"
         boolean is_private
+        string dm_pair "nullable, DM only, unique"
     }
     
     CONVERSATION_MEMBER {
         uuid id PK
         uuid conversation_id FK
         uuid user_id FK
-        datetime last_read_at
+        string lastReadMessageId FK "nullable, FK to Message.id"
     }
     
     MESSAGE {
-        uuid id PK
+        uuid id PK "UUIDv7"
         string content
         uuid conversation_id FK
         uuid user_id FK
         boolean is_edited
-        datetime created_at
+        datetime created_at "display only"
     }
     
     REACTION {
@@ -278,21 +320,63 @@ erDiagram
 The following entities are the Phase 1 implementation focus:
 *   **User**: Represents an authenticated individual using the platform. Key fields include `id`, `email`, and `name`.
 *   **Conversation**: The central entity for any communication stream. In Phase 1, this strictly handles Direct Messages (`type = DM`). **Constraint:** DM conversations must have exactly 2 members.
+    *   **`dm_pair`** (nullable String): Only populated when `type = 'DM'`. Value is the two member user IDs sorted alphabetically and joined with a colon (e.g., `"uuid-a:uuid-b"`). A unique index on this field enforces the one-DM-per-pair constraint at the database level.
 
-    > ⚠️ **Flaw — DM uniqueness:** Add a unique partial index on the sorted user pair (`WHERE type = 'DM'`) at the database level to enforce the one-DM-per-user-pair constraint. Application-level checks alone are not sufficient.
 
-*   **ConversationMember**: A junction table defining which users are participants in a specific conversation. It tracks read receipts via the `last_read_at` field, ensuring users know when their messages are seen.
-    *   *Index:* `INDEX(conversation_id, user_id)`
-*   **Message**: A single piece of communication sent by a user within a conversation. Messages are ordered by `created_at` ascending.
-    *   *Index:* `INDEX(conversation_id, created_at)`
+*   **ConversationMember**: A junction table defining which users are participants in a specific conversation. It tracks read receipts via `lastReadMessageId` (nullable FK to `Message.id`).
+    *   *Indexes (both required):*
+        *   `@@unique([conversationId, userId])` — prevents duplicate memberships and serves as the index for "get members of a conversation".
+        *   `@@index([userId, conversationId])` — required for "get all conversations for a user" (sidebar/inbox query). **This index was missing from the original spec.**
+*   **Message**: A single piece of communication sent by a user within a conversation. `Message.id` uses **UUIDv7** (generated in the application layer using the `uuidv7` npm package), which is both globally unique and monotonically sortable. Messages are ordered by `id` ascending. `created_at` is retained for display purposes only (e.g., "sent 2 mins ago") and must never be used for ordering or cursor comparison.
+    *   *Index:* `@@index([conversationId, id])`
 
 #### Phase 2+ Entities
 
 Workspace, WorkspaceMember, and Reaction are Phase 2 entities built on top of the messaging foundation:
 *   **Workspace**: A logical container for a team or organization. Contains members and conversations.
 *   **WorkspaceMember**: A junction table defining a user's membership and role within a specific workspace.
-    *   *Index:* `INDEX(workspace_id, user_id)`
-*   **Reaction**: A junction table linking users, messages, and emoji reactions with constraints to prevent duplicate identical reactions from the same user.
+    *   *Index:* `@@index([workspaceId, userId])`
+*   **Reaction**: A junction table linking users, messages, and emoji reactions.
+    *   **Unique constraint:** `@@unique([messageId, userId, emoji])` — prevents a user from adding the same emoji reaction twice to the same message.
+    *   **Cascade delete:** The relation to `Message` uses `onDelete: Cascade`, so reactions are automatically deleted when their parent message is deleted.
+    *   **Toggle semantics:** Toggling a reaction must use a **lookup-then-delete** or **lookup-then-create** pattern, not `upsert`. The toggle logic needs to know which action was taken (add vs. remove) in order to broadcast the correct socket event (`reaction:added` vs. `reaction:removed`).
+
+## Frontend Architecture
+
+### State Management
+
+There is a strict boundary between TanStack Query and Zustand. Mixing these responsibilities is not permitted.
+
+| Library | Owns |
+| :--- | :--- |
+| **TanStack Query** | Anything that originates from the server: messages, conversations, user profiles, read receipts, presence snapshots |
+| **Zustand** | Purely local UI state with no server equivalent |
+
+**What lives in Zustand:**
+* `activeConversationId` — the currently open conversation.
+* Per-conversation draft text — stored as a `Map<conversationId, string>` so drafts survive conversation switching.
+* `socketStatus: 'connecting' | 'connected' | 'disconnected'` — current socket connection state.
+* Emoji picker open state and target `messageId`.
+
+### TanStack Query + Socket.io Integration
+
+Socket.io events mutate the TanStack Query cache **directly**. They must not trigger refetches.
+
+* Incoming `message:new` events are **injected** into the paginated message cache for the relevant conversation via `queryClient.setQueryData`.
+* Incoming `message:read` events **update** the receipt cache for the relevant conversation via `queryClient.setQueryData`.
+* Query keys must be defined centrally (e.g., `messageKeys`, `conversationKeys`) and shared across all hooks. Ad-hoc inline key strings are not allowed.
+
+### Optimistic Updates
+
+Messages must feel instant. The following lifecycle applies to every send:
+
+**Message status field:** `'pending' | 'sent' | 'delivered' | 'read' | 'failed'`
+
+1. **On send (`onMutate`):** A temporary message is added to the TanStack Query cache immediately with a `localId` (UUIDv7, generated client-side) and `status: 'pending'`. The UI renders it at once.
+2. **On server ack (`onSuccess`):** The temporary entry is replaced with the real server message (real `id`, `status: 'sent'`). The pending message is removed.
+3. **On failure (`onError`):** `status` is set to `'failed'`. A retry option is displayed to the user. The previous cache snapshot (captured in `onMutate`) is restored for all other state.
+
+TanStack Query's `onMutate` / `onSuccess` / `onError` mutation lifecycle handles this entirely.
 
 ## Architectural Decisions
 
@@ -334,13 +418,12 @@ Supabase Auth provides tight integration with our PostgreSQL database, offering 
 * Application-specific data remains managed through Prisma and PostgreSQL.
 * Authentication session tables are intentionally omitted from the application ER diagram because they are owned and managed by Supabase.
 
-> ⚠️ **Flaw — Auth sync:** A reliable sync mechanism (Supabase Auth webhook or on-login upsert) is required to keep Supabase Auth user records and the Prisma `USER` table consistent. Registration and login flows must both trigger this upsert.
+
 
 ### Socket.io
 
 Socket.io was chosen over long polling or native WebSockets because it provides robust bi-directional communication with low latency. It supports real-time events, automatic reconnections, and multiplexing (namespaces/rooms), which results in a significantly better user experience when delivering instant messages and presence updates.
 
-> ⚠️ **Flaw — Socket authentication:** All socket connections must be authenticated via JWT validation middleware on the handshake before any room access is permitted. This prevents unauthenticated clients from subscribing to conversations.
 
 ### Redis
 
@@ -348,16 +431,20 @@ Redis is utilized exclusively for our real-time presence system, enabling fast p
 
 #### Redis Presence Model
 
-We use the following structure to track presence:
+The presence model uses a **Redis Set of socket IDs** per user, replacing the previous counter approach.
 
 ```text
-user:{id}
-  status: online
-  lastSeen: timestamp
-  socketCount: number
+Key:   user:presence:{userId}   (Redis Set)
+Value: { socketId1, socketId2, ... }
+TTL:   24 hours (reset on every SADD)
 ```
 
-> ⚠️ **Flaw — Presence race condition:** A TTL must be set on each presence key, and a cleanup sweep must run on server restart. Without this, a crashed server leaves `socketCount` permanently incremented and users appear stuck online.
+**Lifecycle:**
+* **On connect:** `SADD user:presence:{userId} {socketId}` + reset TTL. Broadcast `user:online` if the Set size transitions from 0 to 1.
+* **On disconnect:** `SREM user:presence:{userId} {socketId}`. If the Set is now empty, broadcast `user:offline`.
+* **On server startup:** Flush all `user:presence:*` keys before accepting connections. Clients reconnect automatically and re-establish their presence entries.
+
+
 
 ## Development Roadmap
 
@@ -411,7 +498,7 @@ All future collaboration features will be built on top of this validated messagi
 *   **Authentication & User Sync**: Implement Supabase Auth, user registration, login, and reliable upsert sync to the Prisma database.
 *   **Direct Messaging API**: Core REST endpoints for conversations and message history, with duplicate DM prevention enforced at the database level.
 *   **Socket.io Integration**: Real-time message delivery with JWT authentication middleware on the socket handshake.
-*   **Read Receipts**: Unread indicators and tracking via `last_read_at` on `ConversationMember`.
+*   **Read Receipts**: Unread indicators and tracking via `lastReadMessageId` on `ConversationMember`.
 *   **Presence System**: Real-time online/offline status powered by Redis, with TTL on presence keys and cleanup on server restart.
 
 ### Phase 2: Collaboration Extensions
