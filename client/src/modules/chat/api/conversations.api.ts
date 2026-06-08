@@ -1,6 +1,6 @@
 import { api } from "@/shared/lib/api";
 import { API_ROUTES } from "@/shared/constants/api_routes";
-import type { Conversation } from "../hooks/useConversations";
+import type { Conversation } from "../types/conversation";
 
 export const getConversations = async () => {
   const response = await api.get<{ data: Conversation[] }>(API_ROUTES.CONVERSATIONS.BASE);

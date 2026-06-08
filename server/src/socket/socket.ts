@@ -1,6 +1,7 @@
 import { Server } from "socket.io";
 import type { Server as HttpServer } from "http";
 import { socketAuthMiddleware } from "./middlewares/auth.js";
+import { socketRateLimiterMiddleware } from "./middlewares/rateLimiter.js";
 import { registerPresenceHandlers } from "./handlers/presence.handler.js";
 import { registerMessageHandlers } from "./handlers/message.handler.js";
 import { prisma } from "@/lib/db.js";
@@ -20,6 +21,9 @@ export const initSocket = (httpServer: HttpServer) => {
 
   io.on("connection", async (socket) => {
     console.log(`[Socket.io] Client connected: ${socket.id} (User: ${socket.data.user?.id})`);
+
+    // Register per-socket middlewares
+    socket.use(socketRateLimiterMiddleware(socket));
 
     // Auto-Join Rooms
     try {

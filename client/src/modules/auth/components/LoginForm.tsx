@@ -121,7 +121,7 @@ export const LoginForm = () => {
       </CardContent>
       <CardFooter className="flex justify-center border-t p-4">
         <p className="text-sm text-muted-foreground">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link href={APP_ROUTES.AUTH.REGISTER} className="font-semibold text-primary hover:underline">
             Sign up
           </Link>

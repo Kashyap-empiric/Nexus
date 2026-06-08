@@ -2,29 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as conversationsApi from "../api/conversations.api";
 import { queryKeys } from "@/shared/constants/queryKeys";
 
-export interface User {
-  id: string;
-  username: string;
-  avatarUrl: string | null;
-}
-
-export interface ConversationMember {
-  id: string;
-  userId: string;
-  lastReadMessageId: string | null;
-  user: User;
-}
-
-export interface Conversation {
-  id: string;
-  type: "DM" | "CHANNEL";
-  isPrivate: boolean;
-  name: string | null;
-  dmPair: string | null;
-  members: ConversationMember[];
-  messages?: any[];
-  updatedAt: string;
-}
+export type { Conversation } from "../types/conversation";
 
 export const useConversationsQuery = () => {
   return useQuery({

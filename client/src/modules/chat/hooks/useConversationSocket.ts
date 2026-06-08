@@ -5,6 +5,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { socket } from "@/shared/lib/socket";
 import { SOCKET_EVENTS } from "@/shared/socket-events";
 import { queryKeys } from "@/shared/constants/queryKeys";
+import type { Message, MessagePage } from "../types/message";
+import type { Conversation } from "../types/conversation";
+import type { MessageReadPayload } from "../types/socket";
+import { InfiniteData } from "@tanstack/react-query";
 
 export const useConversationSocket = (conversationId: string) => {
   const queryClient = useQueryClient();
@@ -12,24 +16,24 @@ export const useConversationSocket = (conversationId: string) => {
   useEffect(() => {
     if (!conversationId) return;
 
-    const onMessageNew = (message: any) => {
+    const onMessageNew = (message: Message) => {
       try {
         if (!message || !message.id) throw new Error("Invalid payload");
         if (message.conversationId !== conversationId) return;
 
-        queryClient.setQueryData(
+        queryClient.setQueryData<InfiniteData<MessagePage>>(
           queryKeys.messages(conversationId),
-          (oldData: any) => {
+          (oldData) => {
             if (!oldData || !oldData.pages) return oldData;
 
-            const updatedPages = oldData.pages.map((page: any, index: number) => {
+            const updatedPages = oldData.pages.map((page, index) => {
               if (index === 0) {
                 // Check if optimistic message already exists
-                const exists = page.data.some((m: any) => m.id === message.id || m.pending);
+                const exists = page.data.some((m) => m.id === message.id || m.pending);
                 if (exists) {
                   return {
                     ...page,
-                    data: page.data.map((m: any) => (m.pending ? message : m)),
+                    data: page.data.map((m) => (m.pending ? message : m)),
                   };
                 }
                 return {
@@ -48,12 +52,12 @@ export const useConversationSocket = (conversationId: string) => {
         );
 
         // Also update the conversations list cache
-        queryClient.setQueryData(
+        queryClient.setQueryData<Conversation[]>(
           queryKeys.conversations,
-          (oldData: any) => {
+          (oldData) => {
             if (!Array.isArray(oldData)) return oldData;
 
-            return oldData.map((conv: any) => {
+            return oldData.map((conv) => {
               if (conv.id !== message.conversationId) return conv;
               
               return {
@@ -69,18 +73,18 @@ export const useConversationSocket = (conversationId: string) => {
       }
     };
 
-    const onMessageRead = (data: { conversationId: string; userId: string; messageId: string }) => {
+    const onMessageRead = (data: MessageReadPayload) => {
       if (!data.conversationId || !data.userId || !data.messageId) return;
 
-      queryClient.setQueryData(
+      queryClient.setQueryData<Conversation[]>(
         queryKeys.conversations,
-        (oldData: any) => {
+        (oldData) => {
           if (!Array.isArray(oldData)) return oldData;
 
-          return oldData.map((conv: any) => {
+          return oldData.map((conv) => {
             if (conv.id !== data.conversationId) return conv;
 
-            const updatedMembers = conv.members.map((member: any) => {
+            const updatedMembers = conv.members.map((member) => {
               if (member.userId !== data.userId) return member;
               
               // Only move cursor forward

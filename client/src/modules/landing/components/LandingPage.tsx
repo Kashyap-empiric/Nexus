@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, MessageSquare, Shield, Zap, CheckCircle, Globe2, Layers, Cpu, Code2, LayoutDashboard } from "lucide-react";
+import { MessageSquare, Shield, Zap, LayoutDashboard } from "lucide-react";
 import { APP_ROUTES } from "@/shared/constants/app_routes";
 
 export const LandingPage = () => {

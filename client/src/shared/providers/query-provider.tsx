@@ -11,8 +11,10 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
           queries: {
             // Don't retry on client errors (4xx) — these are auth/not-found errors,
             // not transient network failures. Only retry on 5xx / network errors.
-            retry: (failureCount, error: any) => {
-              const status = error?.response?.status;
+            retry: (failureCount, error: unknown) => {
+              const status = typeof error === 'object' && error !== null && 'response' in error 
+                ? (error as { response?: { status?: number } }).response?.status 
+                : undefined;
               if (status && status >= 400 && status < 500) return false;
               return failureCount < 2;
             },
