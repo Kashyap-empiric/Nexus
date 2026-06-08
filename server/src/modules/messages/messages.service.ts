@@ -1,7 +1,5 @@
 import { prisma } from "@/lib/db.js";
 import { uuidv7 } from "uuidv7";
-import { getIO } from "@/socket/socket.js";
-import { SOCKET_EVENTS } from "@/shared/socket-events.js";
 
 export const getMessages = async (conversationId: string, cursor: string | undefined, limit: number) => {
   const messages = await prisma.message.findMany({
@@ -57,13 +55,6 @@ export const createMessage = async (conversationId: string, userId: string, cont
       },
     },
   });
-
-  try {
-    const io = getIO();
-    io.to(`conversation:${conversationId}`).emit(SOCKET_EVENTS.MESSAGE_NEW, message);
-  } catch (err) {
-    console.error("[Socket.io] Failed to emit message:new", err);
-  }
 
   return message;
 };

@@ -4,15 +4,15 @@ import { useConversationDetailsQuery } from "../hooks/useConversations";
 import { useConversationSocket } from "../hooks/useConversationSocket";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/shared/lib/supabase";
 
 interface ActiveConversationProps {
   conversationId: string;
 }
 
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeToggle } from "@/shared/components/theme-toggle";
 
 export function ActiveConversation({ conversationId }: ActiveConversationProps) {
   useConversationSocket(conversationId);
@@ -23,7 +23,7 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
       if (data.user) setCurrentUserId(data.user.id);
     });
   }, []);
-  
+
   const { data: conversation, isLoading } = useConversationDetailsQuery(conversationId);
 
   if (isLoading) {

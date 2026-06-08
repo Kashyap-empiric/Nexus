@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { Search, Plus, LogOut } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import { NewConversationModal } from "./NewConversationModal";
 import { useConversationsQuery } from "../hooks/useConversations";
 import { useAuth } from "@/modules/auth";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/shared/lib/supabase";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
@@ -71,8 +71,8 @@ export function Sidebar() {
                       key={chat.id}
                       href={`/conversations/${chat.id}`}
                       className={`flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors ${isActive
-                          ? "bg-primary/10 text-primary font-medium dark:bg-white/10 dark:text-foreground"
-                          : "text-muted-foreground hover:bg-muted/80 hover:text-foreground dark:hover:bg-white/5"
+                        ? "bg-primary/10 text-primary font-medium dark:bg-white/10 dark:text-foreground"
+                        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground dark:hover:bg-white/5"
                         }`}
                     >
                       <Avatar className="h-7 w-7 shrink-0 rounded-md">

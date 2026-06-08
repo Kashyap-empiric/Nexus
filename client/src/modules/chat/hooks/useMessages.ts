@@ -1,6 +1,8 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as messagesApi from "../api/messages.api";
-import { queryKeys } from "@/constants/queryKeys";
+import { queryKeys } from "@/shared/constants/queryKeys";
+import { socket } from "@/shared/lib/socket";
+import { SOCKET_EVENTS } from "@/shared/socket-events";
 import type { User } from "./useConversations";
 
 export interface Message {
@@ -27,8 +29,20 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (content: string) => messagesApi.createMessage(conversationId, content),
-    onMutate: async (newContent) => {
+    mutationFn: ({ content, tempId }: { content: string; tempId: string }) => {
+      return new Promise<Message>((resolve, reject) => {
+        socket.emit(SOCKET_EVENTS.MESSAGE_SEND, { conversationId, content, tempId }, (response: any) => {
+          if (response?.error) {
+            reject(new Error(response.error));
+          } else if (response?.success && response?.message) {
+            resolve(response.message);
+          } else {
+            reject(new Error("Unknown error"));
+          }
+        });
+      });
+    },
+    onMutate: async ({ content, tempId }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.messages(conversationId) });
 
       const userId = currentUser?.id || "me";
@@ -38,8 +52,8 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
       const previousMessages = queryClient.getQueryData(queryKeys.messages(conversationId));
 
       const optimisticMessage = {
-        id: `temp-${Date.now()}`,
-        content: newContent,
+        id: tempId,
+        content: content,
         conversationId,
         userId: userId,
         createdAt: new Date().toISOString(),
@@ -62,7 +76,7 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
         };
       });
 
-      return { previousMessages, localId: optimisticMessage.id };
+      return { previousMessages, localId: tempId };
     },
     onSuccess: (realMessage, variables, context) => {
       queryClient.setQueryData(queryKeys.messages(conversationId), (old: any) => {
@@ -70,7 +84,7 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
 
         const newPages = old.pages.map((page: any) => ({
           ...page,
-          data: page.data.map((m: any) => 
+          data: page.data.map((m: any) =>
             m.id === context?.localId ? realMessage : m
           )
         }));
@@ -81,7 +95,7 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
         };
       });
     },
-    onError: (err, newContent, context) => {
+    onError: (err, variables, context) => {
       if (context?.previousMessages) {
         queryClient.setQueryData(queryKeys.messages(conversationId), context.previousMessages);
       }

@@ -1,9 +1,9 @@
 import axios from "axios";
-import { supabase } from "@/lib/supabase";
-import { APP_ROUTES } from "@/constants/app_routes";
+import { supabase } from "@/shared/lib/supabase";
+import { APP_ROUTES } from "@/shared/constants/app_routes";
 
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api",
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
 });
 
 api.interceptors.request.use(async (config) => {
@@ -21,7 +21,7 @@ api.interceptors.response.use(
       const { data, error: refreshError } = await supabase.auth.getSession();
 
       if (refreshError || !data.session) {
-        window.location.href = APP_ROUTES.AUTH.LOGIN;
+        await supabase.auth.signOut();
         return Promise.reject(error);
       }
 

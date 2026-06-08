@@ -1,12 +1,16 @@
+"use client";
+
 import { useEffect } from "react";
 import { socket } from "@/shared/lib/socket";
 import { useChatStore } from "@/modules/chat";
 
-export const useSocket = () => {
+export function SocketProvider() {
   const setSocketStatus = useChatStore((state) => state.setSocketStatus);
 
   useEffect(() => {
-    socket.connect();
+    if (!socket.connected) {
+      socket.connect();
+    }
 
     const onConnect = () => setSocketStatus("connected");
     const onDisconnect = () => setSocketStatus("disconnected");
@@ -20,7 +24,8 @@ export const useSocket = () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
       socket.off("connect_error", onConnectError);
-      socket.disconnect();
     };
   }, [setSocketStatus]);
-};
+
+  return null;
+}

@@ -132,10 +132,11 @@ Client-server communication is divided into two strict pathways to separate pers
 2. **WebSocket (Socket.io):** Used strictly for push-based real-time events (e.g., receiving a message someone else sent, seeing a user come online).
 
 ### Message Delivery Flow
-1. **Send:** The client calls the REST endpoint `POST /api/conversations/:id/messages`.
-2. **Persist:** The Express server validates the user and saves the message to PostgreSQL via Prisma.
-3. **Broadcast:** Upon successful persistence, the server emits a `message:new` Socket.io event specifically to the `conversation:{id}` room.
-4. **Receive:** Connected clients in that room receive the payload and update their React state instantly.
+1. **Send:** The client emits a `message:send` Socket.io event with a deterministic `tempId` and immediately renders it (Optimistic UI). *(Fallback: `POST /api/conversations/:id/messages`)*
+2. **Persist:** The Express socket handler validates the user and saves the message to PostgreSQL via Prisma.
+3. **Broadcast:** Upon successful persistence, the server emits a `message:new` Socket.io event to the `conversation:{id}` room.
+4. **Acknowledge:** The server acknowledges the sender's socket, passing back the saved message to replace the `tempId` optimistic UI.
+5. **Receive:** Connected clients in that room receive the `message:new` broadcast and update their React state instantly.
 
 ---
 
@@ -151,7 +152,7 @@ Client-server communication is divided into two strict pathways to separate pers
 | `GET` | `/api/conversations` | List all DM conversations for the current user. |
 | `POST` | `/api/conversations` | Create a new DM or return an existing one (idempotent). |
 | `GET` | `/api/conversations/:id/messages` | Cursor-based paginated retrieval of a conversation's messages. |
-| `POST` | `/api/conversations/:id/messages` | Send and persist a new message. |
+| `POST` | `/api/conversations/:id/messages` | Send and persist a new message (Fallback for `message:send` socket event). |
 | `PATCH` | `/api/conversations/:id/read` | Update the user's `lastReadMessageId` for read receipts. |
 
 *(Note: Registration, login, and logout are handled directly by the Supabase Client SDK in Next.js).*
@@ -161,6 +162,7 @@ Client-server communication is divided into two strict pathways to separate pers
 **Client → Server**
 - `conversation:join { conversationId }`: Subscribes the socket to a specific conversation room.
 - `conversation:leave { conversationId }`: Unsubscribes the socket.
+- `message:send { tempId, conversationId, content }`: Primary method to send a message. Expects an acknowledgment.
 
 **Server → Client**
 - `message:new { message }`: Broadcasts a newly persisted message to the room.

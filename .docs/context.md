@@ -141,7 +141,7 @@ All authenticated routes expect `Authorization: Bearer <JWT>` header.
 |---|---|---|
 | `conversation:join` | `{ conversationId }` | Join a conversation room |
 | `conversation:leave` | `{ conversationId }` | Leave a conversation room |
-| `message:send` | `{ conversationId, content }` | Send a message (alternative to REST) |
+| `message:send` | `{ tempId, conversationId, content }` | Send a message (returns acknowledgment) |
 | `message:read` | `{ conversationId }` | Mark conversation as read |
 
 **Server to Client:**

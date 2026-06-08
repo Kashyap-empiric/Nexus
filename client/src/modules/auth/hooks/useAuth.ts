@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/shared/lib/supabase";
 import { socket } from "@/shared/lib/socket";
 import { useChatStore } from "@/modules/chat";
-import { APP_ROUTES } from "@/constants/app_routes";
+import { APP_ROUTES } from "@/shared/constants/app_routes";
 import type { LoginFormData, RegisterFormData } from "../schemas/auth";
 
 export const useAuth = () => {

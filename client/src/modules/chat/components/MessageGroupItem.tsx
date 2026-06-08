@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import type { MessageGroup } from "../utils/groupMessages";
 
 export function MessageGroupItem({ group }: { group: MessageGroup }) {

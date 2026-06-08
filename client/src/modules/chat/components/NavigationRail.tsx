@@ -1,5 +1,5 @@
 import { MessagesSquare } from "lucide-react";
-import { APP_ROUTES } from "@/constants/app_routes";
+import { APP_ROUTES } from "@/shared/constants/app_routes";
 import Link from "next/link";
 
 export function NavigationRail() {
