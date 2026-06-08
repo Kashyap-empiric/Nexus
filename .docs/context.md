@@ -1,7 +1,7 @@
 # Nexus: Project Context
 
-> **Last Updated:** 2026-06-03
-> **Status:** Pre-build. Update this file after every major feature is completed.
+> **Last Updated:** 2026-06-08
+> **Status:** Active build (Phase 1 Complete). Update this file after every major feature is completed.
 
 ---
 
@@ -23,7 +23,7 @@ Phase 1 establishes the core messaging foundation: authentication, direct messag
 | Direct Messaging | Private 1-to-1 conversations between users. DM conversations must have exactly 2 members. |
 | Message Persistence | Messages stored in PostgreSQL, retrievable as paginated history. |
 | Real-time Delivery | Messages delivered instantly to connected clients via Socket.io rooms. |
-| Read Receipts | Tracked using `last_read_at` on `ConversationMember`. Unread = `message.created_at > last_read_at`. |
+| Read Receipts | Tracked using `lastReadMessageId` on `ConversationMember`. |
 | Presence | Online/offline status tracked in Redis per user. Uses `socketCount` to handle multi-tab correctly. |
 
 ### Phase 2 (planned)
@@ -105,14 +105,14 @@ Core Phase 1 entities:
 |---|---|
 | `users` | Authenticated users, synced from Supabase Auth |
 | `conversations` | DMs (Phase 1) and Channels (Phase 2). Type field: `DM` or `CHANNEL`. |
-| `conversation_members` | Junction table: user-to-conversation membership. Holds `last_read_at` for read receipts. |
-| `messages` | All messages, linked to a conversation and a user. Ordered by `created_at` ASC. |
+| `conversation_members` | Junction table: user-to-conversation membership. Holds `lastReadMessageId` for read receipts. |
+| `messages` | All messages, linked to a conversation and a user. Ordered by `id` ASC (UUIDv7). |
 
 Phase 2 will add: `workspaces`, `workspace_members`, `reactions`.
 
 Key indexes:
 - `conversation_members(conversation_id, user_id)`
-- `messages(conversation_id, created_at)`
+- `messages(conversation_id, id)`
 
 See the ER diagram in [architecture.md](./architecture.md#3-database-schema).
 
@@ -124,14 +124,12 @@ See the ER diagram in [architecture.md](./architecture.md#3-database-schema).
 
 | Method | Route | Auth | Description |
 |---|---|---|---|
-| POST | `/auth/register` | No | Register a new user |
-| POST | `/auth/login` | No | Login, returns JWT session |
-| POST | `/auth/logout` | Yes | Invalidate session |
-| GET | `/conversations` | Yes | List all DMs for the current user |
-| POST | `/conversations` | Yes | Create a new DM conversation |
-| GET | `/messages?conversationId=` | Yes | Fetch message history for a conversation |
-| POST | `/messages` | Yes | Send a new message |
-| PATCH | `/conversations/:id/read` | Yes | Update `last_read_at` for the current user |
+| GET | `/api/me` | Yes | Returns current Prisma user for a valid Supabase JWT |
+| GET | `/api/conversations` | Yes | List all DMs for the current user |
+| POST | `/api/conversations` | Yes | Create a new DM conversation |
+| GET | `/api/conversations/:id/messages` | Yes | Fetch message history for a conversation |
+| POST | `/api/conversations/:id/messages` | Yes | Send a new message |
+| PATCH | `/api/conversations/:id/read` | Yes | Update `lastReadMessageId` for the current user |
 
 All authenticated routes expect `Authorization: Bearer <JWT>` header.
 

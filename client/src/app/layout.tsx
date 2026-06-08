@@ -12,9 +12,9 @@ export const metadata: Metadata = {
   description: "A secure chat application",
 };
 
-import { ThemeProvider } from "@/components/providers/theme-provider";
+import { ThemeProvider } from "@/providers/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { QueryProvider } from "@/components/providers/query-provider";
+import { QueryProvider } from "@/providers/query-provider";
 
 export default function RootLayout({
   children,
@@ -35,9 +35,6 @@ export default function RootLayout({
         >
           <QueryProvider>
             {children}
-            <div className="fixed bottom-4 right-4 z-50">
-              <ThemeToggle />
-            </div>
           </QueryProvider>
         </ThemeProvider>
       </body>
