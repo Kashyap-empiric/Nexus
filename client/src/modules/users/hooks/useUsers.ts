@@ -6,6 +6,6 @@ export const useUsersSearchQuery = (query: string, isOpen: boolean) => {
   return useQuery({
     queryKey: queryKeys.usersSearch(query),
     queryFn: () => usersApi.searchUsers(query),
-    enabled: !!query.trim() && isOpen,
+    enabled: isOpen,
   });
 };
