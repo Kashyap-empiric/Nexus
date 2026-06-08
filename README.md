@@ -1,5 +1,15 @@
 # Nexus
 
+## How to Start a Conversation
+
+To test the application or start a new chat:
+1. Locate the **Direct Messages** section in the left sidebar.
+2. Click the **`+`** (plus) icon next to the section title.
+3. A modal will appear instantly displaying a **Suggested Users** list containing existing registered accounts.
+4. Click on any user from this list to automatically create a direct message channel and begin chatting.
+
+---
+
 Nexus is a real-time messaging application structured around a client-server architecture. The project facilitates direct communication between users with features including real-time text exchange, presence tracking, and read receipts.
 
 ## Architecture
@@ -16,6 +26,7 @@ The backend is a Node.js application utilizing the Express framework. It exposes
 
 - **Real-time Messaging:** Messages are transmitted and received over WebSockets, minimizing latency.
 - **Direct Messages:** Users can initiate one-on-one conversations.
+- **User Discovery:** New users are automatically presented with a suggested list of active members to facilitate immediate connection.
 - **Presence Indicators:** The system tracks and displays active socket connections to denote user online status.
 - **Read Receipts:** Unread message states are calculated based on the latest message ID and the user's cursor position.
 - **Rate Limiting:** Socket middleware restricts the volume of message events to prevent system abuse.

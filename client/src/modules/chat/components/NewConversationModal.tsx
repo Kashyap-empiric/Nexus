@@ -72,6 +72,11 @@ export function NewConversationModal({ isOpen, onClose }: NewConversationModalPr
             </div>
           ) : users && users.length > 0 ? (
             <div className="space-y-1">
+              {!query.trim() && (
+                <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                  Suggested Users
+                </div>
+              )}
               {users.map((user) => (
                 <button
                   key={user.id}
