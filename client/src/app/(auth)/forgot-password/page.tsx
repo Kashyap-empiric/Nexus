@@ -4,10 +4,10 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { supabase } from "../../../lib/supabase";
-import { Button } from "../../../components/ui/button";
-import { Input } from "../../../components/ui/input";
-import { Label } from "../../../components/ui/label";
+import { supabase } from "@/shared/lib/supabase";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
 import {
   Card,
   CardContent,
@@ -15,11 +15,12 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "../../../components/ui/card";
+} from "@/shared/components/ui/card";
 import Link from "next/link";
+import { APP_ROUTES } from "@/shared/constants/app_routes";
 
 const forgotPasswordSchema = z.object({
-  email: z.email({ message: "Please enter a valid email address." }),
+  email: z.string().email({ message: "Please enter a valid email address." }),
 });
 
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
@@ -50,8 +51,9 @@ export default function ForgotPasswordPage() {
       );
       if (resetError) throw resetError;
       setSent(true);
-    } catch (err: any) {
-      setError(err.message || "Something went wrong. Please try again.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -110,7 +112,7 @@ export default function ForgotPasswordPage() {
           <p className="text-sm text-muted-foreground">
             Remember your password?{" "}
             <Link
-              href="/login"
+              href={APP_ROUTES.AUTH.LOGIN}
               className="font-semibold text-primary hover:underline"
             >
               Sign in

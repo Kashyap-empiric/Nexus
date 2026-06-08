@@ -1,6 +1,6 @@
 import type { Response, NextFunction } from "express";
-import type { AuthRequest } from "../types/shared.js";
-import { prisma } from "../lib/db.js";
+import type { AuthRequest } from "@/types/shared.js";
+import { prisma } from "@/lib/db.js";
 
 export const requireConversationMember = ({ paramName }: { paramName: string }) => {
     return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {

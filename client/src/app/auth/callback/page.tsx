@@ -2,7 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "../../../lib/supabase";
+import { supabase } from "@/shared/lib/supabase";
+import { APP_ROUTES } from "@/shared/constants/app_routes";
 
 export default function AuthCallback() {
   const router = useRouter();
@@ -11,7 +12,7 @@ export default function AuthCallback() {
   const redirect = () => {
     if (!redirected.current) {
       redirected.current = true;
-      router.push("/conversations");
+      router.push(APP_ROUTES.CONVERSATIONS.INDEX);
     }
   };
 
