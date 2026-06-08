@@ -69,7 +69,7 @@ export const markConversationAsRead = async (req: AuthRequest, res: Response): P
     }
 
     await conversationsService.updateLastReadMessage(conversationId, userId, messageId);
-    
+
     res.status(200).json({ success: true });
   } catch (error) {
     console.error("Error marking conversation as read:", error);

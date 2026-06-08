@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { authMiddleware } from "../../middlewares/auth.js";
-import { validate } from "../../middlewares/validate.js";
+import { authMiddleware } from "@/middlewares/auth.js";
+import { validate } from "@/middlewares/validate.js";
 import {
   createConversation,
   getConversations,
@@ -8,9 +8,9 @@ import {
   markConversationAsRead
 } from "./conversations.controller.js";
 import { createConversationSchema, markReadSchema } from "./conversations.schema.js";
-import { requireConversationMember } from "../../middlewares/requireConversationMember.js";
+import { requireConversationMember } from "@/middlewares/requireConversationMember.js";
 
-import messagesRoutes from "../messages/messages.routes.js";
+import messagesRoutes from "@/modules/messages/messages.routes.js";
 
 const router = Router();
 

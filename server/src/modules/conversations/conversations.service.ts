@@ -1,5 +1,7 @@
 import { uuidv7 } from "uuidv7"
 import { prisma } from "@/lib/db"
+import { getIO } from "@/socket/socket.js";
+import { SOCKET_EVENTS } from "@/shared/socket-events.js";
 
 const buildDmPair = (userIdA: string, userIdB: string) => {
     return [userIdA, userIdB].sort().join(":");
@@ -115,7 +117,7 @@ export const createOrGetDM = async (userIdA: string, userIdB: string) => {
 }
 
 export const updateLastReadMessage = async (conversationId: string, userId: string, messageId: string) => {
-    return prisma.conversationMember.update({
+    const member = await prisma.conversationMember.update({
         where: {
             conversationId_userId: {
                 conversationId,
@@ -126,4 +128,17 @@ export const updateLastReadMessage = async (conversationId: string, userId: stri
             lastReadMessageId: messageId
         }
     });
+
+    try {
+        const io = getIO();
+        io.to(`conversation:${conversationId}`).emit(SOCKET_EVENTS.MESSAGE_READ, {
+            conversationId,
+            userId,
+            messageId
+        });
+    } catch (err) {
+        console.error("[Socket.io] Failed to emit message:read", err);
+    }
+
+    return member;
 };

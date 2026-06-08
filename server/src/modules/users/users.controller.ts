@@ -1,5 +1,5 @@
 import type { Response } from "express";
-import type { AuthRequest } from "../../types/shared.js";
+import type { AuthRequest } from "@/types/shared.js";
 import * as usersService from "./users.service.js";
 import type { SearchUsersQuery } from "./users.schema.js";
 

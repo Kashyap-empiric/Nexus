@@ -1,5 +1,5 @@
 import type { Response } from "express";
-import type { AuthRequest } from "../../types/shared.js";
+import type { AuthRequest } from "@/types/shared.js";
 import * as messagesService from "./messages.service.js";
 import { getMessagesQuerySchema, type CreateMessageBody, type GetMessagesQuery } from "./messages.schema.js";
 
@@ -27,6 +27,15 @@ export const createMessage = async (req: AuthRequest, res: Response): Promise<vo
     const { content } = req.body as CreateMessageBody;
 
     const message = await messagesService.createMessage(conversationId, userId, content);
+
+    try {
+      const { getIO } = await import("@/socket/socket.js");
+      const { SOCKET_EVENTS } = await import("@/shared/socket-events.js");
+      const io = getIO();
+      io.to(`conversation:${conversationId}`).emit(SOCKET_EVENTS.MESSAGE_NEW, message);
+    } catch (err) {
+      console.error("[Socket.io] Failed to emit message:new from HTTP endpoint", err);
+    }
 
     res.status(201).json({
       data: message,

@@ -1,14 +1,15 @@
 "use client";
 
-import { Sidebar } from "@/components/chat/Sidebar";
-
+import { Sidebar, NavigationRail } from "@/modules/chat";
 export default function ConversationsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      <NavigationRail />
       <Sidebar />
       <main className="flex-1 flex flex-col min-w-0 bg-background h-full">
         {children}
