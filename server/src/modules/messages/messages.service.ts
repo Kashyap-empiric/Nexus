@@ -1,4 +1,4 @@
-import { prisma } from "../../lib/db.js";
+import { prisma } from "@/lib/db.js";
 import { uuidv7 } from "uuidv7";
 
 export const getMessages = async (conversationId: string, cursor: string | undefined, limit: number) => {
@@ -38,26 +38,29 @@ export const getMessages = async (conversationId: string, cursor: string | undef
 };
 
 export const createMessage = async (conversationId: string, userId: string, content: string) => {
-  const message = await prisma.message.create({
-    data: {
-      id: uuidv7(),
-      conversationId,
-      userId,
-      content,
-    },
-    include: {
-      user: {
-        select: {
-          id: true,
-          username: true,
-          avatarUrl: true,
+  const [message] = await prisma.$transaction([
+    prisma.message.create({
+      data: {
+        id: uuidv7(),
+        conversationId,
+        userId,
+        content,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true,
+          },
         },
       },
-    },
-  });
-
-  // Day 3:
-  // emit socket event here for real-time updates
+    }),
+    prisma.conversation.update({
+      where: { id: conversationId },
+      data: { updatedAt: new Date() }
+    })
+  ]);
 
   return message;
 };

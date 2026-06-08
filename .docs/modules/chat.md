@@ -1,6 +1,6 @@
 # Chat Module (Conversations & Messages)
 
-The chat module forms the backbone of the Nexus direct messaging system. It handles creating private DMs between users, paginated message fetching, message creation, and read receipts. Currently, it operates exclusively via REST endpoints, with real-time WebSocket augmentation planned for Day 3.
+The chat module forms the backbone of the Nexus direct messaging system. It handles creating private DMs between users, paginated message fetching, message creation, and read receipts. It utilizes a hybrid approach: REST for fetching history/metadata, and WebSockets (`socket.io`) for real-time message delivery and optimistic UI updates.
 
 ## Core Features
 
@@ -26,7 +26,7 @@ The Chat module interacts with three core Prisma models:
 
 ### Messages
 - `GET /api/conversations/:id/messages?cursor=<uuid>&limit=50`: Fetches messages for a conversation. If `cursor` is omitted, fetches the newest messages.
-- `POST /api/conversations/:id/messages`: Creates a new message. Emits real-time Socket.io events (post Day 3).
+- `POST /api/conversations/:id/messages`: Fallback REST endpoint to create a new message. The primary method is emitting the `message:send` Socket.io event with a `tempId` for optimistic UI updates.
 
 ## Read Receipts Architecture
 
@@ -61,6 +61,4 @@ On the client side, read receipts are triggered by a focused `useEffect` inside 
 ```
 
 ## Future Upgrades
-- Optimistic updates when sending messages (Day 3).
-- Real-time Socket.io broadcasting of `READ_RECEIPT` events to instantly update UI ticks.
 - Scroll-to-bottom improvements and "unread message" dividers.

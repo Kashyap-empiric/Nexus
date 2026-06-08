@@ -10,14 +10,13 @@ import conversationsRoutes from "./modules/conversations/conversations.routes.js
 import usersRoutes from "./modules/users/users.routes.js";
 
 import { prisma } from "./lib/db.js";
+import { ENV } from "./config/env.js";
 
 const app = express();
 
 const allowedOrigins = [
-  "http://localhost:3000",
-  "http://localhost:3002",
-  process.env.CLIENT_URL
-].filter(Boolean);
+  ENV.CLIENT_URL
+];
 
 app.use(cors({ origin: allowedOrigins as string[] }));
 app.use(express.json());
