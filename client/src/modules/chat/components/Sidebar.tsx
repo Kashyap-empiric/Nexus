@@ -11,8 +11,10 @@ import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { Input } from "@/shared/components/ui/input";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useGlobalSocket } from "../hooks/useGlobalSocket";
 
 export function Sidebar() {
+  useGlobalSocket();
   const { logout } = useAuth();
   const { data: conversations, isLoading } = useConversationsQuery();
   const [currentAuthUser, setCurrentAuthUser] = useState<SupabaseUser | null>(null);

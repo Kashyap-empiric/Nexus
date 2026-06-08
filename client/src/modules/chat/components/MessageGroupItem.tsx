@@ -17,7 +17,7 @@ export function MessageGroupItem({ group }: { group: MessageGroup }) {
         return (
           <div
             key={msg.id}
-            className={`group/row flex hover:bg-black/5 dark:hover:bg-white-[0.03] px-4 ${isFirst ? "pt-2 pb-0.5" : "py-0.5"} ${msg.optimistic ? "opacity-70" : ""}`}
+            className={`group/row flex hover:bg-black/5 dark:hover:bg-white-[0.03] px-4 animate-in fade-in slide-in-from-bottom-1 duration-300 ease-out ${isFirst ? "pt-2 pb-0.5" : "py-0.5"} ${msg.optimistic || msg.pending ? "opacity-70" : ""}`}
           >
             {/* Gutter: Avatar or Hover Timestamp */}
             <div className="w-[50px] shrink-0 flex justify-center items-start relative select-none">
