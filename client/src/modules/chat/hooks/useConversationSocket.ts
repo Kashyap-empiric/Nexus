@@ -46,16 +46,54 @@ export const useConversationSocket = (conversationId: string) => {
             };
           }
         );
+
+        // Also update the conversations list cache
+        queryClient.setQueryData(
+          queryKeys.conversations,
+          (oldData: any) => {
+            if (!Array.isArray(oldData)) return oldData;
+
+            return oldData.map((conv: any) => {
+              if (conv.id !== message.conversationId) return conv;
+              
+              return {
+                ...conv,
+                updatedAt: new Date().toISOString(),
+                messages: [message],
+              };
+            });
+          }
+        );
       } catch (err) {
         console.error("Failed to parse incoming message", err);
       }
     };
 
-    const onMessageRead = (data: any) => {
-      if (data.conversationId !== conversationId) return;
+    const onMessageRead = (data: { conversationId: string; userId: string; messageId: string }) => {
+      if (!data.conversationId || !data.userId || !data.messageId) return;
 
-      // Update read receipt cache if we implement it, or just invalidate
-      // For now, no-op or specific cache mutation as needed
+      queryClient.setQueryData(
+        queryKeys.conversations,
+        (oldData: any) => {
+          if (!Array.isArray(oldData)) return oldData;
+
+          return oldData.map((conv: any) => {
+            if (conv.id !== data.conversationId) return conv;
+
+            const updatedMembers = conv.members.map((member: any) => {
+              if (member.userId !== data.userId) return member;
+              
+              // Only move cursor forward
+              if (!member.lastReadMessageId || data.messageId > member.lastReadMessageId) {
+                return { ...member, lastReadMessageId: data.messageId };
+              }
+              return member;
+            });
+
+            return { ...conv, members: updatedMembers };
+          });
+        }
+      );
     };
 
     socket.on(SOCKET_EVENTS.MESSAGE_NEW, onMessageNew);

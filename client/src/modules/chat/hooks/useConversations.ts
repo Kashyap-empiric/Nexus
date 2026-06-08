@@ -11,6 +11,7 @@ export interface User {
 export interface ConversationMember {
   id: string;
   userId: string;
+  lastReadMessageId: string | null;
   user: User;
 }
 
@@ -21,6 +22,7 @@ export interface Conversation {
   name: string | null;
   dmPair: string | null;
   members: ConversationMember[];
+  messages?: any[];
   updatedAt: string;
 }
 
