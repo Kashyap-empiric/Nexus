@@ -4,13 +4,14 @@ import { socketAuthMiddleware } from "./middlewares/auth.js";
 import { registerPresenceHandlers } from "./handlers/presence.handler.js";
 import { registerMessageHandlers } from "./handlers/message.handler.js";
 import { prisma } from "@/lib/db.js";
+import { ENV } from "@/config/env.js";
 
 let io: Server;
 
 export const initSocket = (httpServer: HttpServer) => {
   io = new Server(httpServer, {
     cors: {
-      origin: process.env.CLIENT_URL,
+      origin: ENV.CLIENT_URL,
       methods: ["GET", "POST"]
     },
   });
@@ -36,6 +37,7 @@ export const initSocket = (httpServer: HttpServer) => {
       }
     } catch (err) {
       console.error("[Socket.io] Failed to auto-join rooms:", err);
+      socket.disconnect(true);
     }
 
     registerPresenceHandlers(io, socket);

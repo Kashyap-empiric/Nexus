@@ -13,37 +13,42 @@ export const useConversationSocket = (conversationId: string) => {
     if (!conversationId) return;
 
     const onMessageNew = (message: any) => {
-      if (message.conversationId !== conversationId) return;
+      try {
+        if (!message || !message.id) throw new Error("Invalid payload");
+        if (message.conversationId !== conversationId) return;
 
-      queryClient.setQueryData(
-        queryKeys.messages(conversationId),
-        (oldData: any) => {
-          if (!oldData || !oldData.pages) return oldData;
+        queryClient.setQueryData(
+          queryKeys.messages(conversationId),
+          (oldData: any) => {
+            if (!oldData || !oldData.pages) return oldData;
 
-          const updatedPages = oldData.pages.map((page: any, index: number) => {
-            if (index === 0) {
-              // Check if optimistic message already exists
-              const exists = page.data.some((m: any) => m.id === message.id || m.pending);
-              if (exists) {
+            const updatedPages = oldData.pages.map((page: any, index: number) => {
+              if (index === 0) {
+                // Check if optimistic message already exists
+                const exists = page.data.some((m: any) => m.id === message.id || m.pending);
+                if (exists) {
+                  return {
+                    ...page,
+                    data: page.data.map((m: any) => (m.pending ? message : m)),
+                  };
+                }
                 return {
                   ...page,
-                  data: page.data.map((m: any) => (m.pending ? message : m)),
+                  data: [message, ...page.data],
                 };
               }
-              return {
-                ...page,
-                data: [message, ...page.data],
-              };
-            }
-            return page;
-          });
+              return page;
+            });
 
-          return {
-            ...oldData,
-            pages: updatedPages,
-          };
-        }
-      );
+            return {
+              ...oldData,
+              pages: updatedPages,
+            };
+          }
+        );
+      } catch (err) {
+        console.error("Failed to parse incoming message", err);
+      }
     };
 
     const onMessageRead = (data: any) => {

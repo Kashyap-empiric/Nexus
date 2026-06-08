@@ -12,7 +12,8 @@ export const socketAuthMiddleware = async (socket: Socket, next: (err?: Error) =
     const user = await verifyToken(token);
     socket.data.user = user;
     next();
-  } catch (error) {
-    next(new Error("Authentication error: Invalid token"));
+  } catch (error: any) {
+    console.error("[Socket.io Auth] Authentication failed:", error);
+    next(new Error(error.message?.includes("token") ? "Authentication error: Invalid token" : "Authentication Service Unavailable"));
   }
 };
