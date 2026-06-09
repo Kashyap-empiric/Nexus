@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Search, Plus, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import { NewConversationModal } from "./NewConversationModal";
+import { PresenceIndicator } from "./PresenceIndicator";
 import { useConversationsQuery } from "../hooks/useConversations";
 import { useAuth } from "@/modules/auth";
 import { supabase } from "@/shared/lib/supabase";
@@ -12,6 +13,8 @@ import { Input } from "@/shared/components/ui/input";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useGlobalSocket } from "../hooks/useGlobalSocket";
+import { useChatStore } from "../store/chatStore";
+import { cn } from "@/shared/lib/utils";
 
 export function Sidebar() {
   useGlobalSocket();
@@ -31,6 +34,8 @@ export function Sidebar() {
   // Try to find the actual database user profile from the conversation members
   const myProfile = conversations?.[0]?.members.find((m) => m.userId === currentAuthUser?.id)?.user;
 
+  const socketStatus = useChatStore((state) => state.socketStatus);
+  const statusLabel = socketStatus === "connected" ? "Online" : socketStatus === "connecting" ? "Connecting..." : "Offline";
 
   const dms = [...(conversations || [])]
     .filter((c) => c.type === "DM")
@@ -89,10 +94,15 @@ export function Sidebar() {
                         : "text-muted-foreground hover:bg-muted/80 hover:text-foreground dark:hover:bg-white/5"
                         }`}
                     >
-                      <Avatar className="h-7 w-7 shrink-0 rounded-md">
-                        <AvatarImage src={otherMember?.user.avatarUrl || undefined} className="rounded-md" />
-                        <AvatarFallback className="text-[10px] leading-none bg-primary/20 text-primary rounded-md font-medium">{name[0]?.toUpperCase()}</AvatarFallback>
-                      </Avatar>
+                      <div className="relative">
+                        <Avatar className="h-7 w-7 shrink-0 rounded-md">
+                          <AvatarImage src={otherMember?.user.avatarUrl || undefined} className="rounded-md" />
+                          <AvatarFallback className="text-[10px] leading-none bg-primary/20 text-primary rounded-md font-medium">{name[0]?.toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        {otherMember?.userId && (
+                          <PresenceIndicator userId={otherMember.userId} className="-bottom-0.5 -right-0.5" />
+                        )}
+                      </div>
                       <span className={`truncate leading-none flex-1 ${isUnread && !isActive ? 'font-bold text-foreground' : ''}`}>{name}</span>
                       {isUnread && !isActive && (
                         <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
@@ -108,17 +118,25 @@ export function Sidebar() {
         {/* Bottom: User Profile */}
         <div className="p-4 border-t bg-background shrink-0 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <Avatar className="h-8 w-8 shrink-0">
-              <AvatarImage src={myProfile?.avatarUrl || currentAuthUser?.user_metadata?.avatar_url || currentAuthUser?.user_metadata?.avatarUrl || undefined} />
-              <AvatarFallback className="text-xs leading-none">
-                {myProfile?.username?.[0]?.toUpperCase() || currentAuthUser?.user_metadata?.username?.[0]?.toUpperCase() || "ME"}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative shrink-0">
+              <Avatar className="h-8 w-8 shrink-0">
+                <AvatarImage src={myProfile?.avatarUrl || currentAuthUser?.user_metadata?.avatar_url || currentAuthUser?.user_metadata?.avatarUrl || undefined} />
+                <AvatarFallback className="text-xs leading-none">
+                  {myProfile?.username?.[0]?.toUpperCase() || currentAuthUser?.user_metadata?.username?.[0]?.toUpperCase() || "ME"}
+                </AvatarFallback>
+              </Avatar>
+              <span
+                className={cn(
+                  "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background",
+                  socketStatus === "connected" ? "bg-green-500" : socketStatus === "connecting" ? "bg-yellow-500" : "bg-muted-foreground"
+                )}
+              />
+            </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium leading-none truncate mb-1">
                 {myProfile?.username || currentAuthUser?.user_metadata?.username || "My Account"}
               </p>
-              <p className="text-xs text-muted-foreground leading-none truncate">Online</p>
+              <p className="text-xs text-muted-foreground leading-none truncate">{statusLabel}</p>
             </div>
           </div>
           <button

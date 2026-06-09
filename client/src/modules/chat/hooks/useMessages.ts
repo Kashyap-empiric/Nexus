@@ -29,9 +29,13 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
       return new Promise<Message>((resolve, reject) => {
         socket.emit(SOCKET_EVENTS.MESSAGE_SEND, { conversationId, content, tempId }, (response: SocketResponse<Message>) => {
           if (response?.error) {
-            reject(new Error(response.error));
-          } else if (response?.success && response?.message) {
-            resolve(response.message);
+            // error can be a string (rate limiter) or a structured object { code, message, retryable }
+            const errorMsg = typeof response.error === 'string'
+              ? response.error
+              : response.error.message || "Failed to send message";
+            reject(new Error(errorMsg));
+          } else if (response?.success && response?.data) {
+            resolve(response.data);
           } else {
             reject(new Error("Unknown error"));
           }

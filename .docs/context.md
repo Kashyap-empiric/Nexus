@@ -1,7 +1,7 @@
 # Nexus: Project Context
 
-> **Last Updated:** 2026-06-08
-> **Status:** Active build (Phase 1 Complete). Update this file after every major feature is completed.
+> **Last Updated:** 2026-06-09
+> **Status:** Active build (Phase 1 core features complete — message editing and soft-delete infrastructure exists but no REST endpoints yet).
 
 ---
 
@@ -9,7 +9,7 @@
 
 Nexus is a real-time messaging and collaboration platform, built as a Slack-like product.
 
-Phase 1 establishes the core messaging foundation: authentication, direct messaging, real-time delivery, message persistence, read receipts, and user presence. All subsequent phases build on top of this foundation.
+Phase 1 establishes the core messaging foundation: authentication, direct messaging, real-time delivery, message persistence, read receipts, and user presence (Redis-backed dual-write presence store with in-memory fallback, multi-tab support). All subsequent phases build on top of this foundation.
 
 ---
 
@@ -21,10 +21,11 @@ Phase 1 establishes the core messaging foundation: authentication, direct messag
 |---|---|
 | Authentication | Email/password registration and login via Supabase Auth. Session managed by Supabase SDK. |
 | Direct Messaging | Private 1-to-1 conversations between users. DM conversations must have exactly 2 members. |
-| Message Persistence | Messages stored in PostgreSQL, retrievable as paginated history. |
-| Real-time Delivery | Messages delivered instantly to connected clients via Socket.io rooms. |
+| Message Persistence | Messages stored in PostgreSQL, retrievable as paginated history. 🟡 Soft-delete field (`deletedAt`) exists in schema + migration applied, no API endpoint yet. |
+| Real-time Delivery | Messages delivered instantly to connected clients via Socket.io rooms. Dual path: Socket `message:send` + REST fallback `POST /messages` both broadcast `message:new`. |
+| Message Editing | 🟡 `editMessage` service exists with validation (owns message, not deleted, non-empty). No REST endpoint exposed yet. |
 | Read Receipts | Tracked using `lastReadMessageId` on `ConversationMember`. |
-| Presence | Online/offline status tracked in Redis per user. Uses `socketCount` to handle multi-tab correctly. |
+| Presence | ✅ **Fully implemented.** Redis-backed `presenceStore.ts` with in-memory fallback. Multi-tab handling via socket ID sets. `user:online` / `user:offline` / `presence:initial` events all wired. `PresenceIndicator` component shows green dot for online users. |
 
 ### Phase 2 (planned)
 
@@ -44,7 +45,7 @@ Nexus uses a monorepo structure with a decoupled frontend and backend.
 - **Server:** Express.js (TypeScript, Socket.io)
 - **Database:** Supabase PostgreSQL accessed via Prisma ORM
 - **Auth:** Supabase Auth (JWT-based, session managed by SDK)
-- **Presence:** Upstash Redis
+- **Presence:** Upstash Redis (dual-write with in-memory fallback)
 - **Hosting:** Render (separate web services for client and server)
 - **CI/CD:** GitHub Actions
 
@@ -149,9 +150,11 @@ All authenticated routes expect `Authorization: Bearer <JWT>` header.
 | Event | Payload | Description |
 |---|---|---|
 | `message:new` | Message object | Broadcast new message to room |
-| `message:read` | `{ conversationId, userId, lastReadAt }` | Broadcast read receipt to room |
-| `user:online` | `{ userId }` | User came online |
-| `user:offline` | `{ userId, lastSeen }` | User went offline |
+| `message:read` | `{ conversationId, userId, messageId }` | Broadcast read receipt to room |
+| `user:online` | `{ userId }` | ✅ Emitted on first socket connection (transition from offline to online) |
+| `user:offline` | `{ userId }` | ✅ Emitted when last socket disconnects (all tabs/devices closed) |
+| `presence:initial` | `{ userIds }` | ✅ Emitted on connect — sends snapshot of all currently online users |
+| `conversation:new` | Conversation object | ✅ Emitted to `user:<userId>` rooms when a new DM is created (dynamic socket join) |
 
 ---
 
@@ -159,6 +162,10 @@ All authenticated routes expect `Authorization: Bearer <JWT>` header.
 
 | Limitation | Details |
 |---|---|
+| Cursor pagination orders by `createdAt` | `getMessages` uses `createdAt: "desc"` instead of `id` (UUIDv7). Should use `id` for consistency with monotonic ordering spec |
+| Soft-deleted messages not filtered | `getMessages` does not exclude messages with `deletedAt != null` |
+| No message edit/delete API endpoints | `editMessage` service exists but no route. Soft-delete schema + migration done but no route |
+| No rate-limit env config | REST rate limiters use hardcoded defaults, not reading env vars properly (uses `process.env` directly instead of `ENV` config) |
 | No file uploads | Phase 1 supports text-only messages |
 | No search | No full-text search in Phase 1 |
 | No message editing or deletion | Not in Phase 1 scope |

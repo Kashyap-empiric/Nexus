@@ -9,26 +9,65 @@ Format:
   NOTES   : any important context or decisions made
 ================================================================================
 
-[2026-06-03] — PROJECT INITIALIZATION
+[2026-06-09] — COMPREHENSIVE DOCS OVERHAUL + MESSAGE EDIT/DELETE INFRA
+  CORRECTED:
+    - Fixed presence status across ALL documentation files — presence is FULLY
+      implemented with Redis-backed `presenceStore.ts` (dual-write to Redis +
+      in-memory fallback), wired `presence.handler.ts`, and client-side
+      `usePresence` hook + `PresenceIndicator` component.
+    - Updated `.docs/` (progress.txt, architecture.md, context.md, data-flow.md,
+      DOCUMENTATION.md, modules/socket.md, modules/chat.md) and `.agents/`
+      (01-project-context.md, 03-database-schema.md, 04-phase-1-plan.md) to
+      reflect actual codebase state.
+  ADDED:
+    - Message soft-delete: `deletedAt` field on Message schema + migration applied
+    - Message editing: `editMessage` service with validation (owns message, not deleted)
+  CHANGED:
+    - Message `createMessage` now uses Prisma `$transaction` to atomically create
+      message + update conversation `updatedAt`
+    - Conversation creation controller now dynamically joins sockets to new rooms
+      and emits `conversation:new` to each participant's `user:<userId>` room
+  CORRECTED DOCS STATUS:
+    - Presence: ⚠️ Skeleton → ✅ Fully implemented (Redis + fallback + UI)
+    - Socket: All client-server events are wired (message:send/new, message:read,
+      user:online/offline, presence:initial, conversation:new)
+    - Message editing: 🟡 Service exists, no REST endpoint exposed
+    - Message soft-delete: 🟡 Schema + migration exist, no REST endpoint exposed
+  NOTES:
+    - Cursor pagination currently orders by `createdAt: "desc"` instead of `id` —
+      should migrate to UUIDv7 `id` ordering for consistency with spec
+    - `getMessages` does not filter out soft-deleted messages — needs `deletedAt: null`
+      clause when API endpoint is created
+
+--------------------------------------------------------------------------------
+[2026-06-08] — REAL-TIME MESSAGING & MODULAR REFACTOR
   ADDED   :
-    - Project scaffold created (monorepo structure: /client, /server)
-    - Next.js 16 client bootstrapped with TypeScript, Tailwind CSS v4
-    - Root layout (layout.tsx) with Geist font family (Geist Sans + Geist Mono)
-    - Default home page (page.tsx) — placeholder, not yet functional
-    - Global CSS baseline (globals.css)
-    - ESLint configuration (eslint.config.mjs)
-    - PostCSS configuration for Tailwind v4 (postcss.config.mjs)
-    - Next.js config (next.config.ts)
-    - Public assets: next.svg, vercel.svg, globe.svg, file.svg, window.svg
-    - AGENTS.md in /client with Next.js 16 agent guidance note
-    - NEXUS_SLACK_CLONE.md — full project spec and architecture document
-    - .docs/ folder created for living documentation
-    - .agents/ folder created with agent instructions and context files
+    - Initialized Socket.io on the Express backend and client.
+    - Added `message:new` broadcast for instant DMs.
+    - Added `message:read` broadcast for instant read receipts.
+    - Integrated Upstash Redis for global user presence tracking (`user:online` / `user:offline`).
+    - Completed Phase 1 Chat UI features and Socket integration.
+
+  CHANGED :
+    - Refactored the Next.js client architecture to a scalable feature-sliced modular design (`src/modules/*`, `src/shared/*`).
+    - Updated `middleware.ts` to `proxy.ts`.
+    - Centralized application constants (`queryKeys.ts`, `app_routes.ts`, `api_routes.ts`) in the `src/constants/` directory.
 
   NOTES   :
-    - Server directory exists but is empty — Express + Socket.io setup pending
-    - Project is in early scaffolding phase (Week 1, Phase 1)
-    - Tech stack confirmed: Next.js + Express + Supabase + Prisma + Redis
+    - Phase 1 core messaging foundation is officially complete. The system now supports secure auth, instant messaging, robust presence, and reliable data persistence.
+
+--------------------------------------------------------------------------------
+[2026-06-05] — CHAT REST API & CLIENT UI
+  ADDED   :
+    - Complete frontend authentication UI (Login and Register pages).
+    - Protected route layouts with client-side Next.js router redirection.
+    - Day 2 REST backend endpoints: GET /conversations, POST /conversations, GET /messages, POST /messages.
+    - Chat UI foundation: Sidebar, ActiveConversation layout, paginated MessageList.
+    - DM creation functionality via NewConversationModal with user search logic.
+    - REST-based Read Receipts architecture (PATCH /api/conversations/:id/read + React Query mutation).
+    - Global API rate limiting for endpoints via in-memory IP mapping (generalLimiter and messageLimiter).
+  CHANGED :
+    - Fixed typography baseline shifting bug by migrating standard fonts to Rubik.
 
 --------------------------------------------------------------------------------
 [2026-06-04] — AUTHENTICATION & CORE BACKEND SETUP
@@ -52,39 +91,38 @@ Format:
     - Successfully decoupled the auth session management (handled by Supabase and cookies) from the API authorization logic (handled by local ES256 JWKS verification on the server).
 
 --------------------------------------------------------------------------------
-[2026-06-05] — CHAT REST API & CLIENT UI
+[2026-06-03] — PROJECT INITIALIZATION
   ADDED   :
-    - Complete frontend authentication UI (Login and Register pages).
-    - Protected route layouts with client-side Next.js router redirection.
-    - Day 2 REST backend endpoints: GET /conversations, POST /conversations, GET /messages, POST /messages.
-    - Chat UI foundation: Sidebar, ActiveConversation layout, paginated MessageList.
-    - DM creation functionality via NewConversationModal with user search logic.
-    - REST-based Read Receipts architecture (PATCH /api/conversations/:id/read + React Query mutation).
-    - Global API rate limiting for endpoints via in-memory IP mapping (generalLimiter and messageLimiter).
-  CHANGED :
-    - Fixed typography baseline shifting bug by migrating standard fonts to Rubik.
-    - Updated `.docs/modules/auth.md` to conform to the standard module template with Mermaid diagrams.
-
---------------------------------------------------------------------------------
-[2026-06-08] — REAL-TIME MESSAGING & MODULAR REFACTOR
-  ADDED   :
-    - Initialized Socket.io on the Express backend and client.
-    - Added `message:new` broadcast for instant DMs.
-    - Added `message:read` broadcast for instant read receipts.
-    - Integrated Upstash Redis for global user presence tracking (`user:online` / `user:offline`).
-    - Completed Phase 1 Chat UI features and Socket integration.
-
-  CHANGED :
-    - Refactored the Next.js client architecture to a scalable feature-sliced modular design (`src/modules/*`, `src/shared/*`).
-    - Updated `middleware.ts` to `proxy.ts`.
-    - Centralized application constants (`queryKeys.ts`, `app_routes.ts`, `api_routes.ts`) in the `src/constants/` directory.
+    - Project scaffold created (monorepo structure: /client, /server)
+    - Next.js 16 client bootstrapped with TypeScript, Tailwind CSS v4
+    - Root layout (layout.tsx) with Geist font family (Geist Sans + Geist Mono)
+    - Default home page (page.tsx) — placeholder, not yet functional
+    - Global CSS baseline (globals.css)
+    - ESLint configuration (eslint.config.mjs)
+    - PostCSS configuration for Tailwind v4 (postcss.config.mjs)
+    - Next.js config (next.config.ts)
+    - Public assets: next.svg, vercel.svg, globe.svg, file.svg, window.svg
+    - AGENTS.md in /client with Next.js 16 agent guidance note
+    - NEXUS_SLACK_CLONE.md — full project spec and architecture document
+    - .docs/ folder created for living documentation
+    - .agents/ folder created with agent instructions and context files
 
   NOTES   :
-    - Phase 1 core messaging foundation is officially complete. The system now supports secure auth, instant messaging, robust presence, and reliable data persistence.
+    - Server directory exists but is empty — Express + Socket.io setup pending
+    - Project is in early scaffolding phase (Week 1, Phase 1)
+    - Tech stack confirmed: Next.js + Express + Supabase + Prisma + Redis
 
---------------------------------------------------------------------------------
-[NEXT UP - PHASE 2]
+[NEXT UP]
+  Phase 1 Remaining:
+  - [ ] Expose message edit REST endpoint (service exists)
+  - [ ] Expose message soft-delete REST endpoint (schema + migration done)
+  - [ ] Filter soft-deleted messages in getMessages query
+  - [ ] Switch cursor pagination from createdAt → id (UUIDv7) ordering
+  - [ ] Add rate-limit environment variables to server config
+
+  Phase 2:
   - Workspaces and Channels
   - Role-Based Access Control (RBAC)
   - Emoji Reactions
---------------------------------------------------------------------------------
+  - Rich text formatting
+================================================================================
