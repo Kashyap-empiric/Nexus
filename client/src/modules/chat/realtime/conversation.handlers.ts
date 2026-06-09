@@ -33,3 +33,22 @@ export const handleMessageRead = (queryClient: QueryClient) => {
     );
   };
 };
+
+export const handleConversationNew = (queryClient: QueryClient) => {
+  return (conversation: Conversation) => {
+    if (!conversation?.id) return;
+
+    queryClient.setQueryData<Conversation[]>(
+      queryKeys.conversations,
+      (oldData) => {
+        if (!Array.isArray(oldData)) return oldData;
+
+        // Avoid duplicates — only add if not already present
+        const exists = oldData.some((conv) => conv.id === conversation.id);
+        if (exists) return oldData;
+
+        return [conversation, ...oldData];
+      }
+    );
+  };
+};

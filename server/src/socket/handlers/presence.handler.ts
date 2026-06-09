@@ -1,41 +1,40 @@
 import type { Server, Socket } from "socket.io";
-import { redis } from "../../lib/redis";
+import { presenceStore } from "../presenceStore.js";
 import { SOCKET_EVENTS } from "../../shared/socket-events";
 
 export const registerPresenceHandlers = async (io: Server, socket: Socket) => {
   const userId = socket.data.user?.id;
   if (!userId) return;
 
-  try {
-    const localSetKey = `user:presence:${userId}`;
-    await redis.sAdd(localSetKey, socket.id);
-
-    const added = await redis.sAdd("presence:users", userId);
-    if (added === 1) {
-      socket.broadcast.emit(SOCKET_EVENTS.USER_ONLINE, { userId });
-    }
-
-    const onlineUsers = await redis.sMembers("presence:users");
-    socket.emit(SOCKET_EVENTS.INITIAL_PRESENCE, { userIds: onlineUsers });
-  } catch (error) {
-    console.error("[Socket.io] Presence connect error:", error);
-  }
-
+  // --- Register disconnect handler FIRST (synchronously) ---
+  // This must be attached before any await so it always catches rapid
+  // disconnects (e.g. page refresh) while Redis ops are still in flight.
   socket.on("disconnect", async () => {
-    console.log(`[Socket.io] Client disconnected: ${socket.id} (User: ${userId})`);
     try {
-      const localSetKey = `user:presence:${userId}`;
-      await redis.sRem(localSetKey, socket.id);
-      const size = await redis.sCard(localSetKey);
+      const isNowOffline = await presenceStore.removeSocket(userId, socket.id);
 
-      if (size === 0) {
-        await redis.del(localSetKey);
-        await redis.sRem("presence:users", userId);
-        socket.broadcast.emit(SOCKET_EVENTS.USER_OFFLINE, { userId });
-        await redis.set(`user:lastSeen:${userId}`, Date.now().toString());
+      if (isNowOffline) {
+        // Use io.emit instead of socket.broadcast.emit because the socket
+        // is already disconnecting — broadcasting via the server instance
+        // is more reliable.
+        io.emit(SOCKET_EVENTS.USER_OFFLINE, { userId });
       }
     } catch (error) {
       console.error("[Socket.io] Presence disconnect error:", error);
     }
   });
+
+  // --- Connect ---
+  try {
+    const isFirstConnection = await presenceStore.addSocket(userId, socket.id);
+
+    if (isFirstConnection) {
+      socket.broadcast.emit(SOCKET_EVENTS.USER_ONLINE, { userId });
+    }
+
+    const onlineUsers = await presenceStore.getOnlineUsers();
+    socket.emit(SOCKET_EVENTS.INITIAL_PRESENCE, { userIds: onlineUsers });
+  } catch (error) {
+    console.error("[Socket.io] Presence connect error:", error);
+  }
 };

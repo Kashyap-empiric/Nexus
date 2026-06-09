@@ -3,32 +3,64 @@ import { createMessage } from "@/modules/messages/messages.service.js";
 import { SOCKET_EVENTS } from "@/shared/socket-events.js";
 
 export const registerMessageHandlers = (io: Server, socket: Socket) => {
-  socket.on(SOCKET_EVENTS.MESSAGE_SEND, async (payload: { tempId: string; conversationId: string; content: string }, callback) => {
-    try {
-      const userId = socket.data.user?.id;
-      if (!userId) {
-        return callback?.({ error: "Unauthorized" });
-      }
+  socket.on(
+    SOCKET_EVENTS.MESSAGE_SEND,
+    async (
+      payload: { tempId: string; conversationId: string; content: string },
+      callback
+    ) => {
+      try {
+        const userId = socket.data.user?.id;
 
-      // Persist the message via the service (DB is the source of truth)
-      const message = await createMessage(payload.conversationId, userId, payload.content);
+        if (!userId) {
+          return callback?.({
+            success: false,
+            error: {
+              code: "UNAUTHORIZED",
+              message: "User not authenticated",
+              retryable: false,
+            },
+          });
+        }
 
-      // Broadcast the saved message to all participants in the conversation room
-      io.to(`conversation:${payload.conversationId}`).emit(SOCKET_EVENTS.MESSAGE_NEW, message);
+        if (!payload?.content || !payload?.conversationId) {
+          return callback?.({
+            success: false,
+            error: {
+              code: "INVALID_PAYLOAD",
+              message: "Missing required fields",
+              retryable: false,
+            },
+          });
+        }
 
-      // Acknowledge the sender with the saved message and their tempId
-      if (callback) {
-        callback({
+        const message = await createMessage(
+          payload.conversationId,
+          userId,
+          payload.content
+        );
+
+        io.to(`conversation:${payload.conversationId}`).emit(
+          SOCKET_EVENTS.MESSAGE_NEW,
+          message
+        );
+
+        return callback?.({
           success: true,
-          tempId: payload.tempId,
-          message: message,
+          data: message,
+        });
+      } catch (error) {
+        console.error("[Socket.io MESSAGE_SEND]", error);
+
+        return callback?.({
+          success: false,
+          error: {
+            code: "MESSAGE_SEND_FAILED",
+            message: "Failed to send message",
+            retryable: true,
+          },
         });
       }
-    } catch (error) {
-      console.error("[Socket.io] Error sending message:", error);
-      if (callback) {
-        callback({ error: "Internal Server Error" });
-      }
     }
-  });
+  );
 };

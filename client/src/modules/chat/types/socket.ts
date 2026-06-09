@@ -1,8 +1,14 @@
 import type { Message } from "./message";
 
+export interface SocketErrorObject {
+  code: string;
+  message: string;
+  retryable?: boolean;
+}
+
 export interface SocketResponse<T = unknown> {
   success?: boolean;
-  error?: string;
+  error?: string | SocketErrorObject;
   message?: T;
   data?: T;
 }
@@ -22,3 +28,4 @@ export interface MessageReadPayload {
   lastReadMessageId: string;
   userId: string;
 }
+
