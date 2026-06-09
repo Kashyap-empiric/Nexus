@@ -8,15 +8,17 @@ import { groupMessages } from "../utils/groupMessages";
 
 interface MessageListProps {
   conversationId: string;
+  currentUserId?: string | null;
+  myLastReadMessageId?: string | null;
+  partnerLastReadMessageId?: string | null;
 }
 
-export function MessageList({ conversationId }: MessageListProps) {
+export function MessageList({ conversationId, currentUserId, myLastReadMessageId, partnerLastReadMessageId }: MessageListProps) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, error } = useMessagesInfiniteQuery(conversationId);
   const { mutate: markRead } = useMarkConversationReadMutation();
   
   const bottomRef = useRef<HTMLDivElement>(null);
   const observerTarget = useRef<HTMLDivElement>(null);
-  const hasMarkedReadFor = useRef<string | null>(null);
 
   const latestMessageId = data?.pages?.[0]?.data?.[0]?.id;
 
@@ -25,16 +27,18 @@ export function MessageList({ conversationId }: MessageListProps) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [latestMessageId, conversationId]); // Scroll when the newest message changes or conversation changes
 
-  // Mark conversation as read when entering (restricted to fire once per conversation load to avoid noisy pagination updates)
+  // Mark conversation as read when entering or when new messages arrive
   useEffect(() => {
-    if (!latestMessageId || hasMarkedReadFor.current === conversationId) return;
+    if (!latestMessageId) return;
+    
+    // Guard: Only mark read if the latest message is newer than what we've already read
+    if (myLastReadMessageId && latestMessageId <= myLastReadMessageId) return;
 
     markRead({
       conversationId,
       messageId: latestMessageId,
     });
-    hasMarkedReadFor.current = conversationId;
-  }, [conversationId, latestMessageId, markRead]);
+  }, [conversationId, latestMessageId, markRead, myLastReadMessageId]);
 
   // Intersection observer for infinite scroll up
   useEffect(() => {
@@ -84,7 +88,12 @@ export function MessageList({ conversationId }: MessageListProps) {
           </div>
         ) : (
           messageGroups.map((group) => (
-            <MessageGroupItem key={group.id} group={group} />
+            <MessageGroupItem 
+              key={group.id} 
+              group={group} 
+              currentUserId={currentUserId}
+              partnerLastReadMessageId={partnerLastReadMessageId} 
+            />
           ))
         )}
 

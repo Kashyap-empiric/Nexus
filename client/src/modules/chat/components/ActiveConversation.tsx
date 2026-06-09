@@ -5,6 +5,7 @@ import { useConversationSocket } from "../hooks/useConversationSocket";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
+import { PresenceIndicator } from "./PresenceIndicator";
 import { useEffect, useState } from "react";
 import { supabase } from "@/shared/lib/supabase";
 
@@ -57,17 +58,27 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
       {/* Top Header */}
       <div className="h-14 border-b flex items-center justify-between px-4 shrink-0 bg-background shadow-sm">
         <div className="flex items-center gap-3">
-          <Avatar className="h-7 w-7 shrink-0 rounded-md">
-            <AvatarImage src={otherMember?.user?.avatarUrl || undefined} className="rounded-md" />
-            <AvatarFallback className="leading-none rounded-md bg-primary/20 text-primary font-medium">{title?.[0]?.toUpperCase() || "?"}</AvatarFallback>
-          </Avatar>
+          <div className="relative">
+            <Avatar className="h-7 w-7 shrink-0 rounded-md">
+              <AvatarImage src={otherMember?.user?.avatarUrl || undefined} className="rounded-md" />
+              <AvatarFallback className="leading-none rounded-md bg-primary/20 text-primary font-medium">{title?.[0]?.toUpperCase() || "?"}</AvatarFallback>
+            </Avatar>
+            {otherMember?.userId && (
+              <PresenceIndicator userId={otherMember.userId} className="-bottom-0.5 -right-0.5" />
+            )}
+          </div>
           <h2 className="text-[15px] font-bold leading-none text-foreground">{title}</h2>
         </div>
         <ThemeToggle />
       </div>
 
       {/* Messages */}
-      <MessageList conversationId={conversationId} />
+      <MessageList 
+        conversationId={conversationId} 
+        currentUserId={currentUserId}
+        myLastReadMessageId={conversation.members.find(m => m.userId === currentUserId)?.lastReadMessageId}
+        partnerLastReadMessageId={otherMember?.lastReadMessageId}
+      />
 
       {/* Input */}
       <MessageInput conversationId={conversationId} currentUser={myProfile} />
