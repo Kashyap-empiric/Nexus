@@ -1,3 +1,3 @@
 export const ENV = {
-  CLIENT_URL: process.env.CLIENT_URL || "http://localhost:3001",
-} as const;
+  ALLOWED_ORIGINS: (process.env.CLIENT_URL!).split(',').map(url => url.trim()),
+};
