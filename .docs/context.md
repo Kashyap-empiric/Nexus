@@ -1,7 +1,7 @@
 # Nexus: Project Context
 
-> **Last Updated:** 2026-06-08
-> **Status:** Active build (Phase 1 Complete). Update this file after every major feature is completed.
+> **Last Updated:** 2026-06-09
+> **Status:** Active build (Phase 1 ~90% complete — presence integration remaining).
 
 ---
 
@@ -9,7 +9,7 @@
 
 Nexus is a real-time messaging and collaboration platform, built as a Slack-like product.
 
-Phase 1 establishes the core messaging foundation: authentication, direct messaging, real-time delivery, message persistence, read receipts, and user presence. All subsequent phases build on top of this foundation.
+Phase 1 establishes the core messaging foundation: authentication, direct messaging, real-time delivery, message persistence, read receipts, and user presence (Redis-based presence tracking not yet wired). All subsequent phases build on top of this foundation.
 
 ---
 
@@ -24,7 +24,7 @@ Phase 1 establishes the core messaging foundation: authentication, direct messag
 | Message Persistence | Messages stored in PostgreSQL, retrievable as paginated history. |
 | Real-time Delivery | Messages delivered instantly to connected clients via Socket.io rooms. |
 | Read Receipts | Tracked using `lastReadMessageId` on `ConversationMember`. |
-| Presence | Online/offline status tracked in Redis per user. Uses `socketCount` to handle multi-tab correctly. |
+| Presence | ⚠️ **Not yet implemented.** Server `presence.handler.ts` is a skeleton. Sidebar "Online" text is hardcoded. Requires Upstash Redis integration. |
 
 ### Phase 2 (planned)
 
@@ -149,9 +149,9 @@ All authenticated routes expect `Authorization: Bearer <JWT>` header.
 | Event | Payload | Description |
 |---|---|---|
 | `message:new` | Message object | Broadcast new message to room |
-| `message:read` | `{ conversationId, userId, lastReadAt }` | Broadcast read receipt to room |
-| `user:online` | `{ userId }` | User came online |
-| `user:offline` | `{ userId, lastSeen }` | User went offline |
+| `message:read` | `{ conversationId, userId, messageId }` | Broadcast read receipt to room |
+| `user:online` | `{ userId }` | ⚠️ Defined in contract but not emitted — presence handler is a skeleton |
+| `user:offline` | `{ userId, lastSeen }` | ⚠️ Defined in contract but not emitted — presence handler is a skeleton |
 
 ---
 
@@ -159,6 +159,7 @@ All authenticated routes expect `Authorization: Bearer <JWT>` header.
 
 | Limitation | Details |
 |---|---|
+| Presence system not wired | `presence.handler.ts` is a skeleton — no Redis integration; "Online" in sidebar is hardcoded |
 | No file uploads | Phase 1 supports text-only messages |
 | No search | No full-text search in Phase 1 |
 | No message editing or deletion | Not in Phase 1 scope |

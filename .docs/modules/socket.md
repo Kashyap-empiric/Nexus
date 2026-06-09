@@ -2,7 +2,7 @@
 
 > **Location:** `server/src/socket/`, `client/src/shared/lib/socket.ts`, `client/src/shared/providers/socket-provider.tsx`
 > **Type:** Real-time Infrastructure
-> **Status:** ✅ Active (Phase 1)
+> **Status:** ✅ Active (Phase 1) - ⚠️ Presence handler is a skeleton (no Redis)
 
 ## Purpose
 Provides the foundational WebSocket infrastructure for real-time features in Nexus, such as live messaging, typing indicators, and user presence. It leverages `socket.io` on the backend and `socket.io-client` on the frontend. The module ensures secure, authenticated connections and handles automatic room assignments for direct messages.
@@ -56,7 +56,7 @@ flowchart TD
 - **`socket.ts`**: The entry point for the Socket.io server. Handles CORS configuration, registers middlewares, and sets up the root `connection` listener. It also manages the logic to automatically join clients into their respective conversation rooms based on DB memberships.
 - **`middlewares/auth.ts` (`socketAuthMiddleware`)**: Intercepts the handshake, extracts the JWT from `auth.token` or headers, and cryptographically verifies it using the same logic as the REST API. Attaches the decoded user to `socket.data.user`.
 - **`handlers/message.handler.ts`**: Listens for the `message:send` event from clients. Persists messages to the database, broadcasts the `message:new` event to conversation rooms, and acknowledges the sender with the official message to replace their optimistic `tempId`.
-- **`handlers/presence.handler.ts`**: Skeleton structure for handling user presence events (online/offline status). Currently logs disconnects, built to be expanded with Redis integration.
+- **`handlers/presence.handler.ts`**: ⚠️ **Skeleton only.** Logs disconnects. Redis integration (user:online / user:offline broadcast) is **not yet implemented**.
 
 ### Frontend
 - **`shared/lib/socket.ts`**: Configures the `socket.io-client` instance. It is instantiated with `autoConnect: false` to allow controlled mounting. It includes an async `auth` callback that securely retrieves the latest Supabase session token before attempting connection.
@@ -73,3 +73,5 @@ flowchart TD
 
 ## Future Upgrades
 - **Typing Indicators**: Ephemeral events broadcasted to specific rooms to show "User is typing..." states.
+- **Presence (Redis)**: Wire Upstash Redis into `presence.handler.ts` to track socketCount per user and broadcast online/offline status.
+- **Presence Indicators in UI**: Build `PresenceIndicator` component and connect to real `user:online` / `user:offline` events.
