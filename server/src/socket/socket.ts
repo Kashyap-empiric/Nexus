@@ -13,39 +13,63 @@ export const initSocket = (httpServer: HttpServer) => {
   io = new Server(httpServer, {
     cors: {
       origin: ENV.ALLOWED_ORIGINS,
-      methods: ["GET", "POST"]
+      methods: ["GET", "POST"],
+      credentials: true, // Consider adding if using cookies/sessions
     },
   });
 
   io.use(socketAuthMiddleware);
 
   io.on("connection", async (socket) => {
-    console.log(`[Socket.io] Client connected: ${socket.id} (User: ${socket.data.user?.id})`);
-
-    // Register per-socket middlewares
+    // Apply rate limiting immediately
     socket.use(socketRateLimiterMiddleware(socket));
 
-    // Auto-Join Rooms
+    const userId = socket.data.user?.id;
+
+    console.log(`[Socket.io] connected: socket=${socket.id} user=${userId}`);
+
+    socket.on("error", (err) => {
+      console.error(
+        `[Socket.io] runtime error: socket=${socket.id} user=${userId}`,
+        err
+      );
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log(`[Socket.io] disconnected user=${userId || 'unknown'} reason=${reason}`);
+    });
+
     try {
-      if (socket.data.user?.id) {
+      if (userId) {
+        // Join user-specific room for targeted messages
+        await socket.join(`user:${userId}`);
+
         const memberships = await prisma.conversationMember.findMany({
-          where: { userId: socket.data.user.id },
-          select: { conversationId: true }
+          where: { userId },
+          select: { conversationId: true },
         });
 
-        const rooms = memberships.map(m => `conversation:${m.conversationId}`);
+        const rooms = memberships.map(
+          (m) => `conversation:${m.conversationId}`
+        );
+
         if (rooms.length > 0) {
-          socket.join(rooms);
-          console.log(`[Socket.io] Socket ${socket.id} auto-joined ${rooms.length} rooms`);
+          await socket.join(rooms);
+          console.log(`[Socket.io] socket=${socket.id} joined ${rooms.length} rooms`);
         }
       }
+
+      socket.data.session = {
+        userId,
+        connectedAt: Date.now(),
+      };
+
+      registerPresenceHandlers(io, socket);
+      registerMessageHandlers(io, socket);
     } catch (err) {
-      console.error("[Socket.io] Failed to auto-join rooms:", err);
+      console.error("[Socket.io] failed to setup connection:", err);
       socket.disconnect(true);
     }
-
-    registerPresenceHandlers(io, socket);
-    registerMessageHandlers(io, socket);
   });
 
   return io;
