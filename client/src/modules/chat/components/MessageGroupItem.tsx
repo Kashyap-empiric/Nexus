@@ -1,13 +1,21 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import type { MessageGroup } from "../utils/groupMessages";
+import { MessageStatus } from "./MessageStatus";
 
-export function MessageGroupItem({ group }: { group: MessageGroup }) {
+interface MessageGroupItemProps {
+  group: MessageGroup;
+  currentUserId?: string | null;
+  partnerLastReadMessageId?: string | null;
+}
+
+export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageId }: MessageGroupItemProps) {
   const { user, messages } = group;
 
   return (
     <div className="mt-2 mb-1">
       {messages.map((msg, index) => {
         const isFirst = index === 0;
+        const isMyMessage = msg.userId === currentUserId;
 
         const time = new Intl.DateTimeFormat("en-US", {
           hour: "numeric",
@@ -45,10 +53,26 @@ export function MessageGroupItem({ group }: { group: MessageGroup }) {
                   <span className="text-xs text-muted-foreground leading-none">
                     {time}
                   </span>
+                  {isMyMessage && (
+                    <MessageStatus
+                      messageId={msg.id}
+                      isPending={msg.pending}
+                      partnerLastReadMessageId={partnerLastReadMessageId}
+                      className="ml-1"
+                    />
+                  )}
                 </div>
               )}
-              <div className="text-[15px] text-foreground whitespace-pre-wrap break-words leading-relaxed">
-                {msg.content}
+              <div className="text-[15px] text-foreground whitespace-pre-wrap break-words leading-relaxed flex items-center justify-between group/msg">
+                <span>{msg.content}</span>
+                {!isFirst && isMyMessage && (
+                  <MessageStatus
+                    messageId={msg.id}
+                    isPending={msg.pending}
+                    partnerLastReadMessageId={partnerLastReadMessageId}
+                    className="ml-2 opacity-0 group-hover/msg:opacity-100 transition-opacity"
+                  />
+                )}
               </div>
             </div>
           </div>

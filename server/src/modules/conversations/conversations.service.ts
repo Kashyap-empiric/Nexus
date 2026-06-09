@@ -129,16 +129,5 @@ export const updateLastReadMessage = async (conversationId: string, userId: stri
         }
     });
 
-    try {
-        const io = getIO();
-        io.to(`conversation:${conversationId}`).emit(SOCKET_EVENTS.MESSAGE_READ, {
-            conversationId,
-            userId,
-            messageId
-        });
-    } catch (err) {
-        console.error("[Socket.io] Failed to emit message:read", err);
-    }
-
     return member;
 };
