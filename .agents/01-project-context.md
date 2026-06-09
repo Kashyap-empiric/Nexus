@@ -1,18 +1,16 @@
 # Nexus — Project Context
 
 > This file is the single-source-of-truth context snapshot for any agent working on this project.
-> Read this file at the start of every session before touching code or docs.
-> **Last Updated:** 2026-06-05
+> Read this file at the start of every session before touching code or docs.> **Last Updated:** 2026-06-09
 
 ---
 
 ## Project Overview
 
 Nexus is a **real-time messaging and collaboration platform** — a Slack-style application built from scratch as a full-stack TypeScript monorepo.
-
 The project is built in phases to ship a working messaging core first, then extend it with team collaboration features:
 
-- **Phase 1** *(current)*: Authentication, direct messages, real-time delivery via Socket.io, message persistence, read receipts, and presence tracking via Redis.
+- **Phase 1** *(nearly complete)*: Authentication, direct messages, real-time delivery via Socket.io, message persistence, read receipts, and basic presence (Redis integration still pending).
 - **Phase 2**: Workspaces, public/private channels, emoji reactions, rich text formatting.
 - **Phase 3+**: File uploads, full-text search, WebRTC voice/video, AI features, microservices migration.
 
@@ -20,7 +18,7 @@ The project is built in phases to ship a working messaging core first, then exte
 
 ## Features
 
-### Phase 1 — Core Foundation (planned / in progress)
+### Phase 1 — Core Foundation (current status)
 
 | Feature | Description | Status |
 |---|---|---|
@@ -31,9 +29,9 @@ The project is built in phases to ship a working messaging core first, then exte
 | **Direct Messages** | Create 1-on-1 DM conversations; each DM has exactly 2 ConversationMembers | ✅ Done |
 | **Message Persistence** | Messages saved to PostgreSQL before any real-time broadcast | ✅ Done |
 | **Message History** | Paginated fetch of past messages | ✅ Done |
-| **Real-time Messaging** | Socket.io rooms (`conversation:{id}`) deliver new messages instantly | 🚧 Planned |
-| **Read Receipts** | `lastReadMessageId` on `ConversationMember` tracks the latest read message | 🚧 Planned |
-| **Presence System** | Redis tracks online/offline per user; Socket connect/disconnect drives state | 🚧 Planned |
+| **Real-time Messaging** | Socket.io rooms (`conversation:{id}`) deliver new messages instantly | ✅ Done |
+| **Read Receipts** | `lastReadMessageId` on `ConversationMember` tracks the latest read message; broadcast via Socket.io `message:read` | ✅ Done |
+| **Presence System** | Redis tracks online/offline per user; Socket connect/disconnect drives state | ⚠️ Skeletal (no Redis integration yet) |
 
 ### Phase 2 — Collaboration Extensions (future)
 
@@ -68,10 +66,10 @@ nexus/
 | UI Language | React | 19.2.4 | Server + Client Components |
 | Type System | TypeScript | ^5 | Both client and server |
 | Styling | Tailwind CSS | ^4 | Utility-first, PostCSS |
-| Server State | TanStack Query | planned | Fetch, cache, sync |
-| UI State | Zustand | planned | Lightweight global state |
-| Backend Framework | Express.js | planned | REST API |
-| Real-time | Socket.io | planned | WebSocket events |
+| Server State | TanStack Query | ^5 | Fetch, cache, sync — fully integrated |
+| UI State | Zustand | ^5 | Lightweight global state — active in chatStore |
+| Backend Framework | Express.js | ^4 | REST API |
+| Real-time | Socket.io | ^4 | WebSocket events — fully implemented |
 | Database | Supabase PostgreSQL | — | Primary relational store |
 | Auth | Supabase Auth | — | JWT-based sessions |
 | ORM | Prisma | planned | Type-safe DB client |
@@ -99,16 +97,23 @@ nexus/
 - Conversation REST endpoints: `GET/POST /api/conversations`, `GET /api/conversations/:id`
 - Message REST endpoints: `GET/POST /api/conversations/:conversationId/messages`
 
-### 🚧 In Progress / Planned (Phase 1)
-- [x] REST endpoints: `/api/conversations`, `/api/conversations/:conversationId/messages`
-- [x] Basic Socket.io server attachment
-- [ ] Socket.io rooms (`conversation:{id}`) and event handlers
-- [ ] Upstash Redis presence system
+### Phase 1 — Completed Items
+- [x] REST endpoints: conversations, messages, users
+- [x] Socket.io server with auth middleware and auto-join rooms
+- [x] Socket.io event handlers: `message:send`, `message:new`, `message:read`
+- [x] Socket rate limiting middleware
 - [x] Client auth pages (register/login UI)
-- [x] Client DM list page
-- [x] Client conversation view (message history)
-- [x] Read receipt logic (`lastReadMessageId`)
-- [ ] Presence indicators (online/offline badges)
+- [x] Client DM list sidebar with unread indicators
+- [x] Client conversation view with paginated message history
+- [x] Real-time message delivery via Socket.io rooms
+- [x] Optimistic UI for message sending (tempId swapping)
+- [x] Read receipt logic with server broadcast (`message:read`)
+- [x] Message grouping by sender
+
+### ⚠️ Phase 1 — Remaining Work
+- [ ] Upstash Redis presence system (`presence.handler.ts` is a skeleton — no Redis integration)
+- [ ] Presence indicators (online/offline badges — "Online" text in sidebar is currently hardcoded)
+- [ ] `user:online` / `user:offline` Socket.io events (defined in contract, not emitted)
 
 ---
 
@@ -310,14 +315,13 @@ Value: {
 
 | # | Limitation | Impact | Resolution Plan |
 |---|---|---|---|
-| 1 | **Real-time handlers are skeletal** — Socket.io is attached but no auth, rooms, or broadcasts yet | Messages require refresh/polling instead of instant delivery | Day 3 work |
+| 1 | **Presence handler is skeletal** — Socket.io `presence.handler.ts` only logs disconnects; no Redis integration | No real online/offline indicators; "Online" text is hardcoded | Wire Upstash Redis per Day 4 of Phase 1 plan |
 | 2 | **DM-only in Phase 1** — No workspaces or channels | Users can only have 1-on-1 conversations | By design; Phase 2 extends this |
-| 3 | **Message pagination shape is incomplete** — Current API returns `nextCursor` but no `hasMore`/`direction` | Client cannot fully distinguish older-page availability/direction | Align with Day 2 pagination contract |
-| 4 | **No offline queue** — Socket messages dropped if client disconnects mid-send | Potential message loss on flaky connections | Out of scope for Phase 1; consider BullMQ in Phase 3 |
-| 5 | **No file/image uploads** | Text-only messaging | Phase 3 — requires S3/Supabase Storage integration |
-| 6 | **No push notifications** | Users must have the app open to receive messages | Phase 3 — Web Push API or Resend |
-| 7 | **Single Socket.io server instance** — No Redis pub/sub adapter | Cannot horizontally scale the Socket.io server | Phase 3 — add `@socket.io/redis-adapter` backed by Upstash |
-| 8 | **No test coverage** — No unit or integration tests written | Regressions won't be caught automatically | Tests should be added alongside each Phase 1 feature |
+| 3 | **No offline queue** — Socket messages dropped if client disconnects mid-send | Potential message loss on flaky connections | Out of scope for Phase 1; consider BullMQ in Phase 3 |
+| 4 | **No file/image uploads** | Text-only messaging | Phase 3 — requires S3/Supabase Storage integration |
+| 5 | **No push notifications** | Users must have the app open to receive messages | Phase 3 — Web Push API or Resend |
+| 6 | **Single Socket.io server instance** — No Redis pub/sub adapter | Cannot horizontally scale the Socket.io server | Phase 3 — add `@socket.io/redis-adapter` backed by Upstash |
+| 7 | **No test coverage** — No unit or integration tests written | Regressions won't be caught automatically | Tests should be added alongside each Phase 1 feature |
 
 ---
 
