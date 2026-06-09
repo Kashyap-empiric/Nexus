@@ -65,6 +65,35 @@ export const createMessage = async (conversationId: string, userId: string, cont
   return message;
 };
 
+export const editMessage = async (messageId: string, userId: string, content: string) => {
+  const message = await getMessageById(messageId);
+  if (!message) {
+    throw new Error("Message not found.")
+  }
+  if (message.deletedAt) {
+    throw new Error("Cannot edit a deleted message.")
+  }
+  if (message.userId !== userId) {
+    throw new Error("403 Forbidden")
+  }
+  return prisma.message.update({
+    where: { id: messageId },
+    data: {
+      content: content.trim(),
+      isEdited: true,
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          avatarUrl: true
+        }
+      }
+    }
+  })
+}
+
 export const getMessageById = async (messageId: string) => {
   return prisma.message.findUnique({
     where: {

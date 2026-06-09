@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as conversationsApi from "../api/conversations.api";
 import { queryKeys } from "@/shared/constants/queryKeys";
+import type { Conversation } from "../types/conversation";
 
-export type { Conversation } from "../types/conversation";
+export type { Conversation };
 
 export const useConversationsQuery = () => {
   return useQuery({
@@ -24,8 +25,18 @@ export const useCreateConversationMutation = () => {
 
   return useMutation({
     mutationFn: conversationsApi.createConversation,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.conversations });
+    onSuccess: (conversation) => {
+      // Directly prepend the new conversation to the cache so the sidebar updates instantly.
+      // The receiver's sidebar is updated via the `conversation:new` socket event.
+      queryClient.setQueryData<Conversation[]>(
+        queryKeys.conversations,
+        (oldData) => {
+          if (!Array.isArray(oldData)) return oldData;
+          const exists = oldData.some((c) => c.id === conversation.id);
+          if (exists) return oldData;
+          return [conversation, ...oldData];
+        }
+      );
     },
   });
 };
