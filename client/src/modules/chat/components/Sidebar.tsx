@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Search, Plus, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import { NewConversationModal } from "./NewConversationModal";
+import { PresenceIndicator } from "./PresenceIndicator";
 import { useConversationsQuery } from "../hooks/useConversations";
 import { useAuth } from "@/modules/auth";
 import { supabase } from "@/shared/lib/supabase";
@@ -89,10 +90,15 @@ export function Sidebar() {
                         : "text-muted-foreground hover:bg-muted/80 hover:text-foreground dark:hover:bg-white/5"
                         }`}
                     >
-                      <Avatar className="h-7 w-7 shrink-0 rounded-md">
-                        <AvatarImage src={otherMember?.user.avatarUrl || undefined} className="rounded-md" />
-                        <AvatarFallback className="text-[10px] leading-none bg-primary/20 text-primary rounded-md font-medium">{name[0]?.toUpperCase()}</AvatarFallback>
-                      </Avatar>
+                      <div className="relative">
+                        <Avatar className="h-7 w-7 shrink-0 rounded-md">
+                          <AvatarImage src={otherMember?.user.avatarUrl || undefined} className="rounded-md" />
+                          <AvatarFallback className="text-[10px] leading-none bg-primary/20 text-primary rounded-md font-medium">{name[0]?.toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        {otherMember?.userId && (
+                          <PresenceIndicator userId={otherMember.userId} className="-bottom-0.5 -right-0.5" />
+                        )}
+                      </div>
                       <span className={`truncate leading-none flex-1 ${isUnread && !isActive ? 'font-bold text-foreground' : ''}`}>{name}</span>
                       {isUnread && !isActive && (
                         <div className="w-2 h-2 rounded-full bg-primary shrink-0" />

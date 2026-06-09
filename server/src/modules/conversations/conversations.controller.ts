@@ -70,6 +70,22 @@ export const markConversationAsRead = async (req: AuthRequest, res: Response): P
 
     await conversationsService.updateLastReadMessage(conversationId, userId, messageId);
 
+    try {
+      const { getIO } = await import("@/socket/socket.js");
+      const { SOCKET_EVENTS } = await import("@/shared/socket-events.js");
+      const io = getIO();
+      
+      const payload = {
+        conversationId,
+        userId,
+        lastReadMessageId: messageId,
+      };
+      
+      io.to(`conversation:${conversationId}`).emit(SOCKET_EVENTS.MESSAGE_READ, payload);
+    } catch (err) {
+      console.error("[Socket.io] Failed to emit message:read from HTTP endpoint", err);
+    }
+
     res.status(200).json({ success: true });
   } catch (error) {
     console.error("Error marking conversation as read:", error);

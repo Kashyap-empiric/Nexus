@@ -19,6 +19,6 @@ export interface MessageNewPayload {
 
 export interface MessageReadPayload {
   conversationId: string;
-  messageId: string;
+  lastReadMessageId: string;
   userId: string;
 }

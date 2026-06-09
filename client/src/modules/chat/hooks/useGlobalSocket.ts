@@ -51,7 +51,7 @@ export const useGlobalSocket = () => {
     };
 
     const onMessageRead = (data: MessageReadPayload) => {
-      if (!data.conversationId || !data.userId || !data.messageId) return;
+      if (!data.conversationId || !data.userId || !data.lastReadMessageId) return;
 
       queryClient.setQueryData<Conversation[]>(
         queryKeys.conversations,
@@ -64,8 +64,8 @@ export const useGlobalSocket = () => {
             const updatedMembers = conv.members.map((member) => {
               if (member.userId !== data.userId) return member;
               
-              if (!member.lastReadMessageId || data.messageId > member.lastReadMessageId) {
-                return { ...member, lastReadMessageId: data.messageId };
+              if (!member.lastReadMessageId || data.lastReadMessageId > member.lastReadMessageId) {
+                return { ...member, lastReadMessageId: data.lastReadMessageId };
               }
               return member;
             });
