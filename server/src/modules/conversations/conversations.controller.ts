@@ -42,6 +42,35 @@ export const createConversation = async (req: AuthRequest, res: Response): Promi
 
     const result = await conversationsService.createOrGetDM(userId, targetUserId);
 
+    // If a new conversation was created, dynamically join participants' sockets and notify them
+    if (result.created) {
+      try {
+        const { getIO } = await import("@/socket/socket.js");
+        const { SOCKET_EVENTS } = await import("@/shared/socket-events.js");
+        const io = getIO();
+
+        // Dynamically join each participant's active sockets to the new conversation room
+        // NOTE: We iterate io.sockets.sockets (Map of real Socket instances) because
+        // io.in(room).fetchSockets() returns RemoteSocket[] which lacks .join().
+        // This is local-only; in multi-instance deployments, this only affects sockets
+        // on the current process.
+        for (const member of result.conversation.members) {
+          for (const socket of io.sockets.sockets.values()) {
+            if (socket.rooms.has(`user:${member.userId}`)) {
+              await socket.join(`conversation:${result.conversation.id}`);
+            }
+          }
+        }
+
+        // Notify each participant about the new conversation
+        for (const member of result.conversation.members) {
+          io.to(`user:${member.userId}`).emit(SOCKET_EVENTS.CONVERSATION_NEW, result.conversation);
+        }
+      } catch (err) {
+        console.error("[Socket.io] Failed to apply dynamic room join for new conversation:", err);
+      }
+    }
+
     res.status(result.created ? 201 : 200).json({ data: result.conversation });
   } catch (error) {
     console.error("Error creating conversation:", error);

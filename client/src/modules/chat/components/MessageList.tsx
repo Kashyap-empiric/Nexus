@@ -20,7 +20,8 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
   const bottomRef = useRef<HTMLDivElement>(null);
   const observerTarget = useRef<HTMLDivElement>(null);
 
-  const latestMessageId = data?.pages?.[0]?.data?.[0]?.id;
+  const latestMessage = data?.pages?.[0]?.data?.[0];
+  const latestMessageId = latestMessage?.id;
 
   // Auto-scroll to bottom on conversation change or new messages
   useEffect(() => {
@@ -30,6 +31,12 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
   // Mark conversation as read when entering or when new messages arrive
   useEffect(() => {
     if (!latestMessageId) return;
+
+    // Skip optimistic/pending messages — they have temp IDs, not real UUIDs
+    // Note: `latestMessage?.pending` is NOT a dep because when the optimistic
+    // message is swapped with the real one, `latestMessageId` changes (tempId
+    // → UUID), which re-fires this effect automatically.
+    if (latestMessage?.pending) return;
     
     // Guard: Only mark read if the latest message is newer than what we've already read
     if (myLastReadMessageId && latestMessageId <= myLastReadMessageId) return;

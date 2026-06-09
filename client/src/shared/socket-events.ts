@@ -7,6 +7,7 @@ export const SOCKET_EVENTS = {
   USER_ONLINE: "user:online",
   USER_OFFLINE: "user:offline",
   INITIAL_PRESENCE: "presence:initial",
+  CONVERSATION_NEW: "conversation:new",
 } as const;
 
 export interface MessageReadPayload {
