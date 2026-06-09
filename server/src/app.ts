@@ -14,11 +14,9 @@ import { ENV } from "./config/env.js";
 
 const app = express();
 
-const allowedOrigins = [
-  ENV.CLIENT_URL
-];
+const allowedOrigins = ENV.ALLOWED_ORIGINS;
 
-app.use(cors({ origin: allowedOrigins as string[] }));
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 app.use(morgan("dev"));
 app.get("/health", (req: Request, res: Response) => {

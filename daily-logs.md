@@ -77,3 +77,32 @@
 
 **Learning**
   One new thing that you learned today: When relying heavily on React `useEffect` for triggering analytics or read-receipt style mutations inside complex lists, using a `useRef` to manually flag execution perfectly guards against noisy array-dependency updates without violating the Rules of Hooks.
+
+---
+
+## 8th June 2026
+
+**Date**: 8th June 2026
+
+**Completed**:
+- Implemented basic Socket.io connection and folder structure refactor.
+- Established socket connection from client to server for event fanout.
+- Created global environment URL configuration files.
+- Improved CSS for the UI and enhanced socket error handling.
+- Added visual unread message highlight feature in the sidebar.
+- Implemented a user suggestions feature showing available users.
+- Updated server build scripts (added tsup bundler, tsc-alias, and `prisma generate`).
+- Addressed deployment issues and merged feature branches.
+
+**In Progress**:
+- Fixing deployment and routing issues.
+
+**Next Plan**:
+- Fix redirection issues upon login in the deployed app.
+- Ensure WebSocket proxying works correctly in production.
+
+**Blockers**
+  Any issues or dependencies: Deployment routing and authentication redirection in production environment.
+
+**Learning**
+  One new thing that you learned today: Using `tsup` and `tsc-alias` provides a cleaner and faster build process for TypeScript server applications, simplifying absolute imports compilation.
