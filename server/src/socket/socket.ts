@@ -12,7 +12,7 @@ let io: Server;
 export const initSocket = (httpServer: HttpServer) => {
   io = new Server(httpServer, {
     cors: {
-      origin: ENV.CLIENT_URL,
+      origin: ENV.ALLOWED_ORIGINS,
       methods: ["GET", "POST"]
     },
   });
