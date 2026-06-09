@@ -1,0 +1,10 @@
+import type { QueryClient } from "@tanstack/react-query";
+import { handleMessageNew } from "./message.handlers";
+import { handleMessageRead } from "./conversation.handlers";
+
+export const createChatEventRouter = (queryClient: QueryClient) => {
+  return {
+    messageNew: handleMessageNew(queryClient),
+    messageRead: handleMessageRead(queryClient),
+  };
+};
