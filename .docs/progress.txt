@@ -83,8 +83,30 @@ Format:
     - Phase 1 core messaging foundation is officially complete. The system now supports secure auth, instant messaging, robust presence, and reliable data persistence.
 
 --------------------------------------------------------------------------------
+[2026-06-09] — COMPREHENSIVE DOCS AUDIT
+  AUDITED :
+    - Full codebase review of all Phase 1 features against .docs/ and .agents/ documentation
+    - Verified real-time messaging (Socket.io) is fully implemented and operational
+    - Verified read receipts with Socket.io broadcast are fully implemented
+    - Verified optimistic UI with tempId swapping works end-to-end
+    - Verified socket rate limiting middleware is active
+    - Verified REST API endpoints, auth, and client UI are complete
+  CORRECTED :
+    - Marked socket handlers, read receipts, TanStack Query, and Zustand as DONE everywhere
+    - Marked Presence (Redis) as NOT IMPLEMENTED — `presence.handler.ts` is a skeleton with no Redis integration
+    - Removed outdated references to "planned" socket features in .agents/
+    - Removed old Limitation #1 ("Real-time handlers are skeletal") since sockets are fully working
+    - Added explicit ⚠️ notes in architecture docs about missing presence integration
+
+  REMAINING PHASE 1 WORK :
+    - Wire Upstash Redis into `server/src/socket/handlers/presence.handler.ts`
+    - Implement `user:online` / `user:offline` Socket.io events
+    - Build presence indicators in UI (replace hardcoded "Online" text)
+    - Handle multi-tab socketCount via Redis
+
 [NEXT UP - PHASE 2]
   - Workspaces and Channels
   - Role-Based Access Control (RBAC)
   - Emoji Reactions
+  - **Or**: Complete Phase 1 presence system first
 --------------------------------------------------------------------------------

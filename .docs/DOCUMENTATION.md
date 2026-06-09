@@ -1,7 +1,7 @@
 # Nexus: Master Project Documentation
 
-> **Status:** Active Development (Phase 1 Complete)
-> **Last Updated:** 2026-06-08
+> **Status:** Active Development (Phase 1 ~90% complete — presence remains)
+> **Last Updated:** 2026-06-09
 
 Welcome to the comprehensive master documentation for **Nexus**, a real-time messaging and collaboration platform designed as a scalable Slack-style application.
 
@@ -14,7 +14,7 @@ This document serves as the single-source-of-truth for project goals, architectu
 Nexus is a full-stack TypeScript monorepo built to deliver instant communication and team collaboration. 
 
 The project is structured in phases to ensure a stable foundation:
-- **Phase 1 (Completed):** Core messaging foundation. Includes robust user authentication, direct 1-on-1 messaging, cursor-based message pagination, real-time message delivery via WebSockets, read receipts, and user presence tracking.
+- **Phase 1 (Nearly Complete):** Core messaging foundation. Includes robust user authentication, direct 1-on-1 messaging, cursor-based message pagination, real-time message delivery via WebSockets, read receipts, and user presence tracking. ⚠️ **Note:** Presence (Redis-based online/offline tracking) is the only remaining unimplemented feature — the server handler is a skeleton.
 - **Phase 2 (Upcoming):** Team collaboration extensions. Includes Workspaces, public/private channels, RBAC (Role-Based Access Control), emoji reactions, and rich text formatting.
 - **Phase 3 (Planned):** Advanced features. File uploads (S3/Supabase Storage), full-text search, WebRTC voice/video calls, and background jobs.
 
@@ -30,7 +30,7 @@ The project is structured in phases to ensure a stable foundation:
 | **Message History** | High-performance, cursor-based paginated retrieval of past messages utilizing UUIDv7 ordering. | ✅ Implemented |
 | **Real-time Delivery** | Messages broadcasted instantly to participants via Socket.io rooms (`conversation:{id}`). | ✅ Implemented |
 | **Read Receipts** | Optimistic UI updates. Persisted via `lastReadMessageId` on the `ConversationMember` junction table. | ✅ Implemented |
-| **Presence System** | Online/offline tracking backed by Upstash Redis. Handles multi-tab connectivity correctly using a `socketCount` model. | ✅ Implemented |
+| **Presence System** | Online/offline tracking backed by Upstash Redis. Handles multi-tab connectivity correctly using a `socketCount` model. | ⚠️ Skeleton only — no Redis integration yet |
 
 ---
 

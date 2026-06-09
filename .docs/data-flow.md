@@ -1,7 +1,7 @@
 # Nexus: Data Flow
 
-> **Last Updated:** 2026-06-08
-> **Status:** Active (Phase 1 Complete)
+> **Last Updated:** 2026-06-09
+> **Status:** Active (Phase 1 ~90% complete — presence not yet wired)
 
 ---
 
@@ -64,6 +64,8 @@ flowchart LR
 ---
 
 ## 5. Presence Flow
+
+> ⚠️ **Not yet implemented.** The following describes the *planned* flow. Currently, `presence.handler.ts` is a skeleton that only logs disconnects.
 
 - On WebSocket connect, the server increments a `socketCount` key in Redis for that user and broadcasts `user:online`.
 - On disconnect, the server decrements the count. If it reaches 0 (all tabs closed), it sets status to `offline` and broadcasts `user:offline`.

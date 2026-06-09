@@ -255,12 +255,14 @@ client/src/modules/chat/hooks/useSendMessage.ts    ← add optimistic update:
 
 ### End of Day 3 Checks
 
-- [ ] Open two browser windows, log in as different users
-- [ ] Send a message in one window, see it appear instantly in the other without refresh
-- [ ] Message appears immediately in the sender's window (optimistic, pending state)
-- [ ] After server ack, pending state resolves to sent
-- [ ] Mark as read in one window, see the receipt update in the sender's window
-- [ ] Open browser devtools network tab — confirm no refetch fires on message:new
+- [x] Socket.io server with auth middleware and auto-join rooms
+- [x] Socket.io rate limiting middleware
+- [x] `message:send` handler persists to DB and broadcasts `message:new` to room
+- [x] Client socket provider manages connection lifecycle
+- [x] `useConversationSocket` injects `message:new` into TanStack Query cache
+- [x] `useGlobalSocket` handles cross-conversation updates and read receipts
+- [x] Optimistic UI with tempId, pending state, and server-ack swap
+- [x] Read receipts broadcast `message:read` on server after DB update
 
 ---
 
@@ -281,7 +283,7 @@ server/src/socket/handlers/presence.handler.ts  ← flesh out fully:
 Update:
 
 ```
-server/src/socket/index.ts  ← on startup: flush all user:presence:* keys before accepting connections
+server/src/socket/index.ts  ← NOT IMPLEMENTED: on startup: flush all user:presence:* keys before accepting connections
                                clients reconnect and re-establish presence automatically
 ```
 
@@ -309,12 +311,16 @@ client/src/modules/chat/components/MessageList.tsx       ← scroll to bottom on
 
 ### End of Day 4 Checks
 
+- [x] Sent message shows pending state immediately (optimistic UI)
+- [x] Other user opens conversation, read receipt updates in sender's view
+- [x] Failed message shows error toast
+
+**⚠️ NOT YET IMPLEMENTED:**
 - [ ] User comes online, other user sees the green dot appear without refresh
 - [ ] User closes tab, other user sees them go offline
-- [ ] Sent message shows pending state immediately
-- [ ] Other user opens conversation, tick updates to read state
-- [ ] Failed message shows retry option in UI
 - [ ] Open two tabs as the same user — going offline only fires when both tabs close
+- [ ] Presence handler (`server/src/socket/handlers/presence.handler.ts`) is a skeleton — no Redis integration
+- [ ] Sidebar "Online" text is hardcoded, not driven by real presence data
 
 ---
 
@@ -387,10 +393,9 @@ Run the demo scenario a minimum of 3 times clean before calling it done. Demo to
 These are in the spec and will drop in cleanly after the demo. None affect the demo scenario.
 
 ```
-Rate limiting              ← stub exists in middlewares/rateLimit.ts, wire in post-demo
+Rate limiting              ✅ wired — socket rate limiter + REST rate limiters active
 Socket token refresh       ← long session handling deferred
-Presence TTL crash recovery ← Redis Set model is correct, startup flush is in, TTL is set.
-                              Full crash-recovery hardening is post-demo.
+Presence TTL crash recovery ← NOT YET IMPLEMENTED — `presence.handler.ts` is a skeleton placeholder
 Error handling layer       ← beyond basic 401/403, deferred
 Any Phase 2 feature
 ```
