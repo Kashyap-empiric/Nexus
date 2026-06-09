@@ -2,10 +2,10 @@
 
 > **Location:** `server/src/socket/`, `client/src/shared/lib/socket.ts`, `client/src/shared/providers/socket-provider.tsx`
 > **Type:** Real-time Infrastructure
-> **Status:** ✅ Active (Phase 1) - ⚠️ Presence handler is a skeleton (no Redis)
+> **Status:** ✅ Active (Phase 1 complete)
 
 ## Purpose
-Provides the foundational WebSocket infrastructure for real-time features in Nexus, such as live messaging, typing indicators, and user presence. It leverages `socket.io` on the backend and `socket.io-client` on the frontend. The module ensures secure, authenticated connections and handles automatic room assignments for direct messages.
+Provides the foundational WebSocket infrastructure for real-time features in Nexus, such as live messaging, presence tracking, and read receipts. It leverages `socket.io` on the backend and `socket.io-client` on the frontend. The module ensures secure, authenticated connections and handles automatic room assignments for direct messages. Presence is backed by Redis with an in-memory fallback.
 
 ## Flow
 ```mermaid
@@ -14,6 +14,7 @@ sequenceDiagram
     participant SocketLib as socket.io-client
     participant Supabase as Supabase Auth
     participant Server as Express Server (socket.io)
+    participant Redis as Redis / In-Memory Store
 
     Client->>SocketLib: Mount SocketProvider -> connect()
     SocketLib->>Supabase: Fetch Session Token (auth callback)
@@ -24,7 +25,10 @@ sequenceDiagram
     else Valid Token
         Server->>Server: Query DB for User's Conversations
         Server->>Server: Auto-Join socket to "conversation:{id}" rooms
+        Server->>Redis: SADD user:presence:{userId} {socketId}
         Server-->>SocketLib: Connection Established
+        Server-->>SocketLib: presence:initial { userIds: [...] }
+        Server-->>Others: user:online { userId } (if first connection)
     end
     SocketLib-->>Client: Update UI (socketStatus: "connected")
 ```
@@ -38,7 +42,10 @@ flowchart TD
     SocketLib["socket.io-client"]
     Server["socket.io Server"]
     AuthMiddle["socketAuthMiddleware"]
-    Handlers["Event Handlers (e.g., Presence)"]
+    RateLimit["socketRateLimiterMiddleware"]
+    PresenceStore["presenceStore.ts (Redis + Memory)"]
+    PresenceHandler["presence.handler.ts"]
+    MessageHandler["message.handler.ts"]
     DB["Postgres DB"]
 
     Client --> SocketProv
@@ -46,32 +53,59 @@ flowchart TD
     SocketProv -->|"connect() / disconnect()"| SocketLib
     SocketLib <--> Server
     Server -->|"1. Validate Connection"| AuthMiddle
-    Server -->|"2. Join Rooms"| DB
-    Server -->|"3. Register"| Handlers
+    Server -->|"2. Rate Limit (msg:send only)"| RateLimit
+    Server -->|"3. Join Rooms"| DB
+    Server -->|"4. Register Handlers"| PresenceHandler
+    Server -->|"4. Register Handlers"| MessageHandler
+    PresenceHandler -->|"Dual-write"| PresenceStore
+    PresenceStore --> Redis
+    PresenceStore --> Memory[(In-Memory Map)]
 ```
 
 ## Key Components
 
 ### Backend (`server/src/socket/`)
-- **`socket.ts`**: The entry point for the Socket.io server. Handles CORS configuration, registers middlewares, and sets up the root `connection` listener. It also manages the logic to automatically join clients into their respective conversation rooms based on DB memberships.
-- **`middlewares/auth.ts` (`socketAuthMiddleware`)**: Intercepts the handshake, extracts the JWT from `auth.token` or headers, and cryptographically verifies it using the same logic as the REST API. Attaches the decoded user to `socket.data.user`.
-- **`handlers/message.handler.ts`**: Listens for the `message:send` event from clients. Persists messages to the database, broadcasts the `message:new` event to conversation rooms, and acknowledges the sender with the official message to replace their optimistic `tempId`.
-- **`handlers/presence.handler.ts`**: ⚠️ **Skeleton only.** Logs disconnects. Redis integration (user:online / user:offline broadcast) is **not yet implemented**.
+- **`socket.ts`**: The entry point for the Socket.io server. Handles CORS configuration, registers middlewares (`socketAuthMiddleware`), and sets up the root `connection` listener. On connect: validates JWT, auto-joins user to `user:<userId>` room + all conversation rooms, registers presence and message handlers.
+- **`middlewares/auth.ts` (`socketAuthMiddleware`)**: Intercepts the handshake, extracts the JWT from `auth.token` or headers/query, and cryptographically verifies it using the same ES256 JWKS logic as the REST API. Attaches the decoded user to `socket.data.user`.
+- **`middlewares/rateLimiter.ts`**: Per-socket middleware that only applies to `message:send` events. Window: 10 seconds, Limit: 10 messages. Drops the packet and calls callback with error on breach.
+- **`handlers/message.handler.ts`**: Listens for `message:send` events. Validates payload, persists message to DB via `createMessage` service, broadcasts `message:new` to the conversation room, and acknowledges the sender.
+- **`handlers/presence.handler.ts`**: Wired and fully functional. On connect: calls `presenceStore.addSocket()` and broadcasts `user:online` if first connection. On disconnect: calls `presenceStore.removeSocket()` and broadcasts `user:offline` if last connection. Sends `presence:initial` snapshot to connecting socket.
+- **`presenceStore.ts`**: Singleton store with dual-write to Redis (via `redis` npm client) and in-memory `Map<userId, Set<socketId>>`. Reads prefer Redis, fall back to memory. Handles multi-tab correctly: user only goes offline when ALL sockets disconnect.
 
 ### Frontend
-- **`shared/lib/socket.ts`**: Configures the `socket.io-client` instance. It is instantiated with `autoConnect: false` to allow controlled mounting. It includes an async `auth` callback that securely retrieves the latest Supabase session token before attempting connection.
-- **`shared/providers/socket-provider.tsx`**: A logic-only React component that manages the connection lifecycle. It calls `socket.connect()` on mount and listens for `connect`, `disconnect`, and `connect_error` events to sync the connection state to the global store. It wraps the protected routes.
-- **`modules/chat/store/chatStore.ts`**: A Zustand store tracking the `socketStatus` (`connecting`, `connected`, `disconnected`), ensuring the UI can reflect the real-time connectivity status to the user.
-- **`modules/chat/hooks/useMessages.ts`**: Hook used to emit `MESSAGE_SEND` events to the server when a user sends a message.
-- **`modules/chat/hooks/useConversationSocket.ts`**: Hook used inside the chat interface to listen to `MESSAGE_NEW` events and dynamically update the message list.
-- **`modules/auth/hooks/useAuth.ts`**: Handles calling `socket.disconnect()` upon user logout.
+- **`shared/lib/socket.ts`**: Configures the `socket.io-client` singleton with `autoConnect: false`. Includes an async `auth` callback that fetches the latest Supabase session token.
+- **`shared/providers/socket-provider.tsx`**: Manages the connection lifecycle. Calls `socket.connect()` on mount, listens for `connect`/`disconnect`/`connect_error`, syncs status to Zustand store.
+- **`modules/chat/store/chatStore.ts`**: Zustand store tracking `socketStatus` (`connecting`, `connected`, `disconnected`), `onlineUsers` (Set of userIds), `activeConversationId`, and per-conversation `drafts`.
+- **`modules/chat/hooks/useMessages.ts`**: Emits `MESSAGE_SEND` events with optimistic UI updates (tempId, pending state). Handles success (swap tempId for real message) and error (rollback + toast).
+- **`modules/chat/hooks/useConversationSocket.ts`**: Listens for `MESSAGE_NEW` and `MESSAGE_READ` events scoped to a specific conversation. Injects into TanStack Query cache.
+- **`modules/chat/hooks/useGlobalSocket.ts`**: Mounted in sidebar. Listens for `MESSAGE_NEW`, `MESSAGE_READ`, and `CONVERSATION_NEW` events globally. Updates sidebar ordering and unread badges.
+- **`modules/users/hooks/usePresence.ts`**: Listens for `presence:initial`, `user:online`, `user:offline`. Updates `chatStore.onlineUsers`.
+
+## Event Contract
+
+### Client → Server
+| Event | Payload | Description |
+|---|---|---|
+| `message:send` | `{ tempId, conversationId, content }` | Send a new message (expects callback ack) |
+
+### Server → Client
+| Event | Payload | Description |
+|---|---|---|
+| `message:new` | `Message` object | New message broadcast to conversation room |
+| `message:read` | `{ conversationId, userId, lastReadMessageId }` | Read receipt broadcast to conversation room |
+| `user:online` | `{ userId }` | User came online (broadcast, not self) |
+| `user:offline` | `{ userId }` | User went offline (broadcast, not self) |
+| `presence:initial` | `{ userIds: string[] }` | Initial snapshot of online users (sent to connecting socket) |
+| `conversation:new` | `Conversation` object | New conversation notification (sent to `user:<userId>` room) |
 
 ## Important Logic
-- **Authentication via Handshake**: Socket connections are strictly authenticated. The frontend dynamically fetches the current Supabase token via the `auth` property in the socket options. The backend verifies this token before allowing the connection.
-- **Auto-Join Rooms**: Upon a successful connection, the backend queries Prisma for all `ConversationMember` records associated with the user. The socket is then automatically joined to a room for each conversation (format: `conversation:{id}`). This allows targeted broadcasting of messages directly to active participants of a DM without manual room management on the client.
-- **Global UI State**: The `SocketProvider` acts as the bridge between the persistent socket instance and the React component tree, updating a lightweight Zustand store so any component can render online/offline indicators.
+- **Authentication via Handshake**: Socket connections are strictly authenticated. The frontend fetches the current Supabase token via the `auth` property in socket options. The backend verifies this before allowing the connection.
+- **Auto-Join Rooms**: On successful connection, the backend queries Prisma for all `ConversationMember` records and auto-joins the socket to `conversation:{id}` rooms.
+- **Dynamic Room Joining**: When a new DM is created, the server iterates `io.sockets.sockets` to find and join participants' sockets to the new room, then emits `conversation:new` to each `user:<userId>` room.
+- **Presence Dual-Write**: Every addSocket/removeSocket operation writes to both Redis and in-memory Map, ensuring the in-memory fallback is always consistent.
+- **Rate Limiting**: Socket-level rate limiter per user per socket, 10 messages per 10 second window. Returns error via callback on rate limit breach.
+- **Error Handling**: Structured error objects `{ success: false, error: { code, message, retryable } }` returned via callback for message send failures.
 
 ## Future Upgrades
-- **Typing Indicators**: Ephemeral events broadcasted to specific rooms to show "User is typing..." states.
-- **Presence (Redis)**: Wire Upstash Redis into `presence.handler.ts` to track socketCount per user and broadcast online/offline status.
-- **Presence Indicators in UI**: Build `PresenceIndicator` component and connect to real `user:online` / `user:offline` events.
+- **Typing Indicators**: `typing:start` / `typing:stop` events reserved in the event contract but not yet implemented.
+- **Redis Pub/Sub Adapter**: For horizontal scaling of Socket.io across multiple server instances.

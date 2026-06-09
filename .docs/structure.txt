@@ -1,181 +1,212 @@
 .
 ├── client
-│   ├── public
-│   │   ├── images
-│   │   │   └── auth-bg.png
-│   │   ├── file.svg
-│   │   ├── globe.svg
-│   │   ├── next.svg
-│   │   ├── vercel.svg
-│   │   └── window.svg
-│   ├── src
-│   │   ├── app
-│   │   │   ├── (auth)
-│   │   │   │   ├── forgot-password
-│   │   │   │   │   └── page.tsx
-│   │   │   │   ├── login
-│   │   │   │   │   └── page.tsx
-│   │   │   │   ├── register
-│   │   │   │   │   └── page.tsx
-│   │   │   │   └── layout.tsx
-│   │   │   ├── auth
-│   │   │   │   └── callback
-│   │   │   │       └── page.tsx
-│   │   │   ├── (protected)
-│   │   │   │   ├── conversations
-│   │   │   │   │   ├── [id]
-│   │   │   │   │   │   └── page.tsx
-│   │   │   │   │   ├── layout.tsx
-│   │   │   │   │   └── page.tsx
-│   │   │   │   └── layout.tsx
-│   │   │   ├── favicon.ico
-│   │   │   ├── globals.css
-│   │   │   ├── layout.tsx
-│   │   │   ├── not-found.tsx
-│   │   │   └── page.tsx
-│   │   ├── config
-│   │   │   └── env.ts
-│   │   ├── modules
-│   │   │   ├── auth
-│   │   │   │   ├── components
-│   │   │   │   │   ├── AuthSidebar.tsx
-│   │   │   │   │   ├── LoginForm.tsx
-│   │   │   │   │   ├── MobileAuthHeader.tsx
-│   │   │   │   │   └── RegisterForm.tsx
-│   │   │   │   ├── hooks
-│   │   │   │   │   └── useAuth.ts
-│   │   │   │   ├── index.ts
-│   │   │   │   └── schemas
-│   │   │   │       └── auth.ts
-│   │   │   ├── chat
-│   │   │   │   ├── api
-│   │   │   │   │   ├── conversations.api.ts
-│   │   │   │   │   └── messages.api.ts
-│   │   │   │   ├── components
-│   │   │   │   │   ├── ActiveConversation.tsx
-│   │   │   │   │   ├── EmptyState.tsx
-│   │   │   │   │   ├── MessageGroupItem.tsx
-│   │   │   │   │   ├── MessageInput.tsx
-│   │   │   │   │   ├── MessageList.tsx
-│   │   │   │   │   ├── NavigationRail.tsx
-│   │   │   │   │   ├── NewConversationModal.tsx
-│   │   │   │   │   └── Sidebar.tsx
-│   │   │   │   ├── hooks
-│   │   │   │   │   ├── useConversationSocket.ts
-│   │   │   │   │   ├── useConversations.ts
-│   │   │   │   │   ├── useGlobalSocket.ts
-│   │   │   │   │   └── useMessages.ts
-│   │   │   │   ├── index.ts
-│   │   │   │   ├── store
-│   │   │   │   │   └── chatStore.ts
-│   │   │   │   ├── types
-│   │   │   │   │   ├── conversation.ts
-│   │   │   │   │   ├── message.ts
-│   │   │   │   │   └── socket.ts
-│   │   │   │   ├── utils
-│   │   │   │   │   └── groupMessages.ts
-│   │   │   │   └── index.ts
-│   │   │   ├── landing
-│   │   │   │   ├── components
-│   │   │   │   │   └── LandingPage.tsx
-│   │   │   │   └── index.ts
-│   │   │   └── users
-│   │   │       ├── api
-│   │   │       │   └── users.api.ts
-│   │   │       ├── hooks
-│   │   │       │   └── useUsers.ts
-│   │   │       └── index.ts
-│   │   ├── proxy.ts
-│   │   └── shared
-│   │       ├── components
-│   │       │   ├── theme-toggle.tsx
-│   │       │   └── ui
-│   │       │       ├── avatar.tsx
-│   │       │       ├── button.tsx
-│   │       │       ├── card.tsx
-│   │       │       ├── input.tsx
-│   │       │       └── label.tsx
-│   │       ├── constants
-│   │       │   ├── api_routes.ts
-│   │       │   ├── app_routes.ts
-│   │       │   └── queryKeys.ts
-│   │       ├── hooks
-│   │       ├── lib
-│   │       │   ├── api.ts
-│   │       │   ├── socket.ts
-│   │       │   ├── supabase.ts
-│   │       │   └── utils.ts
-│   │       ├── providers
-│   │       │   ├── auth-provider.tsx
-│   │       │   ├── query-provider.tsx
-│   │       │   ├── socket-provider.tsx
-│   │       │   └── theme-provider.tsx
-│   │       └── socket-events.ts
-│   ├── components.json
-│   ├── eslint.config.mjs
-│   ├── next.config.ts
-│   ├── package.json
-│   ├── postcss.config.mjs
-│   ├── README.md
-│   ├── tsconfig.json
-│   └── .gitignore
+│   ├── public
+│   │   ├── images
+│   │   │   └── auth-bg.png
+│   │   ├── file.svg
+│   │   ├── globe.svg
+│   │   ├── next.svg
+│   │   ├── vercel.svg
+│   │   └── window.svg
+│   ├── src
+│   │   ├── app
+│   │   │   ├── (auth)
+│   │   │   │   ├── forgot-password
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── login
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── register
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── layout.tsx
+│   │   │   ├── auth
+│   │   │   │   └── callback
+│   │   │   │       └── page.tsx
+│   │   │   ├── (protected)
+│   │   │   │   ├── conversations
+│   │   │   │   │   ├── [id]
+│   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   ├── layout.tsx
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── layout.tsx
+│   │   │   ├── favicon.ico
+│   │   │   ├── globals.css
+│   │   │   ├── layout.tsx
+│   │   │   ├── not-found.tsx
+│   │   │   └── page.tsx
+│   │   ├── config
+│   │   │   └── env.ts
+│   │   ├── modules
+│   │   │   ├── auth
+│   │   │   │   ├── components
+│   │   │   │   │   ├── AuthSidebar.tsx
+│   │   │   │   │   ├── LoginForm.tsx
+│   │   │   │   │   ├── MobileAuthHeader.tsx
+│   │   │   │   │   └── RegisterForm.tsx
+│   │   │   │   ├── hooks
+│   │   │   │   │   ├── useAuth.ts
+│   │   │   │   │   └── (usePresence.ts → moved to users/)
+│   │   │   │   ├── index.ts
+│   │   │   │   └── schemas
+│   │   │   │       └── auth.ts
+│   │   │   ├── chat
+│   │   │   │   ├── api
+│   │   │   │   │   ├── conversations.api.ts
+│   │   │   │   │   └── messages.api.ts
+│   │   │   │   ├── components
+│   │   │   │   │   ├── ActiveConversation.tsx
+│   │   │   │   │   ├── EmptyState.tsx
+│   │   │   │   │   ├── MessageGroupItem.tsx
+│   │   │   │   │   ├── MessageInput.tsx
+│   │   │   │   │   ├── MessageList.tsx
+│   │   │   │   │   ├── MessageStatus.tsx
+│   │   │   │   │   ├── NavigationRail.tsx
+│   │   │   │   │   ├── NewConversationModal.tsx
+│   │   │   │   │   ├── PresenceIndicator.tsx
+│   │   │   │   │   └── Sidebar.tsx
+│   │   │   │   ├── hooks
+│   │   │   │   │   ├── useConversationSocket.ts
+│   │   │   │   │   ├── useConversations.ts
+│   │   │   │   │   ├── useGlobalSocket.ts
+│   │   │   │   │   └── useMessages.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── realtime
+│   │   │   │   │   ├── conversation.handlers.ts
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   └── message.handlers.ts
+│   │   │   │   ├── store
+│   │   │   │   │   └── chatStore.ts
+│   │   │   │   ├── types
+│   │   │   │   │   ├── conversation.ts
+│   │   │   │   │   ├── message.ts
+│   │   │   │   │   └── socket.ts
+│   │   │   │   └── utils
+│   │   │   │       └── groupMessages.ts
+│   │   │   ├── landing
+│   │   │   │   ├── components
+│   │   │   │   │   └── LandingPage.tsx
+│   │   │   │   └── index.ts
+│   │   │   └── users
+│   │   │       ├── api
+│   │   │       │   └── users.api.ts
+│   │   │       ├── hooks
+│   │   │       │   ├── usePresence.ts
+│   │   │       │   └── useUsers.ts
+│   │   │       └── index.ts
+│   │   ├── proxy.ts
+│   │   └── shared
+│   │       ├── components
+│   │       │   ├── theme-toggle.tsx
+│   │       │   └── ui
+│   │       │       ├── avatar.tsx
+│   │       │       ├── button.tsx
+│   │       │       ├── card.tsx
+│   │       │       ├── input.tsx
+│   │       │       └── label.tsx
+│   │       ├── constants
+│   │       │   ├── api_routes.ts
+│   │       │   ├── app_routes.ts
+│   │       │   └── queryKeys.ts
+│   │       ├── lib
+│   │       │   ├── api.ts
+│   │       │   ├── socket.ts
+│   │       │   ├── supabase.ts
+│   │       │   └── utils.ts
+│   │       ├── providers
+│   │       │   ├── auth-provider.tsx
+│   │       │   ├── query-provider.tsx
+│   │       │   ├── socket-provider.tsx
+│   │       │   └── theme-provider.tsx
+│   │       └── socket-events.ts
+│   ├── components.json
+│   ├── eslint.config.mjs
+│   ├── next.config.ts
+│   ├── package.json
+│   ├── postcss.config.mjs
+│   ├── README.md
+│   ├── tsconfig.json
+│   └── .gitignore
 ├── server
-│   ├── prisma
-│   │   ├── migrations
-│   │   │   ├── 20260604065339_init
-│   │   │   │   └── migration.sql
-│   │   │   └── migration_lock.toml
-│   │   ├── schema.prisma
-│   │   ├── seed.ts
-│   │   └── SUPABASE_QUERIES.sql
-│   ├── src
-│   │   ├── config
-│   │   │   └── env.ts
-│   │   ├── lib
-│   │   │   └── db.ts
-│   │   ├── middlewares
-│   │   │   ├── auth.ts
-│   │   │   ├── errorHandler.ts
-│   │   │   ├── rateLimiter.ts
-│   │   │   ├── requireConversationMember.ts
-│   │   │   └── validate.ts
-│   │   ├── modules
-│   │   │   ├── conversations
-│   │   │   │   ├── conversations.controller.ts
-│   │   │   │   ├── conversations.routes.ts
-│   │   │   │   ├── conversations.schema.ts
-│   │   │   │   └── conversations.service.ts
-│   │   │   ├── messages
-│   │   │   │   ├── messages.controller.ts
-│   │   │   │   ├── messages.routes.ts
-│   │   │   │   ├── messages.schema.ts
-│   │   │   │   └── messages.service.ts
-│   │   │   └── users
-│   │   │       ├── users.controller.ts
-│   │   │       ├── users.routes.ts
-│   │   │       ├── users.schema.ts
-│   │   │       └── users.service.ts
-│   │   ├── server.ts
-│   │   ├── shared
-│   │   │   └── socket-events.ts
-│   │   ├── socket
-│   │   │   ├── handlers
-│   │   │   │   ├── message.handler.ts
-│   │   │   │   └── presence.handler.ts
-│   │   │   ├── middlewares
-│   │   │   │   ├── auth.ts
-│   │   │   │   └── rateLimiter.ts
-│   │   │   └── socket.ts
-│   │   ├── types
-│   │   │   └── shared.ts
-│   │   ├── utils
-│   │   │   └── jwt.ts
-│   │   └── app.ts
-│   ├── package.json
-│   ├── prisma.config.ts
-│   ├── tsconfig.json
-│   ├── tsup.config.ts
-│   └── .gitignore
+│   ├── prisma
+│   │   ├── migrations
+│   │   │   ├── 20260604065339_init
+│   │   │   │   └── migration.sql
+│   │   │   ├── 20260609124118_add_message_soft_delete
+│   │   │   │   └── migration.sql
+│   │   │   └── migration_lock.toml
+│   │   ├── schema.prisma
+│   │   ├── seed.ts
+│   │   └── SUPABASE_QUERIES.sql
+│   ├── src
+│   │   ├── config
+│   │   │   └── env.ts
+│   │   ├── lib
+│   │   │   ├── db.ts
+│   │   │   └── redis.ts
+│   │   ├── middlewares
+│   │   │   ├── auth.ts
+│   │   │   ├── errorHandler.ts
+│   │   │   ├── rateLimiter.ts
+│   │   │   ├── requireConversationMember.ts
+│   │   │   └── validate.ts
+│   │   ├── modules
+│   │   │   ├── conversations
+│   │   │   │   ├── conversations.controller.ts
+│   │   │   │   ├── conversations.routes.ts
+│   │   │   │   ├── conversations.schema.ts
+│   │   │   │   └── conversations.service.ts
+│   │   │   ├── messages
+│   │   │   │   ├── messages.controller.ts
+│   │   │   │   ├── messages.routes.ts
+│   │   │   │   ├── messages.schema.ts
+│   │   │   │   └── messages.service.ts
+│   │   │   └── users
+│   │   │       ├── users.controller.ts
+│   │   │       ├── users.routes.ts
+│   │   │       ├── users.schema.ts
+│   │   │       └── users.service.ts
+│   │   ├── server.ts
+│   │   ├── shared
+│   │   │   └── socket-events.ts
+│   │   ├── socket
+│   │   │   ├── handlers
+│   │   │   │   ├── message.handler.ts
+│   │   │   │   └── presence.handler.ts
+│   │   │   ├── middlewares
+│   │   │   │   ├── auth.ts
+│   │   │   │   └── rateLimiter.ts
+│   │   │   ├── presenceStore.ts
+│   │   │   ├── socket.ts
+│   │   │   └── socketErrors.ts
+│   │   ├── types
+│   │   │   └── shared.ts
+│   │   ├── utils
+│   │   │   └── jwt.ts
+│   │   └── app.ts
+│   ├── package.json
+│   ├── prisma.config.ts
+│   ├── tsconfig.json
+│   ├── tsup.config.ts
+│   └── .gitignore
+├── .agents
+│   ├── 00-instructions.md
+│   ├── 01-project-context.md
+│   ├── 02-architecture-guidelines.md
+│   ├── 03-database-schema.md
+│   ├── 04-phase-1-plan.md
+│   └── module-context
+│       ├── README.md
+│       └── auth-context.md
+├── .docs
+│   ├── progress.txt
+│   ├── architecture.md
+│   ├── context.md
+│   ├── data-flow.md
+│   ├── DOCUMENTATION.md
+│   ├── structure.txt
+│   └── modules
+│       ├── auth.md
+│       ├── chat.md
+│       └── socket.md
 ├── daily-logs.md
 ├── logging-instructions.txt
 ├── NEXUS_SLACK_CLONE.md
@@ -183,4 +214,4 @@
 ├── render.yaml
 └── sandbox.txt
 
-59 directories, 162 files
+62 directories, 172 files

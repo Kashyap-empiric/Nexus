@@ -1,7 +1,7 @@
 # Nexus: System Architecture
 
 > **Last Updated:** 2026-06-09
-> **Status:** Active. Most sections describe the current architecture for Phase 1. Presence (Redis) integration is not yet complete.
+> **Status:** Active. Phase 1 core features are complete. Presence (Redis) integration is fully implemented with dual-write to Redis + in-memory fallback.
 
 ---
 
@@ -43,7 +43,7 @@ flowchart TD
 
 ### Data Layer (implemented)
 - **Supabase PostgreSQL:** primary data store, accessed via Prisma ORM
-- **Upstash Redis:** ⚠️ configured but not yet integrated for presence — `presence.handler.ts` is a skeleton
+- **Upstash Redis:** ✅ fully integrated for presence — `presenceStore.ts` uses Redis with in-memory fallback, dual-writes on every connect/disconnect
 - **Supabase Auth:** handles session management and JWT issuance
 
 ### Infrastructure (implemented)
@@ -102,9 +102,9 @@ erDiagram
 | Decision | Choice | Rationale |
 |---|---|---|
 | Unified conversation model | Single `Conversation` entity for DMs and Channels (Phase 1) | Avoids schema duplication; DM logic extends cleanly to Channels |
-| Read receipts | `last_read_at` on `ConversationMember` (Phase 1) | O(1) writes; no per-message read-status rows |
+| Read receipts | `lastReadMessageId` on `ConversationMember` (Phase 1) | O(1) writes; no per-message read-status rows |
 | Auth | Supabase Auth (Phase 1) | Delegated session security, no custom token infrastructure |
-| Presence store | Upstash Redis (Phase 1) | ⚠️ Not yet integrated — handler is a skeleton placeholder |
+| Presence store | Upstash Redis (Phase 1) | ✅ Fully integrated — `presenceStore.ts` with dual-write to Redis + in-memory fallback, multi-tab support via socket ID sets |
 | Real-time transport | Socket.io (Phase 1) | Rooms, auto-reconnect, better DX than raw WebSockets |
 
 ---
