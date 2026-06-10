@@ -28,21 +28,8 @@ export const updateMessageInCache = (
       };
     }
   );
-
-  // Update conversation preview if it's the latest message
-  queryClient.setQueryData<Conversation[]>(queryKeys.conversations, (old) => {
-    if (!Array.isArray(old)) return old;
-    return old.map((conv) => {
-      if (conv.id !== conversationId) return conv;
-      if (conv.messages?.[0]?.id === messageId) {
-        return {
-          ...conv,
-          messages: [{ ...conv.messages[0], content: newContent, isEdited } as Message],
-        };
-      }
-      return conv;
-    });
-  });
+  // Note: We no longer update conversation metadata (latestMessage, latestMessageId) here.
+  // It is now strictly handled by CONVERSATION_UPDATE socket events.
 };
 
 export const markMessageDeletedInCache = (
@@ -69,19 +56,6 @@ export const markMessageDeletedInCache = (
       };
     }
   );
-
-  // Update conversation preview if it's the latest message
-  queryClient.setQueryData<Conversation[]>(queryKeys.conversations, (old) => {
-    if (!Array.isArray(old)) return old;
-    return old.map((conv) => {
-      if (conv.id !== conversationId) return conv;
-      if (conv.messages?.[0]?.id === messageId) {
-        return {
-          ...conv,
-          messages: [{ ...conv.messages[0], deletedAt } as Message],
-        };
-      }
-      return conv;
-    });
-  });
+  // Note: We no longer update conversation metadata (latestMessage, latestMessageId) here.
+  // It is now strictly handled by CONVERSATION_UPDATE socket events.
 };

@@ -130,7 +130,8 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                 )}
 
                 <div className="text-[15px] text-foreground whitespace-pre-wrap break-words leading-relaxed flex items-center justify-between group/msg relative min-h-[22px]">
-                  {editingMessageId === msg.id ? (
+                  {/* !isDeleted prevents stuck edit states during concurrent multi-device deletions or rapid click race conditions */}
+                  {editingMessageId === msg.id && !isDeleted ? (
                     <div className="flex flex-col gap-2 w-full mt-1 mb-2">
                       <textarea
                         ref={editInputRef}
