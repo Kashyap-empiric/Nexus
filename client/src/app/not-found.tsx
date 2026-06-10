@@ -1,7 +1,6 @@
-"use client";
-
 import Link from "next/link";
-import { Ghost, Home, ArrowLeft } from "lucide-react";
+import { Ghost, Home } from "lucide-react";
+import { BackButton } from "@/shared/components/back-button";
 
 export default function NotFound() {
   return (
@@ -11,7 +10,7 @@ export default function NotFound() {
           <div className="absolute inset-0 bg-primary/20 rounded-full animate-pulse blur-xl" />
           <Ghost className="w-20 h-20 text-primary relative z-10 animate-bounce" />
         </div>
-        
+
         <div className="space-y-3">
           <h1 className="text-6xl font-extrabold tracking-tighter text-foreground">404</h1>
           <h2 className="text-2xl font-semibold tracking-tight text-foreground">
@@ -23,15 +22,9 @@ export default function NotFound() {
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-          <button 
-            onClick={() => window.history.back()}
-            className="w-full sm:w-auto inline-flex items-center justify-center h-10 px-6 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground text-sm font-medium transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Go Back
-          </button>
-          
-          <Link 
+          <BackButton />
+
+          <Link
             href="/"
             className="w-full sm:w-auto inline-flex items-center justify-center h-10 px-6 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium shadow transition-colors"
           >

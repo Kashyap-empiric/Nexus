@@ -193,7 +193,14 @@ Key files:
 
 ## Day 5 — Integration, Polish & Demo Prep
 
-**Status: ✅ Complete**
+**Status: 🟡 In Progress**
+
+### To Implement
+
+- [ ] Edit and delete messages
+- [ ] The conversation sidebar should show number of unread messages for each conversation (if there are any)
+- [ ] Message requests: instead of directly starting a conversation, a message request is sent with the message. Only upon acceptance does it appear in the direct messages list.
+
 
 ### Demo Scenario — ✅ Verified
 

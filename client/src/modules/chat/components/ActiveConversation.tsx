@@ -49,7 +49,7 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
   const isDM = conversation.type === "DM";
   const otherMember = conversation.members.find((m) => m.userId !== currentUserId);
   const otherName = otherMember?.user?.username;
-  const title = conversation.name || otherName || (isDM ? "Direct Message" : "Channel");
+  const title = conversation.name || otherName || (isDM ? "Deleted user" : "Channel");
 
   const myProfile = conversation.members.find((m) => m.userId === currentUserId)?.user;
 
@@ -59,15 +59,15 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
       <div className="h-14 border-b flex items-center justify-between px-4 shrink-0 bg-background shadow-sm">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <Avatar className="h-7 w-7 shrink-0 rounded-md">
-              <AvatarImage src={otherMember?.user?.avatarUrl || undefined} className="rounded-md" />
-              <AvatarFallback className="leading-none rounded-md bg-primary/20 text-primary font-medium">{title?.[0]?.toUpperCase() || "?"}</AvatarFallback>
+            <Avatar className="h-7 w-7 shrink-0">
+              <AvatarImage src={otherMember?.user?.avatarUrl || undefined} />
+              <AvatarFallback className="bg-primary/20 text-primary font-medium pt-[1px]">{title?.[0]?.toUpperCase() || "?"}</AvatarFallback>
             </Avatar>
             {otherMember?.userId && (
               <PresenceIndicator userId={otherMember.userId} className="-bottom-0.5 -right-0.5" />
             )}
           </div>
-          <h2 className="text-[15px] font-bold leading-none text-foreground">{title}</h2>
+          <h2 className="text-[15px] font-bold text-foreground pt-[1px]">{title}</h2>
         </div>
         <ThemeToggle />
       </div>

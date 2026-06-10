@@ -7,6 +7,7 @@ import { useCreateConversationMutation } from "../hooks/useConversations";
 import { useUsersSearchQuery } from "@/modules/users";
 import { Input } from "@/shared/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
+import { toast } from "sonner";
 
 interface NewConversationModalProps {
   isOpen: boolean;
@@ -35,6 +36,11 @@ export function NewConversationModal({ isOpen, onClose }: NewConversationModalPr
         setQuery("");
         router.push(`/conversations/${conversation.id}`);
       },
+      onError: (error) => {
+        console.error("Failed to create conversation:", error);
+        // @ts-ignore
+        toast.error(`Failed to create conversation: ${error?.response?.data?.error || error.message}`);
+      }
     });
   };
 
@@ -79,6 +85,7 @@ export function NewConversationModal({ isOpen, onClose }: NewConversationModalPr
               )}
               {users.map((user) => (
                 <button
+                  type="button"
                   key={user.id}
                   onClick={() => handleSelectUser(user.id)}
                   disabled={isCreating}
@@ -86,9 +93,9 @@ export function NewConversationModal({ isOpen, onClose }: NewConversationModalPr
                 >
                   <Avatar className="h-8 w-8 shrink-0">
                     <AvatarImage src={user.avatarUrl || undefined} />
-                    <AvatarFallback className="text-xs leading-none">{user.username[0]?.toUpperCase()}</AvatarFallback>
+                    <AvatarFallback className="text-xs pt-[1px]">{user.username[0]?.toUpperCase()}</AvatarFallback>
                   </Avatar>
-                  <span className="font-medium leading-none">{user.username}</span>
+                  <span className="font-medium pt-[1px]">{user.username}</span>
                 </button>
               ))}
             </div>
