@@ -6,7 +6,9 @@ import { X, Search, Loader2 } from "lucide-react";
 import { useCreateConversationMutation } from "../hooks/useConversations";
 import { useUsersSearchQuery } from "@/modules/users";
 import { Input } from "@/shared/components/ui/input";
+import { Button } from "@/shared/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
+import { toast } from "sonner";
 
 interface NewConversationModalProps {
   isOpen: boolean;
@@ -35,6 +37,11 @@ export function NewConversationModal({ isOpen, onClose }: NewConversationModalPr
         setQuery("");
         router.push(`/conversations/${conversation.id}`);
       },
+      onError: (error) => {
+        console.error("Failed to create conversation:", error);
+        // @ts-ignore
+        toast.error(`Failed to create conversation: ${error?.response?.data?.error || error.message}`);
+      }
     });
   };
 
@@ -78,18 +85,27 @@ export function NewConversationModal({ isOpen, onClose }: NewConversationModalPr
                 </div>
               )}
               {users.map((user) => (
-                <button
+                <div
                   key={user.id}
-                  onClick={() => handleSelectUser(user.id)}
-                  disabled={isCreating}
-                  className="w-full flex items-center gap-3 p-2 hover:bg-muted rounded-md transition-colors text-left"
+                  className="w-full flex items-center justify-between p-2 hover:bg-muted rounded-md transition-colors"
                 >
-                  <Avatar className="h-8 w-8 shrink-0">
-                    <AvatarImage src={user.avatarUrl || undefined} />
-                    <AvatarFallback className="text-xs leading-none">{user.username[0]?.toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <span className="font-medium leading-none">{user.username}</span>
-                </button>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8 shrink-0">
+                      <AvatarImage src={user.avatarUrl || undefined} />
+                      <AvatarFallback className="text-xs pt-[1px]">{user.username[0]?.toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium pt-[1px]">{user.username}</span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={isCreating}
+                    onClick={() => handleSelectUser(user.id)}
+                    className="h-7 text-xs px-3 rounded-full"
+                  >
+                    Message
+                  </Button>
+                </div>
               ))}
             </div>
           ) : (

@@ -17,3 +17,13 @@ export const createMessage = async (conversationId: string, content: string) => 
   const response = await api.post<{ data: Message }>(API_ROUTES.CONVERSATIONS.MESSAGES(conversationId), { content });
   return response.data.data;
 };
+
+export const editMessage = async (conversationId: string, messageId: string, content: string) => {
+  const response = await api.patch<{ data: Message }>(API_ROUTES.CONVERSATIONS.MESSAGE_DETAIL(conversationId, messageId), { content });
+  return response.data.data;
+};
+
+export const deleteMessage = async (conversationId: string, messageId: string) => {
+  const response = await api.delete<{ data: Message }>(API_ROUTES.CONVERSATIONS.MESSAGE_DETAIL(conversationId, messageId));
+  return response.data.data;
+};

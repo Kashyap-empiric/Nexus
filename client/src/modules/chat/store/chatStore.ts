@@ -59,3 +59,7 @@ export const useChatStore = create<UiState>((set) => ({
       onlineUsers: new Set(),
     }),
 }));
+
+import { storeResetHandlers } from "@/shared/lib/store-reset";
+storeResetHandlers.add(() => useChatStore.getState().clearAll());
+

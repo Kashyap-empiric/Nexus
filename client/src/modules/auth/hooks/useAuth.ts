@@ -2,16 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/shared/lib/supabase";
-import { socket } from "@/shared/lib/socket";
-import { useChatStore } from "@/modules/chat";
 import { APP_ROUTES } from "@/shared/constants/app_routes";
 import type { LoginFormData, RegisterFormData } from "../schemas/auth";
 
 export const useAuth = () => {
   const router = useRouter();
-  const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -91,12 +87,7 @@ export const useAuth = () => {
     try {
       const { error: authError } = await supabase.auth.signOut();
       if (authError) throw authError;
-
-      queryClient.clear();
-      socket.disconnect();
-      useChatStore.getState().clearAll();
-
-      router.replace(APP_ROUTES.AUTH.LOGIN);
+      // Note: Teardown and routing are now handled by AuthProvider's onAuthStateChange listener
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "An error occurred during sign out.";
       setError(message);

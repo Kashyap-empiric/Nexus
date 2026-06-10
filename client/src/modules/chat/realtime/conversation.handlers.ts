@@ -3,6 +3,8 @@ import { queryKeys } from "@/shared/constants/queryKeys";
 import type { Conversation } from "../types/conversation";
 import type { MessageReadPayload } from "../types/socket";
 
+import { getAuthUser } from "@/modules/auth/store/useAuthStore";
+
 export const handleMessageRead = (queryClient: QueryClient) => {
   return (data: MessageReadPayload) => {
     if (!data.conversationId || !data.userId || !data.lastReadMessageId) return;
@@ -14,6 +16,9 @@ export const handleMessageRead = (queryClient: QueryClient) => {
 
         return oldData.map((conv) => {
           if (conv.id !== data.conversationId) return conv;
+
+          const currentUser = getAuthUser();
+          const isCurrentUser = data.userId === currentUser?.id;
 
           const updatedMembers = conv.members.map((member) => {
             if (member.userId !== data.userId) return member;
@@ -27,7 +32,11 @@ export const handleMessageRead = (queryClient: QueryClient) => {
             return member;
           });
 
-          return { ...conv, members: updatedMembers };
+          return { 
+            ...conv, 
+            members: updatedMembers,
+            unreadCount: isCurrentUser ? 0 : conv.unreadCount
+          };
         });
       }
     );
@@ -48,6 +57,36 @@ export const handleConversationNew = (queryClient: QueryClient) => {
         if (exists) return oldData;
 
         return [conversation, ...oldData];
+      }
+    );
+  };
+};
+
+import { ConversationUpdatePayload } from "../types/socket";
+
+export const handleConversationUpdate = (queryClient: QueryClient) => {
+  return (payload: ConversationUpdatePayload) => {
+    if (!payload?.conversation?.id) return;
+
+    queryClient.setQueryData<Conversation[]>(
+      queryKeys.conversations,
+      (oldData) => {
+        if (!Array.isArray(oldData)) return oldData;
+
+        const updatedData = oldData.map((conv) => {
+          if (conv.id !== payload.conversation.id) return conv;
+
+          return {
+            ...conv,
+            updatedAt: payload.conversation.updatedAt,
+            latestMessageId: payload.conversation.latestMessageId,
+            latestMessage: payload.conversation.latestMessage,
+            name: payload.conversation.name !== undefined ? payload.conversation.name : conv.name,
+          };
+        });
+
+        // Re-sort the cached conversations array using updatedAt descending
+        return updatedData.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
       }
     );
   };

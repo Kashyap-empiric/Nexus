@@ -15,11 +15,13 @@ export const useGlobalSocket = () => {
     socket.on(SOCKET_EVENTS.MESSAGE_NEW, router.messageNew);
     socket.on(SOCKET_EVENTS.MESSAGE_READ, router.messageRead);
     socket.on(SOCKET_EVENTS.CONVERSATION_NEW, router.conversationNew);
+    socket.on(SOCKET_EVENTS.CONVERSATION_UPDATE, router.conversationUpdate);
 
     return () => {
       socket.off(SOCKET_EVENTS.MESSAGE_NEW, router.messageNew);
       socket.off(SOCKET_EVENTS.MESSAGE_READ, router.messageRead);
       socket.off(SOCKET_EVENTS.CONVERSATION_NEW, router.conversationNew);
+      socket.off(SOCKET_EVENTS.CONVERSATION_UPDATE, router.conversationUpdate);
     };
   }, [queryClient]);
 };
