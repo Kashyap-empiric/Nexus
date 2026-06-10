@@ -9,6 +9,8 @@ export interface Message {
   user: User;
   optimistic?: boolean;
   pending?: boolean;
+  isEdited?: boolean;
+  deletedAt?: string | null;
 }
 
 export interface MessagePage {

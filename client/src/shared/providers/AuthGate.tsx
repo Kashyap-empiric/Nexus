@@ -8,7 +8,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const isInitialized = useAuthInitialized();
   const user = useUser();
   const pathname = usePathname();
-  const isPublicRoute = pathname === "/" || pathname?.startsWith("/auth");
+  const isPublicRoute = pathname === "/" || pathname === "/login" || pathname === "/register";
 
   if (!isInitialized && !isPublicRoute) {
     return (

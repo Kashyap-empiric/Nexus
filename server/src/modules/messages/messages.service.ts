@@ -101,3 +101,32 @@ export const getMessageById = async (messageId: string) => {
     },
   });
 };
+
+export const deleteMessage = async (messageId: string, userId: string) => {
+  const message = await getMessageById(messageId);
+  if (!message) {
+    throw new Error("Message not found.");
+  }
+  if (message.deletedAt) {
+    throw new Error("Message is already deleted.");
+  }
+  if (message.userId !== userId) {
+    throw new Error("403 Forbidden");
+  }
+
+  return prisma.message.update({
+    where: { id: messageId },
+    data: {
+      deletedAt: new Date(),
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          avatarUrl: true,
+        },
+      },
+    },
+  });
+};
