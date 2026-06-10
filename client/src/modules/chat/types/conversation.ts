@@ -20,6 +20,17 @@ export interface Conversation {
   name: string | null;
   dmPair: string | null;
   members: ConversationMember[];
-  messages?: Message[];
+  latestMessageId?: string | null;
+  latestMessage?: {
+    id: string;
+    userId: string;
+    content: string;
+    deletedAt: string | null;
+    createdAt: string;
+    user: {
+      username: string;
+    };
+  } | null;
   updatedAt: string;
+  unreadCount?: number;
 }

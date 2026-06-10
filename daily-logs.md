@@ -1,39 +1,5 @@
 # Daily Logs
 
-## 9th June 2026
-
-**Date**: 9th June 2026
-
-**Completed**:
-- **Build tooling**: Added tsup bundler and tsc-alias for production builds. Added `prisma generate` to build script.
-- **CORS**: Fixed socket.io CORS to allow multiple comma-separated origins from `ALLOWED_ORIGINS` env var.
-- **Presence system — Redis integration**: Fleshed out `presence.handler.ts` to broadcast `user:online` / `user:offline` / `presence:initial` events. Created `presenceStore.ts` with dual-write strategy (always writes to both Redis Sets + in-memory `Map<userId, Set<socketId>>`). In-memory fallback is always consistent because it's updated on every operation regardless of Redis availability.
-- **Presence system — UI**: Built `PresenceIndicator` component (green/gray dot), `MessageStatus` component (pending/sent/read icons), `usePresence` hook (listens for all presence events). Updated `chatStore` with `onlineUsers` Set. Wired `Sidebar` and `ActiveConversation` to show presence indicators.
-- **Socket refactoring**: Clean separation of `useGlobalSocket` — extracted event handling into `realtime/` module with `message.handlers.ts` (sidebar reordering, unread badge) and `conversation.handlers.ts` (read receipt cache updates). Added `createChatEventRouter` factory pattern.
-- **Dynamic room joining**: On new DM creation, server now iterates active sockets and calls `socket.join()` for each participant. Emits `conversation:new` to each `user:<userId>` room. Client-side `useGlobalSocket` listens and prepends to sidebar cache.
-- **Message soft-delete schema**: Added `deletedAt` (DateTime?) field to Message model. Created migration. Built `editMessage` service with validation (owns message, not deleted, non-empty). Added `$transaction` to `createMessage` for atomic message + conversation `updatedAt` update. Added `test-seed.ts`.
-- **Deployment fixes**: Resolved redirection and routing issues for production environment.
-
-**In Progress**:
-- Message edit/delete REST endpoints not yet exposed (services exist).
-- Cursor pagination still ordering by `createdAt` instead of `id`.
-
-**Next Plan**:
-- Expose `PATCH /messages/:id` and `DELETE /messages/:id` REST endpoints.
-- Fix cursor pagination to use `id: "desc"` ordering (UUIDv7).
-- Filter soft-deleted messages in `getMessages`.
-- Begin Phase 2: Workspaces, channels, RBAC, reactions.
-
-**Blockers**
-  None.
-
-**Learning**
-  Two key architectural decisions today:
-  1. Dual-write presence store — always write to both Redis Sets and an in-memory Map on every addSocket/removeSocket. This means the in-memory fallback is never stale, even if Redis becomes unavailable between operations. Reads prefer Redis, fall back to memory. This elegantly handles multi-tab scenarios.
-  2. Dynamic socket joining for new conversations — instead of relying on reconnection, the server iterates `io.sockets.sockets` after creating a DM and joins each participant's sockets to the new room. Combined with `conversation:new` events sent to `user:<userId>` rooms, this provides instant room access without client-side reconnection logic.
-
----
-
 ## 4th June 2026
 - Initialized Express + TypeScript backend server.
 - Configured Prisma v7 with PostgreSQL adapter for Supabase.
@@ -140,3 +106,66 @@
 
 **Learning**
   One new thing that you learned today: Using `tsup` and `tsc-alias` provides a cleaner and faster build process for TypeScript server applications, simplifying absolute imports compilation.
+
+
+---
+
+## 9th June 2026
+
+**Date**: 9th June 2026
+
+**Completed**:
+- **Build tooling**: Added tsup bundler and tsc-alias for production builds. Added `prisma generate` to build script.
+- **CORS**: Fixed socket.io CORS to allow multiple comma-separated origins from `ALLOWED_ORIGINS` env var.
+- **Presence system — Redis integration**: Fleshed out `presence.handler.ts` to broadcast `user:online` / `user:offline` / `presence:initial` events. Created `presenceStore.ts` with dual-write strategy (always writes to both Redis Sets + in-memory `Map<userId, Set<socketId>>`). In-memory fallback is always consistent because it's updated on every operation regardless of Redis availability.
+- **Presence system — UI**: Built `PresenceIndicator` component (green/gray dot), `MessageStatus` component (pending/sent/read icons), `usePresence` hook (listens for all presence events). Updated `chatStore` with `onlineUsers` Set. Wired `Sidebar` and `ActiveConversation` to show presence indicators.
+- **Socket refactoring**: Clean separation of `useGlobalSocket` — extracted event handling into `realtime/` module with `message.handlers.ts` (sidebar reordering, unread badge) and `conversation.handlers.ts` (read receipt cache updates). Added `createChatEventRouter` factory pattern.
+- **Dynamic room joining**: On new DM creation, server now iterates active sockets and calls `socket.join()` for each participant. Emits `conversation:new` to each `user:<userId>` room. Client-side `useGlobalSocket` listens and prepends to sidebar cache.
+- **Message soft-delete schema**: Added `deletedAt` (DateTime?) field to Message model. Created migration. Built `editMessage` service with validation (owns message, not deleted, non-empty). Added `$transaction` to `createMessage` for atomic message + conversation `updatedAt` update. Added `test-seed.ts`.
+- **Deployment fixes**: Resolved redirection and routing issues for production environment.
+
+**In Progress**:
+- Message edit/delete REST endpoints not yet exposed (services exist).
+- Cursor pagination still ordering by `createdAt` instead of `id`.
+
+**Next Plan**:
+- Expose `PATCH /messages/:id` and `DELETE /messages/:id` REST endpoints.
+- Fix cursor pagination to use `id: "desc"` ordering (UUIDv7).
+- Filter soft-deleted messages in `getMessages`.
+- Begin Phase 2: Workspaces, channels, RBAC, reactions.
+
+**Blockers**
+  None.
+
+**Learning**
+  Two key architectural decisions today:
+  1. Dual-write presence store — always write to both Redis Sets and an in-memory Map on every addSocket/removeSocket. This means the in-memory fallback is never stale, even if Redis becomes unavailable between operations. Reads prefer Redis, fall back to memory. This elegantly handles multi-tab scenarios.
+  2. Dynamic socket joining for new conversations — instead of relying on reconnection, the server iterates `io.sockets.sockets` after creating a DM and joins each participant's sockets to the new room. Combined with `conversation:new` events sent to `user:<userId>` rooms, this provides instant room access without client-side reconnection logic.
+
+---
+
+## 10th June 2026
+
+**Date**: 10th June 2026
+
+**Completed**:
+- Implemented dynamic numeric unread message counters in the sidebar to accurately track unseen messages per conversation.
+- Improved the user search experience by adding an explicit 'Message' button when discovering new users, replacing the implicit full-row clickable area for better accessibility.
+- Enabled message editing functionality, allowing users to modify their sent messages while ensuring strict ownership and validation checks.
+- Enabled message deletion functionality, empowering users to safely remove messages from the conversation history.
+- Refactored the real-time messaging engine to improve how conversation metadata (such as the latest message preview) is synchronized, resolving UI race conditions by enforcing strict server authority.
+- Hardened the real-time user presence tracking system to ensure perfect synchronization of online/offline statuses, flawlessly handling scenarios where a user has multiple browser tabs open simultaneously.
+
+**In Progress**:
+- Preparing the messaging infrastructure to support group communication features, including Workspaces, Channels, and a new Message Requests flow.
+
+**Next Plan**:
+- Strengthen database transaction boundaries during message editing and deletion to prevent potential race conditions under heavy load.
+- Improve data fetching logic to guarantee that deleted messages are strictly filtered out from the conversation history.
+- Optimize message history pagination to utilize the monotonic properties of the database primary keys, ensuring perfectly stable chronological sorting.
+
+**Blockers**
+  None.
+
+**Learning**
+  One new thing that you learned today: Regularly reviewing the backend architecture against the intended user experience ensures that data integrity issues are caught before they scale to production.

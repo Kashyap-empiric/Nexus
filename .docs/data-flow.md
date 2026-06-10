@@ -109,3 +109,6 @@ flowchart LR
 - **On connect:** Server auto-joins socket to all conversation rooms the user is a member of (queried from `ConversationMember`).
 - **On new DM creation:** Server dynamically iterates active sockets and calls `socket.join()` for participants, then emits `conversation:new` to `user:<userId>` rooms.
 - **Authorization:** Socket auth middleware validates JWT on handshake. Room membership is based on DB `ConversationMember` records.
+
+
+> **Note:** Documentation updated on 2026-06-10 to reflect UI improvements: feat(ui): Added an explicit 'Message' button in the NewConversationModal when searching for users, replacing the full-row clickable area for better UX.

@@ -3,6 +3,8 @@ import { queryKeys } from "@/shared/constants/queryKeys";
 import type { Message } from "../types/message";
 import type { Conversation } from "../types/conversation";
 
+import { getAuthUser } from "@/modules/auth/store/useAuthStore";
+
 export const handleMessageNew = (queryClient: QueryClient) => {
   return (message: Message) => {
     try {
@@ -15,11 +17,11 @@ export const handleMessageNew = (queryClient: QueryClient) => {
 
           return oldData.map((conv) => {
             if (conv.id !== message.conversationId) return conv;
+            const currentUser = getAuthUser();
 
             return {
               ...conv,
-              updatedAt: new Date().toISOString(),
-              messages: [message],
+              unreadCount: (conv.unreadCount || 0) + (message.userId !== currentUser?.id ? 1 : 0),
             };
           });
         }

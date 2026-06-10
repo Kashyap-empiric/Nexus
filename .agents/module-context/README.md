@@ -37,3 +37,6 @@ Create or update a module-context file when:
 ## Current Module Context Files
 
 - `auth-context.md` — Supabase Auth, client session handling, Express JWKS auth middleware, Supabase trigger-based user sync, and explicit auth non-goals.
+
+
+> **Note:** Documentation updated on 2026-06-10 to reflect UI improvements: feat(ui): Added an explicit 'Message' button in the NewConversationModal when searching for users, replacing the full-row clickable area for better UX.
