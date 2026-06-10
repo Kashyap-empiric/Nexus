@@ -143,3 +143,6 @@ The `editMessage` service in `messages.service.ts` enforces:
 2. Update the conversation's `updatedAt` to now (for sidebar ordering)
 
 This ensures the sidebar always shows the most recently active conversation at the top.
+
+
+> **Note:** Documentation updated on 2026-06-10 to reflect UI improvements: feat(ui): Added an explicit 'Message' button in the NewConversationModal when searching for users, replacing the full-row clickable area for better UX.

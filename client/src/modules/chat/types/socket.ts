@@ -29,3 +29,21 @@ export interface MessageReadPayload {
   userId: string;
 }
 
+export interface ConversationUpdatePayload {
+  conversation: {
+    id: string;
+    name: string | null;
+    updatedAt: string;
+    latestMessageId: string | null;
+    latestMessage: {
+      id: string;
+      userId: string;
+      content: string;
+      deletedAt: string | null;
+      createdAt: string;
+      user: {
+        username: string;
+      };
+    } | null;
+  };
+}

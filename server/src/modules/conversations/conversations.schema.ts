@@ -5,7 +5,7 @@ export const conversationParamsSchema = z.object({
 });
 
 export const createConversationSchema = z.object({
-  targetUserId: z.uuid("targetUserId must be a valid UUID"),
+  targetUserId: z.string().uuid("targetUserId must be a valid UUID"),
 });
 
 export type CreateConversationInput = z.infer<typeof createConversationSchema>;

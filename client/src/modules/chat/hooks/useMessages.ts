@@ -125,3 +125,55 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
     },
   });
 };
+
+export const useEditMessageMutation = (conversationId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ messageId, content }: { messageId: string; content: string }) => {
+      return messagesApi.editMessage(conversationId, messageId, content);
+    },
+    onMutate: async ({ messageId, content }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.messages(conversationId) });
+      const previousMessages = queryClient.getQueryData(queryKeys.messages(conversationId));
+      
+      import("../utils/cacheHelpers").then(({ updateMessageInCache }) => {
+        updateMessageInCache(queryClient, conversationId, messageId, content, true);
+      });
+
+      return { previousMessages };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousMessages) {
+        queryClient.setQueryData(queryKeys.messages(conversationId), context.previousMessages);
+      }
+      toast.error(err instanceof Error ? err.message : "Failed to edit message");
+    },
+  });
+};
+
+export const useDeleteMessageMutation = (conversationId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ messageId }: { messageId: string }) => {
+      return messagesApi.deleteMessage(conversationId, messageId);
+    },
+    onMutate: async ({ messageId }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.messages(conversationId) });
+      const previousMessages = queryClient.getQueryData(queryKeys.messages(conversationId));
+      
+      import("../utils/cacheHelpers").then(({ markMessageDeletedInCache }) => {
+        markMessageDeletedInCache(queryClient, conversationId, messageId, new Date().toISOString());
+      });
+
+      return { previousMessages };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousMessages) {
+        queryClient.setQueryData(queryKeys.messages(conversationId), context.previousMessages);
+      }
+      toast.error(err instanceof Error ? err.message : "Failed to delete message");
+    },
+  });
+};

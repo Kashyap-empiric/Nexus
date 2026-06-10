@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -41,6 +36,9 @@ model Conversation {
   // Relations
   members  ConversationMember[]
   messages Message[]
+
+  latestMessageId String?
+  latestMessage   Message? @relation("ConversationLatestMessage", fields: [latestMessageId], references: [id])
 }
 
 model ConversationMember {
@@ -72,6 +70,7 @@ model Message {
   conversation   Conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   readByMembers  ConversationMember[] @relation("ConversationMemberLastRead")
+  latestIn       Conversation[]       @relation("ConversationLatestMessage")
 
   @@index([conversationId, id])
 }
