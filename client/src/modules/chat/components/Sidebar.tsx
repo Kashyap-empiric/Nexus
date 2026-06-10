@@ -7,29 +7,22 @@ import { NewConversationModal } from "./NewConversationModal";
 import { PresenceIndicator } from "./PresenceIndicator";
 import { useConversationsQuery } from "../hooks/useConversations";
 import { useAuth } from "@/modules/auth";
-import { supabase } from "@/shared/lib/supabase";
-import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { Input } from "@/shared/components/ui/input";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useGlobalSocket } from "../hooks/useGlobalSocket";
 import { useChatStore } from "../store/chatStore";
 import { cn } from "@/shared/lib/utils";
+import { useUser } from "@/modules/auth/store/useAuthStore";
 
 export function Sidebar() {
   useGlobalSocket();
   const { logout } = useAuth();
   const { data: conversations, isLoading } = useConversationsQuery();
-  const [currentAuthUser, setCurrentAuthUser] = useState<SupabaseUser | null>(null);
+  const currentAuthUser = useUser();
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const params = useParams();
   const activeId = params?.id as string;
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setCurrentAuthUser(data.user);
-    });
-  }, []);
 
   // Try to find the actual database user profile from the conversation members
   const myProfile = conversations?.[0]?.members.find((m) => m.userId === currentAuthUser?.id)?.user;
