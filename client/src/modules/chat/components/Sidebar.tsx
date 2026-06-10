@@ -52,7 +52,7 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="w-60 border-r bg-muted/30 dark:bg-muted/10 flex flex-col hidden md:flex shrink-0">
+      <aside className="w-full md:w-60 border-r bg-muted/30 dark:bg-muted/10 flex flex-col shrink-0">
         {/* Top: Search */}
         <div className="h-14 border-b flex items-center px-3 shrink-0 shadow-sm">
           <div className="relative w-full">
@@ -77,7 +77,17 @@ export function Sidebar() {
             </div>
 
             {isLoading ? (
-              <div className="text-sm text-muted-foreground/70 px-2 py-1">Loading...</div>
+              <div className="space-y-[2px]">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="flex items-center gap-3 px-2 py-2 rounded-md">
+                    <div className="w-9 h-9 rounded-full bg-muted animate-pulse shrink-0" />
+                    <div className="flex-1 flex flex-col gap-1.5 justify-center">
+                      <div className="w-24 h-3 bg-muted rounded animate-pulse" />
+                      <div className="w-32 h-2.5 bg-muted rounded animate-pulse" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : dms.length === 0 ? (
               <div className="text-sm text-muted-foreground/70 px-2 py-1">No messages yet</div>
             ) : (
