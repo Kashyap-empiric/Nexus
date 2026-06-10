@@ -41,7 +41,7 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
     setIsAtBottom(true);
     isAtBottomRef.current = true;
     setHasNewMessages(false);
-    
+
     // Reset programmatic scroll flag after a frame
     requestAnimationFrame(() => {
       setTimeout(() => {
@@ -52,14 +52,14 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
 
   const handleScroll = useCallback(() => {
     if (isProgrammaticScroll.current) return;
-    
+
     const container = scrollContainerRef.current;
     if (!container) return;
 
     const { scrollTop, scrollHeight, clientHeight } = container;
     // 100px tolerance
     const atBottom = scrollHeight - scrollTop - clientHeight < 100;
-    
+
     setIsAtBottom(atBottom);
     isAtBottomRef.current = atBottom;
     if (atBottom) {
@@ -148,7 +148,7 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
 
   return (
     <div className="flex-1 relative min-h-0 flex flex-col bg-background">
-      <div 
+      <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto pb-4 pt-2"
