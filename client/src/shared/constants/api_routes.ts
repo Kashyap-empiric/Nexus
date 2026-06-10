@@ -10,5 +10,6 @@ export const API_ROUTES = {
       const baseUrl = `/conversations/${conversationId}/messages`;
       return cursor ? `${baseUrl}?cursor=${cursor}` : baseUrl;
     },
+    MESSAGE_DETAIL: (conversationId: string, messageId: string) => `/conversations/${conversationId}/messages/${messageId}`,
   },
 } as const;

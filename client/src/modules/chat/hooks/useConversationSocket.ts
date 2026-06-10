@@ -93,12 +93,30 @@ export const useConversationSocket = (conversationId: string) => {
       }
     };
 
+    const onMessageUpdate = (message: Message) => {
+      if (!message || message.conversationId !== conversationId) return;
+      import("../utils/cacheHelpers").then(({ updateMessageInCache }) => {
+        updateMessageInCache(queryClient, conversationId, message.id, message.content, true);
+      });
+    };
+
+    const onMessageDelete = (message: Message) => {
+      if (!message || message.conversationId !== conversationId) return;
+      import("../utils/cacheHelpers").then(({ markMessageDeletedInCache }) => {
+        markMessageDeletedInCache(queryClient, conversationId, message.id, message.deletedAt || new Date().toISOString());
+      });
+    };
+
     socket.on(SOCKET_EVENTS.MESSAGE_NEW, onMessageNew);
     socket.on(SOCKET_EVENTS.MESSAGE_READ, onMessageRead);
+    socket.on(SOCKET_EVENTS.MESSAGE_UPDATE, onMessageUpdate);
+    socket.on(SOCKET_EVENTS.MESSAGE_DELETE, onMessageDelete);
 
     return () => {
       socket.off(SOCKET_EVENTS.MESSAGE_NEW, onMessageNew);
       socket.off(SOCKET_EVENTS.MESSAGE_READ, onMessageRead);
+      socket.off(SOCKET_EVENTS.MESSAGE_UPDATE, onMessageUpdate);
+      socket.off(SOCKET_EVENTS.MESSAGE_DELETE, onMessageDelete);
     };
   }, [conversationId, queryClient]);
 };
