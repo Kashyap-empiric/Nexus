@@ -38,7 +38,14 @@ export function Sidebar() {
   const statusLabel = socketStatus === "connected" ? "Online" : socketStatus === "connecting" ? "Connecting..." : "Offline";
 
   const dms = [...(conversations || [])]
-    .filter((c) => c.type === "DM")
+    .filter((c) => {
+      if (c.type !== "DM") return false;
+      const otherMember = c.members.find((m) => m.userId !== currentAuthUser?.id);
+      const isOtherDeleted = !otherMember?.user;
+      const hasNoMessages = !c.messages || c.messages.length === 0;
+      if (isOtherDeleted && hasNoMessages) return false;
+      return true;
+    })
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
   return (
@@ -73,7 +80,7 @@ export function Sidebar() {
               <div className="space-y-[2px]">
                 {dms.map((chat) => {
                   const otherMember = chat.members.find((m) => m.userId !== currentAuthUser?.id);
-                  const name = otherMember?.user.username || "Unknown User";
+                  const name = otherMember?.user.username || "Deleted user";
                   const isActive = chat.id === activeId;
                   
                   const myMember = chat.members.find((m) => m.userId === currentAuthUser?.id);
@@ -95,15 +102,15 @@ export function Sidebar() {
                         }`}
                     >
                       <div className="relative">
-                        <Avatar className="h-7 w-7 shrink-0 rounded-md">
-                          <AvatarImage src={otherMember?.user.avatarUrl || undefined} className="rounded-md" />
-                          <AvatarFallback className="text-[10px] leading-none bg-primary/20 text-primary rounded-md font-medium">{name[0]?.toUpperCase()}</AvatarFallback>
+                        <Avatar className="h-7 w-7 shrink-0">
+                          <AvatarImage src={otherMember?.user.avatarUrl || undefined} />
+                          <AvatarFallback className="text-[10px] bg-primary/20 text-primary font-medium pt-[1px]">{name[0]?.toUpperCase()}</AvatarFallback>
                         </Avatar>
                         {otherMember?.userId && (
                           <PresenceIndicator userId={otherMember.userId} className="-bottom-0.5 -right-0.5" />
                         )}
                       </div>
-                      <span className={`truncate leading-none flex-1 ${isUnread && !isActive ? 'font-bold text-foreground' : ''}`}>{name}</span>
+                      <span className={`truncate flex-1 pt-[1px] ${isUnread && !isActive ? 'font-bold text-foreground' : ''}`}>{name}</span>
                       {isUnread && !isActive && (
                         <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
                       )}
@@ -121,7 +128,7 @@ export function Sidebar() {
             <div className="relative shrink-0">
               <Avatar className="h-8 w-8 shrink-0">
                 <AvatarImage src={myProfile?.avatarUrl || currentAuthUser?.user_metadata?.avatar_url || currentAuthUser?.user_metadata?.avatarUrl || undefined} />
-                <AvatarFallback className="text-xs leading-none">
+                <AvatarFallback className="text-xs pt-[1px]">
                   {myProfile?.username?.[0]?.toUpperCase() || currentAuthUser?.user_metadata?.username?.[0]?.toUpperCase() || "ME"}
                 </AvatarFallback>
               </Avatar>
@@ -133,7 +140,7 @@ export function Sidebar() {
               />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium leading-none truncate mb-1">
+              <p className="text-sm font-medium truncate mb-1 pt-[1px]">
                 {myProfile?.username || currentAuthUser?.user_metadata?.username || "My Account"}
               </p>
               <p className="text-xs text-muted-foreground leading-none truncate">{statusLabel}</p>

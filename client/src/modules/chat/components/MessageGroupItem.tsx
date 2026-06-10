@@ -30,9 +30,9 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
             {/* Gutter: Avatar or Hover Timestamp */}
             <div className="w-[50px] shrink-0 flex justify-center items-start relative select-none">
               {isFirst ? (
-                <Avatar className="h-9 w-9 mt-0.5 absolute left-1 rounded-md">
-                  <AvatarImage src={user?.avatarUrl || undefined} className="rounded-md" />
-                  <AvatarFallback className="bg-primary/20 text-primary rounded-md font-medium">
+                <Avatar className="h-9 w-9 mt-0.5 absolute left-1">
+                  <AvatarImage src={user?.avatarUrl || undefined} />
+                  <AvatarFallback className="bg-primary/20 text-primary font-medium pt-[1px]">
                     {user?.username?.[0]?.toUpperCase() || "?"}
                   </AvatarFallback>
                 </Avatar>
@@ -48,7 +48,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
               {isFirst && (
                 <div className="flex items-baseline gap-2 mb-0.5">
                   <span className="font-bold text-foreground hover:underline cursor-pointer leading-none">
-                    {user?.username || "Unknown"}
+                    {user?.username || "Deleted user"}
                   </span>
                   <span className="text-xs text-muted-foreground leading-none">
                     {time}
@@ -70,7 +70,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                     messageId={msg.id}
                     isPending={msg.pending}
                     partnerLastReadMessageId={partnerLastReadMessageId}
-                    className="ml-2 opacity-0 group-hover/msg:opacity-100 transition-opacity"
+                    className="ml-2"
                   />
                 )}
               </div>
