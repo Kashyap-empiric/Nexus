@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 import { ThemeProvider } from "@/shared/providers/theme-provider";
 import { QueryProvider } from "@/shared/providers/query-provider";
 import { AuthProvider } from "@/shared/providers/auth-provider";
+import { AuthGate } from "@/shared/providers/AuthGate";
 import { Toaster } from "sonner";
 
 export default function RootLayout({
@@ -36,7 +37,9 @@ export default function RootLayout({
         >
           <QueryProvider>
             <AuthProvider>
-              {children}
+              <AuthGate>
+                {children}
+              </AuthGate>
               <Toaster richColors />
             </AuthProvider>
           </QueryProvider>
