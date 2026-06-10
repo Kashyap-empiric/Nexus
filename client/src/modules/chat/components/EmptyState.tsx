@@ -1,28 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { MessageSquarePlus } from "lucide-react";
 import { NewConversationModal } from "./NewConversationModal";
 import { useConversationsQuery } from "../hooks/useConversations";
-import { useRouter } from "next/navigation";
 
 export function EmptyState() {
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
-  const { data: conversations, isLoading } = useConversationsQuery();
-  const router = useRouter();
+  const { isLoading } = useConversationsQuery();
 
-  useEffect(() => {
-    if (!isLoading && conversations && conversations.length > 0) {
-      const mostRecent = [...conversations].sort(
-        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-      )[0];
-      if (mostRecent) {
-        router.replace(`/conversations/${mostRecent.id}`);
-      }
-    }
-  }, [conversations, isLoading, router]);
-
-  if (isLoading || (conversations && conversations.length > 0)) {
+  if (isLoading) {
     return null;
   }
 
