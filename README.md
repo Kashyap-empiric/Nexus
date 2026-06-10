@@ -20,7 +20,7 @@ The system is divided into two primary components: a frontend client and a backe
 The frontend is developed using Next.js and React. It relies on TanStack Query for data fetching, caching, and optimistic UI updates. State synchronization for real-time events is managed through a Socket.io client connection. The user interface is built with Tailwind CSS and standard React components. Authentication is handled via Supabase.
 
 ### Server
-The backend is a Node.js application utilizing the Express framework. It exposes a REST API for standard HTTP requests and maintains a Socket.io server for bidirectional communication. Data persistence is managed through PostgreSQL using Prisma as the Object-Relational Mapper (ORM).
+The backend is a Node.js application utilizing the Express framework. It exposes a REST API for standard HTTP requests and maintains a Socket.io server for bidirectional communication. Data persistence is managed through PostgreSQL using Prisma as the Object-Relational Mapper (ORM). It also uses Redis for key-value caching (currently hosted through a free service on Render).
 
 ## Core Features
 

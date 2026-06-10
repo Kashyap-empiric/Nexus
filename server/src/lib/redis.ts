@@ -5,7 +5,7 @@ export const redis = createClient({
   url: ENV.REDIS_URL,
   socket: {
     reconnectStrategy: (retries) => {
-      if (retries >= 2) return false;
+      if (retries >= 1) return false;
       return 1000;
     }
   }
