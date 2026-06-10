@@ -29,3 +29,4 @@ export const getAuthActions = () => ({
   setUser: useAuthStoreBase.getState().setUser,
   setInitialized: useAuthStoreBase.getState().setInitialized,
 });
+export const getAuthUser = () => useAuthStoreBase.getState().user;

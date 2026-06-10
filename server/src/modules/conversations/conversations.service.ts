@@ -27,7 +27,7 @@ export const getConversationById = async (conversationId: string) => {
 }
 
 export const getUserConversations = async (userId: string) => {
-    return prisma.conversation.findMany({
+    const conversations = await prisma.conversation.findMany({
         where: { members: { some: { userId } } },
         include: {
             members: {
@@ -39,12 +39,65 @@ export const getUserConversations = async (userId: string) => {
                     }
                 }
             },
-            messages: {
-                orderBy: { createdAt: 'desc' }, take: 1
-            }
+            latestMessage: {
+                select: { 
+                    id: true,
+                    userId: true,
+                    content: true,
+                    deletedAt: true,
+                    createdAt: true,
+                    user: {
+                        select: {
+                            username: true
+                        }
+                    }
+                }
+            },
         },
         orderBy: { updatedAt: 'desc' }
     });
+
+    // 1. Identify unread candidates
+    const conversationsWithState = conversations.map(conv => {
+        const member = conv.members.find(m => m.userId === userId);
+        const hasUnread = Boolean(
+            member &&
+            conv.latestMessageId &&
+            conv.latestMessageId !== member.lastReadMessageId &&
+            conv.latestMessage?.userId !== userId
+        );
+        return { conv, member, hasUnread };
+    });
+
+    const unreadCandidates = conversationsWithState.filter(c => c.hasUnread);
+
+    // 2. Only execute count queries for that subset
+    const unreadCounts = await Promise.all(
+        unreadCandidates.map(async ({ conv, member }) => {
+            const whereClause: any = {
+                conversationId: conv.id,
+                userId: { not: userId },
+            };
+
+            if (member?.lastReadMessageId) {
+                whereClause.id = { gt: member.lastReadMessageId };
+            }
+
+            const unreadCount = await prisma.message.count({
+                where: whereClause
+            });
+
+            return { conversationId: conv.id, unreadCount };
+        })
+    );
+
+    const countsMap = Object.fromEntries(unreadCounts.map(uc => [uc.conversationId, uc.unreadCount]));
+
+    // 3. Return identically formatted payload
+    return conversationsWithState.map(({ conv }) => ({
+        ...conv,
+        unreadCount: countsMap[conv.id] || 0
+    }));
 };
 
 export const getDMByUsers = async (userIdA: string, userIdB: string) => {

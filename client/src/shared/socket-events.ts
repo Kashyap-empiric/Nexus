@@ -10,6 +10,7 @@ export const SOCKET_EVENTS = {
   CONVERSATION_NEW: "conversation:new",
   MESSAGE_UPDATE: "message:update",
   MESSAGE_DELETE: "message:delete",
+  CONVERSATION_UPDATE: "conversation:update",
 } as const;
 
 export interface MessageReadPayload {

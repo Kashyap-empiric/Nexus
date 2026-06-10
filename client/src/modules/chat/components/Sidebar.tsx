@@ -21,6 +21,7 @@ export function Sidebar() {
   const { data: conversations, isLoading } = useConversationsQuery();
   const currentAuthUser = useUser();
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const params = useParams();
   const activeId = params?.id as string;
 
@@ -35,8 +36,16 @@ export function Sidebar() {
       if (c.type !== "DM") return false;
       const otherMember = c.members.find((m) => m.userId !== currentAuthUser?.id);
       const isOtherDeleted = !otherMember?.user;
-      const hasNoMessages = !c.messages || c.messages.length === 0;
+      const hasNoMessages = !c.latestMessageId;
       if (isOtherDeleted && hasNoMessages) return false;
+
+      if (searchQuery.trim()) {
+        const name = otherMember?.user.username?.toLowerCase() || "";
+        if (!name.includes(searchQuery.toLowerCase())) {
+          return false;
+        }
+      }
+
       return true;
     })
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
@@ -49,7 +58,9 @@ export function Sidebar() {
           <div className="relative w-full">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Find or start a conversation"
+              placeholder="Find a conversation"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 py-1.5 bg-muted/50 border-transparent hover:border-border focus-visible:border-border focus-visible:ring-1"
             />
           </div>
@@ -75,37 +86,47 @@ export function Sidebar() {
                   const otherMember = chat.members.find((m) => m.userId !== currentAuthUser?.id);
                   const name = otherMember?.user.username || "Deleted user";
                   const isActive = chat.id === activeId;
-                  
-                  const myMember = chat.members.find((m) => m.userId === currentAuthUser?.id);
-                  const latestMessage = chat.messages?.[0];
-                  let isUnread = false;
-                  if (latestMessage && latestMessage.userId !== currentAuthUser?.id) {
-                    if (!myMember?.lastReadMessageId || latestMessage.id > myMember.lastReadMessageId) {
-                      isUnread = true;
-                    }
-                  }
+
+                  const unreadCount = chat.unreadCount || 0;
+                  const isUnread = unreadCount > 0;
 
                   return (
                     <Link
                       key={chat.id}
                       href={`/conversations/${chat.id}`}
-                      className={`flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors ${isActive
-                        ? "bg-primary/10 text-primary font-medium dark:bg-white/10 dark:text-foreground"
+                      className={`flex items-center gap-3 px-2 py-2 rounded-md transition-colors ${isActive
+                        ? "bg-primary/10 text-primary dark:bg-white/10 dark:text-foreground"
                         : "text-muted-foreground hover:bg-muted/80 hover:text-foreground dark:hover:bg-white/5"
                         }`}
                     >
-                      <div className="relative">
-                        <Avatar className="h-7 w-7 shrink-0">
+                      <div className="relative shrink-0">
+                        <Avatar className="h-9 w-9 shrink-0">
                           <AvatarImage src={otherMember?.user.avatarUrl || undefined} />
-                          <AvatarFallback className="text-[10px] bg-primary/20 text-primary font-medium pt-[1px]">{name[0]?.toUpperCase()}</AvatarFallback>
+                          <AvatarFallback className="text-xs bg-primary/20 text-primary font-medium pt-[1px]">{name[0]?.toUpperCase()}</AvatarFallback>
                         </Avatar>
                         {otherMember?.userId && (
                           <PresenceIndicator userId={otherMember.userId} className="-bottom-0.5 -right-0.5" />
                         )}
                       </div>
-                      <span className={`truncate flex-1 pt-[1px] ${isUnread && !isActive ? 'font-bold text-foreground' : ''}`}>{name}</span>
+
+                      <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        <span className={`truncate text-sm pb-[1px] ${isUnread && !isActive ? 'font-bold text-foreground' : 'font-medium'}`}>{name}</span>
+                        {chat.latestMessage && (
+                          <span className={`truncate text-[13px] ${isUnread && !isActive ? 'font-semibold text-foreground' : 'text-muted-foreground/80'}`}>
+                            {chat.latestMessage.deletedAt
+                              ? <span className="italic">This message was deleted</span>
+                              : chat.latestMessage.userId === currentAuthUser?.id
+                                ? `You: ${chat.latestMessage.content}`
+                                : `${chat.latestMessage.user.username}: ${chat.latestMessage.content}`
+                            }
+                          </span>
+                        )}
+                      </div>
+
                       {isUnread && !isActive && (
-                        <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                        <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[12px] font-bold shrink-0">
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </div>
                       )}
                     </Link>
                   );

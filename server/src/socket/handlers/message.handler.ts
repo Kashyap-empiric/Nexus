@@ -34,7 +34,7 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
           });
         }
 
-        const message = await createMessage(
+        const { message, conversationMetadata } = await createMessage(
           payload.conversationId,
           userId,
           payload.content
@@ -44,6 +44,13 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
           SOCKET_EVENTS.MESSAGE_NEW,
           message
         );
+
+        if (conversationMetadata) {
+          io.to(`conversation:${payload.conversationId}`).emit(
+            SOCKET_EVENTS.CONVERSATION_UPDATE,
+            { conversation: conversationMetadata }
+          );
+        }
 
         return callback?.({
           success: true,
