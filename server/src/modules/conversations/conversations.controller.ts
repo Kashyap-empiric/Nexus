@@ -33,6 +33,7 @@ export const getConversationDetails = async (req: AuthRequest, res: Response): P
 
 export const createConversation = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    console.log("createConversation called with body:", req.body);
     const userId = req.user!.id;
     const { targetUserId } = req.body as CreateConversationInput;
     if (userId === targetUserId) {
