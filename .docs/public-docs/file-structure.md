@@ -4,11 +4,13 @@ This document outlines the high-level file and directory structure of the Nexus 
 
 ## Root Directory
 
-- `.agents/` - Contains internal instructions and context for AI agents working on the repository.
-- `.docs/` - Contains internal developer documentation, progress trackers, and logs.
+- `.agents/` - Contains internal instructions and context for AI agents working on the repository. *Critical: See `05-agent-boundaries.md`*.
+- `.docs/` - Contains internal developer documentation, architecture audits, and logs.
+  - `AS_IS_ARCHITECTURE.md` - The brutal truth of the system's actual data flow.
+  - `TECHNICAL_DEBT.md` - Mandatory reading before touching the codebase.
   - `incremental-logs.md` - Detailed, day-to-day progress logs.
-  - `major-changes.md` - Log of significant architectural decisions.
-- `public-docs/` - The main public-facing documentation for the project (what you are reading now).
+  - `major-changes.md` - Log of significant architectural decisions and deviations.
+- `public-docs/` - The main public-facing documentation for the project.
 - `client/` - The React/Next.js frontend application.
 - `server/` - The Node.js/Express backend API.
 

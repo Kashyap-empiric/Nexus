@@ -1,8 +1,10 @@
-# Nexus — Phase 1 Plan (5-Day Sprint)
+# Nexus — Phase 1 Plan (HISTORICAL ARCHIVE)
 
-> **Last Updated:** 2026-06-09
-> **Goal**: Deliver a working real-time DM platform with auth, messaging, read receipts, and presence.
-> **Stack**: Next.js · Express.js · TypeScript · Supabase Auth · Prisma · PostgreSQL · Socket.io · Upstash Redis
+> **CRITICAL WARNING**: This file is an archived historical document representing the *intended* Phase 1 plan (5-Day Sprint). The sprint has concluded. 
+> The system has massively deviated from this plan. Do **NOT** use this file as the source of truth for the codebase.
+> **Instead, you must read `.docs/AS_IS_ARCHITECTURE.md` and `.docs/TECHNICAL_DEBT.md`.**
+> 
+> **Last Updated:** 2026-06-10 (Archived)
 
 ---
 
@@ -252,3 +254,29 @@ These items are infrastructure-complete but lack REST endpoint exposure:
 | Rich text formatting | | ❌ Phase 2 |
 | File uploads | | ❌ v3 |
 | Search | | ❌ v3 |
+
+- [x] feat(ui): Added an explicit 'Message' button in the NewConversationModal when searching for users, replacing the full-row clickable area for better UX.
+
+---
+
+## End of Day 5 Summary: Phase 1 Review
+
+As we reach the end of Day 5, here is a retrospective on the Phase 1 Sprint:
+
+### ✅ Accomplished
+- **Infrastructure & Auth**: Full Next.js & Express.js monorepo setup. Supabase Auth is integrated securely with JWKS verification and an automatic database trigger syncing to Prisma.
+- **Messaging Core**: Direct Messaging is functional, backed by PostgreSQL persistence with UUIDv7 indexing and cursor-based pagination. Includes fully exposed REST endpoints for Message Editing (`PATCH`) and Soft Deletion (`DELETE`).
+- **Real-Time Engine**: Socket.io handles instant delivery, read receipts (`message:read`), and dynamic room joining.
+- **Presence System**: A robust dual-write presence system (Upstash Redis + in-memory fallback) provides real-time online/offline statuses across multi-tab scenarios.
+- **Polished UI**: Optimistic UI message rendering, dynamic sidebars (including numeric unread message counters), real-time presence indicators, and user discovery components are live.
+
+### 🟡 What is Left (Spillover)
+- **Soft-Delete Filtering**: The backend `getMessages` service currently fails to filter out soft-deleted messages (`deletedAt: null`).
+- **Pagination Optimization**: Need to switch cursor pagination from `createdAt: "desc"` to `id: "desc"` to fully leverage UUIDv7 monotonic properties.
+- **Feature Backlog**: Implementing a "Message Requests" acceptance flow before surfacing DMs.
+
+### 🔄 Deviations from the Initial Plan
+1. **Decoupled Conversation Metadata (Architecture Change)**: Instead of the client inferring conversation updates (like `latestMessage` or `updatedAt`) directly from incoming message payloads, we introduced a dedicated `CONVERSATION_UPDATE` socket event. This delegates state authority entirely to the server and cleanly prevents race conditions.
+2. **Presence Dual-Write System**: The plan initially focused heavily on Redis, but we adapted to include an in-memory Map fallback. This guarantees consistent state even if Upstash experiences latency or network blips between Redis calls.
+3. **Structured Documentation Paradigms**: Mid-sprint, we pivoted to a rigorous multi-tier documentation system (`.docs/`, `.agents/`, `public-docs/`) to standardize how AI agents and humans collaborate and maintain project state.
+4. **UX Overhauls**: Shifted towards more explicit UI call-to-actions, such as adding specific 'Message' buttons instead of relying on implicit, full-row clickable elements in search modals.

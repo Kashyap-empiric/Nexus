@@ -59,3 +59,6 @@ sequenceDiagram
     Client->>Client: Store session metadata (Zustand)
     Client->>Server: Subsequent requests include Token/Cookie
 ```
+
+
+> **Note:** Documentation updated on 2026-06-10 to reflect UI improvements: feat(ui): Added an explicit 'Message' button in the NewConversationModal when searching for users, replacing the full-row clickable area for better UX.

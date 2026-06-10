@@ -38,3 +38,11 @@
   - `client/src/modules/chat/utils/cacheHelpers.ts`
   - `client/src/shared/providers/socket-provider.tsx`
   - `client/src/modules/chat/components/Sidebar.tsx`
+
+## 10th June 2026 - UI Improvements
+
+- **Action**: Improved New Conversation UI.
+- **Details**: feat(ui): Added an explicit 'Message' button in the NewConversationModal when searching for users, replacing the full-row clickable area for better UX.
+- **Files Touched**:
+  - `client/src/modules/chat/components/NewConversationModal.tsx`
+  - `client/src/modules/chat/components/MessageList.tsx`
