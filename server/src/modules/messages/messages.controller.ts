@@ -1,7 +1,7 @@
 import type { Response } from "express";
 import type { AuthRequest } from "@/types/shared.js";
 import * as messagesService from "./messages.service.js";
-import { getMessagesQuerySchema, type CreateMessageBody, type GetMessagesQuery } from "./messages.schema.js";
+import { getMessagesQuerySchema, type CreateMessageBody, type GetMessagesQuery, type UpdateMessageBody } from "./messages.schema.js";
 
 export const getMessages = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -42,6 +42,73 @@ export const createMessage = async (req: AuthRequest, res: Response): Promise<vo
     });
   } catch (error) {
     console.error("Error creating message:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const updateMessage = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { conversationId, messageId } = req.params as { conversationId: string; messageId: string };
+    const { content } = req.body as UpdateMessageBody;
+
+    const message = await messagesService.editMessage(messageId, userId, content);
+
+    try {
+      const { getIO } = await import("@/socket/socket.js");
+      const { SOCKET_EVENTS } = await import("@/shared/socket-events.js");
+      const io = getIO();
+      io.to(`conversation:${conversationId}`).emit(SOCKET_EVENTS.MESSAGE_UPDATE, message);
+    } catch (err) {
+      console.error("[Socket.io] Failed to emit message:update from HTTP endpoint", err);
+    }
+
+    res.json({
+      data: message,
+    });
+  } catch (error: any) {
+    console.error("Error updating message:", error);
+    if (error.message === "403 Forbidden") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    if (error.message === "Message not found." || error.message === "Cannot edit a deleted message.") {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const deleteMessage = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { conversationId, messageId } = req.params as { conversationId: string; messageId: string };
+
+    const message = await messagesService.deleteMessage(messageId, userId);
+
+    try {
+      const { getIO } = await import("@/socket/socket.js");
+      const { SOCKET_EVENTS } = await import("@/shared/socket-events.js");
+      const io = getIO();
+      io.to(`conversation:${conversationId}`).emit(SOCKET_EVENTS.MESSAGE_DELETE, message);
+    } catch (err) {
+      console.error("[Socket.io] Failed to emit message:delete from HTTP endpoint", err);
+    }
+
+    res.json({
+      data: message,
+    });
+  } catch (error: any) {
+    console.error("Error deleting message:", error);
+    if (error.message === "403 Forbidden") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    if (error.message === "Message not found." || error.message === "Message is already deleted.") {
+      res.status(400).json({ error: error.message });
+      return;
+    }
     res.status(500).json({ error: "Internal server error" });
   }
 };
