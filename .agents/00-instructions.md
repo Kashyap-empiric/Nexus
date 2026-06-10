@@ -18,7 +18,7 @@
 ## 3. Daily Logging Rules
 When instructed to "log progress" or "update daily logs":
 1. Open the primary tracking file: `daily-logs.md` (or `.docs/daily-logs.md` if it exists).
-2. Append the new section at the top of the logs list.
+2. Append the new section at the bottom of the logs list.
 3. Use a Level 2 Heading format: `## [Day] [Month] [Year]` (e.g., `## 4th June 2026`).
 4. Write exactly 3 or 4 concise bullet points summarizing only the architectural changes, features, or critical bugs fixed during the session.
 
@@ -43,3 +43,6 @@ When working on the project, adhere to the following documentation practices:
 ## 6. Agent Workflow
 - Validate your assumptions before committing code (e.g. check `package.json` for dependency versions or inspect the schema).
 - If something breaks, inspect the actual terminal logs (e.g. backend 500 errors) rather than guessing. Forward backend traces to the frontend during development if necessary to speed up debugging.
+
+
+> **Note:** Documentation updated on 2026-06-10 to reflect UI improvements: feat(ui): Added an explicit 'Message' button in the NewConversationModal when searching for users, replacing the full-row clickable area for better UX.

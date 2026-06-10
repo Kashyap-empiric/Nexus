@@ -83,6 +83,15 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
     }
   };
 
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  const handleContextMenu = (e: React.MouseEvent, msgId: string, isMyMsg: boolean, isDel: boolean) => {
+    if (isMyMsg && !isDel) {
+      e.preventDefault();
+      setOpenMenuId(msgId);
+    }
+  };
+
   return (
     <>
       <div className="mt-2 mb-1">
@@ -99,11 +108,11 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
           return (
             <div
               key={msg.id}
-              className={`group/row flex hover:bg-black/10 dark:hover:bg-white/10 px-4 animate-in fade-in slide-in-from-bottom-1 duration-300 ease-out ${isFirst ? "pt-2 pb-0.5" : "py-0.5"} ${msg.optimistic || msg.pending ? "opacity-70" : ""}`}
+              className={`group/row flex hover:bg-black/10 dark:hover:bg-white/10 px-[15px] md:px-4 animate-in fade-in slide-in-from-bottom-1 duration-300 ease-out ${isFirst ? "pt-2 pb-0.5" : "py-0.5"} ${msg.optimistic || msg.pending ? "opacity-70" : ""}`}
             >
-              <div className="w-[50px] shrink-0 flex justify-center items-start relative select-none">
+              <div className="w-[36px] shrink-0 flex justify-center items-start relative select-none">
                 {isFirst ? (
-                  <Avatar className="h-9 w-9 mt-0.5 absolute left-1">
+                  <Avatar className="h-9 w-9 mt-0.5 absolute left-0">
                     <AvatarImage src={user?.avatarUrl || undefined} />
                     <AvatarFallback className="bg-primary/20 text-primary font-medium pt-[1px]">
                       {user?.username?.[0]?.toUpperCase() || "?"}
@@ -116,7 +125,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                 )}
               </div>
 
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 ml-2">
                 {isFirst && (
                   <div className="flex items-baseline gap-2 mb-0.5">
                     <span className="font-bold text-foreground hover:underline cursor-pointer leading-none">
@@ -129,7 +138,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                   </div>
                 )}
 
-                <div className="text-[15px] text-foreground whitespace-pre-wrap break-words leading-relaxed flex items-center justify-between group/msg relative min-h-[22px]">
+                <div className="text-base text-foreground whitespace-pre-wrap break-words leading-relaxed flex items-center justify-between group/msg relative min-h-[22px]">
                   {/* !isDeleted prevents stuck edit states during concurrent multi-device deletions or rapid click race conditions */}
                   {editingMessageId === msg.id && !isDeleted ? (
                     <div className="flex flex-col gap-2 w-full mt-1 mb-2">
@@ -138,7 +147,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                         value={editContent}
                         onChange={(e) => setEditContent(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        className="w-full bg-background border rounded-md p-2 text-[15px] focus:outline-none focus:ring-1 focus:ring-primary resize-none overflow-hidden min-h-[44px]"
+                        className="w-full bg-background border rounded-md p-2 text-base focus:outline-none focus:ring-1 focus:ring-primary resize-none overflow-hidden min-h-[44px]"
                         rows={Math.max(1, editContent.split('\n').length)}
                       />
                       <div className="flex gap-2 text-xs">
@@ -149,7 +158,10 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                     </div>
                   ) : (
                     <>
-                      <div className="flex-1 relative">
+                      <div 
+                        className="flex-1 relative" 
+                        onContextMenu={(e) => handleContextMenu(e, msg.id, isMyMessage, isDeleted)}
+                      >
                         <span className={isDeleted ? "italic text-muted-foreground flex items-center gap-1.5" : ""}>
                           {isDeleted && <Ban className="h-3.5 w-3.5 inline-block mr-1" />}
                           {isDeleted ? "This message was deleted." : msg.content}
@@ -159,7 +171,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                         </span>
                         
                         {isMyMessage && !isDeleted && !msg.pending && !msg.optimistic && (
-                          <div className="opacity-0 group-hover/row:opacity-100 transition-opacity absolute inline-flex items-center ml-2 -translate-y-1.5 bg-background border shadow-sm rounded-md z-10">
+                          <div className="hidden md:inline-flex opacity-0 group-hover/row:opacity-100 transition-opacity absolute right-2 md:right-auto md:ml-2 -translate-y-1.5 bg-background border shadow-sm rounded-md z-10 items-center">
                             <Button
                               variant="ghost"
                               size="icon"
@@ -196,6 +208,25 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                             </DropdownMenu>
                           </div>
                         )}
+                        {/* Mobile dropdown menu (hidden trigger, triggered by state) */}
+                        {isMyMessage && !isDeleted && !msg.pending && !msg.optimistic && (
+                           <div className="md:hidden">
+                             <DropdownMenu open={openMenuId === msg.id} onOpenChange={(open) => setOpenMenuId(open ? msg.id : null)}>
+                               <DropdownMenuTrigger className="absolute right-0 top-0 w-full h-full opacity-0 pointer-events-none" aria-hidden="true" tabIndex={-1} />
+                               <DropdownMenuContent align="end" side="bottom" sideOffset={4} className="w-40">
+                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => handleEditStart(msg.id, msg.content)}>
+                                   <Pencil className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Edit Message</span>
+                                 </DropdownMenuItem>
+                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(msg.content)}>
+                                   <Copy className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy Text</span>
+                                 </DropdownMenuItem>
+                                 <DropdownMenuItem className="text-destructive focus:text-destructive flex items-center cursor-pointer" onClick={() => setMessageToDelete(msg.id)}>
+                                   <Trash className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Delete Message</span>
+                                 </DropdownMenuItem>
+                               </DropdownMenuContent>
+                             </DropdownMenu>
+                           </div>
+                        )}
                       </div>
                       
                       <div className="flex items-center ml-2 shrink-0">
@@ -225,11 +256,11 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
               Are you sure you want to delete this message? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel variant="ghost" className="hover:bg-white/5">
+          <AlertDialogFooter className="flex-row gap-2 sm:justify-end">
+            <AlertDialogCancel variant="ghost" className="flex-1 sm:flex-none mt-0 hover:bg-white/5">
               <span className="pt-[1px]">Cancel</span>
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-2">
+            <AlertDialogAction onClick={confirmDelete} className="flex-1 sm:flex-none bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-2">
               <Trash className="h-3.5 w-3.5" />
               <span className="pt-[1px]">Delete</span>
             </AlertDialogAction>
