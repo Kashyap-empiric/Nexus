@@ -6,8 +6,7 @@ import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import { PresenceIndicator } from "./PresenceIndicator";
-import { useEffect, useState } from "react";
-import { supabase } from "@/shared/lib/supabase";
+import { useUser } from "@/modules/auth/store/useAuthStore";
 
 interface ActiveConversationProps {
   conversationId: string;
@@ -17,13 +16,8 @@ import { ThemeToggle } from "@/shared/components/theme-toggle";
 
 export function ActiveConversation({ conversationId }: ActiveConversationProps) {
   useConversationSocket(conversationId);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setCurrentUserId(data.user.id);
-    });
-  }, []);
+  const user = useUser();
+  const currentUserId = user?.id || null;
 
   const { data: conversation, isLoading } = useConversationDetailsQuery(conversationId);
 
