@@ -22,11 +22,24 @@ When instructed to "log progress" or "update daily logs":
 3. Use a Level 2 Heading format: `## [Day] [Month] [Year]` (e.g., `## 4th June 2026`).
 4. Write exactly 3 or 4 concise bullet points summarizing only the architectural changes, features, or critical bugs fixed during the session.
 
-## 4. Coding Standards
+## 4. Documentation Rules
+When working on the project, adhere to the following documentation practices:
+- **Incremental Logs (`.docs/incremental-logs.md`)**: This is the most detailed log file. ALWAYS add new, detailed entries here every time you work on something or make progress. Include what was changed, technical details, and specific files touched.
+- **Major Changes (`.docs/major-changes.md`)**: Whenever a significant architectural or large-scale change is introduced, document it here explaining *what* changed and *why* the decision was made.
+- **Public Documentation (`.docs/public-docs/`)**:
+  - Maintain an overarching `.docs/public-docs/DOCUMENTATION.md` file that summarizes the entire project, architecture, and module breakdown.
+  - Maintain specific module documentation (e.g., `.docs/public-docs/modules/<module-name>.md`) detailing responsibilities, APIs, and components.
+  - Maintain an up-to-date `.docs/public-docs/file-structure.md` explaining the directory organization.
+  - Maintain `.docs/public-docs/data-flow.md` with Mermaid sequence diagrams detailing the movement of data across client, server, DB, and WebSockets.
+- **Visual Documentation (`.docs/`)**:
+  - Maintain `.docs/git-branches.md` using Mermaid diagrams to accurately reflect the branch hierarchy and workflows. Update it whenever new branching strategies are introduced.
+- **Agent Instructions (`.agents/`)**: Update these files if new conventions, modules, or architectural guidelines are established to ensure all future agents follow the correct procedures.
+
+## 5. Coding Standards
 - **REST APIs**: Extract data from wrappers correctly (e.g. `const { data } = await api.get()`). If the backend returns `{ data: Message[] }`, handle the wrapper properly in the frontend API client so components receive clean types.
 - **Frontend Architecture**: Keep App Router layout/page files to an absolute bare minimum. Extract all meaningful logic and UI states into dedicated components in `components/`. Do not use `flex-col-reverse` for chat interfaces; parse arrays chronologically and utilize `scrollIntoView`.
 - **Database**: Prisma rules apply. Use UUIDv7 for clustered indexing where appropriate.
 
-## 5. Agent Workflow
+## 6. Agent Workflow
 - Validate your assumptions before committing code (e.g. check `package.json` for dependency versions or inspect the schema).
 - If something breaks, inspect the actual terminal logs (e.g. backend 500 errors) rather than guessing. Forward backend traces to the frontend during development if necessary to speed up debugging.
