@@ -1,6 +1,7 @@
 import type { Server, Socket } from "socket.io";
 import { createMessage } from "@/modules/messages/messages.service.js";
 import { SOCKET_EVENTS } from "@/shared/socket-events.js";
+import { dispatchMessageEvent } from "../socket.dispatcher.js";
 
 export const registerMessageHandlers = (io: Server, socket: Socket) => {
   socket.on(
@@ -40,17 +41,7 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
           payload.content
         );
 
-        io.to(`conversation:${payload.conversationId}`).emit(
-          SOCKET_EVENTS.MESSAGE_NEW,
-          message
-        );
-
-        if (conversationMetadata) {
-          io.to(`conversation:${payload.conversationId}`).emit(
-            SOCKET_EVENTS.CONVERSATION_UPDATE,
-            { conversation: conversationMetadata }
-          );
-        }
+        dispatchMessageEvent("NEW", payload.conversationId, message, conversationMetadata);
 
         return callback?.({
           success: true,

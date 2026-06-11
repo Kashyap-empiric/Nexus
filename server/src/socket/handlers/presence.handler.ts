@@ -1,6 +1,7 @@
 import type { Server, Socket } from "socket.io";
 import { presenceStore } from "../presenceStore.js";
 import { SOCKET_EVENTS } from "../../shared/socket-events";
+import { dispatchUserPresence } from "../socket.dispatcher.js";
 
 export const registerPresenceHandlers = async (io: Server, socket: Socket) => {
   const userId = socket.data.user?.id;
@@ -14,10 +15,10 @@ export const registerPresenceHandlers = async (io: Server, socket: Socket) => {
       const isNowOffline = await presenceStore.removeSocket(userId, socket.id);
 
       if (isNowOffline) {
-        // Use io.emit instead of socket.broadcast.emit because the socket
+        // Use dispatchUserPresence instead of socket.broadcast.emit because the socket
         // is already disconnecting — broadcasting via the server instance
         // is more reliable.
-        io.emit(SOCKET_EVENTS.USER_OFFLINE, { userId });
+        dispatchUserPresence("OFFLINE", userId);
       }
     } catch (error) {
       console.error("[Socket.io] Presence disconnect error:", error);
@@ -29,11 +30,11 @@ export const registerPresenceHandlers = async (io: Server, socket: Socket) => {
     const isFirstConnection = await presenceStore.addSocket(userId, socket.id);
 
     if (isFirstConnection) {
-      socket.broadcast.emit(SOCKET_EVENTS.USER_ONLINE, { userId });
+      dispatchUserPresence("ONLINE", userId, socket);
     }
 
     const onlineUsers = await presenceStore.getOnlineUsers();
-    socket.emit(SOCKET_EVENTS.INITIAL_PRESENCE, { userIds: onlineUsers });
+    dispatchUserPresence("INITIAL", onlineUsers, socket);
   } catch (error) {
     console.error("[Socket.io] Presence connect error:", error);
   }

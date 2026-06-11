@@ -1,4 +1,4 @@
-[CRITICAL INSTRUCTIONS]: Compare the progress of today with yesterday and log with this format:
+[CRITICAL INSTRUCTIONS]: Compare the progress of today with yesterday and log with this format in `daily-logs.md`:
 
 1. Daily Update (Mandatory)
 Every day before starting work, update in the following format:
@@ -15,3 +15,8 @@ Blockers
   Any issues or dependencies:
 Learning
   One new thing that you learned today:
+
+[CRITICAL INSTRUCTIONS - INCREMENTAL LOGGING]:
+Whenever any changes are made during the workflow, you MUST append a log of those changes to `.docs/incremental-logs.md`. This ensures we have a granular history of features implemented, bug fixes, and modifications.
+Format for `.docs/incremental-logs.md`:
+- [Date & Time]: Brief description of changes made (files modified, logic added, etc.)

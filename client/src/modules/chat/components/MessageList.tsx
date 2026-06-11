@@ -105,6 +105,7 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
     if (!latestMessageId) return;
     if (latestMessage?.pending) return;
     if (myLastReadMessageId && latestMessageId <= myLastReadMessageId) return;
+    if (isLatestMessageMine) return; // Prevent redundant API call if we sent the message
 
     markRead({
       conversationId,
