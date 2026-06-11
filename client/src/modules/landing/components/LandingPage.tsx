@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { MessageSquare, Shield, Zap, LayoutDashboard } from "lucide-react";
 import { APP_ROUTES } from "@/shared/constants/app_routes";
 
@@ -9,9 +10,7 @@ export const LandingPage = () => {
       {/* Navigation Bar */}
       <header className="px-6 lg:px-12 h-16 flex items-center border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md sticky top-0 z-50">
         <Link className="flex items-center justify-center gap-2" href="/">
-          <div className="w-8 h-8 bg-emerald-600 rounded-md flex items-center justify-center shadow-sm">
-            <MessageSquare className="h-5 w-5 text-white" />
-          </div>
+          <Image src="/images/Logo.png" alt="Nexus Logo" width={32} height={32} className="w-8 h-8 object-contain" />
           <span className="font-bold text-xl tracking-tight">Nexus</span>
         </Link>
         <nav className="ml-auto flex items-center gap-4 sm:gap-6">
@@ -126,7 +125,7 @@ export const LandingPage = () => {
       <footer className="w-full py-8 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400">
           <div className="flex items-center gap-2 font-semibold text-zinc-900 dark:text-zinc-100">
-            <MessageSquare className="h-5 w-5 text-emerald-600" />
+            <Image src="/images/Logo.png" alt="Nexus Logo" width={20} height={20} className="w-5 h-5 object-contain" />
             Nexus
           </div>
           <div className="flex gap-6">
