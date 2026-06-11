@@ -3,9 +3,8 @@
 import { useState } from "react";
 import { Search, Plus, LogOut } from "lucide-react";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
-import { NewConversationModal } from "./NewConversationModal";
 import { PresenceIndicator } from "./PresenceIndicator";
-import { InviteModal } from "./InviteModal";
+import dynamic from "next/dynamic";
 import { useConversationsQuery } from "../hooks/useConversations";
 import { useAuth } from "@/modules/auth";
 import { Input } from "@/shared/components/ui/input";
@@ -23,6 +22,9 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
 import { MessageSquarePlus, UserPlus } from "lucide-react";
+
+const NewConversationModal = dynamic(() => import("./NewConversationModal").then((m) => m.NewConversationModal), { ssr: false });
+const InviteModal = dynamic(() => import("./InviteModal").then((m) => m.InviteModal), { ssr: false });
 
 export function Sidebar() {
   useGlobalSocket();
@@ -82,8 +84,9 @@ export function Sidebar() {
             <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">
               <span>Direct Messages</span>
               <DropdownMenu>
-                <DropdownMenuTrigger className="hover:text-foreground transition-colors p-1 rounded-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
-                  <Plus className="h-4 w-4" />
+                <DropdownMenuTrigger className="flex items-center gap-1 transition-colors py-1 px-2.5 -mr-1 rounded-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary/10 text-primary hover:bg-primary/20 normal-case tracking-normal font-medium leading-none">
+                  <span className="sr-only md:not-sr-only text-xs leading-none">New</span>
+                  <Plus className="h-3.5 w-3.5" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem onClick={() => setIsNewModalOpen(true)} className="gap-2 cursor-pointer">
@@ -126,13 +129,14 @@ export function Sidebar() {
                     <Link
                       key={chat.id}
                       href={`/conversations/${chat.id}`}
+                      prefetch={false}
                       className={`flex items-center gap-3 px-2 py-2 rounded-md transition-colors ${isActive
                         ? "bg-primary/10 text-primary dark:bg-white/10 dark:text-foreground"
                         : "text-muted-foreground hover:bg-muted/80 hover:text-foreground dark:hover:bg-white/5"
                         }`}
                     >
                       <div className="relative shrink-0">
-                        <UserAvatar 
+                        <UserAvatar
                           name={name}
                           src={otherMember?.user.avatarUrl}
                           className="h-9 w-9 shrink-0"
@@ -174,7 +178,7 @@ export function Sidebar() {
         <div className="p-4 border-t bg-background shrink-0 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative shrink-0">
-              <UserAvatar 
+              <UserAvatar
                 name={myProfile?.username || currentAuthUser?.user_metadata?.username || "ME"}
                 src={myProfile?.avatarUrl || currentAuthUser?.user_metadata?.avatar_url || currentAuthUser?.user_metadata?.avatarUrl}
                 className="h-8 w-8 shrink-0"

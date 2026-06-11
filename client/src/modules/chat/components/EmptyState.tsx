@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import { MessageSquarePlus, UserPlus } from "lucide-react";
-import { NewConversationModal } from "./NewConversationModal";
-import { InviteModal } from "./InviteModal";
+import dynamic from "next/dynamic";
+import { EmptyStateSkeleton } from "./EmptyStateSkeleton";
+
+const NewConversationModal = dynamic(() => import("./NewConversationModal").then((m) => m.NewConversationModal), { ssr: false });
+const InviteModal = dynamic(() => import("./InviteModal").then((m) => m.InviteModal), { ssr: false });
 import { useConversationsQuery } from "../hooks/useConversations";
 import { Button } from "@/shared/components/ui/button";
 import { useInviteModal } from "@/shared/hooks/useInviteModal";
@@ -14,7 +17,7 @@ export function EmptyState() {
   const { data: conversations, isLoading } = useConversationsQuery();
 
   if (isLoading) {
-    return null;
+    return <EmptyStateSkeleton />;
   }
 
   return (
