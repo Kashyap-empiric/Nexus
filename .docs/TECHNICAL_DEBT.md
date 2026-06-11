@@ -21,6 +21,7 @@ This inventory was compiled during the Phase 1 architectural forensic audit.
 |---|---|---|---|---|---|
 | ~~**Race Conditions in Mutations**~~ | ✅ RESOLVED | CRITICAL | Non-transactional reads in `messages.service.ts`. Specifically, `deleteMessage` computes the `nextLatestMessageId` *before* entering the Prisma `$transaction`. Concurrent deletions will corrupt the `Conversation.latestMessageId`. | Misunderstanding of Prisma transaction isolation constraints. | Move all read and logic operations into the `prisma.$transaction(async (tx) => { ... })` callback. |
 | ~~**Soft-Delete Leakage**~~ | ✅ RESOLVED | CRITICAL | `getMessages` queries do not include `where: { deletedAt: null }`. This leaks soft-deleted payloads to the client and wastes bandwidth. | Missing filter in the Prisma `findMany` clause. | Add the filter to the backend service. |
+| **Non-Transactional Reads in editMessage** | 🔴 UNRESOLVED | CRITICAL | `editMessage` calls `getMessageById` (which does ownership validation and `deletedAt` check) *outside* of the `$transaction`. The actual `prisma.message.update` is not wrapped in a transaction. | Incomplete refactor — only `deleteMessage` was fixed. | Move `getMessageById` + ownership validation + update inside `prisma.$transaction(async (tx) => { ... })`. |
 
 ---
 

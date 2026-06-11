@@ -359,8 +359,8 @@ sequenceDiagram
     Controller->>Service: deleteMessage(messageId, userId)
     Service->>Service: getMessageById (⚠️ non-transactional)
     Service->>Service: validate ownership & not already deleted
-    Service->>Service: find next latest message (⚠️ race condition risk)
-    Service->>DB: $transaction(update message set deletedAt, update conversation latestMessageId)
+   Service->>Service: find next latest message inside $transaction ✅ FIXED (race condition eliminated)
+   Service->>DB: $transaction(update message set deletedAt, update conversation latestMessageId)
     DB-->>Service: updatedMessage
     Service-->>Controller: { message, conversationMetadata }
 

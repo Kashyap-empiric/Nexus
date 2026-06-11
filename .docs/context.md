@@ -23,8 +23,8 @@ Phase 1 establishes the core messaging foundation: authentication, direct messag
 | Direct Messaging | Private 1-to-1 conversations between users. `dmPair` deduplication strategy. DB trigger enforces 2-member limit. | ✅ Complete |
 | Message Persistence | Messages stored in PostgreSQL with UUIDv7 IDs, retrievable as paginated history. | ✅ Complete |
 | Real-time Delivery | Messages delivered instantly via Socket.io rooms. Dual path: Socket `message:send` + REST fallback `POST /messages`. | ✅ Complete |
-| Message Editing | ✅ Service + REST endpoint exposed. Broadcasts `message:update` + `conversation:update`. | ✅ Complete |
-| Message Soft-Delete | ✅ Schema, migration, REST endpoint, and socket broadcast (`message:delete` + `conversation:update`). | ✅ Complete |
+| Message Editing | ✅ Service + REST endpoint exposed. Broadcasts `message:update` + `conversation:update`. ⚠️ `editMessage` still has non-transactional reads. | ✅ Complete (with debt) |
+| Message Soft-Delete | ✅ Schema, migration, REST endpoint, socket broadcast. Race condition in `deleteMessage` ✅ **FIXED** (transactional compute of `nextLatestMessageId`). | ✅ Complete |
 | Read Receipts | Tracked using `lastReadMessageId` on `ConversationMember`. Broadcasts `message:read` via socket. | ✅ Complete |
 | Presence | **Fully implemented.** Redis-backed `presenceStore.ts` with in-memory fallback. Multi-tab handling via socket ID sets. `user:online` / `user:offline` / `presence:initial` all wired. `PresenceIndicator` component. | ✅ Complete |
 | Invite System | Secure deep-linked invites supporting USER and CONVERSATION types. 24h active link rotation, atomic consumption. | ✅ Complete |
@@ -180,10 +180,10 @@ For detailed documentation of each event including flow diagrams, see [socket.md
 
 | Limitation | Details |
 |---|---|
-| Cursor pagination orders by `createdAt` | `getMessages` uses `createdAt: "desc"` instead of `id` (UUIDv7). Should use `id` for consistency with monotonic ordering spec |
-| Soft-deleted messages not filtered | `getMessages` does not exclude messages with `deletedAt != null` |
-| Race condition in deleteMessage | `nextLatestMessageId` computed before transaction starts |
-| Non-transactional reads in edit/delete | `getMessageById` called outside Prisma `$transaction` |
+| ~~Cursor pagination orders by `createdAt`~~ | ✅ **FIXED** — Now uses `id: "desc"` (UUIDv7) for monotonic-safe cursor pagination |
+| ~~Soft-deleted messages not filtered~~ | ✅ **FIXED** — `getMessages` now filters `deletedAt: null` |
+| ~~Race condition in deleteMessage~~ | ✅ **FIXED** — `nextLatestMessageId` computed inside Prisma `$transaction` with `tx.message.findFirst` |
+| Non-transactional reads in editMessage | ⚠️ `getMessageById` called outside Prisma `$transaction` in `editMessage` — still unresolved |
 | No rate-limit env config | REST rate limiters use hardcoded defaults |
 | No Redis Pub/Sub adapter | Single Socket.io instance cannot scale horizontally |
 | DM only (no channels) | No channels or workspaces until Phase 2 |

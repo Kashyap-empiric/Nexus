@@ -65,3 +65,4 @@ The Conversations module manages the logical containers for messages. Conversati
 ### Recent Updates
 
 - feat(ui): Added an explicit 'Message' button in the NewConversationModal when searching for users, replacing the full-row clickable area for better UX.
+- feat(invites): Added invite link generation for DM conversations. Integrated `InviteModal`, `useInviteLink` hook, and `useInviteModal` shared hook into the sidebar. DM invites create new conversations via the invite system's `userResolver`.

@@ -42,12 +42,12 @@ The Messages module handles the lifecycle of individual chat messages — creati
 
 - **`deleteMessage`** — Soft-deletes by setting `deletedAt` to current timestamp:
   - Validates same ownership checks as edit
-  - Computes `nextLatestMessageId` **before** entering the Prisma transaction (⚠️ known race condition — see Technical Debt)
+  - ✅ **FIXED (2026-06-11)**: `nextLatestMessageId` is now computed **inside** `prisma.$transaction(async (tx) => { ... })` using `tx.message.findFirst` with `deletedAt: null` filter, eliminating the critical race condition.
   - Returns `conversationMetadata` only if deleting the latest message
 
 - **`getMessages`** — Cursor-based pagination:
-  - Orders by `createdAt: "desc"` (⚠️ should be `id: "desc"` for UUIDv7 consistency)
-  - Does **not** filter out soft-deleted messages (`deletedAt: null`) (⚠️ known bug)
+  - ✅ **FIXED (2026-06-11)**: Orders by `id: "desc"` (UUIDv7) for monotonic-safe cursor pagination
+  - ✅ **FIXED (2026-06-11)**: Filters `deletedAt: null` — soft-deleted messages are no longer returned
   - Fetches one extra record to determine `hasNextPage`
 
 ### Socket Integration
@@ -86,8 +86,5 @@ The controller directly imports `dispatchMessageEvent` from `socket.dispatcher.t
 ### Known Technical Debt
 
 See `.docs/TECHNICAL_DEBT.md` and `.docs/socket.md` for detailed documentation of:
-- Non-transactional reads in `editMessage` and `deleteMessage`
-- Race condition in `deleteMessage` when computing `nextLatestMessageId`
-- Soft-delete leakage in `getMessages`
-- Pagination ordering using `createdAt` instead of `id`
-- Overloaded controllers mixing HTTP and socket concerns
+- 🔴 **Non-transactional reads in `editMessage`** — `getMessageById` is called outside the `$transaction` (still unresolved)
+- 🟡 Overloaded controllers mixing HTTP and socket concerns

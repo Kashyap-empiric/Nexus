@@ -197,11 +197,14 @@ Key files:
 - [x] Sidebar search filter
 - [x] UI refinements (Message button, responsive layout)
 
-### Deferred Debt (Still Open)
+### Deferred Debt
 
-- [ ] Filter soft-deleted messages in `getMessages` (`where: { deletedAt: null }`)
-- [ ] Switch pagination from `createdAt` to `id` ordering
-- [ ] Fix race condition in `deleteMessage` (non-transactional read)
+#### ✅ Resolved (2026-06-11)
+- [x] Filter soft-deleted messages in `getMessages` (`where: { deletedAt: null }`)
+- [x] Switch pagination from `createdAt` to `id` ordering
+- [x] Fix race condition in `deleteMessage` (non-transactional read)
+
+#### 🔴 Still Open
 - [ ] Fix non-transactional reads in `editMessage`
 - [ ] Add Redis Pub/Sub adapter for Socket.io horizontal scaling
 
@@ -261,9 +264,10 @@ Key files:
 - **Documentation**: Comprehensive `.docs/` and `.agents/` documentation system including complete socket architecture documentation.
 
 ### 🟡 Deferred Technical Debt
-- Soft-delete filtering in `getMessages`
-- Pagination ordering from `createdAt` to `id`
-- Race condition and non-transactional reads in message edit/delete
+- ~~Soft-delete filtering in `getMessages`~~ ✅ **RESOLVED (2026-06-11)**
+- ~~Pagination ordering from `createdAt` to `id`~~ ✅ **RESOLVED (2026-06-11)**
+- ~~Race condition in `deleteMessage`~~ ✅ **RESOLVED (2026-06-11)**
+- Non-transactional reads in `editMessage` — 🔴 **STILL OPEN**
 - Horizontal scaling of Socket.io (Redis Pub/Sub)
 
 ### 🔄 Key Deviations from Initial Plan

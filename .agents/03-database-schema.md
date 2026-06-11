@@ -8,7 +8,7 @@ This document details the exact PostgreSQL database schema for Phase 1 of the Ne
 
 1. **UUIDv7 Primary Keys**: All `id` fields across all tables are `String` storing UUIDv7 strings. This is critical for cursor-based pagination because UUIDv7 is time-ordered (monotonically sortable). We do **not** use `createdAt` for sorting.
    - *Requirement*: Always generate IDs in the application layer using the `uuidv7` npm package before calling `prisma.model.create()`. Do not use `crypto.randomUUID()` (UUIDv4) or Prisma's default `@default(uuid())` as they break sorting.
-   - ⚠️ **Current code uses `createdAt: "desc"` for pagination ordering** — this should be switched to `id` ordering for consistency with the spec.
+   - ✅ **FIXED (2026-06-11)**: `getMessages` now uses `id: "desc"` for pagination ordering.
 2. **Supabase Auth Separation**: Supabase handles authentication and issues JWTs. The Prisma `User` table mirrors profile data through the Supabase `on_auth_user_created` database trigger in `server/prisma/SUPABASE_QUERIES.sql`, not through Express middleware upserts.
 
 ---
@@ -81,7 +81,7 @@ An individual chat message sent within a Conversation.
 | `userId` | `String` | | Foreign key to `User` (the sender) |
 | `isEdited` | `Boolean` | `@default(false)` | Flag for edited messages. Set to `true` by `editMessage` service. |
 | `deletedAt` | `DateTime?` | | Soft-delete field. When set, the message is considered deleted. ✅ Schema + migration + REST endpoint all complete. |
-| `createdAt` | `DateTime` | `@default(now())` | Displayed in UI ("sent 2 mins ago"). ⚠️ Currently used for ordering instead of `id`. |
+| `createdAt` | `DateTime` | `@default(now())` | Displayed in UI ("sent 2 mins ago"). ✅ `getMessages` uses `id: "desc"` ordering (UUIDv7). |
 | `updatedAt` | `DateTime` | `@updatedAt` | Updated automatically by Prisma |
 
 **Relations:**
@@ -121,7 +121,7 @@ To prevent duplicate DMs between the same two users. See full description in `pu
 Because we use UUIDv7, `Message.id` is sequentially generated based on a timestamp.
 API query for history: `GET /conversations/:id/messages?cursor=<messageId>&limit=50`
 
-> ⚠️ **Known issue:** The current implementation uses `createdAt: "desc"` instead of `id: "desc"`. Since UUIDv7 is monotonically ordered by timestamp, ordering by `id` would be equivalent but more correct. This should be fixed.
+> ✅ **FIXED (2026-06-11)**: Now uses `id: "desc"` ordering (UUIDv7) for cursor-based pagination.
 
 ### Message Editing Logic
 The `editMessage` service in `messages.service.ts` enforces:
@@ -136,7 +136,7 @@ The `editMessage` service in `messages.service.ts` enforces:
 - `deletedAt: DateTime?` on the Message model
 - ✅ REST endpoint: `DELETE /conversations/:id/messages/:messageId`
 - ✅ Socket broadcast: `message:delete` + `conversation:update` (if deleting latest message)
-- ⚠️ Current `getMessages` does NOT filter out soft-deleted messages — needs `where: { deletedAt: null }` clause
+- ✅ **FIXED (2026-06-11)**: `getMessages` now filters `deletedAt: null` — soft-deleted messages are excluded.
 - The `editMessage` service correctly rejects editing deleted messages
 
 ### Message Creation Transaction
