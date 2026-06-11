@@ -2,8 +2,11 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useSendMessageMutation } from "../hooks/useMessages";
-import { SendHorizontal } from "lucide-react";
+import { SendHorizontal, Smile } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/shared/components/ui/popover";
+import EmojiPicker, { Theme } from 'emoji-picker-react';
+import { useTheme } from "next-themes";
 import type { User } from "../types/conversation";
 
 interface MessageInputProps {
@@ -14,6 +17,8 @@ interface MessageInputProps {
 
 export function MessageInput({ conversationId, currentUser, disabled }: MessageInputProps) {
   const [content, setContent] = useState("");
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const { theme } = useTheme();
   const { mutate: sendMessage } = useSendMessageMutation(conversationId, currentUser);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -34,7 +39,7 @@ export function MessageInput({ conversationId, currentUser, disabled }: MessageI
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     sendMessage({ conversationId, content, tempId });
     setContent("");
-    
+
     // Reset height explicitly
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -82,16 +87,51 @@ export function MessageInput({ conversationId, currentUser, disabled }: MessageI
             autoFocus
           />
         </div>
-        <Button
-          type="submit"
-          disabled={!content.trim() || disabled}
-          size="icon"
-          variant="ghost"
-          className={`shrink-0 h-9 w-9 rounded-md transition-all flex items-center justify-center hover:bg-muted ${content.trim() ? "text-primary" : "text-muted-foreground opacity-50"}`}
-        >
-          <SendHorizontal className="h-6 w-6" />
-          <span className="sr-only">Send</span>
-        </Button>
+        <div className="flex items-center gap-1 shrink-0 pb-[1px]">
+          <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
+            <PopoverTrigger
+              type="button"
+              className="shrink-0 h-9 w-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center"
+            >
+              <Smile className="h-5 w-5" />
+              <span className="sr-only">Emoji</span>
+            </PopoverTrigger>
+            <PopoverContent
+              side="top"
+              align="end"
+              className="w-auto p-0 border-none shadow-xl"
+              sideOffset={8}
+            >
+              <EmojiPicker
+                onEmojiClick={(emojiData) => {
+                  setContent((prev) => prev + emojiData.emoji);
+                  textareaRef.current?.focus();
+                }}
+                theme={theme === 'dark' ? Theme.DARK : Theme.LIGHT}
+                lazyLoadEmojis={true}
+                searchPlaceHolder="Search emojis..."
+                width={300}
+                previewConfig={{ showPreview: true }}
+                style={{
+                  '--epr-emoji-size': '20px',
+                  '--epr-preview-height': '40px',
+                  '--epr-preview-emoji-size': '18px',
+                  '--epr-preview-text-size': '12px'
+                } as React.CSSProperties}
+              />
+            </PopoverContent>
+          </Popover>
+          <Button
+            type="submit"
+            disabled={!content.trim() || disabled}
+            size="icon"
+            variant="ghost"
+            className={`shrink-0 h-9 w-9 rounded-md transition-all flex items-center justify-center hover:bg-muted ${content.trim() ? "text-primary" : "text-muted-foreground opacity-50"}`}
+          >
+            <SendHorizontal className="h-6 w-6" />
+            <span className="sr-only">Send</span>
+          </Button>
+        </div>
       </div>
     </form>
   );

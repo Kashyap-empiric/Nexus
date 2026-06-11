@@ -85,7 +85,7 @@ export function Sidebar() {
               <span>Direct Messages</span>
               <DropdownMenu>
                 <DropdownMenuTrigger className="flex items-center gap-1 transition-colors py-1 px-2.5 -mr-1 rounded-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary/10 text-primary hover:bg-primary/20 normal-case tracking-normal font-medium leading-none">
-                  <span className="sr-only md:not-sr-only text-xs leading-none">New</span>
+                  <span className="text-xs leading-none">New</span>
                   <Plus className="h-3.5 w-3.5" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
