@@ -1,6 +1,6 @@
 "use client";
 
-import { useConversationDetailsQuery } from "../hooks/useConversations";
+import { useConversationsQuery, useConversationDetailsQuery } from "../hooks/useConversations";
 import { useConversationSocket } from "../hooks/useConversationSocket";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
@@ -24,6 +24,14 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
   const currentUserId = user?.id || null;
 
   const { data: conversation, isLoading } = useConversationDetailsQuery(conversationId);
+  const { data: conversations } = useConversationsQuery();
+
+  const totalUnreadCount = conversations?.reduce((acc, conv) => {
+    if (conv.id !== conversationId) {
+      return acc + (conv.unreadCount || 0);
+    }
+    return acc;
+  }, 0) || 0;
 
   if (isLoading) {
     return (
@@ -75,13 +83,27 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
         <div className="flex items-center gap-2 md:gap-3">
           <Link
             href={APP_ROUTES.CONVERSATIONS.INDEX}
-            className="md:hidden p-2 -ml-1 text-muted-foreground hover:text-foreground transition-colors"
+            className="md:hidden relative p-2 -ml-1 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
+            {totalUnreadCount > 0 && (
+              <span className="
+                absolute bottom-0 right-0
+                flex h-[18px] min-w-[18px]
+                items-center justify-center
+                rounded-full bg-red-500
+                px-1 text-[10px]
+                leading-none
+                font-bold text-white
+                shadow-sm ring-2 ring-background
+              ">
+                {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+              </span>
+            )}
             <span className="sr-only">Back</span>
           </Link>
           <div className="relative">
-            <UserAvatar 
+            <UserAvatar
               name={title}
               src={otherMember?.user?.avatarUrl}
               className="h-7 w-7 shrink-0"
@@ -97,8 +119,8 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
       </div>
 
       {/* Messages */}
-      <MessageList 
-        conversationId={conversationId} 
+      <MessageList
+        conversationId={conversationId}
         currentUserId={currentUserId}
         myLastReadMessageId={conversation.members.find(m => m.userId === currentUserId)?.lastReadMessageId}
         partnerLastReadMessageId={otherMember?.lastReadMessageId}
