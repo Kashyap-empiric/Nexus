@@ -169,3 +169,42 @@
 
 **Learning**
   One new thing that you learned today: Regularly reviewing the backend architecture against the intended user experience ensures that data integrity issues are caught before they scale to production.
+
+---
+
+## 11th June 2026
+
+- **Critical race condition fix**: Fixed `deleteMessage` in `messages.service.ts` to compute `nextLatestMessageId` inside the Prisma `$transaction` using `tx.message.findFirst`, eliminating the race condition window that could corrupt `Conversation.latestMessageId` under concurrent deletions.
+- **Fixed soft-delete leakage**: `getMessages` now filters `deletedAt: null`, preventing deleted messages from being sent to clients.
+- **Fixed pagination ordering**: `getMessages` now orders by `id: "desc"` (UUIDv7) instead of `createdAt`, ensuring monotonic-safe cursor-based pagination.
+- **Added Emoji Picker**: Integrated `emoji-picker-react` into `MessageInput.tsx` with a `Smile` icon button and popover, supporting dark/light theme via `next-themes`.
+- **Added invite links for DMs**: Implemented invite link generation for DM conversations, integrated into the sidebar via `InviteModal` and `useInviteLink` hook.
+- **Mobile UI improvements**: Added unread badge to the mobile back button in `ActiveConversation`, dynamic textarea heights, and fixed UI inconsistencies.
+- **Accessibility improvements**: Improved accessibility for interactive elements.
+- **Code deduplication**: Refactored code across the codebase to reduce duplication.
+- **Branding update**: Updated the logo and favicon.
+
+**Date**: 11th June 2026
+
+**Completed**:
+- Resolved 3 critical technical debt items: race condition in `deleteMessage`, soft-delete leakage in `getMessages`, and pagination ordering using `createdAt` instead of `id`.
+- Added Emoji Picker to message input (`emoji-picker-react` library, dark/light theme support).
+- Added invite link generation for DM conversations (sidebar integration).
+- Fixed various UI inconsistencies and improved mobile responsiveness.
+- Improved accessibility for interactive elements.
+- Refactored code to deduplicate logic.
+- Updated branding (logo and favicon).
+
+**In Progress**:
+- Phase 2 planning and technical debt cleanup (remaining: non-transactional reads in `editMessage`).
+
+**Next Plan**:
+- Fix non-transactional reads in `editMessage` service.
+- Begin Phase 2: Workspaces, channels, RBAC, reactions.
+
+**Blockers**
+  None.
+
+**Learning**
+  One new thing that you learned today: Moving the `nextLatestMessageId` computation inside the Prisma `$transaction` callback using `tx.message.findFirst` eliminates the critical race condition window where concurrent deletions could corrupt the conversation's `latestMessageId`. The transaction's snapshot isolation ensures consistent reads within the same transaction boundary.
+

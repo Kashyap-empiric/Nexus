@@ -58,13 +58,15 @@ sequenceDiagram
 
 ## 3. Data Integrity & Transaction Boundaries
 
-The backend uses Prisma, but transaction boundaries are frequently broken.
+The backend uses Prisma, but some transaction boundaries remain broken.
 
-### Deviations & Flaws:
-- **Non-Transactional Reads**: In `messages.service.ts` -> `editMessage` and `deleteMessage`, the service executes isolated reads (e.g., `getMessageById`) to perform authorization and logic branching *outside* of the `$transaction`.
-- **Race Condition in `deleteMessage` (CRITICAL)**: When deleting the `latestMessage`, the service fetches the next-most-recent message ID *before* the transaction starts. Concurrent deletions of the two newest messages will result in a corrupted `Conversation.latestMessageId`.
-- **Soft-Delete Leakage**: The schema uses `deletedAt` for soft deletes, but `getMessages` does *not* apply a `where: { deletedAt: null }` filter. Deleted messages are sent to the client.
-- **Pagination Ordering Defect**: Messages use `UUIDv7` for clustered chronological indexing, but `getMessages` paginates using `orderBy: { createdAt: "desc" }`. This breaks monotonic safety if messages share identical timestamps.
+### Resolved Issues (✅ Fixed on 2026-06-11):
+- ~~**Race Condition in `deleteMessage` (CRITICAL)**: When deleting the `latestMessage`, the service fetches the next-most-recent message ID *before* the transaction starts.~~ → ✅ **FIXED**: `nextLatestMessageId` is now computed inside `prisma.$transaction(async (tx) => { ... })` using `tx.message.findFirst` with `deletedAt: null` filter.
+- ~~**Soft-Delete Leakage**: `getMessages` does not apply `where: { deletedAt: null }` filter.~~ → ✅ **FIXED**: `getMessages` now filters `deletedAt: null`.
+- ~~**Pagination Ordering Defect**: `getMessages` paginates using `orderBy: { createdAt: "desc" }`.~~ → ✅ **FIXED**: Now uses `orderBy: { id: "desc" }` (UUIDv7).
+
+### Remaining Issues (⚠️ Still Unresolved):
+- **Non-Transactional Reads in `editMessage`**: `editMessage` calls `getMessageById` (which performs ownership validation and `deletedAt` check) *outside* of the `$transaction`. The actual `prisma.message.update` is not wrapped in a transaction.
 
 ## 4. Frontend State Strategy
 
@@ -72,4 +74,4 @@ The frontend relies heavily on TanStack Query cache mutation.
 
 ### Deviations & Flaws:
 - **Aggressive Optimistic Updates**: `useMessages.ts` injects `pending: true` payloads and creates a `tempId` upon sending. It directly mutates the query cache to swap the `tempId` with the final payload.
-- **Cache Fragility**: Because the backend leaks soft-deleted messages, the frontend handles deletions optimistically (using `markMessageDeletedInCache`) but is completely reliant on manual DOM/cache updates rather than clean server reconciliation.
+- **Cache Fragility**: The frontend handles deletions optimistically (using `markMessageDeletedInCache`) but is reliant on manual DOM/cache updates rather than clean server reconciliation.
