@@ -1,12 +1,93 @@
 # Messages Module
 
 ## Overview
-The Messages module on the backend is responsible for persisting and retrieving individual chat messages.
+
+The Messages module handles the lifecycle of individual chat messages — creating, reading, editing, and soft-deleting them. Messages are the core data unit of the Nexus platform.
 
 ## Server-Side (`server/src/modules/messages`)
-- **Endpoints / Routes**: Provides the `messages.routes.ts` file for handling REST API requests to send a message or fetch historical messages for a conversation.
-- **Controllers**: Validates the payload and saves new messages to the database via `messages.controller.ts`.
-- **Sockets**: Often emits a socket event when a new message is successfully saved so that connected clients receive it in real-time.
 
+### Endpoints
 
-> **Note:** Documentation updated on 2026-06-10 to reflect UI improvements: feat(ui): Added an explicit 'Message' button in the NewConversationModal when searching for users, replacing the full-row clickable area for better UX.
+| Method | Route | Auth | Description | Socket Events Emitted |
+|---|---|---|---|---|
+| `GET` | `/conversations/:id/messages` | Yes | Cursor-based paginated history | None |
+| `POST` | `/conversations/:id/messages` | Yes | Create and persist a new message | `message:new`, `conversation:update` |
+| `PATCH` | `/conversations/:id/messages/:messageId` | Yes | Edit message content | `message:update`, `conversation:update` (if editing latest message) |
+| `DELETE` | `/conversations/:id/messages/:messageId` | Yes | Soft-delete a message | `message:delete`, `conversation:update` (if deleting latest message) |
+
+### Files
+
+| File | Role |
+|---|---|
+| `messages.routes.ts` | Route definitions with Zod validation |
+| `messages.controller.ts` | HTTP request handlers + socket event dispatch |
+| `messages.service.ts` | Business logic (Prisma queries, transactions) |
+| `messages.schema.ts` | Zod schemas for request validation |
+
+### Business Logic
+
+- **`createMessage`** — Uses a Prisma `$transaction` to atomically:
+  1. Create the message record with UUIDv7 ID
+  2. Update the conversation's `updatedAt` and `latestMessageId`
+  3. Update the sender's `lastReadMessageId` on their `ConversationMember` row
+  - Returns `{ message, conversationMetadata }` for socket dispatch
+
+- **`editMessage`** — Validates:
+  - Message exists (`getMessageById`)
+  - Message is not soft-deleted (`deletedAt` is null)
+  - Requesting user is the message owner
+  - Content is non-empty after trimming
+  - Sets `isEdited: true` on update
+  - Returns `conversationMetadata` only if editing the latest message
+
+- **`deleteMessage`** — Soft-deletes by setting `deletedAt` to current timestamp:
+  - Validates same ownership checks as edit
+  - Computes `nextLatestMessageId` **before** entering the Prisma transaction (⚠️ known race condition — see Technical Debt)
+  - Returns `conversationMetadata` only if deleting the latest message
+
+- **`getMessages`** — Cursor-based pagination:
+  - Orders by `createdAt: "desc"` (⚠️ should be `id: "desc"` for UUIDv7 consistency)
+  - Does **not** filter out soft-deleted messages (`deletedAt: null`) (⚠️ known bug)
+  - Fetches one extra record to determine `hasNextPage`
+
+### Socket Integration
+
+The controller directly imports `dispatchMessageEvent` from `socket.dispatcher.ts` to broadcast socket events after successful database operations. This is called after the Prisma operation succeeds, meaning:
+
+- ✅ Messages are always persisted before being broadcast
+- ❌ The controller mixes HTTP and WebSocket concerns (known architectural debt)
+
+## Client-Side
+
+### API (`client/src/modules/chat/api/messages.api.ts`)
+
+| Function | HTTP Method | Route |
+|---|---|---|
+| `getMessages(conversationId, cursor?)` | GET | `/conversations/{id}/messages?cursor=` |
+| `createMessage(conversationId, content)` | POST | `/conversations/{id}/messages` |
+| `editMessage(conversationId, messageId, content)` | PATCH | `/conversations/{id}/messages/{msgId}` |
+| `deleteMessage(conversationId, messageId)` | DELETE | `/conversations/{id}/messages/{msgId}` |
+
+### Hooks (`client/src/modules/chat/hooks/useMessages.ts`)
+
+| Hook | Description |
+|---|---|
+| `useMessagesInfiniteQuery(conversationId)` | Infinite query for paginated message history |
+| `useSendMessageMutation(conversationId, currentUser)` | Sends via Socket.io `message:send` with optimistic UI |
+| `useEditMessageMutation(conversationId)` | Edits via REST PATCH with optimistic cache update |
+| `useDeleteMessageMutation(conversationId)` | Deletes via REST DELETE with optimistic cache update |
+
+### Optimistic Update Strategy
+
+- **Send:** Message immediately appears with `pending: true` and a `tempId`. On server acknowledgment (`success: true`), the temp message is replaced with the real message.
+- **Edit:** Instantly updates the cache via `updateMessageInCache()`, rolls back on error.
+- **Delete:** Instantly marks message as deleted in cache via `markMessageDeletedInCache()`, rolls back on error.
+
+### Known Technical Debt
+
+See `.docs/TECHNICAL_DEBT.md` and `.docs/socket.md` for detailed documentation of:
+- Non-transactional reads in `editMessage` and `deleteMessage`
+- Race condition in `deleteMessage` when computing `nextLatestMessageId`
+- Soft-delete leakage in `getMessages`
+- Pagination ordering using `createdAt` instead of `id`
+- Overloaded controllers mixing HTTP and socket concerns

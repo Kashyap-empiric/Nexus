@@ -1,3 +1,4 @@
+// Dev server reload trigger
 import "dotenv/config";
 import http from "http";
 import app from "./app.js";
