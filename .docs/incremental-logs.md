@@ -52,3 +52,73 @@
 - [Thursday 11 June 2026 11:46:10 AM IST] Fixed auth flaw in invite generation, added expiresAt dynamically to InviteModal, and fixed EmptyState CTA visibility to respect conversation length.
 - [Thursday 11 June 2026] Executed Invite Architecture Polish: Renamed targetId -> entityId globally, migrated DB, implemented consumed semantics to prevent over-bumping usedCount, and added a 24-hour active link rotation policy.
 - [Thursday 11 June 2026] UI & Security Fixes: Prevented infinite loop in InviteModal, secured conversationResolver against 3+ member DM bug, and added a Postgres Database Trigger (trg_enforce_dm_member_limit) to strictly enforce maximum 2 members per DM.
+
+## 11th June 2026 - Comprehensive Docs & Agents Update + Socket Documentation
+
+- **Action**: Complete overhaul of all `.docs/` and `.agents/` documentation to reflect the current codebase state. Created comprehensive socket architecture documentation.
+- **Details**:
+  - Created `.docs/socket.md` — comprehensive socket event documentation with 12 sequence diagrams, event reference tables, room strategy, connection lifecycle, message flows (send/edit/delete/read), presence flow, conversation update flow, invite system socket events, dispatcher architecture, and middleware documentation.
+  - Updated all 6 `public-docs/modules/*.md` files (chat, messages, conversations, auth, users, landing) with accurate architecture details, socket event references, file listings, and known issues.
+  - Updated `public-docs/DOCUMENTATION.md` and `public-docs/file-structure.md` with socket layer, invites module, and accurate directory structure.
+  - Updated `public-docs/data-flow.md` with all socket event flows and cross-references to `socket.md`.
+  - Updated `.docs/architecture.md` with socket architecture section and invite system details.
+  - Updated `.docs/context.md` with current socket event tables, invite system, and comprehensive API list.
+  - Updated `.docs/data-flow.md` with comprehensive REST vs Socket split table, all data flow sections, and invite system flows.
+  - Updated `.agents/01-project-context.md` with current socket event list, edit/delete status, and invite system.
+  - Updated `.agents/03-database-schema.md` with Invite model, `latestMessageId` field, and updated edit/delete status.
+  - Updated `.agents/04-phase-1-plan.md` to archived status with full Phase 1 retrospective and deferred debt.
+  - Updated `.agents/05-agent-boundaries.md` with socket emission rules, dispatcher usage, and documentation requirements.
+- **Files Touched**:
+  - `.docs/socket.md` (NEW)
+  - `.docs/public-docs/modules/chat.md`
+  - `.docs/public-docs/modules/messages.md`
+  - `.docs/public-docs/modules/conversations.md`
+  - `.docs/public-docs/modules/auth.md`
+  - `.docs/public-docs/modules/users.md`
+  - `.docs/public-docs/modules/landing.md`
+  - `.docs/public-docs/DOCUMENTATION.md`
+  - `.docs/public-docs/file-structure.md`
+  - `.docs/public-docs/data-flow.md`
+  - `.docs/architecture.md`
+  - `.docs/context.md`
+  - `.docs/data-flow.md`
+  - `.docs/incremental-logs.md`
+  - `.agents/01-project-context.md`
+  - `.agents/03-database-schema.md`
+  - `.agents/04-phase-1-plan.md`
+  - `.agents/05-agent-boundaries.md`
+
+## 11th June 2026 — New Docs: Onboarding, Deployment, API Reference, State Management, Error Handling
+
+- **Action**: Created 5 new documentation files covering the remaining documentation gaps.
+- **Details**:
+  - `.docs/onboarding.md` — Complete local dev setup guide: prerequisites, env vars for both client/server, database setup with Supabase + Prisma migrations, Redis options (Upstash or local Docker), running instructions, verification checklist, and common issues FAQ.
+  - `.docs/deployment.md` — Render deployment architecture: two-service topology (nexus-server + nexus-client), `render.yaml` configuration, production env vars, build process, CORS config, WebSocket considerations, production migration strategy, and known limitations.
+  - `.docs/api-reference.md` — Complete 13-endpoint REST API reference: every endpoint with method, route, auth, rate limiting, request/response shapes, validation schemas, error responses, socket events emitted, and an endpoint summary table.
+  - `.docs/state-management.md` — Client state architecture: TanStack Query vs Zustand boundary, query key factory with all 4 keys, infinite query pattern, all 3 mutation patterns (socket send, REST edit/delete), socket cache integration diagram, all Zustand stores (chatStore + authStore), store reset pattern on logout.
+  - `.docs/error-handling.md` — Four-layer error handling strategy: transport (Axios interceptor + socket middleware), HTTP API (Express error handler, Zod validation, rate limiter), Socket.io (callback errors, disconnect, auth), UI (toasts, optimistic rollback, AuthGate). All server and client error responses documented in tables.
+- **Files Touched**:
+  - `.docs/onboarding.md` (NEW)
+  - `.docs/deployment.md` (NEW)
+  - `.docs/api-reference.md` (NEW)
+  - `.docs/state-management.md` (NEW)
+  - `.docs/error-handling.md` (NEW)
+  - `.docs/incremental-logs.md`
+
+## 11th June 2026 — Deployment Docs Corrections (Actual Setup)
+
+- **Action**: Updated deployment docs to reflect the actual production setup based on user feedback.
+- **Details**:
+  - `render.yaml` is **not used** — server is deployed as a manual web service via Render Dashboard
+  - Client is deployed on **Vercel**, not Render
+  - Redis is used as a **standard key-value service** with `REDIS_URL` (standard connection string, not Upstash REST)
+  - Updated `.docs/deployment.md` with corrected topology diagram, setup steps for both Render and Vercel, Redis provider options table, CORS config, and known limitations
+  - Updated `.docs/context.md` hosting info (Render + Vercel, not just Render) and Redis env var name
+  - Updated `.docs/architecture.md` infrastructure section
+  - Updated `.docs/onboarding.md` Redis common issue text
+- **Files Touched**:
+  - `.docs/deployment.md`
+  - `.docs/context.md`
+  - `.docs/architecture.md`
+  - `.docs/onboarding.md`
+  - `.docs/incremental-logs.md`

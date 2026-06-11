@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Search, Plus, LogOut } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
+import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { NewConversationModal } from "./NewConversationModal";
 import { PresenceIndicator } from "./PresenceIndicator";
 import { InviteModal } from "./InviteModal";
@@ -132,10 +132,12 @@ export function Sidebar() {
                         }`}
                     >
                       <div className="relative shrink-0">
-                        <Avatar className="h-9 w-9 shrink-0">
-                          <AvatarImage src={otherMember?.user.avatarUrl || undefined} />
-                          <AvatarFallback className="text-xs bg-primary/20 text-primary font-medium pt-[1px]">{name[0]?.toUpperCase()}</AvatarFallback>
-                        </Avatar>
+                        <UserAvatar 
+                          name={name}
+                          src={otherMember?.user.avatarUrl}
+                          className="h-9 w-9 shrink-0"
+                          fallbackClassName="text-xs bg-primary/20 text-primary font-medium"
+                        />
                         {otherMember?.userId && (
                           <PresenceIndicator userId={otherMember.userId} className="-bottom-0.5 -right-0.5" />
                         )}
@@ -172,12 +174,12 @@ export function Sidebar() {
         <div className="p-4 border-t bg-background shrink-0 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative shrink-0">
-              <Avatar className="h-8 w-8 shrink-0">
-                <AvatarImage src={myProfile?.avatarUrl || currentAuthUser?.user_metadata?.avatar_url || currentAuthUser?.user_metadata?.avatarUrl || undefined} />
-                <AvatarFallback className="text-xs pt-[1px]">
-                  {myProfile?.username?.[0]?.toUpperCase() || currentAuthUser?.user_metadata?.username?.[0]?.toUpperCase() || "ME"}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar 
+                name={myProfile?.username || currentAuthUser?.user_metadata?.username || "ME"}
+                src={myProfile?.avatarUrl || currentAuthUser?.user_metadata?.avatar_url || currentAuthUser?.user_metadata?.avatarUrl}
+                className="h-8 w-8 shrink-0"
+                fallbackClassName="text-xs"
+              />
               <span
                 className={cn(
                   "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background",

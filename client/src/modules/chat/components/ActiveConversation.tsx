@@ -4,7 +4,7 @@ import { useConversationDetailsQuery } from "../hooks/useConversations";
 import { useConversationSocket } from "../hooks/useConversationSocket";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
-import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
+import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { PresenceIndicator } from "./PresenceIndicator";
 import { useUser } from "@/modules/auth/store/useAuthStore";
 import { MessageListSkeleton } from "./MessageListSkeleton";
@@ -81,10 +81,12 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
             <span className="sr-only">Back</span>
           </Link>
           <div className="relative">
-            <Avatar className="h-7 w-7 shrink-0">
-              <AvatarImage src={otherMember?.user?.avatarUrl || undefined} />
-              <AvatarFallback className="bg-primary/20 text-primary font-medium pt-[1px]">{title?.[0]?.toUpperCase() || "?"}</AvatarFallback>
-            </Avatar>
+            <UserAvatar 
+              name={title}
+              src={otherMember?.user?.avatarUrl}
+              className="h-7 w-7 shrink-0"
+              fallbackClassName="bg-primary/20 text-primary font-medium"
+            />
             {otherMember?.userId && (
               <PresenceIndicator userId={otherMember.userId} className="-bottom-0.5 -right-0.5" />
             )}

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
+import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import type { MessageGroup } from "../utils/groupMessages";
 import { MessageStatus } from "./MessageStatus";
 import { MoreHorizontal, Pencil, Trash, Ban, Copy } from "lucide-react";
@@ -112,12 +112,12 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
             >
               <div className="w-[36px] shrink-0 flex justify-center items-start relative select-none">
                 {isFirst ? (
-                  <Avatar className="h-9 w-9 mt-0.5 absolute left-0">
-                    <AvatarImage src={user?.avatarUrl || undefined} />
-                    <AvatarFallback className="bg-primary/20 text-primary font-medium pt-[1px]">
-                      {user?.username?.[0]?.toUpperCase() || "?"}
-                    </AvatarFallback>
-                  </Avatar>
+                  <UserAvatar 
+                    name={user?.username}
+                    src={user?.avatarUrl}
+                    className="h-9 w-9 mt-0.5 absolute left-0"
+                    fallbackClassName="bg-primary/20 text-primary font-medium"
+                  />
                 ) : (
                   <span className="text-[10px] text-muted-foreground opacity-0 group-hover/row:opacity-100 mt-[5px] absolute right-2 leading-none">
                     {time}

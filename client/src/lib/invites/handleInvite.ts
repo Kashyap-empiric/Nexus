@@ -1,6 +1,7 @@
 import { api } from "@/shared/lib/api";
 import { API_ROUTES } from "@/shared/constants/api_routes";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const handleInviteContinuation = async (router: any) => {
   const inviteData = sessionStorage.getItem("nexus_invite");
   if (!inviteData) return;
@@ -12,7 +13,7 @@ export const handleInviteContinuation = async (router: any) => {
     try {
       const parsed = JSON.parse(inviteData);
       token = parsed.token;
-    } catch (e) {
+    } catch {
       // Not valid JSON, assume it's the raw token string
     }
   }

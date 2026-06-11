@@ -2,12 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { X, Copy, Check, Loader2, Link as LinkIcon } from "lucide-react";
-import { generateInvite } from "../api/invites.api";
+import { InviteType } from "@/shared/hooks/useInviteModal";
+import { useInviteLink } from "../hooks/useInviteLink";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { toast } from "sonner";
-
-import { InviteType } from "@/shared/hooks/useInviteModal";
 
 interface InviteModalProps {
   isOpen: boolean;
@@ -17,31 +16,13 @@ interface InviteModalProps {
 }
 
 export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProps) {
-  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const { inviteUrl, expiresAt, isLoading, error, generate, reset } = useInviteLink();
   const [isCopied, setIsCopied] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [expiresAt, setExpiresAt] = useState<string | null>(null);
 
   useEffect(() => {
     // We only want to run this once when the modal opens with a valid type
     if (isOpen && type && !inviteUrl && !isLoading && !error) {
-      const fetchInvite = async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-          const { invitePath, expiresAt: expiration } = await generateInvite({ type, entityId });
-          setInviteUrl(`${window.location.origin}${invitePath}`);
-          setExpiresAt(expiration);
-        } catch (err: any) {
-          setError(err?.response?.data?.error || "Failed to generate invite link");
-          toast.error("Could not generate invite link");
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      
-      fetchInvite();
+      generate(type, entityId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, type, entityId]);
@@ -50,13 +31,11 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
   useEffect(() => {
     if (!isOpen) {
       setTimeout(() => {
-        setInviteUrl(null);
-        setExpiresAt(null);
+        reset();
         setIsCopied(false);
-        setError(null);
       }, 300); // Wait for exit animation
     }
-  }, [isOpen]);
+  }, [isOpen, reset]);
 
   if (!isOpen) return null;
 
