@@ -46,7 +46,7 @@ export function InviteProcessor() {
   }, [searchParams, router, user, isLoading]);
 
   return (
-    <div className="flex items-center justify-center h-screen bg-neutral-900 text-white">
+    <div className="flex items-center justify-center h-dvh bg-neutral-900 text-white">
       <div className="flex flex-col items-center gap-4">
         <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
         <p className="text-sm text-neutral-400 font-medium">Processing Invite...</p>

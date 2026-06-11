@@ -4,7 +4,7 @@ import { BackButton } from "@/shared/components/back-button";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+    <div className="min-h-dvh bg-background flex flex-col items-center justify-center p-4">
       <div className="max-w-md w-full text-center space-y-8">
         <div className="relative mx-auto w-32 h-32 flex items-center justify-center">
           <div className="absolute inset-0 bg-primary/20 rounded-full animate-pulse blur-xl" />
