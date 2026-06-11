@@ -144,7 +144,7 @@ export function Sidebar() {
                       </div>
 
                       <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <span className={`truncate text-sm pb-[1px] ${isUnread && !isActive ? 'font-bold text-foreground' : 'font-medium'}`}>{name}</span>
+                        <span className={`truncate text-sm leading-none ${isUnread && !isActive ? 'font-bold text-foreground' : 'font-medium'}`}>{name}</span>
                         {chat.latestMessage && (
                           <span className={`truncate text-[13px] ${isUnread && !isActive ? 'font-semibold text-foreground' : 'text-muted-foreground/80'}`}>
                             {chat.latestMessage.deletedAt
@@ -158,7 +158,7 @@ export function Sidebar() {
                       </div>
 
                       {isUnread && !isActive && (
-                        <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[12px] font-bold shrink-0">
+                        <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[12px] font-bold shrink-0 leading-none">
                           {unreadCount > 99 ? '99+' : unreadCount}
                         </div>
                       )}
@@ -188,7 +188,7 @@ export function Sidebar() {
               />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate mb-1 pt-[1px]">
+              <p className="text-sm font-medium truncate mb-1 leading-none">
                 {myProfile?.username || currentAuthUser?.user_metadata?.username || "My Account"}
               </p>
               <p className="text-xs text-muted-foreground leading-none truncate">{statusLabel}</p>
