@@ -122,3 +122,96 @@
   - `.docs/architecture.md`
   - `.docs/onboarding.md`
   - `.docs/incremental-logs.md`
+
+## 11th June 2026 — Critical Race Condition Fix & Technical Debt Resolution
+
+- **Action**: Fixed the critical race condition in `deleteMessage` and resolved multiple technical debt items in the messages service.
+- **Details**:
+  - **Race condition fix** (`c7e0cfc`): `deleteMessage` now computes `nextLatestMessageId` inside `prisma.$transaction(async (tx) => { ... })` using `tx.message.findFirst` with `deletedAt: null` filter, eliminating the window where concurrent deletions could corrupt `Conversation.latestMessageId`.
+  - **Soft-delete leakage fix**: Added `where: { deletedAt: null }` to `getMessages` query, preventing deleted messages from being returned to clients.
+  - **Pagination ordering fix**: Switched `getMessages` ordering from `createdAt: "desc"` to `id: "desc"` (UUIDv7), ensuring monotonic-safe cursor-based pagination.
+- **Files Touched**:
+  - `server/src/modules/messages/messages.service.ts`
+
+## 11th June 2026 — Emoji Picker Integration
+
+- **Action**: Added emoji picker to the message input component.
+- **Details**:
+  - Integrated `emoji-picker-react` (v4.19.1) into `MessageInput.tsx`.
+  - Added `Smile` icon button that opens a `Popover` containing the emoji picker.
+  - Supports dark/light themes via `next-themes` (`Theme.DARK` / `Theme.LIGHT`).
+  - Custom styling with CSS variables for compact display (`--epr-emoji-size`, `--epr-preview-height`, etc.).
+  - Emoji inserts at cursor position; input retains focus after selection.
+- **Files Touched**:
+  - `client/src/modules/chat/components/MessageInput.tsx`
+  - `client/package.json`
+  - `client/package-lock.json`
+
+## 11th June 2026 — Invite Links for DMs
+
+- **Action**: Added invite link generation for DM conversations, integrated into the sidebar.
+- **Details**:
+  - Implemented `useInviteLink` hook to generate invite links via `POST /api/invites/generate`.
+  - Added `InviteModal` component with copy-to-clipboard, expiration display, and loading/error states.
+  - Added `useInviteModal` shared hook for managing invite modal state (type, entityId).
+  - Integrated InviteModal into Sidebar via dropdown menu with "New Message" and "Invite Someone" options.
+  - Backend `invites.controller.ts` dispatches socket events on invite resolution (`CONVERSATION_NEW`, `CONVERSATION_UPDATE`).
+- **Files Touched**:
+  - `client/src/modules/chat/components/InviteModal.tsx` (NEW)
+  - `client/src/modules/chat/hooks/useInviteLink.ts` (NEW)
+  - `client/src/shared/hooks/useInviteModal.ts` (NEW)
+  - `client/src/modules/chat/components/Sidebar.tsx`
+  - `client/src/modules/chat/api/invites.api.ts`
+  - `server/src/modules/invites/invites.controller.ts`
+
+## 11th June 2026 — Mobile UI Improvements & Accessibility
+
+- **Action**: Fixed UI inconsistencies, improved mobile responsiveness, and enhanced accessibility.
+- **Details**:
+  - Added unread count badge to the mobile back button in `ActiveConversation.tsx` for better navigation context.
+  - Dynamic textarea heights using `scrollHeight` with 140px max, resetting on send.
+  - Mobile-friendly keyboard handling: Enter adds new line on mobile, sends on desktop.
+  - Various UI inconsistency fixes and code deduplication refactors.
+- **Files Touched**:
+  - `client/src/modules/chat/components/ActiveConversation.tsx`
+  - `client/src/modules/chat/components/MessageInput.tsx`
+  - `client/src/modules/chat/components/Sidebar.tsx`
+  - Multiple other UI component files
+
+## 11th June 2026 — Branding Update
+
+- **Action**: Updated the logo and favicon.
+- **Details**:
+  - Replaced default Next.js favicon with Nexus branding.
+  - Updated logo assets.
+- **Files Touched**:
+  - `client/public/images/`
+  - `client/src/app/favicon.ico`
+
+## 11th June 2026 — Comprehensive Documentation Update
+
+- **Action**: Comprehensive update of all docs/ logs and structure files to reflect June 11 codebase state.
+- **Details**:
+  - Updated `daily-logs.md` with June 11 entry covering all changes.
+  - Updated `.docs/incremental-logs.md` with detailed per-feature entries.
+  - Updated `.docs/progress.txt` with June 11 progress.
+  - Updated `.docs/major-changes.md` with race condition fix and emoji picker.
+  - Updated `.docs/TECHNICAL_DEBT.md` to mark 3 resolved items.
+  - Updated `.docs/context.md` and `.docs/AS_IS_ARCHITECTURE.md` to reflect fixed items.
+  - Updated `.docs/public-docs/modules/chat.md`, `messages.md`, `conversations.md`.
+  - Updated `.agents/01-project-context.md`, `03-database-schema.md`, `04-phase-1-plan.md`, `05-agent-boundaries.md`.
+- **Files Touched**:
+  - `daily-logs.md`
+  - `.docs/incremental-logs.md`
+  - `.docs/progress.txt`
+  - `.docs/major-changes.md`
+  - `.docs/TECHNICAL_DEBT.md`
+  - `.docs/context.md`
+  - `.docs/AS_IS_ARCHITECTURE.md`
+  - `.docs/public-docs/modules/chat.md`
+  - `.docs/public-docs/modules/messages.md`
+  - `.docs/public-docs/modules/conversations.md`
+  - `.agents/01-project-context.md`
+  - `.agents/03-database-schema.md`
+  - `.agents/04-phase-1-plan.md`
+  - `.agents/05-agent-boundaries.md`

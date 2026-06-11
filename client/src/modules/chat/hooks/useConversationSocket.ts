@@ -95,16 +95,12 @@ export const useConversationSocket = (conversationId: string) => {
 
     const onMessageUpdate = (message: Message) => {
       if (!message || message.conversationId !== conversationId) return;
-      import("../utils/cacheHelpers").then(({ updateMessageInCache }) => {
-        updateMessageInCache(queryClient, conversationId, message.id, message.content, true);
-      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.messages(conversationId) });
     };
 
     const onMessageDelete = (message: Message) => {
       if (!message || message.conversationId !== conversationId) return;
-      import("../utils/cacheHelpers").then(({ markMessageDeletedInCache }) => {
-        markMessageDeletedInCache(queryClient, conversationId, message.id, message.deletedAt || new Date().toISOString());
-      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.messages(conversationId) });
     };
 
     return {

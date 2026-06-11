@@ -5,12 +5,13 @@ export const getMessages = async (conversationId: string, cursor: string | undef
   const messages = await prisma.message.findMany({
     where: {
       conversationId,
+      deletedAt: null,
     },
     take: limit + 1, // Fetch one extra to determine if there's a next page
     skip: cursor ? 1 : 0,
     cursor: cursor ? { id: cursor } : undefined,
     orderBy: {
-      createdAt: "desc",
+      id: "desc",
     },
     include: {
       user: {
@@ -183,21 +184,21 @@ export const deleteMessage = async (messageId: string, userId: string) => {
 
   const conversation = message.conversation;
 
-  let nextLatestMessageId = conversation?.latestMessageId;
-
-  if (conversation?.latestMessageId === messageId) {
-    const nextMessage = await prisma.message.findFirst({
-      where: {
-        conversationId: message.conversationId,
-        id: { not: messageId },
-        deletedAt: null,
-      },
-      orderBy: { createdAt: "desc" },
-    });
-    nextLatestMessageId = nextMessage ? nextMessage.id : null;
-  }
-
   return prisma.$transaction(async (tx) => {
+    let nextLatestMessageId = conversation?.latestMessageId;
+
+    if (conversation?.latestMessageId === messageId) {
+      const nextMessage = await tx.message.findFirst({
+        where: {
+          conversationId: message.conversationId,
+          id: { not: messageId },
+          deletedAt: null,
+        },
+        orderBy: { id: "desc" },
+      });
+      nextLatestMessageId = nextMessage ? nextMessage.id : null;
+    }
+
     const updatedMessage = await tx.message.update({
       where: { id: messageId },
       data: {
