@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect } from "react";
 import { useMessagesInfiniteQuery } from "../hooks/useMessages";
 import { useMarkConversationReadMutation } from "../hooks/useConversations";
+import { useMessageScroll } from "../hooks/useMessageScroll";
 import { MessageGroupItem } from "./MessageGroupItem";
 import { groupMessages } from "../utils/groupMessages";
 import { MessageListSkeleton } from "./MessageListSkeleton";
@@ -20,115 +21,41 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, error } = useMessagesInfiniteQuery(conversationId);
   const { mutate: markRead } = useMarkConversationReadMutation();
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const observerTarget = useRef<HTMLDivElement>(null);
-  const isProgrammaticScroll = useRef(false);
-  const prevConversationId = useRef(conversationId);
-  const isAtBottomRef = useRef(true);
-  const hasInitialScrolled = useRef(false);
-
-  const [isAtBottom, setIsAtBottom] = useState(true);
-  const [hasNewMessages, setHasNewMessages] = useState(false);
-
   const latestMessage = data?.pages?.[0]?.data?.[0];
   const latestMessageId = latestMessage?.id;
   const isLatestMessageMine = latestMessage?.userId === currentUserId;
 
-  const scrollToBottom = useCallback((behavior: "auto" | "smooth" = "smooth") => {
-    isProgrammaticScroll.current = true;
-    bottomRef.current?.scrollIntoView({ behavior });
-    setIsAtBottom(true);
-    isAtBottomRef.current = true;
-    setHasNewMessages(false);
-
-    // Reset programmatic scroll flag after a frame
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        isProgrammaticScroll.current = false;
-      }, 100);
-    });
-  }, []);
-
-  const handleScroll = useCallback(() => {
-    if (isProgrammaticScroll.current) return;
-
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    // 100px tolerance
-    const atBottom = scrollHeight - scrollTop - clientHeight < 100;
-
-    setIsAtBottom(atBottom);
-    isAtBottomRef.current = atBottom;
-    if (atBottom) {
-      setHasNewMessages(false);
-    }
-  }, []);
-
-  // Auto-scroll logic based on rules
-  useEffect(() => {
-    // Rule 1: Conversation switch -> Reset initial load flag
-    if (prevConversationId.current !== conversationId) {
-      prevConversationId.current = conversationId;
-      hasInitialScrolled.current = false;
-    }
-
-    if (!latestMessageId) return;
-
-    // Rule 2: Initial load -> Jump instantly to bottom
-    if (!hasInitialScrolled.current) {
-      hasInitialScrolled.current = true;
-      scrollToBottom("auto");
-      return;
-    }
-
-    // Rule 3: Outgoing message (current user sent it) -> ALWAYS scroll to bottom
-    if (isLatestMessageMine) {
-      scrollToBottom("smooth");
-      return;
-    }
-
-    // Rule 4: Incoming message
-    if (isAtBottomRef.current) {
-      // If already at bottom, stay at bottom
-      scrollToBottom("smooth");
-    } else {
-      // If scrolled up, DO NOT scroll, but show indicator
-      setHasNewMessages(true);
-    }
-  }, [latestMessageId, conversationId, isLatestMessageMine, scrollToBottom]);
+  const {
+    scrollContainerRef,
+    bottomRef,
+    observerTarget,
+    isAtBottom,
+    hasNewMessages,
+    scrollToBottom,
+    handleScroll,
+  } = useMessageScroll({
+    conversationId,
+    latestMessageId,
+    isLatestMessageMine,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  });
 
   // Mark conversation as read when entering or when new messages arrive
   useEffect(() => {
     if (!latestMessageId) return;
     if (latestMessage?.pending) return;
     if (myLastReadMessageId && latestMessageId <= myLastReadMessageId) return;
+    if (isLatestMessageMine) return; // Prevent redundant API call if we sent the message
 
     markRead({
       conversationId,
       messageId: latestMessageId,
     });
-  }, [conversationId, latestMessageId, markRead, myLastReadMessageId]);
+  }, [conversationId, latestMessageId, markRead, myLastReadMessageId, isLatestMessageMine, latestMessage?.pending]);
 
-  // Intersection observer for infinite scroll up
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage();
-        }
-      },
-      { threshold: 0.5 }
-    );
 
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
-    }
-
-    return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   if (isLoading) {
     return <MessageListSkeleton />;

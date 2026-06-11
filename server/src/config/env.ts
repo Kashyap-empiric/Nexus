@@ -5,4 +5,5 @@ export const ENV = {
   DATABASE_URL: process.env.DATABASE_URL,
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+  CLIENT_URL: process.env.CLIENT_URL,
 };

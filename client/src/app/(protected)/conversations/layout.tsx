@@ -13,7 +13,7 @@ export default function ConversationsLayout({
   const isConversationList = pathname === APP_ROUTES.CONVERSATIONS.INDEX;
   
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-dvh overflow-hidden bg-background">
       <div className={`shrink-0 ${isConversationList ? 'flex' : 'hidden md:flex'}`}>
         <NavigationRail />
       </div>

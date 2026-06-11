@@ -1,10 +1,10 @@
 "use client";
 
-import { useConversationDetailsQuery } from "../hooks/useConversations";
+import { useConversationsQuery, useConversationDetailsQuery } from "../hooks/useConversations";
 import { useConversationSocket } from "../hooks/useConversationSocket";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
-import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
+import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { PresenceIndicator } from "./PresenceIndicator";
 import { useUser } from "@/modules/auth/store/useAuthStore";
 import { MessageListSkeleton } from "./MessageListSkeleton";
@@ -24,6 +24,14 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
   const currentUserId = user?.id || null;
 
   const { data: conversation, isLoading } = useConversationDetailsQuery(conversationId);
+  const { data: conversations } = useConversationsQuery();
+
+  const totalUnreadCount = conversations?.reduce((acc, conv) => {
+    if (conv.id !== conversationId) {
+      return acc + (conv.unreadCount || 0);
+    }
+    return acc;
+  }, 0) || 0;
 
   if (isLoading) {
     return (
@@ -31,8 +39,7 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
         {/* Skeleton Header */}
         <div className="h-14 border-b flex items-center px-4 shrink-0 bg-background shadow-sm">
           <div className="flex items-center gap-3 w-full">
-            <div className="md:hidden w-8 h-8 rounded-full bg-muted animate-pulse" />
-            <div className="w-7 h-7 rounded-full bg-muted animate-pulse shrink-0" />
+            <div className="w-9 h-9 rounded-full bg-muted animate-pulse shrink-0" />
             <div className="w-32 h-4 bg-muted rounded animate-pulse" />
           </div>
         </div>
@@ -75,28 +82,44 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
         <div className="flex items-center gap-2 md:gap-3">
           <Link
             href={APP_ROUTES.CONVERSATIONS.INDEX}
-            className="md:hidden p-2 -ml-1 text-muted-foreground hover:text-foreground transition-colors"
+            className="md:hidden relative p-2 -ml-1 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
+            {totalUnreadCount > 0 && (
+              <span className="
+                absolute bottom-0 right-0
+                flex h-[18px] min-w-[18px]
+                items-center justify-center
+                rounded-full bg-red-500
+                px-1 text-[10px]
+                leading-none
+                font-bold text-white
+                shadow-sm ring-2 ring-background
+              ">
+                {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+              </span>
+            )}
             <span className="sr-only">Back</span>
           </Link>
           <div className="relative">
-            <Avatar className="h-7 w-7 shrink-0">
-              <AvatarImage src={otherMember?.user?.avatarUrl || undefined} />
-              <AvatarFallback className="bg-primary/20 text-primary font-medium pt-[1px]">{title?.[0]?.toUpperCase() || "?"}</AvatarFallback>
-            </Avatar>
+            <UserAvatar
+              name={title}
+              src={otherMember?.user?.avatarUrl}
+              className="h-9 w-9 shrink-0"
+              fallbackClassName="bg-primary/20 text-primary font-medium"
+            />
             {otherMember?.userId && (
               <PresenceIndicator userId={otherMember.userId} className="-bottom-0.5 -right-0.5" />
             )}
           </div>
-          <h2 className="text-base font-bold text-foreground pt-[1px] truncate">{title}</h2>
+          <h2 className="text-base font-bold text-foreground leading-none truncate">{title}</h2>
         </div>
         <ThemeToggle />
       </div>
 
       {/* Messages */}
-      <MessageList 
-        conversationId={conversationId} 
+      <MessageList
+        conversationId={conversationId}
         currentUserId={currentUserId}
         myLastReadMessageId={conversation.members.find(m => m.userId === currentUserId)?.lastReadMessageId}
         partnerLastReadMessageId={otherMember?.lastReadMessageId}

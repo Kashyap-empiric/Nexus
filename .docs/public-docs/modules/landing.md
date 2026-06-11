@@ -1,11 +1,27 @@
 # Landing Module
 
 ## Overview
-The Landing module contains the public-facing pages for unauthenticated users, such as the homepage, features overview, and pricing.
+
+The Landing module contains the public-facing page for unauthenticated users. It serves as the entry point for visitors who have not yet logged in.
 
 ## Client-Side (`client/src/modules/landing`)
-- **UI Components**: Marketing copy, hero sections, and navigation targeted at users who are not yet logged in.
-- **Routing**: Generally accessible without an active session. Redirects to the chat application upon successful login.
 
+### Files
 
-> **Note:** Documentation updated on 2026-06-10 to reflect UI improvements: feat(ui): Added an explicit 'Message' button in the NewConversationModal when searching for users, replacing the full-row clickable area for better UX.
+| File | Role |
+|---|---|
+| `components/LandingPage.tsx` | Main landing page component with hero section, feature highlights, and CTA |
+| `index.ts` | Module barrel export |
+
+### Routing
+
+- **Path:** `/` (root)
+- **Access:** Public — no authentication required
+- **Behavior:** Displays marketing content for unauthenticated users. After login, the Next.js middleware redirects authenticated users away from `/` to `/conversations`
+- **Integration:** Links to `/login` and `/register` pages for authentication
+
+### Known Limitations
+
+- Currently a single page with static content
+- No pricing or features detail pages
+- No analytics tracking

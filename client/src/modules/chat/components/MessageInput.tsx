@@ -14,7 +14,7 @@ interface MessageInputProps {
 
 export function MessageInput({ conversationId, currentUser, disabled }: MessageInputProps) {
   const [content, setContent] = useState("");
-  const { mutate: sendMessage, isPending } = useSendMessageMutation(conversationId, currentUser);
+  const { mutate: sendMessage } = useSendMessageMutation(conversationId, currentUser);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const resizeTextarea = () => {
@@ -74,7 +74,7 @@ export function MessageInput({ conversationId, currentUser, disabled }: MessageI
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
-            disabled={disabled || isPending}
+            disabled={disabled}
             placeholder="Message..."
             rows={1}
             className="w-full bg-transparent border-0 focus:ring-0 px-2 py-1.5 text-base outline-none placeholder:text-muted-foreground resize-none block overflow-y-auto disabled:opacity-50"
@@ -84,7 +84,7 @@ export function MessageInput({ conversationId, currentUser, disabled }: MessageI
         </div>
         <Button
           type="submit"
-          disabled={!content.trim() || isPending || disabled}
+          disabled={!content.trim() || disabled}
           size="icon"
           variant="ghost"
           className={`shrink-0 h-9 w-9 rounded-md transition-all flex items-center justify-center hover:bg-muted ${content.trim() ? "text-primary" : "text-muted-foreground opacity-50"}`}

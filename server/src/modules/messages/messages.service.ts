@@ -69,6 +69,17 @@ export const createMessage = async (conversationId: string, userId: string, cont
         updatedAt: true,
         latestMessageId: true,
       }
+    }),
+    prisma.conversationMember.update({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId,
+        },
+      },
+      data: {
+        lastReadMessageId: messageId,
+      },
     })
   ]);
 

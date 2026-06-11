@@ -7,7 +7,7 @@ import { useCreateConversationMutation } from "../hooks/useConversations";
 import { useUsersSearchQuery } from "@/modules/users";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
+import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { toast } from "sonner";
 
 interface NewConversationModalProps {
@@ -39,7 +39,7 @@ export function NewConversationModal({ isOpen, onClose }: NewConversationModalPr
       },
       onError: (error) => {
         console.error("Failed to create conversation:", error);
-        // @ts-ignore
+        // @ts-expect-error : error property is not officially typed but provided by the API
         toast.error(`Failed to create conversation: ${error?.response?.data?.error || error.message}`);
       }
     });
@@ -90,10 +90,12 @@ export function NewConversationModal({ isOpen, onClose }: NewConversationModalPr
                   className="w-full flex items-center justify-between p-2 hover:bg-muted rounded-md transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarImage src={user.avatarUrl || undefined} />
-                      <AvatarFallback className="text-xs pt-[1px]">{user.username[0]?.toUpperCase()}</AvatarFallback>
-                    </Avatar>
+                    <UserAvatar 
+                      name={user.username}
+                      src={user.avatarUrl}
+                      className="h-8 w-8 shrink-0"
+                      fallbackClassName="text-xs"
+                    />
                     <span className="font-medium pt-[1px]">{user.username}</span>
                   </div>
                   <Button
