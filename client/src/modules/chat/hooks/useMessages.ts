@@ -95,11 +95,13 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
       queryClient.setQueryData<InfiniteData<MessagePage>>(queryKeys.messages(conversationId), (old) => {
         if (!old || !old.pages) return old;
 
+        const alreadyExists = old.pages.some(page => page.data.some(m => m.id === realMessage.id));
+
         const newPages = old.pages.map((page) => ({
           ...page,
-          data: page.data.map((m) =>
-            m.id === context?.localId ? realMessage : m
-          )
+          data: alreadyExists
+            ? page.data.filter((m) => m.id !== context?.localId)
+            : page.data.map((m) => (m.id === context?.localId ? realMessage : m))
         }));
 
         return {
@@ -136,7 +138,7 @@ export const useEditMessageMutation = (conversationId: string) => {
     onMutate: async ({ messageId, content }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.messages(conversationId) });
       const previousMessages = queryClient.getQueryData(queryKeys.messages(conversationId));
-      
+
       import("../utils/cacheHelpers").then(({ updateMessageInCache }) => {
         updateMessageInCache(queryClient, conversationId, messageId, content, true);
       });
@@ -162,7 +164,7 @@ export const useDeleteMessageMutation = (conversationId: string) => {
     onMutate: async ({ messageId }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.messages(conversationId) });
       const previousMessages = queryClient.getQueryData(queryKeys.messages(conversationId));
-      
+
       import("../utils/cacheHelpers").then(({ markMessageDeletedInCache }) => {
         markMessageDeletedInCache(queryClient, conversationId, messageId, new Date().toISOString());
       });

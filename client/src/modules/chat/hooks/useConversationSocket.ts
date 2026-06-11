@@ -29,11 +29,11 @@ export const useConversationSocket = (conversationId: string) => {
             const updatedPages = oldData.pages.map((page, index) => {
               if (index === 0) {
                 // Check if optimistic message already exists
-                const exists = page.data.some((m) => m.id === message.id || m.pending);
+                const exists = page.data.some((m) => m.id === message.id);
                 if (exists) {
                   return {
                     ...page,
-                    data: page.data.map((m) => (m.pending ? message : m)),
+                    data: page.data.map((m) => (m.id === message.id ? message : m)),
                   };
                 }
                 return {
