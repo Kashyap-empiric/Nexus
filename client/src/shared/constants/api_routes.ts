@@ -12,4 +12,8 @@ export const API_ROUTES = {
     },
     MESSAGE_DETAIL: (conversationId: string, messageId: string) => `/conversations/${conversationId}/messages/${messageId}`,
   },
+  INVITES: {
+    RESOLVE: '/invites/resolve',
+    GENERATE: '/invites/generate',
+  },
 } as const;

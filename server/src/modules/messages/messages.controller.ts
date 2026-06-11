@@ -2,6 +2,7 @@ import type { Response } from "express";
 import type { AuthRequest } from "@/types/shared.js";
 import * as messagesService from "./messages.service.js";
 import { getMessagesQuerySchema, type CreateMessageBody, type GetMessagesQuery, type UpdateMessageBody } from "./messages.schema.js";
+import { dispatchMessageEvent } from "@/socket/socket.dispatcher.js";
 
 export const getMessages = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -29,13 +30,7 @@ export const createMessage = async (req: AuthRequest, res: Response): Promise<vo
     const { message, conversationMetadata } = await messagesService.createMessage(conversationId, userId, content);
 
     try {
-      const { getIO } = await import("@/socket/socket.js");
-      const { SOCKET_EVENTS } = await import("@/shared/socket-events.js");
-      const io = getIO();
-      io.to(`conversation:${conversationId}`).emit(SOCKET_EVENTS.MESSAGE_NEW, message);
-      if (conversationMetadata) {
-        io.to(`conversation:${conversationId}`).emit(SOCKET_EVENTS.CONVERSATION_UPDATE, { conversation: conversationMetadata });
-      }
+      dispatchMessageEvent("NEW", conversationId, message, conversationMetadata);
     } catch (err) {
       console.error("[Socket.io] Failed to emit message:new from HTTP endpoint", err);
     }
@@ -58,13 +53,7 @@ export const updateMessage = async (req: AuthRequest, res: Response): Promise<vo
     const { message, conversationMetadata } = await messagesService.editMessage(messageId, userId, content);
 
     try {
-      const { getIO } = await import("@/socket/socket.js");
-      const { SOCKET_EVENTS } = await import("@/shared/socket-events.js");
-      const io = getIO();
-      io.to(`conversation:${conversationId}`).emit(SOCKET_EVENTS.MESSAGE_UPDATE, message);
-      if (conversationMetadata) {
-        io.to(`conversation:${conversationId}`).emit(SOCKET_EVENTS.CONVERSATION_UPDATE, { conversation: conversationMetadata });
-      }
+      dispatchMessageEvent("UPDATE", conversationId, message, conversationMetadata);
     } catch (err) {
       console.error("[Socket.io] Failed to emit message:update from HTTP endpoint", err);
     }
@@ -94,13 +83,7 @@ export const deleteMessage = async (req: AuthRequest, res: Response): Promise<vo
     const { message, conversationMetadata } = await messagesService.deleteMessage(messageId, userId);
 
     try {
-      const { getIO } = await import("@/socket/socket.js");
-      const { SOCKET_EVENTS } = await import("@/shared/socket-events.js");
-      const io = getIO();
-      io.to(`conversation:${conversationId}`).emit(SOCKET_EVENTS.MESSAGE_DELETE, message);
-      if (conversationMetadata) {
-        io.to(`conversation:${conversationId}`).emit(SOCKET_EVENTS.CONVERSATION_UPDATE, { conversation: conversationMetadata });
-      }
+      dispatchMessageEvent("DELETE", conversationId, message, conversationMetadata);
     } catch (err) {
       console.error("[Socket.io] Failed to emit message:delete from HTTP endpoint", err);
     }

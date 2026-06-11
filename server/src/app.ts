@@ -8,6 +8,7 @@ import { authMiddleware } from "./middlewares/auth.js";
 import { generalLimiter } from "./middlewares/rateLimiter.js";
 import conversationsRoutes from "./modules/conversations/conversations.routes.js";
 import usersRoutes from "./modules/users/users.routes.js";
+import invitesRoutes from "./modules/invites/invites.routes.js";
 
 import { prisma } from "./lib/db.js";
 import { ENV } from "./config/env.js";
@@ -44,6 +45,7 @@ app.get("/api/me", authMiddleware, async (req: AuthRequest, res: Response) => {
 
 app.use("/api/conversations", conversationsRoutes);
 app.use("/api/users", usersRoutes);
+app.use("/api/invites", invitesRoutes);
 app.use(errorHandler);
 
 export default app;

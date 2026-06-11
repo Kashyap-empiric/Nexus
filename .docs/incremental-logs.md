@@ -46,3 +46,9 @@
 - **Files Touched**:
   - `client/src/modules/chat/components/NewConversationModal.tsx`
   - `client/src/modules/chat/components/MessageList.tsx`
+- [Thursday 11 June 2026 11:10:07 AM IST] Added v3.1 Secure Deep-Linked Invite System (frontend & backend implementation, raw SQL atomic updates).
+- [Thursday 11 June 2026 11:13:08 AM IST] Refactored invites logic into invites.service.ts and invites.types.ts to separate business logic from the controller.
+- [Thursday 11 June 2026 11:41:26 AM IST] Expanded invite entry points across Nexus UI. Created reusable InviteModal, useInviteModal hook, and added proper POST /api/invites/generate backend endpoint.
+- [Thursday 11 June 2026 11:46:10 AM IST] Fixed auth flaw in invite generation, added expiresAt dynamically to InviteModal, and fixed EmptyState CTA visibility to respect conversation length.
+- [Thursday 11 June 2026] Executed Invite Architecture Polish: Renamed targetId -> entityId globally, migrated DB, implemented consumed semantics to prevent over-bumping usedCount, and added a 24-hour active link rotation policy.
+- [Thursday 11 June 2026] UI & Security Fixes: Prevented infinite loop in InviteModal, secured conversationResolver against 3+ member DM bug, and added a Postgres Database Trigger (trg_enforce_dm_member_limit) to strictly enforce maximum 2 members per DM.
