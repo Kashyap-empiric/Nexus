@@ -25,11 +25,14 @@ Phase 1 (Core Messaging) has concluded. Several deep architectural deviations an
 - **Invite System**: Secure deep-linked invites for USER and CONVERSATION types. 24h active rotation policy, atomic consumption via raw SQL, domain event dispatching.
 
 ### 🔴 Architectural Deviations & Tech Debt (The Brutal Reality)
-- **Message Editing/Deletion is Exposed but Flawed**: The REST endpoints **ARE** registered and exposed. However, their Prisma implementations suffer from non-transactional reads that create severe race conditions.
-- **Soft-Delete Data Leakage**: The `getMessages` backend query fails to filter `deletedAt: null`. It leaks soft-deleted payloads to the client.
+- **Message Editing (editMessage)**: REST endpoint is exposed but `editMessage` still suffers from non-transactional reads (`getMessageById` called outside `$transaction`).
 - **Overloaded Controllers**: The Express controllers manually import and invoke Socket.io dispatchers, breaking separation of concerns.
-- **Pagination Bug**: Message pagination relies on `orderBy: { createdAt: "desc" }`, failing to utilize the monotonic guarantees of UUIDv7.
 - **Horizontal Scaling Trap**: The presence system's in-memory Map fallback prevents the backend from scaling beyond a single Node.js instance.
+
+### ✅ Resolved Debt (2026-06-11)
+- ~~**Race Condition in deleteMessage**:~~ ✅ **FIXED** — `nextLatestMessageId` now computed inside `$transaction`.
+- ~~**Soft-Delete Data Leakage**:~~ ✅ **FIXED** — `getMessages` now filters `deletedAt: null`.
+- ~~**Pagination Bug**:~~ ✅ **FIXED** — Now uses `orderBy: { id: "desc" }` (UUIDv7).
 
 ---
 
@@ -65,10 +68,13 @@ Phase 1 (Core Messaging) has concluded. Several deep architectural deviations an
 
 ## 5. Next Steps / Debt Resolution
 
-Before adding Workspaces or Channels (Phase 2), future work MUST resolve:
-- `getMessages` soft-delete leakage
-- Non-transactional read race conditions in `messages.service.ts`
-- Switch pagination from `createdAt` to `id` ordering
+### ✅ Resolved (2026-06-11)
+- ~~`getMessages` soft-delete leakage~~ → Filtered `deletedAt: null`
+- ~~Race condition in `deleteMessage`~~ → `nextLatestMessageId` computed inside `$transaction`
+- ~~Pagination ordering~~ → Switched from `createdAt` to `id` ordering
+
+### 🔴 Still Open Before Phase 2
+- Non-transactional reads in `editMessage` (`getMessageById` called outside `$transaction`)
 - Add Redis Pub/Sub adapter for horizontal scaling
 
 Consult `.docs/TECHNICAL_DEBT.md` for full details and `.docs/socket.md` for complete socket documentation.

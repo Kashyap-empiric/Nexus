@@ -80,3 +80,9 @@ The chat module uses Socket.io for all real-time events. There are two parallel 
 
 - feat(ui): Added an explicit 'Message' button in the NewConversationModal when searching for users, replacing the full-row clickable area for better UX.
 - feat(ui): Added proper responsiveness to the UI and improved the message list behaviour.
+- feat(ui): Added Emoji Picker (`emoji-picker-react`) to MessageInput with `Smile` icon button, dark/light theme support.
+- feat(invites): Added invite link generation for DMs — `InviteModal`, `useInviteLink` hook, `useInviteModal` shared hook, sidebar integration.
+- fix(ui): Added unread badge to mobile back button in ActiveConversation for navigation context.
+- fix(ui): Dynamic textarea heights with 140px max, mobile-aware keyboard handling (Enter → new line on mobile, send on desktop).
+- fix(ui): Various UI inconsistency fixes and accessibility improvements.
+- chore: Code deduplication refactors across the codebase.

@@ -114,10 +114,7 @@ Format:
 
 [NEXT UP]
   Phase 1 Remaining:
-  - [ ] Expose message edit REST endpoint (service exists)
-  - [ ] Expose message soft-delete REST endpoint (schema + migration done)
-  - [ ] Filter soft-deleted messages in getMessages query
-  - [ ] Switch cursor pagination from createdAt → id (UUIDv7) ordering
+  - [ ] Fix non-transactional reads in `editMessage` service
   - [ ] Add rate-limit environment variables to server config
 
   Phase 2:
@@ -127,4 +124,9 @@ Format:
   - Rich text formatting
 ================================================================================
 
-[COMPLETED] feat(ui): Added an explicit 'Message' button in the NewConversationModal when searching for users, replacing the full-row clickable area for better UX.
+[COMPLETED] fix(message): Fixed the race condition in deleteMessage by computing nextLatestMessageId inside the Prisma $transaction using tx.message.findFirst with deletedAt: null filter. Also fixed soft-delete leakage (getMessages now filters deletedAt: null) and pagination ordering (switched from createdAt to id ordering).
+[COMPLETED] feat(ui): Added Emoji Picker to MessageInput (emoji-picker-react, dark/light theme support).
+[COMPLETED] feat(invites): Added invite link generation for DM conversations (InviteModal, useInviteLink hook).
+[COMPLETED] fix(ui): Fixed UI inconsistencies, added mobile unread badge, dynamic textarea heights, and improved accessibility.
+[COMPLETED] chore: Refactored code to deduplicate logic.
+[COMPLETED] branding: Updated logo and favicon.
