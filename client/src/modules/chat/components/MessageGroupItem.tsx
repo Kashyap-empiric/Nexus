@@ -128,17 +128,16 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
               <div className="flex-1 min-w-0 ml-2">
                 {isFirst && (
                   <div className="flex items-baseline gap-2 mb-0.5">
-                    <span className="font-bold text-foreground hover:underline cursor-pointer leading-none">
+                    <span className="font-bold text-foreground hover:underline cursor-pointer">
                       {user?.username || "Deleted user"}
                     </span>
-                    <span className="text-xs text-muted-foreground leading-none">
+                    <span className="text-xs text-muted-foreground">
                       {time}
                     </span>
-
                   </div>
                 )}
 
-                <div className="text-base text-foreground whitespace-pre-wrap break-words leading-relaxed flex items-center justify-between group/msg relative min-h-[22px]">
+                <div className="text-[15px] text-foreground whitespace-pre-wrap break-words leading-snug flex items-center justify-between group/msg relative min-h-[22px]">
                   {/* !isDeleted prevents stuck edit states during concurrent multi-device deletions or rapid click race conditions */}
                   {editingMessageId === msg.id && !isDeleted ? (
                     <div className="flex flex-col gap-2 w-full mt-1 mb-2">

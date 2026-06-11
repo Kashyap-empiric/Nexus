@@ -39,8 +39,7 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
         {/* Skeleton Header */}
         <div className="h-14 border-b flex items-center px-4 shrink-0 bg-background shadow-sm">
           <div className="flex items-center gap-3 w-full">
-            <div className="md:hidden w-8 h-8 rounded-full bg-muted animate-pulse" />
-            <div className="w-7 h-7 rounded-full bg-muted animate-pulse shrink-0" />
+            <div className="w-9 h-9 rounded-full bg-muted animate-pulse shrink-0" />
             <div className="w-32 h-4 bg-muted rounded animate-pulse" />
           </div>
         </div>
@@ -106,14 +105,14 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
             <UserAvatar
               name={title}
               src={otherMember?.user?.avatarUrl}
-              className="h-7 w-7 shrink-0"
+              className="h-9 w-9 shrink-0"
               fallbackClassName="bg-primary/20 text-primary font-medium"
             />
             {otherMember?.userId && (
               <PresenceIndicator userId={otherMember.userId} className="-bottom-0.5 -right-0.5" />
             )}
           </div>
-          <h2 className="text-base font-bold text-foreground pt-[1px] truncate">{title}</h2>
+          <h2 className="text-base font-bold text-foreground leading-none truncate">{title}</h2>
         </div>
         <ThemeToggle />
       </div>

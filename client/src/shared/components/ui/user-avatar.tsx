@@ -14,7 +14,7 @@ export function UserAvatar({ name, src, className, fallbackClassName }: UserAvat
   return (
     <Avatar className={className}>
       <AvatarImage src={src || undefined} />
-      <AvatarFallback className={cn("pt-[1px]", fallbackClassName)}>
+      <AvatarFallback className={cn("leading-none", fallbackClassName)}>
         {initials}
       </AvatarFallback>
     </Avatar>
