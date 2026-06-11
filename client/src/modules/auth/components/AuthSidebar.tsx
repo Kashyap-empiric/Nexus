@@ -18,11 +18,15 @@ export function AuthSidebar() {
         <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/80 via-zinc-950/20 to-zinc-950/80"></div>
       </div>
 
-      <Link href="/" className="relative z-10 flex items-center gap-2 font-bold text-2xl tracking-tight transition-opacity hover:opacity-80">
-        <div className="w-8 h-8 bg-emerald-600 rounded-md flex items-center justify-center shadow-sm">
-          <MessageSquare className="h-5 w-5 text-white" />
-        </div>
-        Nexus
+      <Link href="/" className="relative z-10 block transition-opacity hover:opacity-80">
+        <Image 
+          src="/images/Nexus_brandname.png" 
+          alt="Nexus Logo" 
+          width={180} 
+          height={50} 
+          className="h-10 w-auto" 
+          priority 
+        />
       </Link>
       
       {/* Empty space where the quote used to be, letting the image shine */}

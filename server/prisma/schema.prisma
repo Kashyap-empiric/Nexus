@@ -16,6 +16,7 @@ model User {
 
   conversations ConversationMember[]
   messages      Message[]
+  invites       Invite[]
 }
 
 enum ConversationType {
@@ -73,4 +74,30 @@ model Message {
   latestIn       Conversation[]       @relation("ConversationLatestMessage")
 
   @@index([conversationId, id])
+}
+
+enum InviteType {
+  USER
+  CONVERSATION
+  WORKSPACE
+  CHANNEL
+}
+
+model Invite {
+  id             String           @id @default(cuid())
+  token          String           @unique
+  type           InviteType
+  entityId       String
+  createdBy      String
+  expiresAt      DateTime?
+  maxUses        Int?
+  usedCount      Int              @default(0)
+  lastUsedAt     DateTime?
+  revoked        Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+
+  creator        User             @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  
+  @@index([token])
+  @@index([type, entityId])
 }

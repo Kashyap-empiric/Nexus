@@ -5,6 +5,7 @@ import { Search, Plus, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import { NewConversationModal } from "./NewConversationModal";
 import { PresenceIndicator } from "./PresenceIndicator";
+import { InviteModal } from "./InviteModal";
 import { useConversationsQuery } from "../hooks/useConversations";
 import { useAuth } from "@/modules/auth";
 import { Input } from "@/shared/components/ui/input";
@@ -14,6 +15,14 @@ import { useGlobalSocket } from "../hooks/useGlobalSocket";
 import { useChatStore } from "../store/chatStore";
 import { cn } from "@/shared/lib/utils";
 import { useUser } from "@/modules/auth/store/useAuthStore";
+import { useInviteModal } from "@/shared/hooks/useInviteModal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
+import { MessageSquarePlus, UserPlus } from "lucide-react";
 
 export function Sidebar() {
   useGlobalSocket();
@@ -21,6 +30,7 @@ export function Sidebar() {
   const { data: conversations, isLoading } = useConversationsQuery();
   const currentAuthUser = useUser();
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const inviteModal = useInviteModal();
   const [searchQuery, setSearchQuery] = useState("");
   const params = useParams();
   const activeId = params?.id as string;
@@ -71,9 +81,21 @@ export function Sidebar() {
           <div>
             <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">
               <span>Direct Messages</span>
-              <button onClick={() => setIsNewModalOpen(true)} className="hover:text-foreground transition-colors">
-                <Plus className="h-4 w-4" />
-              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="hover:text-foreground transition-colors p-1 rounded-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                  <Plus className="h-4 w-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => setIsNewModalOpen(true)} className="gap-2 cursor-pointer">
+                    <MessageSquarePlus className="h-4 w-4" />
+                    <span>New Message</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); inviteModal.open("USER"); }} className="cursor-pointer">
+                    <UserPlus className="h-4 w-4" />
+                    <span>Invite Someone</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             {isLoading ? (
@@ -181,6 +203,7 @@ export function Sidebar() {
       </aside>
 
       <NewConversationModal isOpen={isNewModalOpen} onClose={() => setIsNewModalOpen(false)} />
+      <InviteModal isOpen={inviteModal.isOpen} onClose={inviteModal.close} type={inviteModal.type} entityId={inviteModal.entityId} />
     </>
   );
 }

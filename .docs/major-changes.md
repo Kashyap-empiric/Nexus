@@ -17,3 +17,7 @@
 ## UI Refinements (10th June 2026)
 - **What Changed**: feat(ui): Added an explicit 'Message' button in the NewConversationModal when searching for users, replacing the full-row clickable area for better UX.
 - **Why**: To provide a clearer call-to-action for users rather than relying on an implicit full-row click.
+
+## Invite Architecture Platform Polish (11th June 2026)
+- **What Changed**: Transitioned legacy 'TargetType' semantics to generic 'entityId/type' nomenclature to prepare for horizontal scaling. Implemented a 24-hour unique active-link rotation policy, smart 'consumed' semantics preventing existing members from draining invite capacity, and hardened the database with a trigger to strictly limit DM group sizes.
+- **Why**: To establish a hardened, scalable foundation for the upcoming Workspaces and Channels features, ensuring that the unified invite pipeline can generically handle any future 'entity' safely and cleanly.
