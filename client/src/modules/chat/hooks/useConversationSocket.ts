@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { socket } from "@/shared/lib/socket";
 import { SOCKET_EVENTS } from "@/shared/socket-events";
+import { useSocketEvents, SocketHandlerMap } from "@/shared/hooks/useSocketEvent";
 import { queryKeys } from "@/shared/constants/queryKeys";
 import type { Message, MessagePage } from "../types/message";
 import type { Conversation } from "../types/conversation";
@@ -13,8 +13,8 @@ import { InfiniteData } from "@tanstack/react-query";
 export const useConversationSocket = (conversationId: string) => {
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (!conversationId) return;
+  const events = useMemo(() => {
+    if (!conversationId) return {} as SocketHandlerMap;
 
     const onMessageNew = (message: Message) => {
       try {
@@ -29,11 +29,11 @@ export const useConversationSocket = (conversationId: string) => {
             const updatedPages = oldData.pages.map((page, index) => {
               if (index === 0) {
                 // Check if optimistic message already exists
-                const exists = page.data.some((m) => m.id === message.id || m.pending);
+                const exists = page.data.some((m) => m.id === message.id);
                 if (exists) {
                   return {
                     ...page,
-                    data: page.data.map((m) => (m.pending ? message : m)),
+                    data: page.data.map((m) => (m.id === message.id ? message : m)),
                   };
                 }
                 return {
@@ -95,28 +95,21 @@ export const useConversationSocket = (conversationId: string) => {
 
     const onMessageUpdate = (message: Message) => {
       if (!message || message.conversationId !== conversationId) return;
-      import("../utils/cacheHelpers").then(({ updateMessageInCache }) => {
-        updateMessageInCache(queryClient, conversationId, message.id, message.content, true);
-      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.messages(conversationId) });
     };
 
     const onMessageDelete = (message: Message) => {
       if (!message || message.conversationId !== conversationId) return;
-      import("../utils/cacheHelpers").then(({ markMessageDeletedInCache }) => {
-        markMessageDeletedInCache(queryClient, conversationId, message.id, message.deletedAt || new Date().toISOString());
-      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.messages(conversationId) });
     };
 
-    socket.on(SOCKET_EVENTS.MESSAGE_NEW, onMessageNew);
-    socket.on(SOCKET_EVENTS.MESSAGE_READ, onMessageRead);
-    socket.on(SOCKET_EVENTS.MESSAGE_UPDATE, onMessageUpdate);
-    socket.on(SOCKET_EVENTS.MESSAGE_DELETE, onMessageDelete);
-
-    return () => {
-      socket.off(SOCKET_EVENTS.MESSAGE_NEW, onMessageNew);
-      socket.off(SOCKET_EVENTS.MESSAGE_READ, onMessageRead);
-      socket.off(SOCKET_EVENTS.MESSAGE_UPDATE, onMessageUpdate);
-      socket.off(SOCKET_EVENTS.MESSAGE_DELETE, onMessageDelete);
+    return {
+      [SOCKET_EVENTS.MESSAGE_NEW]: onMessageNew,
+      [SOCKET_EVENTS.MESSAGE_READ]: onMessageRead,
+      [SOCKET_EVENTS.MESSAGE_UPDATE]: onMessageUpdate,
+      [SOCKET_EVENTS.MESSAGE_DELETE]: onMessageDelete,
     };
   }, [conversationId, queryClient]);
+
+  useSocketEvents(events);
 };

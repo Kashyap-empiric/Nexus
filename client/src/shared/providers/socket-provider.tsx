@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { socket } from "@/shared/lib/socket";
 import { SOCKET_EVENTS } from "@/shared/socket-events";
+import { useSocketEvents } from "@/shared/hooks/useSocketEvent";
 import { useChatStore } from "@/modules/chat";
 import { toast } from "sonner";
 
 export function SocketProvider() {
   const setSocketStatus = useChatStore((state) => state.setSocketStatus);
 
-  useEffect(() => {
+  const events = useMemo(() => {
     const onConnect = () => setSocketStatus("connected");
     const onDisconnect = () => setSocketStatus("disconnected");
     const onConnectError = (error: Error) => {
@@ -29,27 +30,24 @@ export function SocketProvider() {
       useChatStore.getState().removeUserOffline(userId);
     };
 
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
-    socket.on("connect_error", onConnectError);
-    socket.on(SOCKET_EVENTS.INITIAL_PRESENCE, handleInitialPresence);
-    socket.on(SOCKET_EVENTS.USER_ONLINE, handleUserOnline);
-    socket.on(SOCKET_EVENTS.USER_OFFLINE, handleUserOffline);
+    return {
+      "connect": onConnect,
+      "disconnect": onDisconnect,
+      "connect_error": onConnectError,
+      [SOCKET_EVENTS.INITIAL_PRESENCE]: handleInitialPresence,
+      [SOCKET_EVENTS.USER_ONLINE]: handleUserOnline,
+      [SOCKET_EVENTS.USER_OFFLINE]: handleUserOffline,
+    };
+  }, [setSocketStatus]);
 
+  useSocketEvents(events);
+
+  useEffect(() => {
     if (socket.connected) {
       setSocketStatus("connected");
     } else {
       socket.connect();
     }
-
-    return () => {
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
-      socket.off("connect_error", onConnectError);
-      socket.off(SOCKET_EVENTS.INITIAL_PRESENCE, handleInitialPresence);
-      socket.off(SOCKET_EVENTS.USER_ONLINE, handleUserOnline);
-      socket.off(SOCKET_EVENTS.USER_OFFLINE, handleUserOffline);
-    };
   }, [setSocketStatus]);
 
   return null;

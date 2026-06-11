@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
+import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import type { MessageGroup } from "../utils/groupMessages";
 import { MessageStatus } from "./MessageStatus";
 import { MoreHorizontal, Pencil, Trash, Ban, Copy } from "lucide-react";
@@ -112,12 +112,12 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
             >
               <div className="w-[36px] shrink-0 flex justify-center items-start relative select-none">
                 {isFirst ? (
-                  <Avatar className="h-9 w-9 mt-0.5 absolute left-0">
-                    <AvatarImage src={user?.avatarUrl || undefined} />
-                    <AvatarFallback className="bg-primary/20 text-primary font-medium pt-[1px]">
-                      {user?.username?.[0]?.toUpperCase() || "?"}
-                    </AvatarFallback>
-                  </Avatar>
+                  <UserAvatar 
+                    name={user?.username}
+                    src={user?.avatarUrl}
+                    className="h-9 w-9 mt-0.5 absolute left-0"
+                    fallbackClassName="bg-primary/20 text-primary font-medium"
+                  />
                 ) : (
                   <span className="text-[10px] text-muted-foreground opacity-0 group-hover/row:opacity-100 mt-[5px] absolute right-2 leading-none">
                     {time}
@@ -128,17 +128,16 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
               <div className="flex-1 min-w-0 ml-2">
                 {isFirst && (
                   <div className="flex items-baseline gap-2 mb-0.5">
-                    <span className="font-bold text-foreground hover:underline cursor-pointer leading-none">
+                    <span className="font-bold text-foreground hover:underline cursor-pointer">
                       {user?.username || "Deleted user"}
                     </span>
-                    <span className="text-xs text-muted-foreground leading-none">
+                    <span className="text-xs text-muted-foreground">
                       {time}
                     </span>
-
                   </div>
                 )}
 
-                <div className="text-base text-foreground whitespace-pre-wrap break-words leading-relaxed flex items-center justify-between group/msg relative min-h-[22px]">
+                <div className="text-[15px] text-foreground whitespace-pre-wrap break-words leading-snug flex items-center justify-between group/msg relative min-h-[22px]">
                   {/* !isDeleted prevents stuck edit states during concurrent multi-device deletions or rapid click race conditions */}
                   {editingMessageId === msg.id && !isDeleted ? (
                     <div className="flex flex-col gap-2 w-full mt-1 mb-2">

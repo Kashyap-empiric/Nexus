@@ -17,3 +17,20 @@
 ## UI Refinements (10th June 2026)
 - **What Changed**: feat(ui): Added an explicit 'Message' button in the NewConversationModal when searching for users, replacing the full-row clickable area for better UX.
 - **Why**: To provide a clearer call-to-action for users rather than relying on an implicit full-row click.
+
+## Invite Architecture Platform Polish (11th June 2026)
+- **What Changed**: Transitioned legacy 'TargetType' semantics to generic 'entityId/type' nomenclature to prepare for horizontal scaling. Implemented a 24-hour unique active-link rotation policy, smart 'consumed' semantics preventing existing members from draining invite capacity, and hardened the database with a trigger to strictly limit DM group sizes.
+- **Why**: To establish a hardened, scalable foundation for the upcoming Workspaces and Channels features, ensuring that the unified invite pipeline can generically handle any future 'entity' safely and cleanly.
+
+## Critical Race Condition Fix in deleteMessage (11th June 2026)
+- **What Changed**: Fixed the `deleteMessage` function in `messages.service.ts` to compute `nextLatestMessageId` **inside** the Prisma `$transaction` callback using `tx.message.findFirst` with `deletedAt: null` filter, instead of computing it before the transaction started. Also fixed `getMessages` to filter `deletedAt: null` and switched pagination ordering from `createdAt: "desc"` to `id: "desc"`.
+- **Why**: The original code had a race condition window where concurrent deletions could corrupt `Conversation.latestMessageId`. Moving the `nextLatestMessageId` computation inside the transaction ensures snapshot isolation — the transaction sees a consistent view of the database. The soft-delete filter and UUIDv7 ordering fixes prevent deleted messages from leaking to clients and ensure monotonic-safe pagination. These were 3 of the 6 critical Technical Debt items identified in the Phase 1 audit.
+
+## Emoji Picker Integration (11th June 2026)
+- **What Changed**: Integrated `emoji-picker-react` v4.19.1 into the `MessageInput.tsx` component, adding a `Smile` icon button that opens a popover with the emoji picker. Supports dark/light theme via `next-themes`.
+- **Why**: To improve the messaging experience by allowing users to easily insert emojis into their messages, a standard feature expected in modern chat applications.
+
+## Mobile UI Improvements (11th June 2026)
+- **What Changed**: Added unread count badge to the mobile back button in `ActiveConversation.tsx`, dynamic textarea heights in `MessageInput.tsx`, and mobile-aware keyboard handling (Enter adds new line on mobile, sends on desktop). Various UI inconsistency fixes and accessibility improvements.
+- **Why**: To provide a better mobile experience, ensuring the chat UI is functional and visually consistent across devices.
+

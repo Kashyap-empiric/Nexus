@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Search, Plus, LogOut } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
-import { NewConversationModal } from "./NewConversationModal";
+import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { PresenceIndicator } from "./PresenceIndicator";
+import dynamic from "next/dynamic";
 import { useConversationsQuery } from "../hooks/useConversations";
 import { useAuth } from "@/modules/auth";
 import { Input } from "@/shared/components/ui/input";
@@ -14,6 +14,17 @@ import { useGlobalSocket } from "../hooks/useGlobalSocket";
 import { useChatStore } from "../store/chatStore";
 import { cn } from "@/shared/lib/utils";
 import { useUser } from "@/modules/auth/store/useAuthStore";
+import { useInviteModal } from "@/shared/hooks/useInviteModal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
+import { MessageSquarePlus, UserPlus } from "lucide-react";
+
+const NewConversationModal = dynamic(() => import("./NewConversationModal").then((m) => m.NewConversationModal), { ssr: false });
+const InviteModal = dynamic(() => import("./InviteModal").then((m) => m.InviteModal), { ssr: false });
 
 export function Sidebar() {
   useGlobalSocket();
@@ -21,6 +32,7 @@ export function Sidebar() {
   const { data: conversations, isLoading } = useConversationsQuery();
   const currentAuthUser = useUser();
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const inviteModal = useInviteModal();
   const [searchQuery, setSearchQuery] = useState("");
   const params = useParams();
   const activeId = params?.id as string;
@@ -71,9 +83,22 @@ export function Sidebar() {
           <div>
             <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">
               <span>Direct Messages</span>
-              <button onClick={() => setIsNewModalOpen(true)} className="hover:text-foreground transition-colors">
-                <Plus className="h-4 w-4" />
-              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center gap-1 transition-colors py-1 px-2.5 -mr-1 rounded-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary/10 text-primary hover:bg-primary/20 normal-case tracking-normal font-medium leading-none">
+                  <span className="text-xs leading-none">New</span>
+                  <Plus className="h-3.5 w-3.5" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => setIsNewModalOpen(true)} className="gap-2 cursor-pointer">
+                    <MessageSquarePlus className="h-4 w-4" />
+                    <span>New Message</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); inviteModal.open("USER"); }} className="cursor-pointer">
+                    <UserPlus className="h-4 w-4" />
+                    <span>Invite Someone</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             {isLoading ? (
@@ -104,23 +129,26 @@ export function Sidebar() {
                     <Link
                       key={chat.id}
                       href={`/conversations/${chat.id}`}
+                      prefetch={false}
                       className={`flex items-center gap-3 px-2 py-2 rounded-md transition-colors ${isActive
                         ? "bg-primary/10 text-primary dark:bg-white/10 dark:text-foreground"
                         : "text-muted-foreground hover:bg-muted/80 hover:text-foreground dark:hover:bg-white/5"
                         }`}
                     >
                       <div className="relative shrink-0">
-                        <Avatar className="h-9 w-9 shrink-0">
-                          <AvatarImage src={otherMember?.user.avatarUrl || undefined} />
-                          <AvatarFallback className="text-xs bg-primary/20 text-primary font-medium pt-[1px]">{name[0]?.toUpperCase()}</AvatarFallback>
-                        </Avatar>
+                        <UserAvatar
+                          name={name}
+                          src={otherMember?.user.avatarUrl}
+                          className="h-9 w-9 shrink-0"
+                          fallbackClassName="text-xs bg-primary/20 text-primary font-medium"
+                        />
                         {otherMember?.userId && (
                           <PresenceIndicator userId={otherMember.userId} className="-bottom-0.5 -right-0.5" />
                         )}
                       </div>
 
                       <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <span className={`truncate text-sm pb-[1px] ${isUnread && !isActive ? 'font-bold text-foreground' : 'font-medium'}`}>{name}</span>
+                        <span className={`truncate text-sm leading-none ${isUnread && !isActive ? 'font-bold text-foreground' : 'font-medium'}`}>{name}</span>
                         {chat.latestMessage && (
                           <span className={`truncate text-[13px] ${isUnread && !isActive ? 'font-semibold text-foreground' : 'text-muted-foreground/80'}`}>
                             {chat.latestMessage.deletedAt
@@ -134,7 +162,7 @@ export function Sidebar() {
                       </div>
 
                       {isUnread && !isActive && (
-                        <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[12px] font-bold shrink-0">
+                        <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[12px] font-bold shrink-0 leading-none">
                           {unreadCount > 99 ? '99+' : unreadCount}
                         </div>
                       )}
@@ -150,12 +178,12 @@ export function Sidebar() {
         <div className="p-4 border-t bg-background shrink-0 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative shrink-0">
-              <Avatar className="h-8 w-8 shrink-0">
-                <AvatarImage src={myProfile?.avatarUrl || currentAuthUser?.user_metadata?.avatar_url || currentAuthUser?.user_metadata?.avatarUrl || undefined} />
-                <AvatarFallback className="text-xs pt-[1px]">
-                  {myProfile?.username?.[0]?.toUpperCase() || currentAuthUser?.user_metadata?.username?.[0]?.toUpperCase() || "ME"}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                name={myProfile?.username || currentAuthUser?.user_metadata?.username || "ME"}
+                src={myProfile?.avatarUrl || currentAuthUser?.user_metadata?.avatar_url || currentAuthUser?.user_metadata?.avatarUrl}
+                className="h-8 w-8 shrink-0"
+                fallbackClassName="text-xs"
+              />
               <span
                 className={cn(
                   "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background",
@@ -164,7 +192,7 @@ export function Sidebar() {
               />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate mb-1 pt-[1px]">
+              <p className="text-sm font-medium truncate mb-1 leading-none">
                 {myProfile?.username || currentAuthUser?.user_metadata?.username || "My Account"}
               </p>
               <p className="text-xs text-muted-foreground leading-none truncate">{statusLabel}</p>
@@ -181,6 +209,7 @@ export function Sidebar() {
       </aside>
 
       <NewConversationModal isOpen={isNewModalOpen} onClose={() => setIsNewModalOpen(false)} />
+      <InviteModal isOpen={inviteModal.isOpen} onClose={inviteModal.close} type={inviteModal.type} entityId={inviteModal.entityId} />
     </>
   );
 }

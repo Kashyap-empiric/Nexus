@@ -95,11 +95,13 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
       queryClient.setQueryData<InfiniteData<MessagePage>>(queryKeys.messages(conversationId), (old) => {
         if (!old || !old.pages) return old;
 
+        const alreadyExists = old.pages.some(page => page.data.some(m => m.id === realMessage.id));
+
         const newPages = old.pages.map((page) => ({
           ...page,
-          data: page.data.map((m) =>
-            m.id === context?.localId ? realMessage : m
-          )
+          data: alreadyExists
+            ? page.data.filter((m) => m.id !== context?.localId)
+            : page.data.map((m) => (m.id === context?.localId ? realMessage : m))
         }));
 
         return {
@@ -133,20 +135,10 @@ export const useEditMessageMutation = (conversationId: string) => {
     mutationFn: async ({ messageId, content }: { messageId: string; content: string }) => {
       return messagesApi.editMessage(conversationId, messageId, content);
     },
-    onMutate: async ({ messageId, content }) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.messages(conversationId) });
-      const previousMessages = queryClient.getQueryData(queryKeys.messages(conversationId));
-      
-      import("../utils/cacheHelpers").then(({ updateMessageInCache }) => {
-        updateMessageInCache(queryClient, conversationId, messageId, content, true);
-      });
-
-      return { previousMessages };
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.messages(conversationId) });
     },
-    onError: (err, variables, context) => {
-      if (context?.previousMessages) {
-        queryClient.setQueryData(queryKeys.messages(conversationId), context.previousMessages);
-      }
+    onError: (err) => {
       toast.error(err instanceof Error ? err.message : "Failed to edit message");
     },
   });
@@ -159,20 +151,10 @@ export const useDeleteMessageMutation = (conversationId: string) => {
     mutationFn: async ({ messageId }: { messageId: string }) => {
       return messagesApi.deleteMessage(conversationId, messageId);
     },
-    onMutate: async ({ messageId }) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.messages(conversationId) });
-      const previousMessages = queryClient.getQueryData(queryKeys.messages(conversationId));
-      
-      import("../utils/cacheHelpers").then(({ markMessageDeletedInCache }) => {
-        markMessageDeletedInCache(queryClient, conversationId, messageId, new Date().toISOString());
-      });
-
-      return { previousMessages };
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.messages(conversationId) });
     },
-    onError: (err, variables, context) => {
-      if (context?.previousMessages) {
-        queryClient.setQueryData(queryKeys.messages(conversationId), context.previousMessages);
-      }
+    onError: (err) => {
       toast.error(err instanceof Error ? err.message : "Failed to delete message");
     },
   });
