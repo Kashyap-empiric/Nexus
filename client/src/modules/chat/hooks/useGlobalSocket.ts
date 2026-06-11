@@ -1,27 +1,21 @@
 "use client";
 
-import { useEffect } from "react";
+import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { socket } from "@/shared/lib/socket";
 import { SOCKET_EVENTS } from "@/shared/socket-events";
+import { useSocketEvents } from "@/shared/hooks/useSocketEvent";
 import { createChatEventRouter } from "../realtime";
 
 export const useGlobalSocket = () => {
   const queryClient = useQueryClient();
+  const router = useMemo(() => createChatEventRouter(queryClient), [queryClient]);
 
-  useEffect(() => {
-    const router = createChatEventRouter(queryClient);
+  const events = useMemo(() => ({
+    [SOCKET_EVENTS.MESSAGE_NEW]: router.messageNew,
+    [SOCKET_EVENTS.MESSAGE_READ]: router.messageRead,
+    [SOCKET_EVENTS.CONVERSATION_NEW]: router.conversationNew,
+    [SOCKET_EVENTS.CONVERSATION_UPDATE]: router.conversationUpdate,
+  }), [router]);
 
-    socket.on(SOCKET_EVENTS.MESSAGE_NEW, router.messageNew);
-    socket.on(SOCKET_EVENTS.MESSAGE_READ, router.messageRead);
-    socket.on(SOCKET_EVENTS.CONVERSATION_NEW, router.conversationNew);
-    socket.on(SOCKET_EVENTS.CONVERSATION_UPDATE, router.conversationUpdate);
-
-    return () => {
-      socket.off(SOCKET_EVENTS.MESSAGE_NEW, router.messageNew);
-      socket.off(SOCKET_EVENTS.MESSAGE_READ, router.messageRead);
-      socket.off(SOCKET_EVENTS.CONVERSATION_NEW, router.conversationNew);
-      socket.off(SOCKET_EVENTS.CONVERSATION_UPDATE, router.conversationUpdate);
-    };
-  }, [queryClient]);
+  useSocketEvents(events);
 };

@@ -1,10 +1,10 @@
 # Nexus — Phase 1 Plan (HISTORICAL ARCHIVE)
 
-> **CRITICAL WARNING**: This file is an archived historical document representing the *intended* Phase 1 plan (5-Day Sprint). The sprint has concluded. 
+> **CRITICAL WARNING**: This file is an archived historical document representing the *intended* Phase 1 plan (5-Day Sprint). The sprint has concluded.
 > The system has massively deviated from this plan. Do **NOT** use this file as the source of truth for the codebase.
-> **Instead, you must read `.docs/AS_IS_ARCHITECTURE.md` and `.docs/TECHNICAL_DEBT.md`.**
-> 
-> **Last Updated:** 2026-06-10 (Archived)
+> **Instead, you must read `.docs/AS_IS_ARCHITECTURE.md`, `.docs/TECHNICAL_DEBT.md`, and `.docs/socket.md`.**
+>
+> **Last Updated:** 2026-06-11 (Archived)
 
 ---
 
@@ -15,15 +15,14 @@ nexus/
   client/
     src/
       app/
-      constants/
       modules/ (auth, chat, landing, users)
-      providers/
-      shared/
+      shared/ (providers, components, lib)
+      proxy.ts
   server/
     src/
-      modules/ (conversations, messages, users)
+      modules/ (conversations, messages, users, invites)
       middlewares/
-      socket/
+      socket/ (handlers, dispatcher, presenceStore)
       lib/
       types/
     prisma/
@@ -42,15 +41,10 @@ Schema models implemented:
 | Model | Fields |
 |---|---|
 | `User` | `id` (String, PK) · `email` (unique) · `username` · `avatarUrl` · `createdAt` · `updatedAt` |
-| `Conversation` | `id` (String, PK) · `type` (enum: DM, CHANNEL) · `isPrivate` · `name` (nullable) · `workspaceId` (nullable) · `dmPair` (String?, unique) · `createdAt` · `updatedAt` |
+| `Conversation` | `id` (String, PK) · `type` (enum: DM, CHANNEL) · `isPrivate` · `name` (nullable) · `workspaceId` (nullable) · `dmPair` (String?, unique) · `latestMessageId` (String?) · `createdAt` · `updatedAt` |
 | `ConversationMember` | `id` (String, PK) · `conversationId` (FK) · `userId` (FK) · `lastReadMessageId` (String?, FK → Message.id) · `joinedAt` |
 | `Message` | `id` (String, PK) · `content` · `conversationId` (FK) · `userId` (FK) · `isEdited` (Boolean) · `deletedAt` (DateTime?) · `createdAt` · `updatedAt` |
-
-Indexes and constraints:
-- `ConversationMember`: `@@unique([conversationId, userId])` — prevents duplicate memberships
-- `ConversationMember`: `@@index([userId, conversationId])` — required for sidebar/inbox query
-- `Message`: `@@index([conversationId, id])` — message pagination ordered by UUIDv7 id
-- `Conversation.dmPair`: `@unique` — enforces one-DM-per-user-pair at DB level
+| `Invite` | `id` (String, PK) · `type` (enum) · `entityId` · `token` (unique) · `maxUses` · `usedCount` · `expiresAt` · `revoked` · `createdBy` · `lastUsedAt` |
 
 Key files:
 - `server/prisma/schema.prisma`
@@ -138,6 +132,7 @@ Key files:
 - `server/src/socket/handlers/message.handler.ts` — `message:send` → persist + broadcast
 - `server/src/socket/handlers/presence.handler.ts` — connect/disconnect presence
 - `server/src/socket/presenceStore.ts` — Redis-backed store with in-memory fallback
+- `server/src/socket/socket.dispatcher.ts` — typed dispatch helpers
 - `server/src/shared/socket-events.ts` — event name constants + payload types
 
 **Updates to existing controllers:**
@@ -148,18 +143,15 @@ Key files:
 ### Client
 
 - `client/src/shared/lib/socket.ts` — singleton socket.io-client with auth callback
-- `client/src/shared/providers/socket-provider.tsx` — connection lifecycle management
-- `client/src/modules/chat/hooks/useConversationSocket.ts` — inject `message:new` + `message:read` into cache
-- `client/src/modules/chat/hooks/useGlobalSocket.ts` — global listeners for sidebar updates
-- `client/src/modules/chat/hooks/useMessages.ts` — optimistic update lifecycle:
-  - `onMutate`: inject `pending: true` message with tempId
-  - `onSuccess`: swap tempId for real message
-  - `onError`: rollback + styled error toast
+- `client/src/shared/providers/socket-provider.tsx` — connection lifecycle management + presence listeners
+- `client/src/modules/chat/hooks/useConversationSocket.ts` — inject `message:new`, `message:update`, `message:delete`, `message:read` into cache
+- `client/src/modules/chat/hooks/useGlobalSocket.ts` — global listeners for sidebar updates (new conversations, unread counts)
+- `client/src/modules/chat/hooks/useMessages.ts` — optimistic update lifecycle with `tempId`
 - `client/src/modules/chat/store/chatStore.ts` — `socketStatus`, `onlineUsers`, `activeConversationId`, `drafts`
-- `client/src/modules/users/hooks/usePresence.ts` — `presence:initial`, `user:online`, `user:offline`
+- `client/src/modules/chat/realtime/` — event router factory pattern
+- `client/src/modules/chat/utils/cacheHelpers.ts` — cache update helpers
 - `client/src/modules/chat/components/PresenceIndicator.tsx` — green/gray dot
 - `client/src/modules/chat/components/MessageStatus.tsx` — pending/sent/read states
-- `client/src/modules/chat/realtime/` — event router factory pattern
 
 ### End of Day 3 Checks — ✅ All Complete
 
@@ -195,16 +187,51 @@ Key files:
 
 ## Day 5 — Integration, Polish & Demo Prep
 
-**Status: 🟡 In Progress**
+**Status: ✅ Complete (with deferred debt)**
 
-### To Implement
+### What Got Done
 
-- [ ] Edit and delete messages
-- [ ] The conversation sidebar should show number of unread messages for each conversation (if there are any)
-- [ ] Message requests: instead of directly starting a conversation, a message request is sent with the message. Only upon acceptance does it appear in the direct messages list.
+- [x] Message edit REST endpoint (`PATCH /conversations/:id/messages/:messageId`)
+- [x] Message soft-delete REST endpoint (`DELETE /conversations/:id/messages/:messageId`)
+- [x] Socket broadcasts for edit/delete (`message:update`, `message:delete`, `conversation:update`)
+- [x] Sidebar search filter
+- [x] UI refinements (Message button, responsive layout)
 
+### Deferred Debt (Still Open)
 
-### Demo Scenario — ✅ Verified
+- [ ] Filter soft-deleted messages in `getMessages` (`where: { deletedAt: null }`)
+- [ ] Switch pagination from `createdAt` to `id` ordering
+- [ ] Fix race condition in `deleteMessage` (non-transactional read)
+- [ ] Fix non-transactional reads in `editMessage`
+- [ ] Add Redis Pub/Sub adapter for Socket.io horizontal scaling
+
+---
+
+## Phase 1 Scope Boundary
+
+| Feature | In Scope | Status |
+|---|---|---|
+| Email/password auth | ✅ | Complete |
+| OAuth (Google, GitHub) | ❌ Phase 2 | — |
+| Direct Messages | ✅ | Complete |
+| Real-time delivery | ✅ | Complete |
+| Message history (paginated, cursor-based) | ✅ | Complete |
+| Read receipts | ✅ | Complete |
+| Presence (online/offline) | ✅ | Complete |
+| Message editing | ✅ | Complete (with debt) |
+| Message deletion | ✅ | Complete (with debt) |
+| Invite system | ✅ | Complete |
+| Typing indicators | ❌ Day 6+ | Not implemented |
+| Workspaces | ❌ Phase 2 | — |
+| Public / Private Channels | ❌ Phase 2 | — |
+| Reactions | ❌ Phase 2 | — |
+| Rich text formatting | ❌ Phase 2 | — |
+| File uploads | ❌ v3 | — |
+| Search | ❌ v3 | — |
+
+---
+
+## Demo Scenario — ✅ Verified
 
 ```
 1.  Register User A          ✅
@@ -222,61 +249,26 @@ Key files:
 
 ---
 
-## 🟡 Remaining Phase 1 Work
-
-These items are infrastructure-complete but lack REST endpoint exposure:
-
-| Item | Codebase Status |
-|---|---|
-| [ ] Message edit REST endpoint | `editMessage` service exists in `messages.service.ts` — no route registered |
-| [ ] Message soft-delete REST endpoint | `deletedAt` field in schema + migration — no route registered |
-| [ ] Filter soft-deleted messages | `getMessages` needs `where: { deletedAt: null }` |
-| [ ] Switch pagination to `id` ordering | Currently uses `createdAt: "desc"` instead of `id: "desc"` |
-
----
-
-## Phase 1 Scope Boundary
-
-| Feature | In Scope | Out of Scope |
-|---|---|---|
-| Email/password auth | ✅ | |
-| OAuth (Google, GitHub) | | ❌ Phase 2 |
-| Direct Messages | ✅ | |
-| Real-time delivery | ✅ | |
-| Message history (paginated, cursor-based) | ✅ | |
-| Read receipts | ✅ | |
-| Presence (online/offline) | ✅ | |
-| Message editing | 🟡 Service exists, no endpoint | |
-| Message deletion | 🟡 Schema done, no endpoint | |
-| Workspaces | | ❌ Phase 2 |
-| Public / Private Channels | | ❌ Phase 2 |
-| Reactions | | ❌ Phase 2 |
-| Rich text formatting | | ❌ Phase 2 |
-| File uploads | | ❌ v3 |
-| Search | | ❌ v3 |
-
-- [x] feat(ui): Added an explicit 'Message' button in the NewConversationModal when searching for users, replacing the full-row clickable area for better UX.
-
----
-
-## End of Day 5 Summary: Phase 1 Review
-
-As we reach the end of Day 5, here is a retrospective on the Phase 1 Sprint:
+## End of Phase 1 Summary: Retrospective
 
 ### ✅ Accomplished
-- **Infrastructure & Auth**: Full Next.js & Express.js monorepo setup. Supabase Auth is integrated securely with JWKS verification and an automatic database trigger syncing to Prisma.
-- **Messaging Core**: Direct Messaging is functional, backed by PostgreSQL persistence with UUIDv7 indexing and cursor-based pagination. Includes fully exposed REST endpoints for Message Editing (`PATCH`) and Soft Deletion (`DELETE`).
-- **Real-Time Engine**: Socket.io handles instant delivery, read receipts (`message:read`), and dynamic room joining.
-- **Presence System**: A robust dual-write presence system (Upstash Redis + in-memory fallback) provides real-time online/offline statuses across multi-tab scenarios.
-- **Polished UI**: Optimistic UI message rendering, dynamic sidebars (including numeric unread message counters), real-time presence indicators, and user discovery components are live.
+- **Infrastructure & Auth**: Full Next.js & Express.js monorepo setup. Supabase Auth integrated securely with JWKS verification and automatic database trigger syncing to Prisma.
+- **Messaging Core**: Direct Messaging functional, backed by PostgreSQL persistence with UUIDv7 indexing and cursor-based pagination. Full REST endpoints for Message Editing (`PATCH`) and Soft Deletion (`DELETE`) with socket broadcasts.
+- **Real-Time Engine**: Socket.io handles instant delivery, editing, deletion, read receipts, and dynamic room joining. 11 events wired across the system.
+- **Presence System**: Robust dual-write presence system (Upstash Redis + in-memory fallback) with multi-tab support.
+- **Polished UI**: Optimistic UI, dynamic sidebars with unread counters, real-time presence indicators, message grouping, and responsive design.
+- **Invite System**: Secure deep-linked invites with polymorphic resolvers, atomic consumption, and 24-hour rotation policy.
+- **Documentation**: Comprehensive `.docs/` and `.agents/` documentation system including complete socket architecture documentation.
 
-### 🟡 What is Left (Spillover)
-- **Soft-Delete Filtering**: The backend `getMessages` service currently fails to filter out soft-deleted messages (`deletedAt: null`).
-- **Pagination Optimization**: Need to switch cursor pagination from `createdAt: "desc"` to `id: "desc"` to fully leverage UUIDv7 monotonic properties.
-- **Feature Backlog**: Implementing a "Message Requests" acceptance flow before surfacing DMs.
+### 🟡 Deferred Technical Debt
+- Soft-delete filtering in `getMessages`
+- Pagination ordering from `createdAt` to `id`
+- Race condition and non-transactional reads in message edit/delete
+- Horizontal scaling of Socket.io (Redis Pub/Sub)
 
-### 🔄 Deviations from the Initial Plan
-1. **Decoupled Conversation Metadata (Architecture Change)**: Instead of the client inferring conversation updates (like `latestMessage` or `updatedAt`) directly from incoming message payloads, we introduced a dedicated `CONVERSATION_UPDATE` socket event. This delegates state authority entirely to the server and cleanly prevents race conditions.
-2. **Presence Dual-Write System**: The plan initially focused heavily on Redis, but we adapted to include an in-memory Map fallback. This guarantees consistent state even if Upstash experiences latency or network blips between Redis calls.
-3. **Structured Documentation Paradigms**: Mid-sprint, we pivoted to a rigorous multi-tier documentation system (`.docs/`, `.agents/`, `public-docs/`) to standardize how AI agents and humans collaborate and maintain project state.
-4. **UX Overhauls**: Shifted towards more explicit UI call-to-actions, such as adding specific 'Message' buttons instead of relying on implicit, full-row clickable elements in search modals.
+### 🔄 Key Deviations from Initial Plan
+1. **Decoupled Conversation Metadata**: Introduced dedicated `CONVERSATION_UPDATE` socket event — server owns metadata authority.
+2. **Presence Dual-Write**: In-memory Map fallback added alongside Redis for resilience.
+3. **Structured Documentation**: Multi-tier documentation system (`.docs/`, `.agents/`, `public-docs/`).
+4. **UX Overhauls**: Explicit 'Message' buttons, responsive layout, message grouping.
+5. **Invite System**: Not in original Phase 1 plan but added as foundational infrastructure for Phase 2.
