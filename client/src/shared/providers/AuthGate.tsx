@@ -21,7 +21,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (!isInitialized && !isPublicRoute) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center space-y-4">
+      <div className="min-h-dvh bg-background flex flex-col items-center justify-center space-y-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="text-muted-foreground animate-pulse text-sm">Authenticating...</p>
       </div>
