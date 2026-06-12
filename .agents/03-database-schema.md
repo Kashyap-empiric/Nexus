@@ -70,8 +70,11 @@ Junction table linking Users to Conversations. Tracks unread state and read rece
 - `lastReadMessage Message?` via `"ConversationMemberLastRead"`
 
 **Constraints & Indexes:**
-- `@@id([conversationId, userId])`: Composite primary key
+- `id String @id @default(cuid())`: Simple primary key (matches production schema for backward compatibility)
+- `@@unique([conversationId, userId])`: Unique constraint preventing duplicate memberships
 - `@@index([userId, conversationId])`: For fetching user's inbox/sidebar list
+
+> **Note:** The composite `@@id([conversationId, userId])` was intentionally avoided to prevent a destructive migration on production. The `@@unique` constraint achieves the same uniqueness guarantee while keeping the existing `id` PK intact.
 
 ### 4. `Message`
 An individual chat message sent within a Conversation.

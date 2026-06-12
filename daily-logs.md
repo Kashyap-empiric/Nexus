@@ -216,3 +216,20 @@
 - **Documentation update**: Updated all `.agents/` files (`01-project-context`, `03-database-schema`, `06-phase-2-plan`, `02-architecture-guidelines`) to reflect the current state of workspace implementation on the `feat/workspaces` branch.
 - **Module documentation**: Created `workspaces.md` module doc, updated `DOCUMENTATION.md`, `file-structure.md`, `chat.md`, `conversations.md`, and `messages.md` to reflect current module boundaries and workspace/channel architecture.
 
+---
+
+## 12th June 2026 (Afternoon) — Workspace Features Complete + Backward Compatibility
+
+- **Workspace Features Complete**: All 14 implementation steps for workspace channels completed on `feat/workspaces` branch. Includes: channel rename/delete, public/private visibility, member list panel with role badges, channel context menu, socket events (`channel:update`, `member:update`, `workspace:update`).
+- **Security fixes**: Fixed private channel socket room leak — `findWorkspaceChannelsByUserId` now filters private channels by explicit membership. Fixed same leak in `workspace:join` handler. Fixed socket events silently lost by joining workspace rooms on connect.
+- **Backward compatibility audit**: Identified that `ConversationMember` PK had been changed from `@id` to `@@id([conversationId, userId])` — would have caused destructive migration on production. Reverted to `@id` + `@@unique` pattern.
+- **Migration created**: Purely additive SQL migration with `IF NOT EXISTS` and PL/pgSQL `DO $$ ... EXCEPTION` blocks for safe production deployment. Applied to dev database via `prisma migrate deploy`.
+- **Environment variable centralization**: All `process.env` references moved to `config/env.ts` files (both server and client). 7 consumer files refactored to import from `ENV`.
+- **Code pushed**: Committed and pushed to `origin/feat/workspaces`.
+
+---
+
+## 12th June 2026 (Evening) — Comprehensive Documentation Update
+
+- **Documentation audit**: Updated all `.agents/` files, `daily-logs.md`, `.docs/incremental-logs.md`, `.docs/major-changes.md`, `.docs/progress.txt`, `.docs/context.md`, `.docs/socket.md`, `.docs/deployment.md`, `.docs/TECHNICAL_DEBT.md`, `.docs/git-branches.md` to reflect the complete workspace implementation, backward compatibility fixes, env var centralization, and migration.
+

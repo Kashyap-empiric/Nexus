@@ -1,10 +1,10 @@
 # Nexus — Phase 2 Plan: Workspaces, Channels & Collaboration
 
-> **Status:** Active Development — `feat/workspaces` branch
+> **Status:** ✅ **Phase 2 Workspaces Complete** — `feat/workspaces` branch ready for merge
 > **Last Updated:** 2026-06-12
 >
-> Some Phase 2 features have been implemented. This document reflects current status.
-> For the prioritized list of remaining work, see `PLAN.md` at the project root.
+> All workspace and channel features are implemented. Remaining work is documented below.
+> For the prioritized list, see `README.md` or `PLAN.md` at the project root.
 
 ---
 
@@ -17,8 +17,12 @@
 | `GET /api/workspaces` | GET | ✅ | List user's workspaces |
 | `GET /api/workspaces/:id` | GET | ✅ | Workspace details with members + channels |
 | `POST /api/workspaces` | POST | ✅ | Create workspace (creator becomes OWNER, auto-creates #general) |
+| `GET /api/workspaces/:id/members` | GET | ✅ | List workspace members |
 | `GET /api/workspaces/:id/channels` | GET | ✅ | List channels in workspace |
-| `POST /api/workspaces/:id/channels` | POST | ✅ | Create channel (all members auto-joined to public channels) |
+| `POST /api/workspaces/:id/channels` | POST | ✅ | Create channel (supports `visibility: PUBLIC | PRIVATE`) |
+| `PATCH /api/workspaces/:id/channels/:channelId` | PATCH | ✅ | Rename channel |
+| `DELETE /api/workspaces/:id/channels/:channelId` | DELETE | ✅ | Delete channel (OWNER/ADMIN only, #general protected) |
+| `PATCH /api/workspaces/:id/members/:userId/role` | PATCH | ✅ | Promote/demote member role |
 
 ### Prisma Schema
 
@@ -26,7 +30,9 @@
 |---|---|---|
 | `Workspace` | ✅ | Full implementation with slug, ownerId |
 | `WorkspaceMember` | ✅ | Role-based (OWNER, ADMIN, MEMBER) |
-| `Conversation` extensions | ✅ | workspaceId FK, type CHANNEL support |
+| `Conversation` extensions | ✅ | workspaceId FK, `createdBy`, `visibility` (ChannelVisibility enum) |
+| `Notification` | 🟡 | DB table exists (from migration); server endpoints not built |
+| `PushSubscription` | 🟡 | DB table exists (from migration); not implemented |
 
 ### Client — Workspace UI
 
@@ -35,11 +41,37 @@
 | `NavigationRail.tsx` | ✅ | Workspace icons, create workspace button, DM icon |
 | `WorkspaceHeader.tsx` | ✅ | Workspace name dropdown with invite option |
 | `CreateWorkspaceModal.tsx` | ✅ | Name only, auto-generates slug |
-| `CreateChannelModal.tsx` | ✅ | Name input, creates public channel |
-| `Sidebar.tsx` | ✅ | Workspace mode shows channels, DM mode shows conversations |
-| `ActiveConversation.tsx` | ✅ | Displays both DMs and channels |
+| `CreateChannelModal.tsx` | ✅ | Public/Private toggle |
+| `Sidebar.tsx` | ✅ | Channels split into public/private sections, DM conversations in DM mode |
+| `ActiveConversation.tsx` | ✅ | Displays both DMs and channels, member panel |
+| `WorkspaceChannelItem.tsx` | ✅ | Channel context menu (rename, delete) |
+| `MemberListPanel.tsx` | ✅ | Discord-style member list with presence + role badges |
 | Channel routing | ✅ | `/workspaces/{slug}/channels/{channelId}` |
-| `useWorkspaceChannels.ts` | ✅ | Polls every 5s for channel updates |
+
+### Socket Events Added
+
+| Event | Direction | Payload | Purpose |
+|---|---|---|---|
+| `channel:update` | S → C | `{ action, channel, userId? }` | Channel created/renamed/deleted |
+| `member:update` | S → C | `{ action, userId, role }` | Workspace role changed |
+| `workspace:update` | S → C | `{ action, workspace }` | Workspace metadata changed |
+| `workspace:join` | C → S | `{ workspaceId }` | Join workspace room on switch |
+
+### Security Fixes (beyond original plan)
+
+| Fix | Details |
+|---|---|
+| Private channel socket room leak | `findWorkspaceChannelsByUserId` now filters private channels by explicit membership |
+| Same leak in `workspace:join` handler | `findChannelIdsByWorkspaceId` accepts optional `userId` for private channel filtering |
+| Socket events silently lost | Workspace rooms (`workspace:{id}`) now joined on connect in `socket.ts` |
+| `verifyWorkspaceMember` duplication | Delegated to existing `isWorkspaceMember` instead of duplicating Prisma query |
+
+### Backward Compatibility
+
+- **ConversationMember PK**: Uses `@id` (simple PK) + `@@unique([conversationId, userId])` to match the production schema — avoids destructive migration
+- **Migration**: Purely additive SQL with `IF NOT EXISTS` and PL/pgSQL exception handling
+- **Migration applied** to dev database via `prisma migrate deploy`
+- **Safe to deploy while main runs** — main's Prisma client ignores unknown columns/tables
 
 ### Workspace Routing
 
@@ -52,18 +84,16 @@ Conversation page: /conversations/{id}
 
 ---
 
-## 🔴 Still to Implement (see PLAN.md for details)
+## 🟡 Open Items (Post-Phase 2)
 
 | Feature | Priority | Notes |
 |---------|----------|-------|
-| Message read receipts for channels | High | `partnerLastReadMessageId` is undefined for channels |
-| Member list (Discord-style) | High | Show online/offline members in sidebar |
-| In-app notification system | High | Bell icon + inbox page |
-| Channel split (public/private) | Medium | Sidebar separation by `isPrivate` |
-| CreateChannelModal → redirect fix | Low | Currently redirects to `/conversations/` instead of workspace URL |
+| Message read receipts for channels | Medium | `partnerLastReadMessageId` is undefined for channels |
+| In-app notification system | Medium | DB schema + migration exist; server endpoints not yet built; client UI exists |
 | Optimistic channel creation | Low | Currently poll-based (5s interval) — should use socket events |
 | Non-transactional reads in editMessage | Medium | Pre-existing debt |
 | Horizontal scaling (Redis Pub/Sub) | Low | Pre-existing debt |
+| editMessage stale `updatedAt` | Low | Editing a message doesn't bump sidebar position |
 
 ---
 
