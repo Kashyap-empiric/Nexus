@@ -94,13 +94,53 @@ export const useConversationSocket = (conversationId: string) => {
     };
 
     const onMessageUpdate = (message: Message) => {
-      if (!message || message.conversationId !== conversationId) return;
-      queryClient.invalidateQueries({ queryKey: queryKeys.messages(conversationId) });
+      try {
+        if (!message || !message.id || message.conversationId !== conversationId) return;
+
+        queryClient.setQueryData<InfiniteData<MessagePage>>(
+          queryKeys.messages(conversationId),
+          (oldData) => {
+            if (!oldData || !oldData.pages) return oldData;
+
+            const updatedPages = oldData.pages.map((page) => ({
+              ...page,
+              data: page.data.map((m) => (m.id === message.id ? { ...m, ...message } : m)),
+            }));
+
+            return {
+              ...oldData,
+              pages: updatedPages,
+            };
+          }
+        );
+      } catch (err) {
+        console.error("Failed to parse incoming message:update", err);
+      }
     };
 
     const onMessageDelete = (message: Message) => {
-      if (!message || message.conversationId !== conversationId) return;
-      queryClient.invalidateQueries({ queryKey: queryKeys.messages(conversationId) });
+      try {
+        if (!message || !message.id || message.conversationId !== conversationId) return;
+
+        queryClient.setQueryData<InfiniteData<MessagePage>>(
+          queryKeys.messages(conversationId),
+          (oldData) => {
+            if (!oldData || !oldData.pages) return oldData;
+
+            const updatedPages = oldData.pages.map((page) => ({
+              ...page,
+              data: page.data.map((m) => (m.id === message.id ? { ...m, ...message } : m)),
+            }));
+
+            return {
+              ...oldData,
+              pages: updatedPages,
+            };
+          }
+        );
+      } catch (err) {
+        console.error("Failed to parse incoming message:delete", err);
+      }
     };
 
     return {

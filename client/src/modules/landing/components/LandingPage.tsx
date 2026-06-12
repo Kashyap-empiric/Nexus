@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { MessageSquare, Shield, Zap, LayoutDashboard } from "lucide-react";
-import { APP_ROUTES } from "@/shared/constants/app_routes";
+import { APP_ROUTES } from "@/config/url";
 
 export const LandingPage = () => {
   return (

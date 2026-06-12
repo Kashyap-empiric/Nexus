@@ -5,6 +5,10 @@ export interface WorkspaceMember {
   userId: string;
   role: WorkspaceRole;
   joinedAt: string;
+  user?: {
+    username: string;
+    avatarUrl: string | null;
+  };
 }
 
 export interface Workspace {

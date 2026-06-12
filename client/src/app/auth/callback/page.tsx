@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/shared/lib/supabase";
-import { APP_ROUTES } from "@/shared/constants/app_routes";
+import { APP_ROUTES } from "@/config/url";
 
 export default function AuthCallback() {
   const router = useRouter();

@@ -94,3 +94,27 @@ export const dispatchUserPresence = (
     console.error(`[Socket.io] Failed to dispatch USER_${action}:`, err);
   }
 };
+
+export const dispatchChannelUpdate = (
+  workspaceId: string,
+  payload: { action: "UPDATED" | "DELETED"; channel: Partial<Conversation> }
+): void => {
+  try {
+    const io = getIO();
+    io.to(`workspace:${workspaceId}`).emit(SOCKET_EVENTS.CHANNEL_UPDATE, payload);
+  } catch (err: unknown) {
+    console.error("[Socket.io] Failed to dispatch CHANNEL_UPDATE:", err);
+  }
+};
+
+export const dispatchMemberUpdate = (
+  workspaceId: string,
+  payload: { action: "ROLE_UPDATED"; member: any }
+): void => {
+  try {
+    const io = getIO();
+    io.to(`workspace:${workspaceId}`).emit(SOCKET_EVENTS.MEMBER_UPDATE, payload);
+  } catch (err: unknown) {
+    console.error("[Socket.io] Failed to dispatch MEMBER_UPDATE:", err);
+  }
+};

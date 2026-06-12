@@ -1,5 +1,5 @@
 import { api } from "@/shared/lib/api";
-import { API_ROUTES } from "@/shared/constants/api_routes";
+import { API_ROUTES } from "@/config/url";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const handleInviteContinuation = async (router: any) => {

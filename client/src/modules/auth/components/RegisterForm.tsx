@@ -9,7 +9,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import Link from "next/link";
-import { APP_ROUTES } from "@/shared/constants/app_routes";
+import { APP_ROUTES } from "@/config/url";
 
 export const RegisterForm = () => {
   const { register: registerUser, loginWithGithub, isLoading, error } = useAuth();

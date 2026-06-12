@@ -1,5 +1,5 @@
 import { api } from "@/shared/lib/api";
-import { API_ROUTES } from "@/shared/constants/api_routes";
+import { API_ROUTES } from "@/config/url";
 import type { Message } from "../types/message";
 
 export interface MessagesResponse {
