@@ -68,7 +68,7 @@ export const editMessage = async (messageId: string, userId: string, content: st
     conversationMetadata = {
       id: message.conversation.id,
       name: message.conversation.name,
-      updatedAt: message.conversation.updatedAt,
+      updatedAt: new Date(),
       latestMessageId: message.conversation.latestMessageId,
       latestMessage: {
         id: updatedMessage.id,

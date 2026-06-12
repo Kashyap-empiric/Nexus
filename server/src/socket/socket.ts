@@ -6,7 +6,7 @@ import { registerPresenceHandlers } from "./handlers/presence.handler.js";
 import { registerMessageHandlers } from "./handlers/message.handler.js";
 import { registerWorkspaceHandlers } from "./handlers/workspace.handler.js";
 import { ENV } from "@/config/env.js";
-import { getUserConversationMemberships } from "@/modules/auth/auth.service.js";
+import { getUserConversationMemberships, getUserWorkspaceChannels, getUserWorkspaceIds } from "@/modules/auth/auth.service.js";
 
 let io: Server;
 
@@ -46,14 +46,24 @@ export const initSocket = (httpServer: HttpServer) => {
         await socket.join(`user:${userId}`);
 
         const dmMemberships = await getUserConversationMemberships(userId);
+        const channelMemberships = await getUserWorkspaceChannels(userId);
 
-        const rooms = dmMemberships.map(
-          (m) => `conversation:${m.conversationId}`
-        );
+        const rooms = [
+          ...dmMemberships.map((m) => `conversation:${m.conversationId}`),
+          ...channelMemberships.map((c) => `conversation:${c.id}`)
+        ];
 
         if (rooms.length > 0) {
           await socket.join(rooms);
-          console.log(`[Socket.io] socket=${socket.id} joined ${rooms.length} DM rooms`);
+          console.log(`[Socket.io] socket=${socket.id} joined ${rooms.length} conversation/channel rooms`);
+        }
+
+        // Join workspace rooms for broadcasts (channel:update, member:update, workspace:update)
+        const workspaceIds = await getUserWorkspaceIds(userId);
+        const workspaceRooms = workspaceIds.map((id) => `workspace:${id}`);
+        if (workspaceRooms.length > 0) {
+          await socket.join(workspaceRooms);
+          console.log(`[Socket.io] socket=${socket.id} joined ${workspaceRooms.length} workspace rooms`);
         }
       }
 

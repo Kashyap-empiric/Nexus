@@ -64,6 +64,8 @@ export const createChannelInTransaction = async (
     type: "CHANNEL";
     workspaceId: string;
     isPrivate: boolean;
+    visibility: "PUBLIC" | "PRIVATE";
+    createdBy: string;
     name: string;
     members: {
       create: Array<{ userId: string }>;
@@ -85,6 +87,8 @@ export const createChannel = async (data: {
   type: "CHANNEL";
   workspaceId: string;
   isPrivate: boolean;
+  visibility: "PUBLIC" | "PRIVATE";
+  createdBy: string;
   name: string;
   members: {
     create: Array<{ userId: string }>;
@@ -143,4 +147,29 @@ export const onboardUserToWorkspaceInTransaction = async (
   }
 
   return { generalChannelId: generalChannel.id };
+};
+
+export const updateChannel = async (channelId: string, data: { name?: string; visibility?: "PUBLIC" | "PRIVATE"; isPrivate?: boolean }) => {
+  return prisma.conversation.update({
+    where: { id: channelId },
+    data,
+  });
+};
+
+export const deleteConversation = async (channelId: string) => {
+  return prisma.conversation.delete({
+    where: { id: channelId },
+  });
+};
+
+export const updateWorkspaceMemberRole = async (workspaceId: string, userId: string, role: WorkspaceRole) => {
+  return prisma.workspaceMember.update({
+    where: { workspaceId_userId: { workspaceId, userId } },
+    data: { role },
+    include: {
+      user: {
+        select: { id: true, username: true, avatarUrl: true },
+      },
+    },
+  });
 };

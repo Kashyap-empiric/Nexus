@@ -6,10 +6,17 @@ export const isWorkspaceMember = async (userId: string, workspaceId: string): Pr
 };
 
 export const verifyConversationMembership = async (userId: string, conversationId: string): Promise<boolean> => {
-  const member = await authRepo.findConversationMember(userId, conversationId);
-  return !!member;
+  return authRepo.checkConversationAccess(userId, conversationId);
 };
 
 export const getUserConversationMemberships = async (userId: string) => {
   return authRepo.findConversationMembershipsByUserId(userId);
+};
+
+export const getUserWorkspaceChannels = async (userId: string) => {
+  return authRepo.findWorkspaceChannelsByUserId(userId);
+};
+
+export const getUserWorkspaceIds = async (userId: string): Promise<string[]> => {
+  return authRepo.findUserWorkspaceIds(userId);
 };

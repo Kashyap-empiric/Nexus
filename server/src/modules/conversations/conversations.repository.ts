@@ -60,9 +60,22 @@ export const findDMByPair = async (dmPair: string) => {
   });
 };
 
-export const findChannelIdsByWorkspaceId = async (workspaceId: string) => {
+export const findChannelIdsByWorkspaceId = async (workspaceId: string, userId?: string) => {
+  const where: any = { workspaceId, type: "CHANNEL" };
+
+  if (userId) {
+    // Only return public channels + private channels the user is a member of
+    where.OR = [
+      { visibility: "PUBLIC" },
+      {
+        visibility: "PRIVATE",
+        members: { some: { userId } },
+      },
+    ];
+  }
+
   return prisma.conversation.findMany({
-    where: { workspaceId, type: "CHANNEL" },
+    where,
     select: { id: true },
   });
 };
@@ -156,10 +169,15 @@ export const updateLastReadMessage = async (
   userId: string,
   messageId: string
 ) => {
-  return prisma.conversationMember.update({
+  return prisma.conversationMember.upsert({
     where: {
       conversationId_userId: { conversationId, userId },
     },
-    data: { lastReadMessageId: messageId },
+    update: { lastReadMessageId: messageId },
+    create: {
+      conversationId,
+      userId,
+      lastReadMessageId: messageId,
+    },
   });
 };

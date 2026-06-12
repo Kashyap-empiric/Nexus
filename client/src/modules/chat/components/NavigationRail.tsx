@@ -1,5 +1,5 @@
 import { MessagesSquare, Plus } from "lucide-react";
-import { APP_ROUTES } from "@/shared/constants/app_routes";
+import { APP_ROUTES } from "@/config/url";
 import Link from "next/link";
 import { useChatStore } from "../store/chatStore";
 import { useWorkspaces } from "@/modules/workspaces/hooks/useWorkspaces";

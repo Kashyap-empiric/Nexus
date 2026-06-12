@@ -59,7 +59,7 @@ The controller directly imports `dispatchMessageEvent` from `socket.dispatcher.t
 
 ## Client-Side
 
-### API (`client/src/modules/chat/api/messages.api.ts`)
+### API (`client/src/modules/messages/api/messages.api.ts`)
 
 | Function | HTTP Method | Route |
 |---|---|---|
@@ -68,7 +68,7 @@ The controller directly imports `dispatchMessageEvent` from `socket.dispatcher.t
 | `editMessage(conversationId, messageId, content)` | PATCH | `/conversations/{id}/messages/{msgId}` |
 | `deleteMessage(conversationId, messageId)` | DELETE | `/conversations/{id}/messages/{msgId}` |
 
-### Hooks (`client/src/modules/chat/hooks/useMessages.ts`)
+### Hooks (`client/src/modules/messages/hooks/useMessages.ts`)
 
 | Hook | Description |
 |---|---|

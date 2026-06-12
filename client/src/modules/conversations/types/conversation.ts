@@ -17,6 +17,7 @@ export interface Conversation {
   id: string;
   type: "DM" | "CHANNEL";
   isPrivate: boolean;
+  visibility?: "PUBLIC" | "PRIVATE";
   name: string | null;
   dmPair: string | null;
   workspaceId?: string | null;
