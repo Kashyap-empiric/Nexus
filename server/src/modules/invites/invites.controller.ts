@@ -1,8 +1,8 @@
 import { type Response } from "express";
 import { type AuthRequest } from "../../types/shared.js";
-import { getIO } from "../../socket/socket.js";
 import { resolveInviteService, generateInviteService } from "./invites.service.js";
 import { dispatchConversationNew } from "../../socket/socket.dispatcher.js";
+import { getIO } from "../../socket/socket.js";
 
 export const resolveInvite = async (req: AuthRequest, res: Response): Promise<any> => {
   const { token } = req.body;
@@ -18,18 +18,9 @@ export const resolveInvite = async (req: AuthRequest, res: Response): Promise<an
     // STEP 3 — POST-COMMIT SOCKET EMISSION (Domain Event Dispatching)
     if (events && events.length > 0) {
       try {
-        const io = getIO();
         events.forEach((event) => {
           if (event.type === "CONVERSATION_UPDATE" && event.conversationId) {
-            io.to(`conversation:${event.conversationId}`).emit("CONVERSATION_UPDATE", {
-              conversationId: event.conversationId,
-              type: "MEMBER_JOINED",
-              userId,
-              conversation: {
-                id: event.conversationId,
-                updatedAt: new Date().toISOString()
-              }
-            });
+            dispatchConversationUpdate(event.conversationId, event.userId || userId);
           } else if (event.type === "CONVERSATION_NEW" && event.payload) {
             dispatchConversationNew(event.payload);
           }
@@ -47,6 +38,23 @@ export const resolveInvite = async (req: AuthRequest, res: Response): Promise<an
     return res.status(500).json({ error: "Internal server error" });
   }
 };
+
+function dispatchConversationUpdate(conversationId: string, userId: string) {
+  try {
+    const io = getIO();
+    io.to(`conversation:${conversationId}`).emit("CONVERSATION_UPDATE", {
+      conversationId,
+      type: "MEMBER_JOINED",
+      userId,
+      conversation: {
+        id: conversationId,
+        updatedAt: new Date().toISOString()
+      }
+    });
+  } catch (err) {
+    console.error("[resolveInvite] Failed to emit CONVERSATION_UPDATE:", err);
+  }
+}
 
 export const generateInvite = async (req: AuthRequest, res: Response): Promise<any> => {
   const { type, entityId } = req.body;

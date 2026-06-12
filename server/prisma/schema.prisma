@@ -14,9 +14,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  conversations ConversationMember[]
-  messages      Message[]
-  invites       Invite[]
+  conversations   ConversationMember[]
+  messages        Message[]
+  invites         Invite[]
+  workspaces      WorkspaceMember[]
+  ownedWorkspaces Workspace[]          @relation("WorkspaceOwner")
 }
 
 enum ConversationType {
@@ -35,8 +37,9 @@ model Conversation {
   updatedAt   DateTime         @updatedAt
 
   // Relations
-  members  ConversationMember[]
-  messages Message[]
+  members   ConversationMember[]
+  messages  Message[]
+  workspace Workspace?           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   latestMessageId String?
   latestMessage   Message? @relation("ConversationLatestMessage", fields: [latestMessageId], references: [id])
@@ -84,20 +87,53 @@ enum InviteType {
 }
 
 model Invite {
-  id             String           @id @default(cuid())
-  token          String           @unique
-  type           InviteType
-  entityId       String
-  createdBy      String
-  expiresAt      DateTime?
-  maxUses        Int?
-  usedCount      Int              @default(0)
-  lastUsedAt     DateTime?
-  revoked        Boolean          @default(false)
-  createdAt      DateTime         @default(now())
+  id         String     @id @default(cuid())
+  token      String     @unique
+  type       InviteType
+  entityId   String
+  createdBy  String
+  expiresAt  DateTime?
+  maxUses    Int?
+  usedCount  Int        @default(0)
+  lastUsedAt DateTime?
+  revoked    Boolean    @default(false)
+  createdAt  DateTime   @default(now())
 
-  creator        User             @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  
+  creator User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
   @@index([token])
   @@index([type, entityId])
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model Workspace {
+  id        String   @id
+  name      String
+  imageUrl  String?
+  ownerId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner    User              @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members  WorkspaceMember[]
+  channels Conversation[]
+}
+
+model WorkspaceMember {
+  id          String        @id
+  workspaceId String
+  userId      String
+  role        WorkspaceRole @default(MEMBER)
+  joinedAt    DateTime      @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
 }

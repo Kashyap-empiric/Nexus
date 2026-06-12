@@ -4,8 +4,9 @@ import { socketAuthMiddleware } from "./middlewares/auth.js";
 import { socketRateLimiterMiddleware } from "./middlewares/rateLimiter.js";
 import { registerPresenceHandlers } from "./handlers/presence.handler.js";
 import { registerMessageHandlers } from "./handlers/message.handler.js";
-import { prisma } from "@/lib/db.js";
+import { registerWorkspaceHandlers } from "./handlers/workspace.handler.js";
 import { ENV } from "@/config/env.js";
+import { getUserConversationMemberships } from "@/modules/auth/auth.service.js";
 
 let io: Server;
 
@@ -44,18 +45,15 @@ export const initSocket = (httpServer: HttpServer) => {
         // Join user-specific room for targeted messages
         await socket.join(`user:${userId}`);
 
-        const memberships = await prisma.conversationMember.findMany({
-          where: { userId },
-          select: { conversationId: true },
-        });
+        const dmMemberships = await getUserConversationMemberships(userId);
 
-        const rooms = memberships.map(
+        const rooms = dmMemberships.map(
           (m) => `conversation:${m.conversationId}`
         );
 
         if (rooms.length > 0) {
           await socket.join(rooms);
-          console.log(`[Socket.io] socket=${socket.id} joined ${rooms.length} rooms`);
+          console.log(`[Socket.io] socket=${socket.id} joined ${rooms.length} DM rooms`);
         }
       }
 
@@ -66,6 +64,7 @@ export const initSocket = (httpServer: HttpServer) => {
 
       registerPresenceHandlers(io, socket);
       registerMessageHandlers(io, socket);
+      registerWorkspaceHandlers(io, socket);
     } catch (err) {
       console.error("[Socket.io] failed to setup connection:", err);
       socket.disconnect(true);

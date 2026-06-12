@@ -6,6 +6,8 @@ import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { PresenceIndicator } from "./PresenceIndicator";
 import dynamic from "next/dynamic";
 import { useConversationsQuery } from "../hooks/useConversations";
+import { useWorkspaceChannelsQuery } from "../hooks/useWorkspaceChannels";
+import type { ConversationMember } from "../types/conversation";
 import { useAuth } from "@/modules/auth";
 import { Input } from "@/shared/components/ui/input";
 import Link from "next/link";
@@ -30,6 +32,10 @@ export function Sidebar() {
   useGlobalSocket();
   const { logout } = useAuth();
   const { data: conversations, isLoading } = useConversationsQuery();
+  
+  const mode = useChatStore((state) => state.mode);
+  const activeWorkspaceId = useChatStore((state) => state.activeWorkspaceId);
+  const { data: workspaceChannels, isLoading: isLoadingChannels } = useWorkspaceChannelsQuery(mode === "WORKSPACE" ? activeWorkspaceId : null);
   const currentAuthUser = useUser();
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const inviteModal = useInviteModal();
@@ -43,24 +49,35 @@ export function Sidebar() {
   const socketStatus = useChatStore((state) => state.socketStatus);
   const statusLabel = socketStatus === "connected" ? "Online" : socketStatus === "connecting" ? "Connecting..." : "Offline";
 
-  const dms = [...(conversations || [])]
-    .filter((c) => {
-      if (c.type !== "DM") return false;
-      const otherMember = c.members.find((m) => m.userId !== currentAuthUser?.id);
-      const isOtherDeleted = !otherMember?.user;
-      const hasNoMessages = !c.latestMessageId;
-      if (isOtherDeleted && hasNoMessages) return false;
+  const displayList = mode === "DM" 
+    ? [...(conversations || [])]
+        .filter((c) => {
+          if (c.type !== "DM") return false;
+          const otherMember = c.members.find((m) => m.userId !== currentAuthUser?.id);
+          const isOtherDeleted = !otherMember?.user;
+          const hasNoMessages = !c.latestMessageId;
+          if (isOtherDeleted && hasNoMessages) return false;
 
-      if (searchQuery.trim()) {
-        const name = otherMember?.user.username?.toLowerCase() || "";
-        if (!name.includes(searchQuery.toLowerCase())) {
-          return false;
-        }
-      }
+          if (searchQuery.trim()) {
+            const name = otherMember?.user.username?.toLowerCase() || "";
+            if (!name.includes(searchQuery.toLowerCase())) {
+              return false;
+            }
+          }
 
-      return true;
-    })
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+          return true;
+        })
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    : [...(workspaceChannels || [])]
+        .filter((c) => {
+          if (searchQuery.trim() && c.name) {
+            return c.name.toLowerCase().includes(searchQuery.toLowerCase());
+          }
+          return true;
+        })
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
+  const isListLoading = mode === "DM" ? isLoading : isLoadingChannels;
 
   return (
     <>
@@ -82,17 +99,19 @@ export function Sidebar() {
         <div className="flex-1 overflow-y-auto px-2 py-3 space-y-6">
           <div>
             <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">
-              <span>Direct Messages</span>
+              <span>{mode === "DM" ? "Direct Messages" : "Channels"}</span>
               <DropdownMenu>
                 <DropdownMenuTrigger className="flex items-center gap-1 transition-colors py-1 px-2.5 -mr-1 rounded-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary/10 text-primary hover:bg-primary/20 normal-case tracking-normal font-medium leading-none">
                   <span className="text-xs leading-none">New</span>
                   <Plus className="h-3.5 w-3.5" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => setIsNewModalOpen(true)} className="gap-2 cursor-pointer">
-                    <MessageSquarePlus className="h-4 w-4" />
-                    <span>New Message</span>
-                  </DropdownMenuItem>
+                  {mode === "DM" && (
+                    <DropdownMenuItem onClick={() => setIsNewModalOpen(true)} className="gap-2 cursor-pointer">
+                      <MessageSquarePlus className="h-4 w-4" />
+                      <span>New Message</span>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={(e) => { e.stopPropagation(); inviteModal.open("USER"); }} className="cursor-pointer">
                     <UserPlus className="h-4 w-4" />
                     <span>Invite Someone</span>
@@ -101,7 +120,7 @@ export function Sidebar() {
               </DropdownMenu>
             </div>
 
-            {isLoading ? (
+            {isListLoading ? (
               <div className="space-y-[2px]">
                 {[1, 2, 3, 4, 5].map((i) => (
                   <div key={i} className="flex items-center gap-3 px-2 py-2 rounded-md">
@@ -113,15 +132,25 @@ export function Sidebar() {
                   </div>
                 ))}
               </div>
-            ) : dms.length === 0 ? (
-              <div className="text-sm text-muted-foreground/70 px-2 py-1">No messages yet</div>
+            ) : displayList.length === 0 ? (
+              <div className="text-sm text-muted-foreground/70 px-2 py-1">Nothing here yet</div>
             ) : (
               <div className="space-y-[2px]">
-                {dms.map((chat) => {
-                  const otherMember = chat.members.find((m) => m.userId !== currentAuthUser?.id);
-                  const name = otherMember?.user.username || "Deleted user";
-                  const isActive = chat.id === activeId;
+                {displayList.map((chat) => {
+                  let name = chat.name;
+                  let avatarUrl = undefined;
+                  let userId = undefined;
 
+                  if (mode === "DM") {
+                    const otherMember = chat.members.find((m: ConversationMember) => m.userId !== currentAuthUser?.id);
+                    name = otherMember?.user.username || "Deleted user";
+                    avatarUrl = otherMember?.user.avatarUrl;
+                    userId = otherMember?.userId;
+                  } else {
+                    name = `# ${name || "channel"}`;
+                  }
+
+                  const isActive = chat.id === activeId;
                   const unreadCount = chat.unreadCount || 0;
                   const isUnread = unreadCount > 0;
 
@@ -135,21 +164,23 @@ export function Sidebar() {
                         : "text-muted-foreground hover:bg-muted/80 hover:text-foreground dark:hover:bg-white/5"
                         }`}
                     >
-                      <div className="relative shrink-0">
-                        <UserAvatar
-                          name={name}
-                          src={otherMember?.user.avatarUrl}
-                          className="h-9 w-9 shrink-0"
-                          fallbackClassName="text-xs bg-primary/20 text-primary font-medium"
-                        />
-                        {otherMember?.userId && (
-                          <PresenceIndicator userId={otherMember.userId} className="-bottom-0.5 -right-0.5" />
-                        )}
-                      </div>
+                      {mode === "DM" ? (
+                        <div className="relative shrink-0">
+                          <UserAvatar
+                            name={name}
+                            src={avatarUrl}
+                            className="h-9 w-9 shrink-0"
+                            fallbackClassName="text-xs bg-primary/20 text-primary font-medium"
+                          />
+                          {userId && (
+                            <PresenceIndicator userId={userId} className="-bottom-0.5 -right-0.5" />
+                          )}
+                        </div>
+                      ) : null}
 
                       <div className="flex-1 min-w-0 flex flex-col justify-center">
                         <span className={`truncate text-sm leading-none ${isUnread && !isActive ? 'font-bold text-foreground' : 'font-medium'}`}>{name}</span>
-                        {chat.latestMessage && (
+                        {chat.latestMessage && mode === "DM" && (
                           <span className={`truncate text-[13px] ${isUnread && !isActive ? 'font-semibold text-foreground' : 'text-muted-foreground/80'}`}>
                             {chat.latestMessage.deletedAt
                               ? <span className="italic">This message was deleted</span>
