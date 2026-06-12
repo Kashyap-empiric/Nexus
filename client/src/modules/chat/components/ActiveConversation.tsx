@@ -1,13 +1,14 @@
 "use client";
 
-import { useConversationsQuery, useConversationDetailsQuery } from "../hooks/useConversations";
+import { useConversationsQuery, useConversationDetailsQuery } from "@/modules/conversations/hooks/useConversations";
 import { useConversationSocket } from "../hooks/useConversationSocket";
-import { MessageList } from "./MessageList";
-import { MessageInput } from "./MessageInput";
+import { MessageList } from "@/modules/messages/components/MessageList";
+import { MessageInput } from "@/modules/messages/components/MessageInput";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
-import { PresenceIndicator } from "./PresenceIndicator";
+import { PresenceIndicator } from "@/modules/chat/components/PresenceIndicator";
 import { useUser } from "@/modules/auth/store/useAuthStore";
-import { MessageListSkeleton } from "./MessageListSkeleton";
+import { MessageListSkeleton } from "@/modules/messages/components/MessageListSkeleton";
+import { useWorkspaceDetails } from "@/modules/workspaces/hooks/useWorkspaces";
 
 interface ActiveConversationProps {
   conversationId: string;
@@ -15,7 +16,7 @@ interface ActiveConversationProps {
 
 import { ThemeToggle } from "@/shared/components/theme-toggle";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Hash } from "lucide-react";
 import { APP_ROUTES } from "@/shared/constants/app_routes";
 
 export function ActiveConversation({ conversationId }: ActiveConversationProps) {
@@ -25,6 +26,9 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
 
   const { data: conversation, isLoading } = useConversationDetailsQuery(conversationId);
   const { data: conversations } = useConversationsQuery();
+  
+  const isChannel = conversation?.type === "CHANNEL";
+  const { data: workspaceDetails } = useWorkspaceDetails(isChannel ? conversation?.workspaceId || null : null);
 
   const totalUnreadCount = conversations?.reduce((acc, conv) => {
     if (conv.id !== conversationId) {
@@ -67,11 +71,11 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
     );
   }
 
-  // Find the other member to display their name
+  // Find the other member to display their name if it's a DM
   const isDM = conversation.type === "DM";
-  const otherMember = conversation.members.find((m) => m.userId !== currentUserId);
+  const otherMember = isDM ? conversation.members.find((m) => m.userId !== currentUserId) : undefined;
   const otherName = otherMember?.user?.username;
-  const title = conversation.name || otherName || (isDM ? "Deleted user" : "Channel");
+  const title = isChannel ? conversation.name : (otherName || "Deleted user");
 
   const myProfile = conversation.members.find((m) => m.userId === currentUserId)?.user;
 
@@ -101,18 +105,35 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
             )}
             <span className="sr-only">Back</span>
           </Link>
-          <div className="relative">
-            <UserAvatar
-              name={title}
-              src={otherMember?.user?.avatarUrl}
-              className="h-9 w-9 shrink-0"
-              fallbackClassName="bg-primary/20 text-primary font-medium"
-            />
-            {otherMember?.userId && (
-              <PresenceIndicator userId={otherMember.userId} className="-bottom-0.5 -right-0.5" />
-            )}
-          </div>
-          <h2 className="text-base font-bold text-foreground leading-none truncate">{title}</h2>
+          
+          {isChannel ? (
+            <div className="flex items-center gap-2">
+              <Hash className="h-6 w-6 text-muted-foreground" />
+              <div className="flex flex-col">
+                <h2 className="text-base font-bold text-foreground leading-none truncate">{title}</h2>
+                {workspaceDetails?.workspace && (
+                  <span className="text-[12px] text-muted-foreground leading-tight truncate">
+                    {workspaceDetails.workspace.name}
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="relative">
+                <UserAvatar
+                  name={title || ""}
+                  src={otherMember?.user?.avatarUrl}
+                  className="h-9 w-9 shrink-0"
+                  fallbackClassName="bg-primary/20 text-primary font-medium"
+                />
+                {otherMember?.userId && (
+                  <PresenceIndicator userId={otherMember.userId} className="-bottom-0.5 -right-0.5" />
+                )}
+              </div>
+              <h2 className="text-base font-bold text-foreground leading-none truncate">{title}</h2>
+            </>
+          )}
         </div>
         <ThemeToggle />
       </div>

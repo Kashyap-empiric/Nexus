@@ -4,7 +4,7 @@ import { useAuthInitialized, useUser } from "@/modules/auth/store/useAuthStore";
 import { Loader2 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { handleInviteContinuation } from "@/lib/invites/handleInvite";
+import { handleInviteContinuation } from "@/modules/invites/lib/handleInvite";
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const isInitialized = useAuthInitialized();
