@@ -135,10 +135,60 @@ export const useEditMessageMutation = (conversationId: string) => {
     mutationFn: async ({ messageId, content }: { messageId: string; content: string }) => {
       return messagesApi.editMessage(conversationId, messageId, content);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.messages(conversationId) });
+    onMutate: async ({ messageId, content }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.messages(conversationId) });
+
+      const previousMessages = queryClient.getQueryData<InfiniteData<MessagePage>>(
+        queryKeys.messages(conversationId)
+      );
+
+      queryClient.setQueryData<InfiniteData<MessagePage>>(
+        queryKeys.messages(conversationId),
+        (old) => {
+          if (!old || !old.pages) return old;
+
+          const updatedPages = old.pages.map((page) => ({
+            ...page,
+            data: page.data.map((m) =>
+              m.id === messageId
+                ? { ...m, content, isEdited: true }
+                : m
+            ),
+          }));
+
+          return {
+            ...old,
+            pages: updatedPages,
+          };
+        }
+      );
+
+      return { previousMessages };
     },
-    onError: (err) => {
+    onSuccess: (serverMessage) => {
+      queryClient.setQueryData<InfiniteData<MessagePage>>(
+        queryKeys.messages(conversationId),
+        (old) => {
+          if (!old || !old.pages) return old;
+
+          const updatedPages = old.pages.map((page) => ({
+            ...page,
+            data: page.data.map((m) =>
+              m.id === serverMessage.id ? { ...m, ...serverMessage } : m
+            ),
+          }));
+
+          return {
+            ...old,
+            pages: updatedPages,
+          };
+        }
+      );
+    },
+    onError: (err, _variables, context) => {
+      if (context?.previousMessages) {
+        queryClient.setQueryData(queryKeys.messages(conversationId), context.previousMessages);
+      }
       toast.error(err instanceof Error ? err.message : "Failed to edit message");
     },
   });
@@ -151,10 +201,62 @@ export const useDeleteMessageMutation = (conversationId: string) => {
     mutationFn: async ({ messageId }: { messageId: string }) => {
       return messagesApi.deleteMessage(conversationId, messageId);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.messages(conversationId) });
+    onMutate: async ({ messageId }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.messages(conversationId) });
+
+      const previousMessages = queryClient.getQueryData<InfiniteData<MessagePage>>(
+        queryKeys.messages(conversationId)
+      );
+
+      queryClient.setQueryData<InfiniteData<MessagePage>>(
+        queryKeys.messages(conversationId),
+        (old) => {
+          if (!old || !old.pages) return old;
+
+          const deletedAt = new Date().toISOString();
+
+          const updatedPages = old.pages.map((page) => ({
+            ...page,
+            data: page.data.map((m) =>
+              m.id === messageId
+                ? { ...m, deletedAt, content: "" }
+                : m
+            ),
+          }));
+
+          return {
+            ...old,
+            pages: updatedPages,
+          };
+        }
+      );
+
+      return { previousMessages };
     },
-    onError: (err) => {
+    onSuccess: (serverMessage) => {
+      queryClient.setQueryData<InfiniteData<MessagePage>>(
+        queryKeys.messages(conversationId),
+        (old) => {
+          if (!old || !old.pages) return old;
+
+          const updatedPages = old.pages.map((page) => ({
+            ...page,
+            data: page.data.map((m) =>
+              m.id === serverMessage.id ? { ...m, ...serverMessage } : m
+            ),
+          }));
+
+          return {
+            ...old,
+            pages: updatedPages,
+          };
+        }
+      );
+    },
+    onError: (err, _variables, context) => {
+      if (context?.previousMessages) {
+        queryClient.setQueryData(queryKeys.messages(conversationId), context.previousMessages);
+      }
       toast.error(err instanceof Error ? err.message : "Failed to delete message");
     },
   });

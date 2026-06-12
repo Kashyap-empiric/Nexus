@@ -71,11 +71,16 @@ export const createMessageTransaction = async (
         latestMessageId: true,
       },
     }),
-    prisma.conversationMember.update({
+    prisma.conversationMember.upsert({
       where: {
         conversationId_userId: { conversationId, userId },
       },
-      data: { lastReadMessageId: messageId },
+      update: { lastReadMessageId: messageId },
+      create: {
+        conversationId,
+        userId,
+        lastReadMessageId: messageId,
+      },
     }),
   ]);
 };

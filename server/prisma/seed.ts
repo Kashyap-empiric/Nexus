@@ -2,11 +2,12 @@ import process from 'node:process'
 import { createClient } from '@supabase/supabase-js'
 import { uuidv7 } from 'uuidv7'
 import 'dotenv/config'
+import { ENV } from '@/config/env.js'
 import { prisma } from '@/lib/db'
 
 const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!, // service role — never expose client-side
+  ENV.SUPABASE_URL,
+  ENV.SUPABASE_SERVICE_ROLE_KEY, // service role — never expose client-side
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
 

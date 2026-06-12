@@ -7,56 +7,52 @@ datasource db {
 }
 
 model User {
-  id        String   @id
-  email     String   @unique
-  username  String
-  avatarUrl String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  conversations   ConversationMember[]
-  messages        Message[]
-  invites         Invite[]
-  workspaces      WorkspaceMember[]
-  ownedWorkspaces Workspace[]          @relation("WorkspaceOwner")
-}
-
-enum ConversationType {
-  DM
-  CHANNEL
+  id                   String               @id
+  email                String               @unique
+  avatarUrl            String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  username             String
+  createdConversations Conversation[]       @relation("ConversationCreator")
+  conversations        ConversationMember[]
+  invites              Invite[]
+  messages             Message[]
+  ownedWorkspaces      Workspace[]          @relation("WorkspaceOwner")
+  workspaces           WorkspaceMember[]
+  notifications        Notification[]
+  pushSubscriptions    PushSubscription[]
 }
 
 model Conversation {
-  id          String           @id
-  type        ConversationType @default(DM)
-  isPrivate   Boolean          @default(true)
-  name        String?
-  workspaceId String?
-  dmPair      String?          @unique
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-
-  // Relations
-  members   ConversationMember[]
-  messages  Message[]
-  workspace Workspace?           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
+  id              String               @id
+  type            ConversationType     @default(DM)
+  name            String?
+  workspaceId     String?
+  dmPair          String?              @unique
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
   latestMessageId String?
-  latestMessage   Message? @relation("ConversationLatestMessage", fields: [latestMessageId], references: [id])
+  createdBy       String?
+  visibility      ChannelVisibility    @default(PUBLIC)
+  isPrivate       Boolean              @default(true)
+  creator         User?                @relation("ConversationCreator", fields: [createdBy], references: [id])
+  latestMessage   Message?             @relation("ConversationLatestMessage", fields: [latestMessageId], references: [id])
+  workspace       Workspace?           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  members         ConversationMember[]
+  messages        Message[]
 }
 
 model ConversationMember {
+  id                String       @id @default(cuid())
   conversationId    String
   userId            String
   lastReadMessageId String?
-  joinedAt          DateTime @default(now())
+  joinedAt          DateTime     @default(now())
+  conversation      Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  lastReadMessage   Message?     @relation("ConversationMemberLastRead", fields: [lastReadMessageId], references: [id])
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Relations
-  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lastReadMessage Message?     @relation("ConversationMemberLastRead", fields: [lastReadMessageId], references: [id])
-
-  @@id([conversationId, userId])
+  @@unique([conversationId, userId])
   @@index([userId, conversationId])
 }
 
@@ -69,13 +65,66 @@ model Message {
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
   deletedAt      DateTime?
-  // Relations
+  latestIn       Conversation[]       @relation("ConversationLatestMessage")
+  readByMembers  ConversationMember[] @relation("ConversationMemberLastRead")
   conversation   Conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  readByMembers  ConversationMember[] @relation("ConversationMemberLastRead")
-  latestIn       Conversation[]       @relation("ConversationLatestMessage")
 
   @@index([conversationId, id])
+}
+
+model Invite {
+  id         String     @id @default(cuid())
+  entityId   String
+  token      String     @unique
+  createdBy  String
+  expiresAt  DateTime?
+  maxUses    Int?
+  usedCount  Int        @default(0)
+  revoked    Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+  type       InviteType
+  lastUsedAt DateTime?
+  creator    User       @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([type, entityId])
+}
+
+model Workspace {
+  id        String            @id
+  name      String
+  imageUrl  String?
+  ownerId   String
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  slug      String            @unique
+  channels  Conversation[]
+  owner     User              @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members   WorkspaceMember[]
+}
+
+model WorkspaceMember {
+  workspaceId String
+  userId      String
+  role        WorkspaceRole @default(MEMBER)
+  joinedAt    DateTime      @default(now())
+  id          String        @default(cuid())
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@id([workspaceId, userId])
+  @@index([userId])
+}
+
+enum ConversationType {
+  DM
+  CHANNEL
+}
+
+enum ChannelVisibility {
+  PUBLIC
+  PRIVATE
 }
 
 enum InviteType {
@@ -85,54 +134,45 @@ enum InviteType {
   CHANNEL
 }
 
-model Invite {
-  id         String     @id @default(cuid())
-  token      String     @unique
-  type       InviteType
-  entityId   String
-  createdBy  String
-  expiresAt  DateTime?
-  maxUses    Int?
-  usedCount  Int        @default(0)
-  lastUsedAt DateTime?
-  revoked    Boolean    @default(false)
-  createdAt  DateTime   @default(now())
-
-  creator User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-
-  @@index([token])
-  @@index([type, entityId])
-}
-
 enum WorkspaceRole {
   OWNER
   ADMIN
   MEMBER
 }
 
-model Workspace {
-  id        String   @id
-  name      String
-  slug      String   @unique
-  imageUrl  String?
-  ownerId   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  owner    User              @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  members  WorkspaceMember[]
-  channels Conversation[]
+enum NotificationType {
+  INVITE_RECEIVED
+  INVITE_ACCEPTED
+  MEMBER_JOINED
+  CHANNEL_CREATED
 }
 
-model WorkspaceMember {
-  workspaceId String
-  userId      String
-  role        WorkspaceRole @default(MEMBER)
-  joinedAt    DateTime      @default(now())
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String?
+  link      String?
+  imageUrl  String?
+  read      Boolean          @default(false)
+  metadata  Json?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, read, createdAt])
+  @@index([userId, createdAt])
+}
 
-  @@id([workspaceId, userId])
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique @db.Text
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }

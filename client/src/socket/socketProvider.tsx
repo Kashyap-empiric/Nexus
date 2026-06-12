@@ -11,7 +11,6 @@ import { requestNotificationPermission } from "@/shared/lib/notifications";
 export function SocketProvider() {
   const setSocketStatus = useSocketStore((state) => state.setSocketStatus);
 
-  // Request notification permission when the socket connection initialises
   useEffect(() => {
     requestNotificationPermission();
   }, []);

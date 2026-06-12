@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/shared/lib/supabase";
-import { APP_ROUTES } from "@/shared/constants/app_routes";
+import { APP_ROUTES } from "@/config/url";
 import { getAuthActions } from "@/modules/auth/store/useAuthStore";
 import { handleSignIn, handleSignOut } from "@/modules/auth/lib/auth-orchestrator";
 

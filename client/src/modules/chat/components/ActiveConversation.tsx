@@ -1,28 +1,28 @@
 "use client";
 
+import { useEffect } from "react";
 import { useConversationsQuery, useConversationDetailsQuery } from "@/modules/conversations/hooks/useConversations";
 import { useConversationSocket } from "../hooks/useConversationSocket";
 import { MessageList } from "@/modules/messages/components/MessageList";
 import { MessageInput } from "@/modules/messages/components/MessageInput";
-import { UserAvatar } from "@/shared/components/ui/user-avatar";
-import { PresenceIndicator } from "@/modules/chat/components/PresenceIndicator";
 import { useUser } from "@/modules/auth/store/useAuthStore";
+import { useChatStore } from "../store/chatStore";
 import { MessageListSkeleton } from "@/modules/messages/components/MessageListSkeleton";
 import { useWorkspaceDetails } from "@/modules/workspaces/hooks/useWorkspaces";
+import { MemberListPanel } from "@/modules/workspaces/components/MemberListPanel";
+import { X } from "lucide-react";
 
 interface ActiveConversationProps {
   conversationId: string;
 }
 
-import { ThemeToggle } from "@/shared/components/theme-toggle";
-import Link from "next/link";
-import { ArrowLeft, Hash } from "lucide-react";
-import { APP_ROUTES } from "@/shared/constants/app_routes";
-
 export function ActiveConversation({ conversationId }: ActiveConversationProps) {
   useConversationSocket(conversationId);
   const user = useUser();
   const currentUserId = user?.id || null;
+  const setHeaderInfo = useChatStore((state) => state.setHeaderInfo);
+  const memberPanelOpen = useChatStore((state) => state.headerInfo?.memberPanelOpen ?? false);
+  const isChannelFromStore = useChatStore((state) => state.headerInfo?.isChannel ?? false);
 
   const { data: conversation, isLoading } = useConversationDetailsQuery(conversationId);
   const { data: conversations } = useConversationsQuery();
@@ -30,25 +30,45 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
   const isChannel = conversation?.type === "CHANNEL";
   const { data: workspaceDetails } = useWorkspaceDetails(isChannel ? conversation?.workspaceId || null : null);
 
-  const totalUnreadCount = conversations?.reduce((acc, conv) => {
-    if (conv.id !== conversationId) {
-      return acc + (conv.unreadCount || 0);
-    }
-    return acc;
-  }, 0) || 0;
+  // Set header info when conversation data loads
+  useEffect(() => {
+    if (!conversation) return;
+
+    const isDM = conversation.type === "DM";
+    const otherMember = isDM ? conversation.members.find((m) => m.userId !== currentUserId) : undefined;
+    const otherName = otherMember?.user?.username;
+    const title = isChannel ? conversation.name : (otherName || "Deleted user");
+
+    const totalUnreadCount = conversations?.reduce((acc, conv) => {
+      if (conv.id !== conversationId) {
+        return acc + (conv.unreadCount || 0);
+      }
+      return acc;
+    }, 0) || 0;
+
+    setHeaderInfo({
+      title: title || "",
+      subtitle: isChannel ? workspaceDetails?.workspace?.name : undefined,
+      isChannel,
+      workspaceId: isChannel ? conversation.workspaceId : null,
+      otherMember: otherMember ? {
+        userId: otherMember.userId,
+        username: otherMember.user.username,
+        avatarUrl: otherMember.user.avatarUrl,
+      } : null,
+      totalUnreadCount,
+      memberPanelOpen: false,
+    });
+
+    return () => {
+      setHeaderInfo(null);
+    };
+  }, [conversation, currentUserId, conversations, conversationId, isChannel, workspaceDetails, setHeaderInfo]);
 
   if (isLoading) {
     return (
       <div className="flex-1 flex flex-col h-full bg-background">
-        {/* Skeleton Header */}
-        <div className="h-14 border-b flex items-center px-4 shrink-0 bg-background shadow-sm">
-          <div className="flex items-center gap-3 w-full">
-            <div className="w-9 h-9 rounded-full bg-muted animate-pulse shrink-0" />
-            <div className="w-32 h-4 bg-muted rounded animate-pulse" />
-          </div>
-        </div>
         <MessageListSkeleton />
-        {/* Skeleton Composer */}
         <div className="px-[15px] md:px-6 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-2 bg-background shrink-0 w-full">
           <div className="w-full flex items-end gap-2 bg-background dark:bg-zinc-950 border rounded-xl px-3 py-2 shadow-sm opacity-50">
             <div className="flex-1 min-w-0 flex items-center">
@@ -71,83 +91,58 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
     );
   }
 
-  // Find the other member to display their name if it's a DM
   const isDM = conversation.type === "DM";
   const otherMember = isDM ? conversation.members.find((m) => m.userId !== currentUserId) : undefined;
-  const otherName = otherMember?.user?.username;
-  const title = isChannel ? conversation.name : (otherName || "Deleted user");
-
   const myProfile = conversation.members.find((m) => m.userId === currentUserId)?.user;
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-background min-w-0">
-      {/* Top Header */}
-      <div className="h-14 border-b flex items-center justify-between px-[15px] md:px-4 shrink-0 bg-background shadow-sm">
-        <div className="flex items-center gap-2 md:gap-3">
-          <Link
-            href={APP_ROUTES.CONVERSATIONS.INDEX}
-            className="md:hidden relative p-2 -ml-1 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            {totalUnreadCount > 0 && (
-              <span className="
-                absolute bottom-0 right-0
-                flex h-[18px] min-w-[18px]
-                items-center justify-center
-                rounded-full bg-red-500
-                px-1 text-[10px]
-                leading-none
-                font-bold text-white
-                shadow-sm ring-2 ring-background
-              ">
-                {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
-              </span>
-            )}
-            <span className="sr-only">Back</span>
-          </Link>
-          
-          {isChannel ? (
-            <div className="flex items-center gap-2">
-              <Hash className="h-6 w-6 text-muted-foreground" />
-              <div className="flex flex-col">
-                <h2 className="text-base font-bold text-foreground leading-none truncate">{title}</h2>
-                {workspaceDetails?.workspace && (
-                  <span className="text-[12px] text-muted-foreground leading-tight truncate">
-                    {workspaceDetails.workspace.name}
-                  </span>
-                )}
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="relative">
-                <UserAvatar
-                  name={title || ""}
-                  src={otherMember?.user?.avatarUrl}
-                  className="h-9 w-9 shrink-0"
-                  fallbackClassName="bg-primary/20 text-primary font-medium"
-                />
-                {otherMember?.userId && (
-                  <PresenceIndicator userId={otherMember.userId} className="-bottom-0.5 -right-0.5" />
-                )}
-              </div>
-              <h2 className="text-base font-bold text-foreground leading-none truncate">{title}</h2>
-            </>
-          )}
-        </div>
-        <ThemeToggle />
+    <div className="flex-1 flex h-full min-w-0">
+      <div className="flex-1 flex flex-col h-full bg-background min-w-0">
+        <MessageList
+          conversationId={conversationId}
+          currentUserId={currentUserId}
+          myLastReadMessageId={conversation.members.find(m => m.userId === currentUserId)?.lastReadMessageId}
+          partnerLastReadMessageId={otherMember?.lastReadMessageId}
+        />
+
+        <MessageInput conversationId={conversationId} currentUser={myProfile} />
       </div>
 
-      {/* Messages */}
-      <MessageList
-        conversationId={conversationId}
-        currentUserId={currentUserId}
-        myLastReadMessageId={conversation.members.find(m => m.userId === currentUserId)?.lastReadMessageId}
-        partnerLastReadMessageId={otherMember?.lastReadMessageId}
-      />
-
-      {/* Input */}
-      <MessageInput conversationId={conversationId} currentUser={myProfile} />
+      {/* Member List Sidebar for Workspaces */}
+      {isChannel && conversation.workspaceId && (
+        <>
+          {/* Desktop version */}
+          <div className="hidden md:block">
+            {memberPanelOpen && (
+              <MemberListPanel workspaceId={conversation.workspaceId} />
+            )}
+          </div>
+          
+          {/* Mobile version */}
+          <div className={`md:hidden flex flex-col fixed inset-y-0 right-0 z-50 w-[85vw] bg-background shadow-xl border-l transform transition-transform duration-300 ease-in-out ${memberPanelOpen ? "translate-x-0" : "translate-x-full"}`}>
+            <div className="flex items-center justify-between p-4 border-b shrink-0">
+              <h2 className="font-semibold text-lg text-foreground">Members</h2>
+              <button 
+                onClick={() => useChatStore.getState().setMemberPanelOpen(false)}
+                className="p-1.5 rounded-full hover:bg-muted text-muted-foreground transition-colors"
+                title="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <MemberListPanel workspaceId={conversation.workspaceId} />
+            </div>
+          </div>
+          {/* Mobile overlay */}
+          {memberPanelOpen && (
+            <div 
+              className="md:hidden fixed inset-0 z-40 bg-black/50 transition-opacity"
+              onClick={() => useChatStore.getState().setMemberPanelOpen(false)}
+            />
+          )}
+        </>
+      )}
     </div>
   );
 }

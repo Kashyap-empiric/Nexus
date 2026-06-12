@@ -5,3 +5,6 @@ reviews/
 
 # 2. But DO NOT ignore the public-docs sub-folder
 !.docs/public-docs/
+
+# AI Agent configuration files
+.cursorrules

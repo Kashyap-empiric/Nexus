@@ -7,7 +7,12 @@ const SOCKET_URL = ENV.API_URL.replace("/api", "");
 export const socket: Socket = io(SOCKET_URL, {
   autoConnect: false,
   auth: async (cb) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    cb({ token: session?.access_token });
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      cb({ token: session?.access_token });
+    } catch (err) {
+      console.error("[Socket] Auth error:", err);
+      cb({ token: null });
+    }
   },
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Plus, LogOut } from "lucide-react";
+import { Search, Plus, LogOut, X } from "lucide-react";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { PresenceIndicator } from "@/modules/chat/components/PresenceIndicator";
 import dynamic from "next/dynamic";
@@ -32,8 +32,13 @@ import { useWorkspaceDetails } from "@/modules/workspaces/hooks/useWorkspaces";
 const NewConversationModal = dynamic(() => import("./NewConversationModal").then((m) => m.NewConversationModal), { ssr: false });
 const InviteModal = dynamic(() => import("@/modules/invites/components/InviteModal").then((m) => m.InviteModal), { ssr: false });
 const CreateChannelModal = dynamic(() => import("@/modules/workspaces/components/CreateChannelModal").then((m) => m.CreateChannelModal), { ssr: false });
+import { WorkspaceChannelItem } from "@/modules/workspaces/components/WorkspaceChannelItem";
 
-export function Sidebar() {
+interface SidebarProps {
+  onNavigate?: () => void;
+}
+
+export function Sidebar({ onNavigate }: SidebarProps) {
   useGlobalSocket();
   const { logout } = useAuth();
   const { data: conversations, isLoading } = useConversationsQuery();
@@ -48,7 +53,7 @@ export function Sidebar() {
   const [searchQuery, setSearchQuery] = useState("");
   const params = useParams();
   const router = useRouter();
-  const activeId = params?.id as string;
+  const activeId = (params?.channelId as string) || (params?.id as string);
   const lastVisitedChannels = useChatStore((state) => state.lastVisitedChannels);
   const setLastVisitedChannel = useChatStore((state) => state.setLastVisitedChannel);
   const pendingRedirect = useRef<string | null>(null);
@@ -122,23 +127,49 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="w-full md:w-72 border-r bg-muted/30 dark:bg-muted/10 flex flex-col shrink-0">
+      <aside className="w-full md:w-72 border-r bg-background md:bg-muted/30 md:dark:bg-muted/10 flex flex-col shrink-0">
         {mode === "WORKSPACE" && workspaceDetails ? (
           <WorkspaceHeader 
             workspace={workspaceDetails.workspace} 
             onInviteClick={() => inviteModal.open("WORKSPACE", workspaceDetails.workspace.id)}
+            rightElement={
+              <button 
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onNavigate?.();
+                }}
+                className="md:hidden p-1.5 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 text-muted-foreground transition-colors cursor-pointer"
+                title="Close sidebar"
+              >
+                <X className="h-5 w-5 pointer-events-none" />
+              </button>
+            }
           />
         ) : (
-          <div className="h-14 border-b flex items-center px-3 shrink-0 shadow-sm">
-            <div className="relative w-full">
+          <div className="h-14 border-b flex items-center px-3 shrink-0 shadow-sm gap-2">
+            <div className="relative w-full flex-1">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Find a conversation"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 py-1.5 bg-muted/50 border-transparent hover:border-border focus-visible:border-border focus-visible:ring-1"
+                className="pl-9 py-1.5 bg-muted/50 border-transparent hover:border-border focus-visible:border-border focus-visible:ring-1 w-full"
               />
             </div>
+            <button 
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onNavigate?.();
+              }}
+              className="md:hidden p-1.5 rounded-full hover:bg-muted text-muted-foreground transition-colors shrink-0 cursor-pointer"
+              title="Close sidebar"
+            >
+              <X className="h-5 w-5 pointer-events-none" />
+            </button>
           </div>
         )}
 
@@ -188,21 +219,13 @@ export function Sidebar() {
               </div>
             ) : displayList.length === 0 ? (
               <div className="text-sm text-muted-foreground/70 px-2 py-1">Nothing here yet</div>
-            ) : (
+            ) : mode === "DM" ? (
               <div className="space-y-[2px]">
                 {displayList.map((chat) => {
-                  let name = chat.name;
-                  let avatarUrl = undefined;
-                  let userId = undefined;
-
-                  if (mode === "DM") {
-                    const otherMember = chat.members.find((m: ConversationMember) => m.userId !== currentAuthUser?.id);
-                    name = otherMember?.user.username || "Deleted user";
-                    avatarUrl = otherMember?.user.avatarUrl;
-                    userId = otherMember?.userId;
-                  } else {
-                    name = `# ${name || "channel"}`;
-                  }
+                  const otherMember = chat.members.find((m: ConversationMember) => m.userId !== currentAuthUser?.id);
+                  const name = otherMember?.user.username || "Deleted user";
+                  const avatarUrl = otherMember?.user.avatarUrl;
+                  const userId = otherMember?.userId;
 
                   const isActive = chat.id === activeId;
                   const unreadCount = chat.unreadCount || 0;
@@ -211,30 +234,29 @@ export function Sidebar() {
                   return (
                     <Link
                       key={chat.id}
-                      href={mode === "WORKSPACE" && activeWorkspaceId ? `/workspaces/${activeWorkspaceId}/channels/${chat.id}` : `/conversations/${chat.id}`}
+                      href={`/conversations/${chat.id}`}
                       prefetch={false}
+                      onClick={() => onNavigate?.()}
                       className={`flex items-center gap-3 px-2 py-2 rounded-md transition-colors ${isActive
                         ? "bg-primary/10 text-primary dark:bg-white/10 dark:text-foreground"
                         : "text-muted-foreground hover:bg-muted/80 hover:text-foreground dark:hover:bg-white/5"
                         }`}
                     >
-                      {mode === "DM" ? (
-                        <div className="relative shrink-0">
-                          <UserAvatar
-                            name={name}
-                            src={avatarUrl}
-                            className="h-9 w-9 shrink-0"
-                            fallbackClassName="text-xs bg-primary/20 text-primary font-medium"
-                          />
-                          {userId && (
-                            <PresenceIndicator userId={userId} className="-bottom-0.5 -right-0.5" />
-                          )}
-                        </div>
-                      ) : null}
+                      <div className="relative shrink-0">
+                        <UserAvatar
+                          name={name}
+                          src={avatarUrl}
+                          className="h-9 w-9 shrink-0"
+                          fallbackClassName="text-xs bg-primary/20 text-primary font-medium"
+                        />
+                        {userId && (
+                          <PresenceIndicator userId={userId} className="-bottom-0.5 -right-0.5" />
+                        )}
+                      </div>
 
                       <div className="flex-1 min-w-0 flex flex-col justify-center">
                         <span className={`truncate text-sm leading-none ${isUnread && !isActive ? 'font-bold text-foreground' : 'font-medium'}`}>{name}</span>
-                        {chat.latestMessage && mode === "DM" && (
+                        {chat.latestMessage && (
                           <span className={`truncate text-[13px] ${isUnread && !isActive ? 'font-semibold text-foreground' : 'text-muted-foreground/80'}`}>
                             {chat.latestMessage.deletedAt
                               ? <span className="italic">This message was deleted</span>
@@ -254,6 +276,59 @@ export function Sidebar() {
                     </Link>
                   );
                 })}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Public Channels */}
+                <div className="space-y-[2px]">
+                  {displayList.filter(c => c.visibility === "PUBLIC").map((chat) => {
+                    const isActive = chat.id === activeId;
+                    const canManage = workspaceDetails?.workspace.members?.some(
+                      m => m.userId === currentAuthUser?.id && (m.role === "OWNER" || m.role === "ADMIN")
+                    ) || false;
+                    
+                    return (
+                      <WorkspaceChannelItem 
+                        key={chat.id}
+                        channel={chat as any}
+                        isActive={isActive}
+                        workspaceId={activeWorkspaceId!}
+                        canManage={canManage}
+                        isGeneral={chat.name === "general"}
+                        onNavigate={onNavigate}
+                      />
+                    );
+                  })}
+                </div>
+
+                {/* Private Channels */}
+                {displayList.some(c => c.visibility === "PRIVATE") && (
+                  <div>
+                    <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2 mt-4">
+                      <span>Private Channels</span>
+                    </div>
+                    <div className="space-y-[2px]">
+                      {displayList.filter(c => c.visibility === "PRIVATE").map((chat) => {
+                        const isActive = chat.id === activeId;
+                        const canManage = workspaceDetails?.workspace.members?.some(
+                          m => m.userId === currentAuthUser?.id && (m.role === "OWNER" || m.role === "ADMIN")
+                        ) || false;
+                        
+                        return (
+                          <WorkspaceChannelItem 
+                            key={chat.id}
+                            channel={chat as any}
+                            isActive={isActive}
+                            workspaceId={activeWorkspaceId!}
+                            canManage={canManage}
+                            isGeneral={chat.name === "general"}
+                            onNavigate={onNavigate}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

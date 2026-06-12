@@ -1,12 +1,19 @@
-# Nexus
+# Nexus — Real-Time Messaging Platform
 
 ## Project Overview
 
-Nexus is a real-time messaging and collaboration platform.
+Nexus is a real-time messaging and collaboration platform (Slack/Discord-like).
 
-Phase 1 focuses on building a robust messaging foundation consisting of authentication, direct messaging, message persistence, read receipts, and user presence.
+| Phase | Status |
+|---|---|
+| **Phase 1 — Core Messaging** | ✅ **Complete** — Auth, DMs, real-time messaging, read receipts, presence, message edit/delete, invite system |
+| **Phase 2 — Workspaces & Channels** | ✅ **Complete** — Workspace CRUD, public/private channels, member list, role management, socket events |
+| **Phase 2 — Notifications** | 🟡 **Partial** — Client UI complete, server backend pending |
+| **Phase 3 — Profiles, Settings, UI/UX** | 📋 **Planned** — User profiles, settings pages, UI/UX refinements |
+| **Phase 3 — Reactions & Rich Text** | 📋 **Planned** — Emoji reactions, rich text formatting |
+| **v3 — Search, Files, Scaling** | 📋 **Future** — Full-text search, file uploads, infrastructure scaling |
 
-Subsequent phases extend this foundation with workspaces, public channels, private channels, reactions, and advanced collaboration features.
+**Branch:** `feat/workspaces` — ready for merge to staging.
 
 ## Tech Stack
 
@@ -28,8 +35,8 @@ Subsequent phases extend this foundation with workspaces, public channels, priva
 | Prisma ORM | Simplifies database interactions and schema migrations through a type-safe, intuitive client. |
 | **Infrastructure** | |
 | Upstash Redis | Manages user presence tracking for real-time online/offline status. |
-| GitHub Actions | Automates the CI/CD pipeline, ensuring consistent testing, linting, and deployment workflows. |
-| Render | Hosts the Next.js application and Express backend services on a fully managed cloud platform. |
+| Render | Hosts the Express.js backend server (manual web service). |
+| Vercel | Hosts the Next.js client application (git integration). |
 
 
 ## High-Level Architecture
@@ -87,8 +94,11 @@ Nexus follows a hybrid architecture, utilizing REST APIs for persistence and res
 | /messages | Message CRUD | Phase 1 |
 | /workspaces | Workspace management | Phase 2 |
 | /members | Membership management | Phase 2 |
-| /reactions | Emoji reactions | Phase 2 |
-| /notifications | Notification preferences | Phase 2 |
+| /reactions | Emoji reactions | Phase 3 (planned) |
+| /notifications | Notification preferences | 🟡 Client UI done, server pending |
+| /workspaces/:id/members | Member management | Phase 2 ✅ |
+| /workspaces/:id/channels/:channelId | Channel rename/delete | Phase 2 ✅ |
+| /workspaces/:id/members/:userId/role | Role management | Phase 2 ✅ |
 
 ### REST vs Socket.io Responsibilities
 
@@ -163,80 +173,110 @@ flowchart LR
 
 ### Socket.io Event Design
 
-The initial Phase 1 event contract supports real-time messaging, immediate read receipt updates, and presence by directly mapping user actions to socket broadcasts.
+Nexus uses **15+ socket events** across three room patterns: conversation rooms (`conversation:{id}`), user rooms (`user:{userId}`), and workspace rooms (`workspace:{workspaceId}`).
 
 **Client → Server:**
-* `conversation:join` - Subscribes to a conversation's real-time events.
-* `conversation:leave` - Unsubscribes from a conversation.
+* `message:send` — Send a message via WebSocket (primary path)
+* `workspace:join` — Join workspace room on navigation
 
 **Server → Client:**
-* `message:new` - Broadcasts a new message to conversation participants.
-* `message:read` - Broadcasts updated read receipts to conversation participants.
-* `user:online` - Broadcasts that a user has connected.
-* `user:offline` - Broadcasts that a user has disconnected.
+* `message:new` — New message broadcast to conversation room
+* `message:update` — Edited message broadcast to conversation room
+* `message:delete` — Soft-deleted message broadcast to room
+* `message:read` — Read receipt broadcast to conversation room
+* `user:online` — User came online (first socket opened)
+* `user:offline` — User went offline (all sockets closed)
+* `presence:initial` — Snapshot of all online users, sent on connect
+* `conversation:new` — New conversation created (DM or invite accepted)
+* `conversation:update` — Conversation metadata changed (latestMessage, updatedAt)
+* `channel:update` — Channel created/renamed/deleted (Phase 2)
+* `member:update` — Workspace role changed (Phase 2)
+* `workspace:update` — Workspace metadata changed (Phase 2)
+* `notification:new` — New notification (client handles, server not yet emitting)
 
-### Socket Room Authorization
-
-> 🔒 **Security Requirement:** Socket room access is protected by two independent layers. Both must pass before a client may join a room. This is not optional.
-
-**Layer 1 — Handshake JWT validation:**
-* Socket.io middleware validates the Supabase Auth JWT on every connection before any event handlers run.
-* Connections that fail JWT validation are rejected immediately with no room access.
-
-**Layer 2 — Membership check on `conversation:join`:**
-* Inside the `conversation:join` handler, the server queries the database to verify the authenticated user is an active `ConversationMember` of the requested conversation.
-* If the user is not a member, the server emits an `error` event (e.g., `{ code: 'FORBIDDEN', message: 'Not a member of this conversation' }`) and returns early without calling `socket.join()`.
-* This prevents a fully authenticated user from subscribing to a conversation they are not part of.
+For complete documentation including sequence diagrams, see `.docs/socket.md`.
 
 ### Socket Room Strategy
 
-* Each Conversation maps directly to a Socket.IO room.
-* Room naming convention should follow: `conversation:{conversationId}`
-  * Example: `conversation:123`
-* When users open a conversation, they join the corresponding room (subject to the two-layer authorization above).
-* New messages are emitted only to members of that room.
-* Read receipt events are emitted only to room participants.
-* This architecture naturally scales from Direct Messages to Channels because both are represented by the Conversation entity.
+Three room patterns:
+
+| Room Pattern | Format | Purpose |
+|---|---|---|
+| **Conversation Room** | `conversation:{id}` | Broadcasting messages, read receipts, metadata updates |
+| **User Room** | `user:{userId}` | Targeted notifications (new conversations, notifications) |
+| **Workspace Room** | `workspace:{workspaceId}` | Broadcasting channel/member/workspace updates (Phase 2) |
+
+**Room joining on connect:** The server auto-joins sockets to:
+- All conversations the user is a member of (from `ConversationMember`)
+- The user's personal room (`user:{userId}`)
+- All workspaces the user belongs to (from `WorkspaceMember`) — **fixed: private channels filtered by access**
+
+**Layer 2 authorization:** `verifyChannelAccess(userId, channelId)` checks:
+- DM → `ConversationMember` required
+- Public Channel → `WorkspaceMember` required
+- Private Channel → `ConversationMember` required
 
 **Example Flow:**
-1. User A joins `conversation:123`
-2. User B joins `conversation:123`
-3. User A sends POST request to `/conversations/123/messages`
-4. Server persists message
-5. Server emits `message:new` to room `conversation:123` via Socket.io
-6. Server returns 201 Created to User A
+1. User A connects → server queries memberships, joins conversation + workspace rooms
+2. User A sends `message:send` via WebSocket
+3. Server persists message via Prisma `$transaction` (atomic message + conversation update)
+4. Server emits `message:new` + `conversation:update` to conversation room
+5. Receiving clients update TanStack Query cache in-place (no refetch)
 
 ## Core Features
 
-### Phase 1: Core Foundation
+### ✅ Phase 1: Core Foundation — Complete
 
-*   **Authentication**: Secure user registration and login utilizing Supabase Auth, supporting email/password and OAuth providers. Session management ensures secure access to protected resources via Next.js Edge middleware. On every successful registration and login, the app upserts the user into the local `USER` table via a Supabase Auth webhook or on-login API request upsert to guarantee consistency. API routes verify JWTs locally using cached ES256 JWKS public keys.
+*   **Authentication**: ✅ Secure user registration and login utilizing Supabase Auth, supporting email/password and OAuth providers. Session management via Next.js Edge middleware. API routes verify JWTs locally using cached ES256 JWKS public keys (zero network overhead).
 
-*   **Direct Messages**: Private one-to-one conversations between users. This is the primary messaging unit for Phase 1, modeled using the Conversation entity.
+*   **Direct Messages**: ✅ Private one-to-one conversations. `dmPair` deduplication strategy prevents duplicate DMs. DB trigger enforces 2-member limit.
 
+*   **Real-time Messaging**: ✅ Instant delivery via Socket.io. Dual path: primary WebSocket (`message:send`) + REST fallback (`POST /messages`). 15+ events across conversation, user, and workspace rooms.
 
-*   **Real-time Messaging**: Instant delivery of messages and updates across connected clients using WebSockets (Socket.io). Ensures all users see the most current state immediately.
+*   **Message History**: ✅ Paginated via cursor-based UUIDv7 ordering. `id: "desc"` for monotonic-safe pagination. Soft-delete filtering.
 
+*   **Message Editing & Deletion**: ✅ `PATCH` / `DELETE` endpoints with socket broadcasts (`message:update`, `message:delete`). Race condition in `deleteMessage` fixed (transactional `nextLatestMessageId`). ⚠️ `editMessage` still has non-transactional reads.
 
-*   **Message History**: Persistent storage of messages allowing users to view past conversations. Messages are ordered by `id` ascending (UUIDv7), never by `created_at`.
+*   **Read Receipts**: ✅ Tracked using `ConversationMember.lastReadMessageId`. Broadcasts `message:read` via socket. ⚠️ Read receipts for channels not yet showing (partner undefined for non-DM conversations).
 
-*   **Read Receipts**: Tracked using `ConversationMember.lastReadMessageId` (a nullable FK to `Message.id`). This approach avoids storing a separate read record for every message and scales efficiently for direct-message conversations. The logic follows:
-    *   **Unread messages**: `message.id > lastReadMessageId` (relies on UUIDv7 monotonic ordering)
-    *   **Seen messages**: `message.id <= lastReadMessageId`
-    *   `created_at` is retained on the Message model for display purposes only (e.g., "sent 2 mins ago") and is never used for ordering or cursor comparison.
+*   **Presence System**: ✅ Redis-backed dual-write presence store with in-memory fallback. Multi-tab support via socket ID sets. `PresenceIndicator` component.
 
+*   **Invite System**: ✅ Secure deep-linked invites for USER, CONVERSATION, WORKSPACE types. 24h active link rotation, atomic consumption via raw SQL, polymorphic domain resolvers.
 
-*   **Presence System**: Real-time indicators showing whether a user is currently online or offline. This system is driven by Socket connections, Socket disconnections, heartbeats (if implemented), and Redis presence storage. Presence is not a primary REST API feature; if a presence endpoint is retained, it is strictly optional and secondary to the real-time system.
+### ✅ Phase 2: Workspaces & Channels — Complete
 
+*   **Workspaces**: ✅ Full CRUD with auto-generated slugs and auto-created `#general` channel.
+*   **Workspace Roles**: ✅ Role-based access control (OWNER, ADMIN, MEMBER). Promote/demote endpoints. `#general` is protected (cannot be deleted/renamed).
+*   **Public Channels**: ✅ Open communication spaces accessible to all workspace members. Auto-join on creation.
+*   **Private Channels**: ✅ Restricted to selected members. Socket room filtering prevents unauthorized access (security fix applied).
+*   **Channel Management**: ✅ Rename, delete with context menu. Delete requires OWNER/ADMIN role.
+*   **Member List Panel**: ✅ Discord-style right panel with presence indicators and role badges.
+*   **Socket Events**: ✅ `channel:update`, `member:update`, `workspace:update` with targeted cache updates.
+*   **Backward Compatibility**: ✅ Additive migration with idempotent SQL. `ConversationMember` PK kept as `@id` + `@@unique` to avoid destructive migration.
 
-### Phase 2: Collaboration Extensions
+### 🟡 Phase 2: In-App Notifications — Partial
 
-*   **Workspaces**: Isolated environments that encapsulate channels, direct messages, and members.
-*   **Workspace Roles**: Role-based access control (RBAC) defining permissions within a workspace (e.g., Owner, Admin, Member).
-*   **Public Channels**: Open communication spaces within a workspace accessible to all members.
-*   **Private Channels**: Restricted communication spaces for specific members within a workspace.
-*   **Message Reactions**: Users can append emoji reactions to messages to acknowledge or express emotion concisely.
-*   **Rich Text Formatting**: Supports advanced message formatting such as bold, italics, code blocks, and lists.
+*   **Client UI**: ✅ BellPopover with unread badge, notifications page, settings page, socket handler
+*   **Database**: ✅ `Notification` + `PushSubscription` tables exist (from migration)
+*   **Server Backend**: ❌ No notification module, no API endpoints, no server-side event emission
+
+### 📋 Phase 3: Next Up
+
+*   **Notifications (Server)**: Build notification module — controller, service, repository, routes. Wire invite/channel creation to create notification records. Emit `notification:new` via socket.
+*   **User Profiles**: Profile pages, avatar upload, status/message settings, display name editing.
+*   **Settings**: User preferences, notification toggles (server-side), theme persistence, account management.
+*   **UI/UX Improvements**: Responsive design polish, loading skeletons, empty states, transitions/animations, better mobile experience, message read receipt fix for channels.
+
+### 🚀 Future (v3)
+
+*   **Message Reactions**: Emoji reaction system with real-time updates
+*   **Rich Text Formatting**: Bold, italic, code blocks, lists via markdown rendering
+*   **Full-Text Search**: PostgreSQL-based search across messages, channels, users
+*   **File Uploads**: Drag-and-drop, image preview, file type icons
+*   **Typing Indicators**: `typing:start` / `typing:stop` events (constants defined, not implemented)
+*   **Channel Categories**: Grouping channels into categories (like Discord)
+*   **Infrastructure Scaling**: Redis Pub/Sub adapter for Socket.io horizontal scaling, BullMQ for background jobs
+*   **WebRTC**: Voice/video calls and screen sharing
 
 ## Core Database Schema
 
@@ -248,6 +288,9 @@ erDiagram
     USER ||--o{ CONVERSATION_MEMBER : has
     USER ||--o{ MESSAGE : sends
     USER ||--o{ REACTION : creates
+    USER ||--o{ NOTIFICATION : receives
+    USER ||--o{ PUSH_SUBSCRIPTION : has
+    USER ||--o{ WORKSPACE : owns
     
     WORKSPACE ||--o{ WORKSPACE_MEMBER : contains
     WORKSPACE ||--o{ CONVERSATION : contains
@@ -259,57 +302,88 @@ erDiagram
     MESSAGE ||--o{ CONVERSATION_MEMBER : "lastReadMessageId"
     
     USER {
-        uuid id PK
+        string id PK "UUIDv7"
         string email
-        string name
+        string username
         string avatar_url
         datetime created_at
     }
     
     WORKSPACE {
-        uuid id PK
+        string id PK "UUIDv7"
         string name
-        string slug
+        string slug UNIQUE
+        string owner_id FK
         datetime created_at
     }
     
     WORKSPACE_MEMBER {
-        uuid id PK
-        uuid workspace_id FK
-        uuid user_id FK
+        string workspace_id PK "composite"
+        string user_id PK "composite"
         enum role "OWNER, ADMIN, MEMBER"
+        datetime joined_at
     }
     
     CONVERSATION {
-        uuid id PK
-        uuid workspace_id FK "nullable for DMs"
+        string id PK "UUIDv7"
+        string workspace_id FK "nullable for DMs"
         string name "nullable for DMs"
         enum type "CHANNEL, DM"
-        boolean is_private
+        enum visibility "PUBLIC, PRIVATE"
+        string created_by FK "nullable"
         string dm_pair "nullable, DM only, unique"
+        string latest_message_id FK "nullable"
+        datetime created_at
+        datetime updated_at
     }
     
     CONVERSATION_MEMBER {
-        uuid id PK
-        uuid conversation_id FK
-        uuid user_id FK
-        string lastReadMessageId FK "nullable, FK to Message.id"
+        string id PK
+        string conversation_id FK
+        string user_id FK
+        string lastReadMessageId FK "nullable"
+        datetime joined_at
     }
     
     MESSAGE {
-        uuid id PK "UUIDv7"
+        string id PK "UUIDv7"
         string content
-        uuid conversation_id FK
-        uuid user_id FK
+        string conversation_id FK
+        string user_id FK
         boolean is_edited
+        datetime deleted_at "nullable, soft-delete"
         datetime created_at "display only"
+        datetime updated_at
+    }
+    
+    NOTIFICATION {
+        string id PK
+        string user_id FK
+        enum type "INVITE_RECEIVED, INVITE_ACCEPTED, MEMBER_JOINED, CHANNEL_CREATED"
+        string title
+        string body "nullable"
+        string link "nullable"
+        string image_url "nullable"
+        boolean read
+        json metadata "nullable"
+        datetime created_at
+    }
+    
+    PUSH_SUBSCRIPTION {
+        string id PK
+        string user_id FK
+        string endpoint UNIQUE
+        string p256dh
+        string auth
+        string user_agent "nullable"
+        datetime created_at
     }
     
     REACTION {
-        uuid id PK
+        string id PK
         string emoji
-        uuid message_id FK
-        uuid user_id FK
+        string message_id FK
+        string user_id FK
     }
 ```
 
@@ -332,14 +406,13 @@ The following entities are the Phase 1 implementation focus:
 
 #### Phase 2+ Entities
 
-Workspace, WorkspaceMember, and Reaction are Phase 2 entities built on top of the messaging foundation:
-*   **Workspace**: A logical container for a team or organization. Contains members and conversations.
-*   **WorkspaceMember**: A junction table defining a user's membership and role within a specific workspace.
-    *   *Index:* `@@index([workspaceId, userId])`
-*   **Reaction**: A junction table linking users, messages, and emoji reactions.
-    *   **Unique constraint:** `@@unique([messageId, userId, emoji])` — prevents a user from adding the same emoji reaction twice to the same message.
-    *   **Cascade delete:** The relation to `Message` uses `onDelete: Cascade`, so reactions are automatically deleted when their parent message is deleted.
-    *   **Toggle semantics:** Toggling a reaction must use a **lookup-then-delete** or **lookup-then-create** pattern, not `upsert`. The toggle logic needs to know which action was taken (add vs. remove) in order to broadcast the correct socket event (`reaction:added` vs. `reaction:removed`).
+| Entity | Status | Description |
+|---|---|---|
+| **Workspace** | ✅ **Implemented** | Logical container for a team. Contains members and channels. Full CRUD with slug, ownerId. |
+| **WorkspaceMember** | ✅ **Implemented** | Junction table for workspace membership with role (OWNER, ADMIN, MEMBER). `@@id([workspaceId, userId])` composite PK. |
+| **Notification** | 🟡 **Schema done, server pending** | Activity feed items for invites, joins, channel events. Created in workspace migration. |
+| **PushSubscription** | 🟡 **Schema done, implementation pending** | For push notifications (Phase 3). Table exists, no API. |
+| **Reaction** | 📋 **Planned** | Junction table for emoji reactions. Schema designed, not migrated. |
 
 ## Frontend Architecture
 
@@ -448,73 +521,89 @@ TTL:   24 hours (reset on every SADD)
 
 ## Development Roadmap
 
-### Week 1 Deliverable
+### ✅ Phase 1: Core Messaging — Complete
 
-**Authentication:**
-* Registration
-* Login
-* Session Management
-* User sync to Prisma `USER` table on registration and login (upsert)
-* Protected Routes
+All Phase 1 features are implemented, tested, and deployed:
 
-**Messaging:**
-* Direct Message Conversations (with duplicate DM prevention via unique partial index)
-* Message Persistence
-* Message History
-* Real-time Delivery via Socket.io (with JWT auth middleware on socket handshake)
-* Read Receipts
-* Presence Tracking (with Redis TTL and server-restart cleanup)
+| Feature | Status | Details |
+|---|---|---|
+| Authentication | ✅ | Email/password + GitHub OAuth. Supabase Auth with local ES256 JWKS verification. |
+| Direct Messages | ✅ | `dmPair` deduplication, DB trigger enforces 2-member limit. |
+| Real-time Messaging | ✅ | Socket.io with 15+ events, auth + rate limiting middleware. |
+| Message History | ✅ | Cursor-based pagination via UUIDv7 ordering. |
+| Message Edit/Delete | ✅ | REST endpoints + socket broadcasts. Race condition fixed. |
+| Read Receipts | ✅ | `lastReadMessageId` tracking + socket broadcast. |
+| Presence System | ✅ | Redis dual-write with in-memory fallback. Multi-tab support. |
+| Invite System | ✅ | Deep-linked invites, atomic consumption, 24h rotation. |
+| Rate Limiting | ✅ | REST + Socket.io rate limiters with configurable env vars. |
+| Environment Config | ✅ | All env vars centralized in `config/env.ts`. |
 
-**Demo Scenario:**
-1. User A logs in
-2. User B logs in
-3. User A sends a message
-4. User B receives it instantly
-5. User B opens the conversation
-6. Message becomes marked as seen
-7. Online/offline status updates in real time
+### ✅ Phase 2: Workspaces & Channels — Complete
 
-### Week 1 Scope Boundary
+| Feature | Status | Details |
+|---|---|---|
+| Workspace CRUD | ✅ | Create, list, view with auto-generated slugs. |
+| Role Management | ✅ | OWNER, ADMIN, MEMBER roles. Promote/demote endpoints. |
+| Public Channels | ✅ | Auto-join all members on creation. |
+| Private Channels | ✅ | Restricted to selected members. Socket filtering. |
+| Channel Management | ✅ | Rename, delete. Context menu. #general protection. |
+| Member List Panel | ✅ | Discord-style right panel with presence + role badges. |
+| Socket Events | ✅ | `channel:update`, `member:update`, `workspace:update`. |
+| Backward Compatible Migration | ✅ | Idempotent SQL, non-destructive schema changes. |
+| Security Fixes | ✅ | Private channel socket room filtering (2 fixes). |
 
-Week 1 intentionally excludes:
-* Workspaces
-* Public Channels
-* Private Channels
-* Reactions
-* Rich Text Formatting
+### 🟡 Phase 2: In-App Notifications — Client UI Done
 
-The objective of Week 1 is to validate the messaging foundation:
-* Authentication
-* Direct Messaging
-* Message Persistence
-* Real-time Delivery
-* Read Receipts
-* Presence Tracking
+| Component | Status |
+|---|---|
+| BellPopover (bell icon + dropdown) | ✅ |
+| Notifications page (`/notifications`) | ✅ |
+| Notification settings page | ✅ |
+| Socket handler (`notification:new`) | ✅ |
+| API client + React Query hooks | ✅ |
+| Notification + PushSubscription tables | ✅ (DB) |
+| Server-side notification module | ❌ |
+| Server-side `notification:new` emission | ❌ |
 
-All future collaboration features will be built on top of this validated messaging layer.
+### 📋 Phase 3: Next Up
 
-### Phase 1: Real-time Core
-*   **Foundation & Project Setup**: Initialize the project structure, configure tooling, and establish CI/CD.
-*   **Authentication & User Sync**: Implement Supabase Auth, user registration, login, and reliable upsert sync to the Prisma database.
-*   **Direct Messaging API**: Core REST endpoints for conversations and message history, with duplicate DM prevention enforced at the database level.
-*   **Socket.io Integration**: Real-time message delivery with JWT authentication middleware on the socket handshake.
-*   **Read Receipts**: Unread indicators and tracking via `lastReadMessageId` on `ConversationMember`.
-*   **Presence System**: Real-time online/offline status powered by Redis, with TTL on presence keys and cleanup on server restart.
+#### 1. Notifications (Server)
+- Build `server/src/modules/notifications/` with controller, service, repository, routes
+- Wire invite creation → `INVITE_RECEIVED` notification
+- Wire channel creation → `CHANNEL_CREATED` / `MEMBER_JOINED` notification
+- Wire invite acceptance → `INVITE_ACCEPTED` notification
+- Emit `notification:new` via socket to `user:{userId}` rooms
 
-### Phase 2: Collaboration Extensions
-*   **Workspaces & Memberships**: Workspace creation, switching, and role-based access control.
-*   **Channels**: Public and private channels using the unified Conversation model.
-*   **Reactions**: Emoji reaction system with real-time updates.
-*   **Rich Text**: Advanced message formatting capabilities.
+#### 2. User Profiles
+- Profile page (`/users/:id`) showing avatar, username, status, workspace memberships
+- Avatar upload (file upload infrastructure)
+- Status/message settings (online, away, busy, invisible)
+- Display name editing
 
-## Future Enhancements (v3)
+#### 3. Settings
+- User preferences page (`/settings/profile`)
+- Notification toggles (server-side, currently client-only)
+- Account management (email, password change)
+- Theme persistence (dark/light/system)
 
-*   **Deferred v1 Features**:
-    *   **Link Unfurling & File Uploads**: Rich media sharing in conversations.
-    *   **Search**: PostgreSQL-based full-text search system.
-    *   **Background Processing**: BullMQ for background jobs and Resend for transactional emails.
-    *   **Infrastructure Scaling**: Redis Pub/Sub for Socket.io scaling and general API caching.
-*   **Communication**: WebRTC voice and video calls, and screen sharing.
-*   **Analytics**: Workspace analytics, engagement dashboards, and usage metrics.
-*   **AI Features**: AI workspace assistant, message summaries, semantic search, and smart recommendations.
-*   **Infrastructure**: Microservices migration, event streaming, and distributed caching.
+#### 4. UI/UX Improvements
+- **Read receipts for channels** — Show "read by N" indicator for channel messages
+- **Loading skeletons** — Replace basic spinners with skeleton screens
+- **Empty states** — Better empty states with illustrations and CTAs
+- **Transitions & animations** — Page transitions, message enter/exit animations
+- **Mobile responsiveness** — Better touch targets, bottom sheets, swipe gestures
+- **Command palette** — Cmd+K search across workspaces, channels, users
+
+### 🚀 Future (v3+)
+
+| Feature | Description | Priority |
+|---|---|---|
+| Message Reactions | Emoji reaction system with real-time updates | Medium |
+| Rich Text Formatting | Markdown rendering for messages | Medium |
+| Typing Indicators | `typing:start` / `typing:stop` (constants defined) | Low |
+| Channel Categories | Discord-style channel grouping | Low |
+| Full-Text Search | PostgreSQL-based search across messages | Low |
+| File Uploads | Drag-and-drop, image preview | Low |
+| Redis Pub/Sub | Socket.io horizontal scaling | Low |
+| BullMQ | Background job processing | Low |
+| WebRTC | Voice/video calls | Very Low |
