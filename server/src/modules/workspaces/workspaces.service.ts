@@ -67,20 +67,29 @@ export const createWorkspace = async (userId: string, name: string, slug: string
 /**
  * Schema Invariant: Workspace Channels must ALWAYS have a valid workspaceId.
  */
-export const createChannel = async (workspaceId: string, name: string, userId: string) => {
-  const isMember = await isWorkspaceMember(userId, workspaceId);
+export const createChannel = async (slugOrId: string, name: string, userId: string) => {
+  console.log("createChannel called with:", { slugOrId, name, userId });
+  const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(slugOrId);
+  if (!workspace) throw new Error("Workspace not found");
+  console.log("Workspace found:", workspace.id, workspace.slug);
+
+  const isMember = await isWorkspaceMember(userId, workspace.id);
+  console.log("isMember check:", isMember, "for userId:", userId, "workspaceId:", workspace.id);
   if (!isMember) throw new Error("Forbidden: Not a member of this workspace");
 
   const channelId = uuidv7();
+  
+  // Add all workspace members to the new public channel
+  const memberUserIds = workspace.members.map((m) => ({ userId: m.userId }));
 
   return workspacesRepo.createChannel({
     id: channelId,
     type: "CHANNEL",
-    workspaceId,
+    workspaceId: workspace.id,
     isPrivate: false,
     name,
     members: {
-      create: [{ userId }],
+      create: memberUserIds,
     },
   });
 };

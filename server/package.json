@@ -4,7 +4,7 @@
   "description": "",
   "main": "src/server.ts",
   "scripts": {
-    "dev": "nodemon --exec tsx src/server.ts",
+    "dev": "nodemon -e ts,tsx,json --exec tsx src/server.ts",
     "build": "prisma generate && tsup",
     "start": "node dist/server.js"
   },

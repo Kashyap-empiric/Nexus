@@ -1,15 +1,15 @@
-# Nexus Database Schema (Phase 1)
+# Nexus Database Schema (Phase 1 + Workspaces)
 
-> **Last Updated:** 2026-06-11
+> **Last Updated:** 2026-06-12
 
-This document details the exact PostgreSQL database schema for Phase 1 of the Nexus project, implemented via Prisma.
+This document details the exact PostgreSQL database schema for the Nexus project, implemented via Prisma.
 
 ## Core Architectural Decisions
 
 1. **UUIDv7 Primary Keys**: All `id` fields across all tables are `String` storing UUIDv7 strings. This is critical for cursor-based pagination because UUIDv7 is time-ordered (monotonically sortable). We do **not** use `createdAt` for sorting.
    - *Requirement*: Always generate IDs in the application layer using the `uuidv7` npm package before calling `prisma.model.create()`. Do not use `crypto.randomUUID()` (UUIDv4) or Prisma's default `@default(uuid())` as they break sorting.
-   - ✅ **FIXED (2026-06-11)**: `getMessages` now uses `id: "desc"` for pagination ordering.
-2. **Supabase Auth Separation**: Supabase handles authentication and issues JWTs. The Prisma `User` table mirrors profile data through the Supabase `on_auth_user_created` database trigger in `server/prisma/SUPABASE_QUERIES.sql`, not through Express middleware upserts.
+   - ✅ **FIXED**: `getMessages` now uses `id: "desc"` for pagination ordering.
+2. **Supabase Auth Separation**: Supabase handles authentication and issues JWTs. The Prisma `User` table mirrors profile data through the Supabase `on_auth_user_created` database trigger, not through Express middleware upserts.
 
 ---
 
@@ -24,41 +24,44 @@ Stores the application profile for users authenticated via Supabase.
 | `email` | `String` | `@unique` | |
 | `username` | `String` | | Display name/handle synced from Supabase Auth metadata |
 | `avatarUrl` | `String?` | | Optional avatar image URL |
-| `createdAt` | `DateTime` | `@default(now())` | For display only |
-| `updatedAt` | `DateTime` | `@updatedAt` | Updated automatically by Prisma |
+| `createdAt` | `DateTime` | `@default(now())` | |
+| `updatedAt` | `DateTime` | `@updatedAt` | |
 
 **Relations:**
-- `conversations ConversationMember[]` — joined conversations
+- `conversations ConversationMember[]` — joined conversations/channels
 - `messages Message[]` — sent messages
+- `invites Invite[]` — created invites
+- `workspaces WorkspaceMember[]` — workspace memberships
+- `ownedWorkspaces Workspace[]` — workspaces owned by this user (via `"WorkspaceOwner"`)
 
 ### 2. `Conversation`
-Represents a chat container. In Phase 1, this only supports DMs, but the schema allows for future expansion to Channels.
+Represents a chat container. Supports both DMs and Channels within workspaces.
 
 | Field | Type | Attributes | Description |
 |---|---|---|---|
 | `id` | `String` | `@id` | UUIDv7 |
-| `type` | `ConversationType`| | Enum: `DM` or `CHANNEL` (Phase 1 uses only `DM`) |
-| `isPrivate` | `Boolean` | `@default(true)` | True for DMs |
-| `name` | `String?` | | Nullable for DMs, used for Channels later |
-| `workspaceId` | `String?` | | Nullable in Phase 1 |
-| `dmPair` | `String?` | `@unique` | A sorted combination of the two user IDs (e.g., `userA_userB`). Enforces exactly one DM conversation between any pair of users at the database level. |
-| `latestMessageId` | `String?` | | Foreign key to the latest Message (used for sidebar preview). Updated atomically via Prisma `$transaction`. |
-| `createdAt` | `DateTime` | `@default(now())` | For display only |
-| `updatedAt` | `DateTime` | `@updatedAt` | Updated atomically on each new message via Prisma `$transaction` (used for sidebar ordering) |
+| `type` | `ConversationType`| | Enum: `DM` or `CHANNEL` |
+| `isPrivate` | `Boolean` | `@default(true)` | True for DMs and private channels |
+| `name` | `String?` | | Nullable for DMs, channel name for channels |
+| `workspaceId` | `String?` | | FK to Workspace for channels, null for DMs |
+| `dmPair` | `String?` | `@unique` | Sorted combination of two user IDs (e.g., `userA_userB`). Enforces exactly one DM between any pair. |
+| `latestMessageId` | `String?` | | FK to the latest Message (sidebar preview). Updated atomically via Prisma `$transaction`. |
+| `createdAt` | `DateTime` | `@default(now())` | |
+| `updatedAt` | `DateTime` | `@updatedAt` | Updated atomically on each new message (sidebar ordering) |
 
 **Relations:**
 - `members ConversationMember[]` (cascade delete)
 - `messages Message[]` (cascade delete)
+- `workspace Workspace?` — parent workspace for channels (cascade delete)
 
 ### 3. `ConversationMember`
-The junction table linking Users to Conversations. It also tracks the user's unread state for that specific conversation.
+Junction table linking Users to Conversations. Tracks unread state and read receipts.
 
 | Field | Type | Attributes | Description |
 |---|---|---|---|
-| `id` | `String` | `@id` | UUIDv7 |
-| `conversationId` | `String` | | Foreign key to `Conversation` |
-| `userId` | `String` | | Foreign key to `User` |
-| `lastReadMessageId`| `String?` | | Foreign key to `Message.id`. Null if the user hasn't read any messages. Used to calculate the unread badge and read receipt ticks. |
+| `conversationId` | `String` | | FK to `Conversation` |
+| `userId` | `String` | | FK to `User` |
+| `lastReadMessageId`| `String?` | | FK to `Message.id`. Null if user hasn't read anything. Used for unread badges and read receipts. |
 | `joinedAt` | `DateTime` | `@default(now())` | |
 
 **Relations:**
@@ -67,8 +70,8 @@ The junction table linking Users to Conversations. It also tracks the user's unr
 - `lastReadMessage Message?` via `"ConversationMemberLastRead"`
 
 **Constraints & Indexes:**
-- `@@unique([conversationId, userId])`: A user can only join a conversation once.
-- `@@index([userId, conversationId])`: Critical for fetching the user's sidebar/inbox list efficiently.
+- `@@id([conversationId, userId])`: Composite primary key
+- `@@index([userId, conversationId])`: For fetching user's inbox/sidebar list
 
 ### 4. `Message`
 An individual chat message sent within a Conversation.
@@ -77,20 +80,21 @@ An individual chat message sent within a Conversation.
 |---|---|---|---|
 | `id` | `String` | `@id` | UUIDv7. Used as the sorting key and cursor for pagination. |
 | `content` | `String` | | The message text |
-| `conversationId` | `String` | | Foreign key to `Conversation` |
-| `userId` | `String` | | Foreign key to `User` (the sender) |
-| `isEdited` | `Boolean` | `@default(false)` | Flag for edited messages. Set to `true` by `editMessage` service. |
-| `deletedAt` | `DateTime?` | | Soft-delete field. When set, the message is considered deleted. ✅ Schema + migration + REST endpoint all complete. |
-| `createdAt` | `DateTime` | `@default(now())` | Displayed in UI ("sent 2 mins ago"). ✅ `getMessages` uses `id: "desc"` ordering (UUIDv7). |
-| `updatedAt` | `DateTime` | `@updatedAt` | Updated automatically by Prisma |
+| `conversationId` | `String` | | FK to `Conversation` |
+| `userId` | `String` | | FK to `User` (sender) |
+| `isEdited` | `Boolean` | `@default(false)` | Flag for edited messages |
+| `deletedAt` | `DateTime?` | | Soft-delete field. When set, message is considered deleted. |
+| `createdAt` | `DateTime` | `@default(now())` | Displayed in UI |
+| `updatedAt` | `DateTime` | `@updatedAt` | |
 
 **Relations:**
 - `conversation Conversation` (cascade delete)
 - `user User` (cascade delete)
 - `readByMembers ConversationMember[]` via `"ConversationMemberLastRead"`
+- `latestIn Conversation[]` via `"ConversationLatestMessage"`
 
 **Constraints & Indexes:**
-- `@@index([conversationId, id])`: Critical for cursor-based pagination. Queries will filter by `conversationId` and order/seek by `id`.
+- `@@index([conversationId, id])`: Critical for cursor-based pagination
 
 ### 5. `Invite`
 Stores secure invite links for various entity types.
@@ -99,62 +103,111 @@ Stores secure invite links for various entity types.
 |---|---|---|---|
 | `id` | `String` | `@id` | UUIDv7 |
 | `type` | `InviteType` | | Enum: `USER`, `CONVERSATION`, `WORKSPACE`, `CHANNEL` |
-| `entityId` | `String` | | The ID of the entity being invited to (user ID, conversation ID, etc.) |
+| `entityId` | `String` | | ID of the entity being invited to |
 | `token` | `String` | `@unique` | Cryptographically random hex string (32 bytes) |
-| `maxUses` | `Int?` | | Null = unlimited. Default in seed: 1. |
-| `usedCount` | `Int` | `@default(0)` | Atomic increment via raw SQL `UPDATE ... SET "usedCount" = "usedCount" + 1` |
-| `expiresAt` | `DateTime?` | | Default: 7 days from creation |
+| `maxUses` | `Int?` | | Null = unlimited |
+| `usedCount` | `Int` | `@default(0)` | Atomic increment via raw SQL |
+| `expiresAt` | `DateTime?` | | Default: 7 days |
 | `revoked` | `Boolean` | `@default(false)` | Soft-revocation flag |
 | `createdBy` | `String` | | User ID of the creator |
-| `lastUsedAt` | `DateTime?` | | Timestamp of last consumption |
+| `lastUsedAt` | `DateTime?` | | |
+| `createdAt` | `DateTime` | `@default(now())` | |
+
+**Indexes:**
+- `@@index([token])`
+- `@@index([type, entityId])`
+
+### 6. `Workspace` — NEW
+A team workspace that contains channels and members.
+
+| Field | Type | Attributes | Description |
+|---|---|---|---|
+| `id` | `String` | `@id` | UUIDv7 |
+| `name` | `String` | | Display name |
+| `slug` | `String` | `@unique` | URL-friendly identifier (used in routing) |
+| `imageUrl` | `String?` | | Optional workspace avatar |
+| `ownerId` | `String` | | FK to User (workspace creator) |
 | `createdAt` | `DateTime` | `@default(now())` | |
 | `updatedAt` | `DateTime` | `@updatedAt` | |
+
+**Relations:**
+- `owner User` via `"WorkspaceOwner"` (cascade delete)
+- `members WorkspaceMember[]` — workspace memberships
+- `channels Conversation[]` — channels within this workspace (type=CHANNEL)
+
+### 7. `WorkspaceMember` — NEW
+Junction table for workspace membership.
+
+| Field | Type | Attributes | Description |
+|---|---|---|---|
+| `workspaceId` | `String` | | FK to `Workspace` |
+| `userId` | `String` | | FK to `User` |
+| `role` | `WorkspaceRole` | `@default(MEMBER)` | Enum: `OWNER`, `ADMIN`, `MEMBER` |
+| `joinedAt` | `DateTime` | `@default(now())` | |
+
+**Relations:**
+- `workspace Workspace` (cascade delete)
+- `user User` (cascade delete)
+
+**Constraints & Indexes:**
+- `@@id([workspaceId, userId])`: Composite primary key
+- `@@index([userId])`:
+
+---
+
+## Enums
+
+### `ConversationType`
+```prisma
+enum ConversationType {
+  DM
+  CHANNEL
+}
+```
+
+### `InviteType`
+```prisma
+enum InviteType {
+  USER
+  CONVERSATION
+  WORKSPACE
+  CHANNEL
+}
+```
+
+### `WorkspaceRole`
+```prisma
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+```
 
 ---
 
 ## Detailed Logic Handlers
 
 ### The `dmPair` Strategy
-To prevent duplicate DMs between the same two users. See full description in `public-docs/modules/conversations.md`.
+Prevents duplicate DMs between the same two users. A sorted, concatenated pair (`userA_userB`) is used as a unique constraint. `createOrGetDM` attempts creation first, catches `P2002` on race conditions, and falls back to returning the existing conversation.
 
 ### Pagination Strategy
-Because we use UUIDv7, `Message.id` is sequentially generated based on a timestamp.
-API query for history: `GET /conversations/:id/messages?cursor=<messageId>&limit=50`
-
-> ✅ **FIXED (2026-06-11)**: Now uses `id: "desc"` ordering (UUIDv7) for cursor-based pagination.
-
-### Message Editing Logic
-The `editMessage` service in `messages.service.ts` enforces:
-1. Message must exist (`getMessageById`)
-2. Message must not have `deletedAt` set (cannot edit deleted message)
-3. `userId` must match message sender (403 Forbidden otherwise)
-4. Content is trimmed before update
-5. Sets `isEdited: true` on update
-6. ✅ Broadcasts via socket (`message:update` + `conversation:update` if editing latest message)
-
-### Soft-Delete Architecture
-- `deletedAt: DateTime?` on the Message model
-- ✅ REST endpoint: `DELETE /conversations/:id/messages/:messageId`
-- ✅ Socket broadcast: `message:delete` + `conversation:update` (if deleting latest message)
-- ✅ **FIXED (2026-06-11)**: `getMessages` now filters `deletedAt: null` — soft-deleted messages are excluded.
-- The `editMessage` service correctly rejects editing deleted messages
+UUIDv7 `Message.id` is time-ordered. API query: `GET /conversations/:id/messages?cursor=<messageId>&limit=50`. Uses `id: "desc"` ordering.
 
 ### Message Creation Transaction
-`createMessage` uses a Prisma `$transaction` to atomically:
+Uses a Prisma `$transaction` to atomically:
 1. Create the message record
 2. Update the conversation's `updatedAt` and `latestMessageId`
-3. Update the sender's `lastReadMessageId` on their `ConversationMember`
-
-This ensures the sidebar always shows the most recently active conversation at the top and the sender's sent messages are automatically marked as read.
+3. Upsert the sender's `lastReadMessageId` on their `ConversationMember`
 
 ### Invite System
-- **Active Link Rotation**: If an existing active invite (created by the same user within 24 hours) exists, it is reused. Older ones are revoked.
-- **Atomic Consumption**: Raw SQL `UPDATE "Invite" SET "usedCount" = "usedCount" + 1` with guard conditions, preventing concurrency-based over-consumption.
-- **Domain Resolvers**: Polymorphic resolvers handle different invite types:
-  - `userResolver.ts` → calls `createOrGetDM`, returns `CONVERSATION_NEW` domain event
-  - `conversationResolver.ts` → adds user to conversation members, returns `CONVERSATION_UPDATE` domain event
-  - `workspaceResolver.ts` / `channelResolver.ts` → throw `NOT_IMPLEMENTED` (Phase 2)
+- **Active Link Rotation**: Existing active invite (same creator + same entity within 24h) is reused
+- **Atomic Consumption**: Raw SQL `UPDATE "Invite" SET "usedCount" = "usedCount" + 1` with guard conditions
+- **Domain Resolvers**: Polymorphic resolvers for USER, CONVERSATION, WORKSPACE types
+- WORKSPACE and CHANNEL resolvers have full implementations
 
----
+### Workspace Channel Creation
+When a new public channel is created, all workspace members are automatically added as `ConversationMember` records, ensuring everyone has access to the channel.
 
-> **Note:** Documentation updated on 2026-06-11 to include Invite model, update message edit/delete status to ✅, and add `latestMessageId` field.
+### Channel Access Control
+Non-private channels in a workspace are accessible to any workspace member (checked via `checkConversationAccess` in `auth.repository.ts`). Private channels require explicit membership.

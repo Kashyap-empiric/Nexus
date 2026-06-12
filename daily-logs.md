@@ -208,3 +208,11 @@
 **Learning**
   One new thing that you learned today: Moving the `nextLatestMessageId` computation inside the Prisma `$transaction` callback using `tx.message.findFirst` eliminates the critical race condition window where concurrent deletions could corrupt the conversation's `latestMessageId`. The transaction's snapshot isolation ensures consistent reads within the same transaction boundary.
 
+---
+
+## 12th June 2026
+
+- **Project analysis & planning**: Analyzed the full codebase and created `PLAN.md` with prioritized issues (message read receipts, member list, notification system, channel public/private split) and a detailed implementation plan.
+- **Documentation update**: Updated all `.agents/` files (`01-project-context`, `03-database-schema`, `06-phase-2-plan`, `02-architecture-guidelines`) to reflect the current state of workspace implementation on the `feat/workspaces` branch.
+- **Module documentation**: Created `workspaces.md` module doc, updated `DOCUMENTATION.md`, `file-structure.md`, `chat.md`, `conversations.md`, and `messages.md` to reflect current module boundaries and workspace/channel architecture.
+
