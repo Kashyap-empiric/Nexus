@@ -1,0 +1,9 @@
+# TypeScript Strict Typing Rule
+
+**CRITICAL INSTRUCTION:** NEVER use the `any` type.
+
+Whenever writing or modifying code in this repository:
+1. Always define proper TypeScript types, interfaces, or type aliases for all variables, parameters, and return types.
+2. Do NOT use `any`. If a type is truly unknown, use `unknown` and perform appropriate type narrowing before using it.
+3. If an external library lacks types, define custom declaration files or use generics rather than falling back to `any`.
+4. Strive for 100% type safety.
