@@ -14,8 +14,6 @@ export const resolveInvite = async (req: AuthRequest, res: Response): Promise<an
 
   try {
     const { redirectUrl, events } = await resolveInviteService({ token, userId });
-
-    // STEP 3 — POST-COMMIT SOCKET EMISSION (Domain Event Dispatching)
     if (events && events.length > 0) {
       try {
         events.forEach((event) => {

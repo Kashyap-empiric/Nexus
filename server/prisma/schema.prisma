@@ -46,6 +46,7 @@ model Conversation {
 }
 
 model ConversationMember {
+  id                String   @default(cuid())
   conversationId    String
   userId            String
   lastReadMessageId String?
@@ -125,6 +126,7 @@ model Workspace {
 }
 
 model WorkspaceMember {
+  id          String        @default(cuid())
   workspaceId String
   userId      String
   role        WorkspaceRole @default(MEMBER)

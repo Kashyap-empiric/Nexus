@@ -6,8 +6,7 @@ export const isWorkspaceMember = async (userId: string, workspaceId: string): Pr
 };
 
 export const verifyConversationMembership = async (userId: string, conversationId: string): Promise<boolean> => {
-  const member = await authRepo.findConversationMember(userId, conversationId);
-  return !!member;
+  return authRepo.checkConversationAccess(userId, conversationId);
 };
 
 export const getUserConversationMemberships = async (userId: string) => {
