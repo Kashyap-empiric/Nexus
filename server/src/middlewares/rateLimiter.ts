@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { ENV } from "@/config/env.js";
 
 type RateLimitOptions = {
   windowMs: number;
@@ -42,13 +43,13 @@ const createRateLimiter = ({ windowMs, max, message }: RateLimitOptions) => {
 };
 
 export const generalLimiter = createRateLimiter({
-  windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS ?? 15 * 60 * 1000),
-  max: Number(process.env.RATE_LIMIT_MAX ?? 1000),
+  windowMs: ENV.RATE_LIMIT_WINDOW_MS,
+  max: ENV.RATE_LIMIT_MAX,
   message: "Too many requests. Please try again later.",
 });
 
 export const messageLimiter = createRateLimiter({
-  windowMs: Number(process.env.MESSAGE_RATE_LIMIT_WINDOW_MS ?? 60 * 1000),
-  max: Number(process.env.MESSAGE_RATE_LIMIT_MAX ?? 20),
+  windowMs: ENV.MESSAGE_RATE_LIMIT_WINDOW_MS,
+  max: ENV.MESSAGE_RATE_LIMIT_MAX,
   message: "You are sending messages too quickly.",
 });
