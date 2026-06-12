@@ -52,6 +52,9 @@ export const getDMByUsers = async (userIdA: string, userIdB: string) => {
     return conversationsRepo.findDMByPair(dmPair);
 }
 
+/**
+ * Schema Invariant: DMs must ALWAYS have a null workspaceId.
+ */
 export const createDM = async (userIdA: string, userIdB: string) => {
     const dmPair = buildDmPair(userIdA, userIdB);
     return conversationsRepo.createDM({
@@ -62,8 +65,8 @@ export const createDM = async (userIdA: string, userIdB: string) => {
         dmPair,
         members: {
             create: [
-                { id: uuidv7(), userId: userIdA },
-                { id: uuidv7(), userId: userIdB },
+                { userId: userIdA },
+                { userId: userIdB },
             ]
         }
     });

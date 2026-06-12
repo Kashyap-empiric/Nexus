@@ -6,6 +6,9 @@ import { ENV } from "../../config/env.js";
 import { resolvers } from "./resolvers/index.js";
 import * as invitesRepo from "./invites.repository.js";
 import * as conversationsRepo from "../conversations/conversations.repository.js";
+import * as workspacesService from "../workspaces/workspaces.service.js";
+
+import { isWorkspaceMember } from "@/shared/permissions.js";
 
 export const resolveInviteService = async ({ token, userId }: ResolveInviteParams): Promise<ResolveInviteResult> => {
   let redirectUrl = "";
@@ -60,6 +63,10 @@ export const generateInviteService = async ({ type, entityId, userId }: Generate
     if (!conversation) throw new Error("CONVERSATION_NOT_FOUND");
     if (conversation.type === "DM") throw new Error("UNAUTHORIZED");
     if (conversation.members.length === 0) throw new Error("UNAUTHORIZED");
+  } else if (type === "WORKSPACE") {
+    if (!finalEntityId) throw new Error("ENTITY_ID_REQUIRED");
+    const isMember = await isWorkspaceMember(userId, finalEntityId).catch(() => false);
+    if (!isMember) throw new Error("UNAUTHORIZED");
   } else if (type === "USER") {
     finalEntityId = userId;
   } else {

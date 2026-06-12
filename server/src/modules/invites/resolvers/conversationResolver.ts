@@ -20,7 +20,6 @@ export const conversationInviteResolver: InviteResolver = {
 
       await tx.conversationMember.create({
         data: {
-          id: uuidv7(),
           userId: actorId,
           conversationId: invite.entityId,
         }

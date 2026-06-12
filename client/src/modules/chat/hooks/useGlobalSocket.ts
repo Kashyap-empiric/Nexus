@@ -2,9 +2,9 @@
 
 import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { SOCKET_EVENTS } from "@/shared/socket-events";
-import { useSocketEvents } from "@/shared/hooks/useSocketEvent";
-import { createChatEventRouter } from "../realtime";
+import { SOCKET_EVENTS } from "@/socket/socket-events";
+import { useSocketEvents } from "@/socket/useSocketEvent";
+import { createChatEventRouter } from "@/socket/eventRouter";
 
 export const useGlobalSocket = () => {
   const queryClient = useQueryClient();

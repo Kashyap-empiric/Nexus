@@ -94,7 +94,7 @@ export const findChannelByWorkspaceId = async (workspaceId: string) => {
         },
       },
     },
-    orderBy: { updatedAt: "desc" },
+    orderBy: { createdAt: "asc" },
   });
 };
 
@@ -138,7 +138,7 @@ export const createDM = async (data: {
   isPrivate: true;
   dmPair: string;
   members: {
-    create: Array<{ id: string; userId: string }>;
+    create: Array<{ userId: string }>;
   };
 }) => {
   return prisma.conversation.create({
