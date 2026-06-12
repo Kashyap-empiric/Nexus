@@ -1,61 +1,16 @@
 import { uuidv7 } from "uuidv7"
-import { prisma } from "@/lib/db"
-import { getIO } from "@/socket/socket.js";
-import { SOCKET_EVENTS } from "@/shared/socket-events.js";
+import * as conversationsRepo from "./conversations.repository.js";
 
 const buildDmPair = (userIdA: string, userIdB: string) => {
     return [userIdA, userIdB].sort().join(":");
 };
 
 export const getConversationById = async (conversationId: string) => {
-    return prisma.conversation.findUnique({
-        where: {
-            id: conversationId
-        },
-        include: {
-            members: {
-                include: {
-                    user: {
-                        select: {
-                            id: true, username: true, avatarUrl: true
-                        }
-                    }
-                }
-            }
-        }
-    })
+    return conversationsRepo.findById(conversationId);
 }
 
 export const getUserConversations = async (userId: string) => {
-    const conversations = await prisma.conversation.findMany({
-        where: { members: { some: { userId } } },
-        include: {
-            members: {
-                include: {
-                    user: {
-                        select: {
-                            id: true, username: true, avatarUrl: true
-                        }
-                    }
-                }
-            },
-            latestMessage: {
-                select: { 
-                    id: true,
-                    userId: true,
-                    content: true,
-                    deletedAt: true,
-                    createdAt: true,
-                    user: {
-                        select: {
-                            username: true
-                        }
-                    }
-                }
-            },
-        },
-        orderBy: { updatedAt: 'desc' }
-    });
+    const conversations = await conversationsRepo.findDMsByUserId(userId);
 
     // 1. Identify unread candidates
     const conversationsWithState = conversations.map(conv => {
@@ -74,19 +29,11 @@ export const getUserConversations = async (userId: string) => {
     // 2. Only execute count queries for that subset
     const unreadCounts = await Promise.all(
         unreadCandidates.map(async ({ conv, member }) => {
-            const whereClause: any = {
-                conversationId: conv.id,
-                userId: { not: userId },
-            };
-
-            if (member?.lastReadMessageId) {
-                whereClause.id = { gt: member.lastReadMessageId };
-            }
-
-            const unreadCount = await prisma.message.count({
-                where: whereClause
-            });
-
+            const unreadCount = await conversationsRepo.countUnreadMessages(
+                conv.id,
+                userId,
+                member?.lastReadMessageId
+            );
             return { conversationId: conv.id, unreadCount };
         })
     );
@@ -102,49 +49,24 @@ export const getUserConversations = async (userId: string) => {
 
 export const getDMByUsers = async (userIdA: string, userIdB: string) => {
     const dmPair = buildDmPair(userIdA, userIdB);
-    return prisma.conversation.findUnique({
-        where: {
-            dmPair,
-        },
-        include: {
-            members: {
-                include: {
-                    user: true
-                }
-            }
-        }
-    })
+    return conversationsRepo.findDMByPair(dmPair);
 }
 
 export const createDM = async (userIdA: string, userIdB: string) => {
     const dmPair = buildDmPair(userIdA, userIdB);
-    return prisma.conversation.create({
-        data: {
-            id: uuidv7(),
-            type: "DM",
-            isPrivate: true,
-            dmPair,
-            members: {
-                create: [
-                    {
-                        id: uuidv7(),
-                        userId: userIdA,
-                    },
-                    {
-                        id: uuidv7(),
-                        userId: userIdB,
-                    },
-                ]
-            }
-        },
-        include: {
-            members: {
-                include: {
-                    user: true,
-                }
-            }
+    return conversationsRepo.createDM({
+        id: uuidv7(),
+        type: "DM",
+        workspaceId: null,
+        isPrivate: true,
+        dmPair,
+        members: {
+            create: [
+                { id: uuidv7(), userId: userIdA },
+                { id: uuidv7(), userId: userIdB },
+            ]
         }
-    })
+    });
 }
 
 export const createOrGetDM = async (userIdA: string, userIdB: string) => {
@@ -170,17 +92,5 @@ export const createOrGetDM = async (userIdA: string, userIdB: string) => {
 }
 
 export const updateLastReadMessage = async (conversationId: string, userId: string, messageId: string) => {
-    const member = await prisma.conversationMember.update({
-        where: {
-            conversationId_userId: {
-                conversationId,
-                userId
-            }
-        },
-        data: {
-            lastReadMessageId: messageId
-        }
-    });
-
-    return member;
+    return conversationsRepo.updateLastReadMessage(conversationId, userId, messageId);
 };

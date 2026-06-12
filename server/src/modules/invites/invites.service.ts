@@ -1,21 +1,20 @@
-import { prisma } from "../../lib/db.js";
 import { Prisma } from "@prisma/client";
 import { type ResolveInviteParams, type ResolveInviteResult, type GenerateInviteParams, type GenerateInviteResult, type DomainEvent } from "./invites.types.js";
 import { InviteType } from "@prisma/client";
 import crypto from "crypto";
 import { ENV } from "../../config/env.js";
 import { resolvers } from "./resolvers/index.js";
+import * as invitesRepo from "./invites.repository.js";
+import * as conversationsRepo from "../conversations/conversations.repository.js";
 
 export const resolveInviteService = async ({ token, userId }: ResolveInviteParams): Promise<ResolveInviteResult> => {
   let redirectUrl = "";
   let domainEvents: DomainEvent[] = [];
 
   try {
-    await prisma.$transaction(async (tx) => {
+    await prismaTransaction(async (tx) => {
       // 1. Fetch Invite
-      const invite = await tx.invite.findUnique({
-        where: { token }
-      });
+      const invite = await invitesRepo.findInviteByTokenInTransaction(tx, token);
 
       if (!invite) throw new Error("INVALID_OR_EXPIRED_INVITE");
 
@@ -34,14 +33,7 @@ export const resolveInviteService = async ({ token, userId }: ResolveInviteParam
 
       // 4. Consume Invite Atomically via Raw SQL (Guards against concurrency)
       if (result.consumed !== false) {
-        const updateResult = await tx.$executeRaw`
-          UPDATE "Invite"
-          SET "usedCount" = "usedCount" + 1, "lastUsedAt" = NOW()
-          WHERE "id" = ${invite.id}
-            AND "revoked" = false
-            AND ("expiresAt" IS NULL OR "expiresAt" > NOW())
-            AND ("maxUses" IS NULL OR "usedCount" < "maxUses")
-        `;
+        const updateResult = await invitesRepo.consumeInviteAtomicInTransaction(tx, invite.id);
 
         if (updateResult === 0) {
           throw new Error("INVALID_OR_EXPIRED_INVITE");
@@ -64,69 +56,45 @@ export const generateInviteService = async ({ type, entityId, userId }: Generate
 
   if (type === "CONVERSATION") {
     if (!finalEntityId) throw new Error("ENTITY_ID_REQUIRED");
-    const conversation = await prisma.conversation.findUnique({
-      where: { id: finalEntityId },
-      include: { members: { where: { userId } } }
-    });
+    const conversation = await conversationsRepo.findConversationByIdForInvite(finalEntityId, userId);
     if (!conversation) throw new Error("CONVERSATION_NOT_FOUND");
-    if (conversation.type === "DM") throw new Error("UNAUTHORIZED"); // Cannot generate group invite for a DM
+    if (conversation.type === "DM") throw new Error("UNAUTHORIZED");
     if (conversation.members.length === 0) throw new Error("UNAUTHORIZED");
   } else if (type === "USER") {
-    // For USER invites, the entity is implicitly the inviter
     finalEntityId = userId;
   } else {
-    // Other types can be implemented later
     if (!finalEntityId) throw new Error("ENTITY_ID_REQUIRED");
   }
 
   // 2. Active Invite Rotation Policy (24h window)
-  const existingActive = await prisma.invite.findFirst({
-    where: {
-      type,
-      entityId: finalEntityId as string,
-      createdBy: userId,
-      revoked: false,
-      OR: [
-        { expiresAt: null },
-        { expiresAt: { gt: new Date() } }
-      ]
-    },
-    orderBy: { createdAt: 'desc' }
-  });
+  const existingActive = await invitesRepo.findExistingActiveInvite(type, finalEntityId as string, userId);
 
   if (existingActive) {
     const ageInMs = Date.now() - existingActive.createdAt.getTime();
     const ageInHours = ageInMs / (1000 * 60 * 60);
 
     if (ageInHours < 24) {
-      // Reuse existing invite
       return {
         invitePath: `/invite?token=${existingActive.token}`,
         token: existingActive.token,
         expiresAt: existingActive.expiresAt?.toISOString() || null,
       };
     } else {
-      // Revoke older invite and proceed to create a new one
-      await prisma.invite.update({
-        where: { id: existingActive.id },
-        data: { revoked: true }
-      });
+      await invitesRepo.revokeInvite(existingActive.id);
     }
   }
 
   // 3. Generation
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
+  expiresAt.setDate(expiresAt.getDate() + 7);
 
-  const invite = await prisma.invite.create({
-    data: {
-      type,
-      entityId: finalEntityId as string,
-      token,
-      createdBy: userId,
-      expiresAt,
-    }
+  const invite = await invitesRepo.createInvite({
+    type,
+    entityId: finalEntityId as string,
+    token,
+    createdBy: userId,
+    expiresAt,
   });
 
   const invitePath = `/invite?token=${token}`;
@@ -141,28 +109,19 @@ export const generateInviteService = async ({ type, entityId, userId }: Generate
 // --- Revocation & Cleanup Helpers ---
 
 export const revokeInvite = async (inviteId: string) => {
-  return prisma.invite.update({
-    where: { id: inviteId },
-    data: { revoked: true }
-  });
+  return invitesRepo.revokeInvite(inviteId);
 };
 
 export const revokeAllInvitesForEntity = async (type: InviteType, entityId: string) => {
-  return prisma.invite.updateMany({
-    where: { type, entityId },
-    data: { revoked: true }
-  });
+  return invitesRepo.revokeAllInvitesForEntity(type, entityId);
 };
 
 export const revokeAllInvitesCreatedByUser = async (userId: string) => {
-  return prisma.invite.updateMany({
-    where: { createdBy: userId },
-    data: { revoked: true }
-  });
+  return invitesRepo.revokeAllInvitesCreatedByUser(userId);
 };
 
 export const deleteInvitesForEntity = async (tx: Prisma.TransactionClient, type: InviteType, entityId: string) => {
-  return tx.invite.deleteMany({
-    where: { type, entityId }
-  });
+  return invitesRepo.deleteInvitesForEntityInTransaction(tx, type, entityId);
 };
+
+import { runTransaction as prismaTransaction } from "@/lib/transaction.js";
