@@ -1,4 +1,5 @@
-import { SocketProvider } from "@/shared/providers/socket-provider";
+import { SocketProvider } from "@/socket/socketProvider";
+import { AppLayoutShell } from "@/shared/components/layout/AppLayoutShell";
 
 export default function ProtectedLayout({
   children,
@@ -8,7 +9,9 @@ export default function ProtectedLayout({
   return (
     <>
       <SocketProvider />
-      {children}
+      <AppLayoutShell>
+        {children}
+      </AppLayoutShell>
     </>
   );
 }

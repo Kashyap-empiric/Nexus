@@ -1,4 +1,4 @@
-import type { Message } from "../types/message";
+import type { Message } from "@/modules/messages/types/message";
 
 export interface MessageGroup {
   id: string;

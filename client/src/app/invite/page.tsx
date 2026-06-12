@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Suspense } from "react";
-import { InviteProcessor } from "@/modules/chat/components/InviteProcessor";
+import { InviteProcessor } from "@/modules/invites/components/InviteProcessor";
 
 export default function InvitePage() {
   return (

@@ -38,7 +38,7 @@ export const dispatchMessageEvent = (
   action: "NEW" | "UPDATE" | "DELETE",
   conversationId: string,
   message: Message,
-  conversationMetadata?: Partial<Conversation>
+  conversationMetadata?: Partial<Conversation> | null
 ): void => {
   try {
     const io = getIO();

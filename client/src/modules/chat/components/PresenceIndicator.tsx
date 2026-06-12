@@ -1,4 +1,4 @@
-import { useChatStore } from "../store/chatStore";
+import { useSocketStore } from "@/socket/socketStore";
 import { cn } from "@/shared/lib/utils";
 
 interface PresenceIndicatorProps {
@@ -7,7 +7,7 @@ interface PresenceIndicatorProps {
 }
 
 export const PresenceIndicator = ({ userId, className }: PresenceIndicatorProps) => {
-  const onlineUsers = useChatStore((state) => state.onlineUsers);
+  const onlineUsers = useSocketStore((state) => state.onlineUsers);
   const isOnline = onlineUsers.has(userId);
 
   return (

@@ -2,11 +2,11 @@
 
 import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { SOCKET_EVENTS } from "@/shared/socket-events";
-import { useSocketEvents, SocketHandlerMap } from "@/shared/hooks/useSocketEvent";
+import { SOCKET_EVENTS } from "@/socket/socket-events";
+import { useSocketEvents, SocketHandlerMap } from "@/socket/useSocketEvent";
 import { queryKeys } from "@/shared/constants/queryKeys";
-import type { Message, MessagePage } from "../types/message";
-import type { Conversation } from "../types/conversation";
+import type { Message, MessagePage } from "@/modules/messages/types/message";
+import type { Conversation } from "@/modules/conversations/types/conversation";
 import type { MessageReadPayload } from "../types/socket";
 import { InfiniteData } from "@tanstack/react-query";
 

@@ -2,6 +2,7 @@ import type { Server, Socket } from "socket.io";
 import { createMessage } from "@/modules/messages/messages.service.js";
 import { SOCKET_EVENTS } from "@/shared/socket-events.js";
 import { dispatchMessageEvent } from "../socket.dispatcher.js";
+import { verifyConversationMembership } from "@/shared/permissions.js";
 
 export const registerMessageHandlers = (io: Server, socket: Socket) => {
   socket.on(
@@ -30,6 +31,18 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
             error: {
               code: "INVALID_PAYLOAD",
               message: "Missing required fields",
+              retryable: false,
+            },
+          });
+        }
+
+        const isMember = await verifyConversationMembership(userId, payload.conversationId);
+        if (!isMember) {
+          return callback?.({
+            success: false,
+            error: {
+              code: "FORBIDDEN",
+              message: "Not a member of this conversation",
               retryable: false,
             },
           });

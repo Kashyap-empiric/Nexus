@@ -1,6 +1,6 @@
 import type { Response, NextFunction } from "express";
 import type { AuthRequest } from "@/types/shared.js";
-import { prisma } from "@/lib/db.js";
+import { verifyConversationMembership } from "@/shared/permissions.js";
 
 export const requireConversationMember = ({ paramName }: { paramName: string }) => {
     return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
@@ -16,16 +16,8 @@ export const requireConversationMember = ({ paramName }: { paramName: string }) 
             return;
         }
         try {
-            const member = await prisma.conversationMember.findUnique({
-                where: {
-                    conversationId_userId:
-                    {
-                        conversationId,
-                        userId
-                    }
-                }
-            })
-            if (!member) {
+            const isMember = await verifyConversationMembership(userId, conversationId);
+            if (!isMember) {
                 res.status(403).json({
                     error: "Forbidden: You are not an authorised member of this conversation."
                 });
