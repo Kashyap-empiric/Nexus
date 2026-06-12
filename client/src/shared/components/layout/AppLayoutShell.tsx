@@ -41,7 +41,7 @@ export function AppLayoutShell({
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
-      {/* Mobile sidebar overlay - hidden since sidebar takes full width now */}
+      {/* Mobile sidebar overlay */}
       {mobileSidebarOpen && (
         <div 
           className="fixed inset-0 z-40 bg-transparent md:hidden"
@@ -49,13 +49,13 @@ export function AppLayoutShell({
         />
       )}
 
-      {/* Sidebar area — hidden on mobile when conversation is active, toggled by button */}
+      {/* Sidebar area — toggled by button on mobile */}
       <div className={cn(
-        "shrink-0 flex transition-transform duration-200",
+        "shrink-0 flex transition-transform duration-300 ease-in-out",
         isConversationActive
-          ? "fixed inset-y-0 left-0 z-50 w-screen md:w-auto md:relative md:z-auto" +
+          ? "fixed inset-y-0 left-0 z-50 w-screen bg-background md:w-auto md:relative md:z-auto" +
             (mobileSidebarOpen ? " translate-x-0" : " -translate-x-full md:translate-x-0")
-          : "relative"
+          : "relative w-full md:w-auto"
       )}>
         <NavigationRail />
         <div className={cn(

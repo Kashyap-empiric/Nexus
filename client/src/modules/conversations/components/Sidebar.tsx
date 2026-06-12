@@ -134,11 +134,16 @@ export function Sidebar({ onNavigate }: SidebarProps) {
             onInviteClick={() => inviteModal.open("WORKSPACE", workspaceDetails.workspace.id)}
             rightElement={
               <button 
-                onClick={onNavigate}
-                className="md:hidden p-1.5 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 text-muted-foreground transition-colors"
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onNavigate?.();
+                }}
+                className="md:hidden p-1.5 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 text-muted-foreground transition-colors cursor-pointer"
                 title="Close sidebar"
               >
-                <X className="h-5 w-5" />
+                <X className="h-5 w-5 pointer-events-none" />
               </button>
             }
           />
@@ -154,11 +159,16 @@ export function Sidebar({ onNavigate }: SidebarProps) {
               />
             </div>
             <button 
-              onClick={onNavigate}
-              className="md:hidden p-1.5 rounded-full hover:bg-muted text-muted-foreground transition-colors shrink-0"
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onNavigate?.();
+              }}
+              className="md:hidden p-1.5 rounded-full hover:bg-muted text-muted-foreground transition-colors shrink-0 cursor-pointer"
               title="Close sidebar"
             >
-              <X className="h-5 w-5" />
+              <X className="h-5 w-5 pointer-events-none" />
             </button>
           </div>
         )}
