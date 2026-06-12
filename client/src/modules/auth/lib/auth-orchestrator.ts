@@ -1,4 +1,4 @@
-import { socket } from "@/shared/lib/socket";
+import { socket } from "@/socket/socketClient";
 import { resetAllStores } from "@/shared/lib/store-reset";
 import { QueryClient } from "@tanstack/react-query";
 

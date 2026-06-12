@@ -1,4 +1,4 @@
-import type { Message } from "./message";
+import type { Message } from "@/modules/messages/types/message";
 
 export interface SocketErrorObject {
   code: string;
