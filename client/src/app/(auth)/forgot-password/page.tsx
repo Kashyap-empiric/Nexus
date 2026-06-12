@@ -17,7 +17,7 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import Link from "next/link";
-import { APP_ROUTES } from "@/shared/constants/app_routes";
+import { APP_ROUTES } from "@/config/url";
 
 const forgotPasswordSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),

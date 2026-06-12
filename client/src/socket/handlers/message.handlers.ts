@@ -28,14 +28,25 @@ export const handleMessageNew = (queryClient: QueryClient) => {
         }
       );
 
-      // Only notify if the tab is hidden (user is not actively viewing)
+      // Also update workspace channels if applicable
+      const queries = queryClient.getQueriesData<Conversation[]>({ queryKey: ["workspace-channels"] });
+      queries.forEach(([queryKey, oldData]) => {
+        if (!Array.isArray(oldData)) return;
+        queryClient.setQueryData(queryKey, oldData.map((conv) => {
+          if (conv.id !== message.conversationId) return conv;
+          const currentUser = getAuthUser();
+          return {
+            ...conv,
+            unreadCount: (conv.unreadCount || 0) + (message.userId !== currentUser?.id ? 1 : 0),
+          };
+        }));
+      });
+
       if (typeof document === "undefined" || !document.hidden) return;
 
-      // Don't notify about our own messages from other devices/tabs
       const currentUser = getAuthUser();
       if (currentUser && message.userId === currentUser.id) return;
 
-      // Dynamic Browser Tab Unread Badge
       const originalTitle = document.title.replace(/^\(\d+\)\s/, "");
       document.title = `(1) New Message! - ${originalTitle}`;
 
@@ -61,16 +72,137 @@ export const handleMessageNew = (queryClient: QueryClient) => {
   };
 };
 
-/**
- * Look up the conversation name from the cached conversations list.
- * Returns null if the data isn't available yet, so the notification
- * falls back to showing just the sender name.
- */
+export const handleMessageUpdate = (queryClient: QueryClient) => {
+  return (message: Message) => {
+    try {
+      if (!message || !message.id) return;
+
+      // Update conversations list sidebar cache
+      queryClient.setQueryData<Conversation[]>(
+        queryKeys.conversations,
+        (oldData) => {
+          if (!Array.isArray(oldData)) return oldData;
+
+          return oldData.map((conv) => {
+            if (conv.latestMessageId !== message.id) return conv;
+            return {
+              ...conv,
+              latestMessage: {
+                id: message.id,
+                userId: message.userId,
+                content: message.content,
+                deletedAt: null,
+                createdAt: message.createdAt,
+                user: {
+                  username: message.user?.username || "Unknown",
+                },
+              },
+            };
+          });
+        }
+      );
+
+      // Update workspace channels cache
+      const queries = queryClient.getQueriesData<Conversation[]>({ queryKey: ["workspace-channels"] });
+      queries.forEach(([queryKey, oldData]) => {
+        if (!Array.isArray(oldData)) return;
+        queryClient.setQueryData(queryKey, oldData.map((conv) => {
+          if (conv.latestMessageId !== message.id) return conv;
+          return {
+            ...conv,
+            latestMessage: {
+              id: message.id,
+              userId: message.userId,
+              content: message.content,
+              deletedAt: null,
+              createdAt: message.createdAt,
+              user: {
+                username: message.user?.username || "Unknown",
+              },
+            },
+          };
+        }));
+      });
+    } catch (err) {
+      console.error("Failed to parse incoming message:update", err);
+    }
+  };
+};
+
+export const handleMessageDelete = (queryClient: QueryClient) => {
+  return (message: Message) => {
+    try {
+      if (!message || !message.id) return;
+
+      // Update conversations list sidebar cache
+      queryClient.setQueryData<Conversation[]>(
+        queryKeys.conversations,
+        (oldData) => {
+          if (!Array.isArray(oldData)) return oldData;
+
+          return oldData.map((conv) => {
+            if (conv.latestMessageId !== message.id) return conv;
+            return {
+              ...conv,
+              latestMessage: {
+                id: message.id,
+                userId: message.userId,
+                content: message.content,
+                deletedAt: message.deletedAt || null,
+                createdAt: message.createdAt,
+                user: {
+                  username: message.user?.username || "Unknown",
+                },
+              },
+            };
+          });
+        }
+      );
+
+      // Update workspace channels cache
+      const queries = queryClient.getQueriesData<Conversation[]>({ queryKey: ["workspace-channels"] });
+      queries.forEach(([queryKey, oldData]) => {
+        if (!Array.isArray(oldData)) return;
+        queryClient.setQueryData(queryKey, oldData.map((conv) => {
+          if (conv.latestMessageId !== message.id) return conv;
+          return {
+            ...conv,
+            latestMessage: {
+              id: message.id,
+              userId: message.userId,
+              content: message.content,
+              deletedAt: message.deletedAt || null,
+              createdAt: message.createdAt,
+              user: {
+                username: message.user?.username || "Unknown",
+              },
+            },
+          };
+        }));
+      });
+    } catch (err) {
+      console.error("Failed to parse incoming message:delete", err);
+    }
+  };
+};
+
 function extractConversationName(queryClient: QueryClient, conversationId: string): string | null {
   const conversations = queryClient.getQueryData<Conversation[]>(queryKeys.conversations);
-  if (!Array.isArray(conversations)) return null;
+  let conversation = Array.isArray(conversations) ? conversations.find((c) => c.id === conversationId) : undefined;
+  
+  if (!conversation) {
+    const queries = queryClient.getQueriesData<Conversation[]>({ queryKey: ["workspace-channels"] });
+    for (const [, oldData] of queries) {
+      if (Array.isArray(oldData)) {
+        const found = oldData.find((c) => c.id === conversationId);
+        if (found) {
+          conversation = found;
+          break;
+        }
+      }
+    }
+  }
 
-  const conversation = conversations.find((c) => c.id === conversationId);
   if (!conversation) return null;
 
   // Return channel name for channels, or null for DMs (sender name is enough)
@@ -80,6 +212,6 @@ function extractConversationName(queryClient: QueryClient, conversationId: strin
 
   // For DMs, return the other person's name as context
   const currentUser = getAuthUser();
-  const otherMember = conversation.members?.find((m) => m.userId !== currentUser?.id);
+  const otherMember = conversation.members?.find((m: any) => m.userId !== currentUser?.id);
   return otherMember?.user?.username || null;
 }

@@ -3,6 +3,7 @@ import { type AuthRequest } from "../../types/shared.js";
 import { resolveInviteService, generateInviteService } from "./invites.service.js";
 import { dispatchConversationNew } from "../../socket/socket.dispatcher.js";
 import { getIO } from "../../socket/socket.js";
+import { SOCKET_EVENTS } from "../../shared/socket-events.js";
 
 export const resolveInvite = async (req: AuthRequest, res: Response): Promise<any> => {
   const { token } = req.body;
@@ -40,7 +41,7 @@ export const resolveInvite = async (req: AuthRequest, res: Response): Promise<an
 function dispatchConversationUpdate(conversationId: string, userId: string) {
   try {
     const io = getIO();
-    io.to(`conversation:${conversationId}`).emit("CONVERSATION_UPDATE", {
+    io.to(`conversation:${conversationId}`).emit(SOCKET_EVENTS.CONVERSATION_UPDATE, {
       conversationId,
       type: "MEMBER_JOINED",
       userId,
@@ -50,7 +51,7 @@ function dispatchConversationUpdate(conversationId: string, userId: string) {
       }
     });
   } catch (err) {
-    console.error("[resolveInvite] Failed to emit CONVERSATION_UPDATE:", err);
+    console.error("[resolveInvite] Failed to emit conversation:update:", err);
   }
 }
 

@@ -80,6 +80,7 @@ export const handleConversationUpdate = (queryClient: QueryClient) => {
             latestMessageId: payload.conversation.latestMessageId,
             latestMessage: payload.conversation.latestMessage,
             name: payload.conversation.name !== undefined ? payload.conversation.name : conv.name,
+            unreadCount: conv.unreadCount,
           };
         });
 

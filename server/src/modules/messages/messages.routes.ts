@@ -37,6 +37,7 @@ router.patch(
 
 router.delete(
   "/:messageId",
+  messageLimiter,
   authMiddleware,
   validate({ params: messageIdParamsSchema }),
   requireConversationMember({ paramName: "conversationId" }),
