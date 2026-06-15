@@ -27,7 +27,29 @@ export const useMarkAsRead = () => {
 
   return useMutation({
     mutationFn: (id: string) => notificationsApi.markAsRead(id),
-    onSuccess: () => {
+    onMutate: async (id: string) => {
+      // Cancel any in-flight unread count refetches so they don't overwrite
+      await queryClient.cancelQueries({ queryKey: queryKeys.unreadCount });
+
+      // Snapshot the previous value for rollback
+      const previousCount = queryClient.getQueryData<number>(queryKeys.unreadCount);
+
+      // Optimistically decrement the unread count (floor at 0)
+      queryClient.setQueryData<number>(
+        queryKeys.unreadCount,
+        (old) => Math.max((old ?? 1) - 1, 0)
+      );
+
+      return { previousCount };
+    },
+    onError: (_err, _id, context) => {
+      // Roll back to the previous count on failure
+      if (context?.previousCount !== undefined) {
+        queryClient.setQueryData(queryKeys.unreadCount, context.previousCount);
+      }
+    },
+    onSettled: () => {
+      // Refetch to sync with server state
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
       queryClient.invalidateQueries({ queryKey: queryKeys.unreadCount });
     },
@@ -39,7 +61,26 @@ export const useMarkAllAsRead = () => {
 
   return useMutation({
     mutationFn: () => notificationsApi.markAllAsRead(),
-    onSuccess: () => {
+    onMutate: async () => {
+      // Cancel any in-flight unread count refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.unreadCount });
+
+      // Snapshot the previous value for rollback
+      const previousCount = queryClient.getQueryData<number>(queryKeys.unreadCount);
+
+      // Optimistically set unread count to 0
+      queryClient.setQueryData<number>(queryKeys.unreadCount, 0);
+
+      return { previousCount };
+    },
+    onError: (_err, _vars, context) => {
+      // Roll back to the previous count on failure
+      if (context?.previousCount !== undefined) {
+        queryClient.setQueryData(queryKeys.unreadCount, context.previousCount);
+      }
+    },
+    onSettled: () => {
+      // Refetch to sync with server state
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
       queryClient.invalidateQueries({ queryKey: queryKeys.unreadCount });
     },
@@ -65,6 +106,7 @@ export const useNotificationPreferences = () => {
     preferences: preferencesQuery.data,
     isLoading: preferencesQuery.isLoading,
     update: updateMutation.mutate,
+    updateAsync: updateMutation.mutateAsync,
     isUpdating: updateMutation.isPending,
   };
 };

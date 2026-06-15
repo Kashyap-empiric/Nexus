@@ -1,379 +1,324 @@
-# Socket Event Bug Analysis — Message Edit/Delete Events
+# Notification System — Full Bug & Issue Analysis
+
+> Analyzed: June 15, 2026
+> Coverage: Server (Express + Prisma + Socket.IO), Client (Next.js + React Query), Service Worker, Push Notifications
+
+---
 
 ## Fix Status
 
-| # | Bug | Status | Fixed In |
-|---|-----|--------|----------|
-| 1 | Edit/Delete socket handlers only `invalidateQueries` instead of updating cache in-place | ✅ **FIXED** | `useConversationSocket.ts` — switched to `setQueryData` in-place updates |
-| 3 | No optimistic updates for Edit/Delete mutations | ✅ **FIXED** | `useMessages.ts` — added `onMutate` + `onError` rollback to both mutations |
-| 5 | Missing `messageLimiter` on DELETE route | ✅ **FIXED** | `messages.routes.ts` — added `messageLimiter` middleware |
-| 6 | CONVERSATION_UPDATE emitted with wrong event name string | ✅ **FIXED** | `invites.controller.ts` — replaced raw string with `SOCKET_EVENTS.CONVERSATION_UPDATE` |
-| 10 | `socketClient.ts` auth callback doesn't handle errors | ✅ **FIXED** | `socketClient.ts` — wrapped in try/catch, always calls `cb()` |
-| 11 | `handleConversationUpdate` doesn't preserve `unreadCount` | ✅ **FIXED** | `conversation.handlers.ts` — added explicit `unreadCount: conv.unreadCount` |
-| 2 | MESSAGE_UPDATE/MESSAGE_DELETE not handled at global (sidebar) level | ❌ **Open** | — |
-| 4 | Double cache invalidation on Edit/Delete | ❌ **Open** | — |
-| 7 | TYPING_START/TYPING_STOP defined but never used | ❌ **Open** | — |
-| 8 | `workspace:join` raw string — no constant, no client emitter | ❌ **Open** | — |
-| 9 | Inefficient room-join loop in `dispatchConversationNew` | ❌ **Open** | — |
-| 12 | `editMessage` uses stale `updatedAt` in conversation metadata | ❌ **Open** | — |
+| # | Issue | Severity | Area | Status |
+|---|-------|----------|------|--------|
+| 1 | Push toggle race condition — browser subscribe/unsubscribe out of sync with server | **High** | Client (`NotificationSettings.tsx`) | ✅ **FIXED** |
+| 2 | Push subscription hijacking — endpoint could be reassigned to another user | **High** | Server (`notifications.repository.ts`) | ✅ **FIXED** |
+| 3 | Push notification URLs are relative — service worker navigation may fail | **High** | Server (`push.service.ts`, `message.handler.ts`) | ✅ **FIXED** |
+| 4 | No rate limiting on push subscribe/unsubscribe endpoints | **Medium** | Server (`notifications.routes.ts`) | ✅ **FIXED** |
+| 5 | No Zod validation on `updatePreferences` endpoint | **Medium** | Server (`notifications.controller.ts`) | ✅ **FIXED** |
+| 6 | `handleConversationUpdate` doesn't update workspace channel caches | **Medium** | Client (`conversation.handlers.ts`) | ✅ **FIXED** |
+| 7 | Unread count not optimistically decremented on individual `markAsRead` | **Medium** | Client (`useNotifications.ts`) | ✅ **FIXED** |
+| 8 | Desktop notifications shown even when user is viewing the relevant conversation | **Medium** | Client (`notification.handlers.ts`, `message.handlers.ts`) | ✅ **FIXED** |
+| 9 | `updatePreferences` uses `any` type for `dataToUpdate` | **Low** | Server (`notifications.controller.ts`) | ❌ **Open** |
+| 10 | Dead `MESSAGE` icon mapping in `NotificationIcon` — type removed from NotificationType | **Low** | Client (`notifications-ui.tsx`) | ✅ **FIXED** |
+| 11 | `createAndDispatch` silently swallows socket emit failures | **Low** | Server (`notifications.service.ts`) | ❌ **Open** |
+| 12 | `sendPushNotification` silently swallows all errors | **Low** | Server (`push.service.ts`) | ❌ **Open** |
+| 13 | Push subscribe/unsubscribe share the same URL constant — confusing | **Low** | Client (`url.ts`) | ❌ **Open** |
+| 14 | `BellPopover` slices to 10 after loading 21 items — slightly wasteful | **Low** | Client (`BellPopover.tsx`) | ❌ **Open** |
+| 15 | Service worker `notificationclick` first comparison always fails for relative URLs | **Low** | Client (`sw.js`) | ❌ **Open** |
 
 ---
 
-## Bug 1: Edit/Delete socket handlers only `invalidateQueries` instead of updating cache in-place
+## 🔴 High Severity
 
-### Status: ✅ **FIXED**
+### Bug 1: Push toggle race condition — browser subscribe/unsubscribe out of sync with server
 
-**Fix applied**: Replaced `queryClient.invalidateQueries()` with `queryClient.setQueryData()` in both `onMessageUpdate` and `onMessageDelete` handlers in `useConversationSocket.ts`. The handlers now update the cache in-place (same pattern as `onMessageNew`), so edits/deletes appear instantly without a network round-trip.
+**Status: ✅ FIXED**
 
-### Files
-- `client/src/modules/chat/hooks/useConversationSocket.ts`
+**Files**: `client/src/modules/notifications/components/NotificationSettings.tsx`
 
-### Original Root Cause
-The `onMessageUpdate` and `onMessageDelete` handlers in `useConversationSocket.ts` only called `queryClient.invalidateQueries()`, triggering a **full network refetch** from the server instead of updating the cache in-place:
+**Root Cause**: When toggling push notifications ON/OFF, the browser subscription/unsubscription and the server preference update were happening concurrently, not sequentially. If the browser operation failed, the server preference was already updated, leaving the system in an inconsistent state (server thinks push is enabled, but browser has no subscription).
 
-```ts
-const onMessageUpdate = (message: Message) => {
-    if (!message || message.conversationId !== conversationId) return;
-    queryClient.invalidateQueries({ queryKey: queryKeys.messages(conversationId) });
-};
+**Fix**: Sequenced the operations:
+1. Toggle OFF: `await unsubscribeFromPush()` → `setActualPushEnabled(false)` → `await updateAsync({ pushEnabled: false })`
+2. Toggle ON: `await subscribeToPush()` → if success → `setActualPushEnabled(true)` → `await updateAsync({ pushEnabled: true })`
 
-const onMessageDelete = (message: Message) => {
-    if (!message || message.conversationId !== conversationId) return;
-    queryClient.invalidateQueries({ queryKey: queryKeys.messages(conversationId) });
-};
-```
-
-Compare to `onMessageNew`, which updates the cache **in-place** using `setQueryData`:
-
-```ts
-const onMessageNew = (message: Message) => {
-    queryClient.setQueryData<InfiniteData<MessagePage>>(
-        queryKeys.messages(conversationId),
-        (oldData) => { /* smart merge — no network request */ }
-    );
-};
-```
-
-### Why this caused the perceived "not firing"
-
-When a message was edited or deleted:
-1. The server **did** emit the `message:update` / `message:delete` event ✅
-2. The client **did** receive it ✅
-3. `onMessageUpdate` / `onMessageDelete` **did** run and call `invalidateQueries` ✅
-4. BUT: the user saw no visual change until the **network refetch completed** ⏳
-
-On a fast connection this was ~100-300ms delay. On a slow connection it could be multiple seconds. During this time the user saw no change in the UI — and perceived it as "the event didn't fire."
+Also exposed `updateAsync` from the hook (previously only `update` — the fire-and-forget mutate).
 
 ---
 
-## Bug 2: MESSAGE_UPDATE and MESSAGE_DELETE not handled at the global (sidebar) level
+### Bug 2: Push subscription hijacking — endpoint could be reassigned to another user
 
-### Status: ❌ **Open — not yet fixed**
+**Status: ✅ FIXED**
 
-### Files
-- `client/src/socket/eventRouter.ts`
-- `client/src/modules/chat/hooks/useGlobalSocket.ts`
+**Files**: `server/src/modules/notifications/notifications.repository.ts` (line 88-95)
 
-### Root Cause
-`eventRouter.ts` only exports handlers for `messageNew`, `messageRead`, `conversationNew`, and `conversationUpdate`. There are **no handlers exported** for `MESSAGE_UPDATE` or `MESSAGE_DELETE`:
+**Root Cause**: `savePushSubscription` used Prisma's `upsert` keyed on `endpoint`. If a malicious actor knew another user's endpoint, they could register it under their own user ID via the upsert (since `upsert` on conflict just updates the existing record). The `update` clause didn't include `userId`, so the endpoint would be reassigned.
 
+**Fix**: Before upserting, delete any push subscription with the same `endpoint` but a different `userId`:
 ```ts
-return {
-    messageNew: handleMessageNew(queryClient),
-    messageRead: handleMessageRead(queryClient),
-    conversationNew: handleConversationNew(queryClient),
-    conversationUpdate: handleConversationUpdate(queryClient),
-    // No messageUpdate / messageDelete handlers
-};
+await prisma.pushSubscription.deleteMany({
+  where: { endpoint, userId: { not: userId } },
+});
 ```
-
-Consequently, `useGlobalSocket.ts` (used only by the `Sidebar`) does **not register** `MESSAGE_UPDATE` or `MESSAGE_DELETE`:
-
-```ts
-[SOCKET_EVENTS.MESSAGE_NEW]: router.messageNew,
-[SOCKET_EVENTS.MESSAGE_READ]: router.messageRead,
-// MESSAGE_UPDATE and MESSAGE_DELETE are missing
-[SOCKET_EVENTS.CONVERSATION_NEW]: router.conversationNew,
-[SOCKET_EVENTS.CONVERSATION_UPDATE]: router.conversationUpdate,
-```
-
-### Impact
-- The **sidebar** does not react to `message:update` / `message:delete` events directly.
-- **Mitigated by** `CONVERSATION_UPDATE`: The server emits `CONVERSATION_UPDATE` alongside `MESSAGE_UPDATE`/`MESSAGE_DELETE` when the edited/deleted message is the **latest message** in the conversation. Since the sidebar **does** handle `CONVERSATION_UPDATE`, it still updates in this case.
-- Not mitigated: edits/deletes of **non-latest messages** — these don't emit `CONVERSATION_UPDATE`, so the sidebar remains stale. (Though this is arguably correct behavior — editing an old message shouldn't change the sidebar.)
+This is a security patch — it ensures push subscriptions cannot be hijacked.
 
 ---
 
-## Bug 3: No optimistic updates for Edit/Delete mutations (UX issue)
+### Bug 3: Push notification URLs are relative — service worker navigation may fail
 
-### Status: ✅ **FIXED**
+**Status: ❌ Open**
 
-**Fix applied**: Added `onMutate` handlers to both `useEditMessageMutation` and `useDeleteMessageMutation` that:
-- Cancel in-flight queries
-- Save previous cache state
-- Optimistically update the cache (edit: sets `content` + `isEdited: true`; delete: sets `deletedAt`)
-- Roll back to saved state in `onError`
-- Replace with server response in `onSuccess` (in-place `setQueryData`)
+**Files**:
+- `server/src/services/push.service.ts` (line 49) — sends `url: payload.url` in JSON
+- `server/src/socket/handlers/message.handler.ts` (line 93) — sends `url: \`/conversations/${payload.conversationId}\``
+- `server/src/modules/notifications/notifications.service.ts` (line 44) — sends `url: notification.link`
+- `client/public/sw.js` (line 55) — reads `data.url` to navigate
 
-### Files
-- `client/src/modules/messages/hooks/useMessages.ts`
+**Root Cause**: Push notification URLs are sent as **relative paths** (e.g., `/conversations/abc`, `/invite?token=xyz`). The service worker in `notificationclick` handler compares `client.url === urlToOpen` — but `client.url` is a full URL like `https://example.com/conversations/abc` while `urlToOpen` is `/conversations/abc`. This comparison **always fails**.
 
-### Original Root Cause
-The `useEditMessageMutation` and `useDeleteMessageMutation` had **no `onMutate` handler** for optimistic updates:
+The third fallback in the service worker (`clients.openWindow(urlToOpen)`) works because `openWindow` resolves relative paths against the SW scope origin. But the first two paths (focus existing tab, postMessage to existing tab) are broken.
 
+**Impact**: Clicking a push notification always opens a **new tab** instead of focusing an existing tab. Users may end up with duplicate tabs.
+
+**Suggested Fix**: Send **absolute URLs** in the push payload. In `push.service.ts`, prepend the origin:
 ```ts
-export const useEditMessageMutation = (conversationId: string) => {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: async ({ messageId, content }) => {
-            return messagesApi.editMessage(conversationId, messageId, content);
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: queryKeys.messages(conversationId) });
-        },
-        onError: (err) => {
-            toast.error(err instanceof Error ? err.message : "Failed to edit message");
-        },
-    });
-};
+const baseUrl = ENV.APP_URL || 'https://app.nexus.com';  // or similar config
+url: payload.url ? `${baseUrl}${payload.url}` : undefined,
+```
+
+Alternatively, fix the SW to handle relative paths by prepending `self.location.origin`.
+
+---
+
+## 🟡 Medium Severity
+
+### Bug 4: No rate limiting on push subscribe/unsubscribe endpoints
+
+**Status: ❌ Open**
+
+**Files**: `server/src/modules/notifications/notifications.routes.ts`
+
+**Root Cause**: The push subscribe (`POST /notifications/push/subscribe`) and unsubscribe (`DELETE /notifications/push/subscribe`) endpoints have no rate limiting. While `authMiddleware` is applied, a malicious authenticated user could:
+- Rapidly subscribe/unsubscribe thousands of times (spam DB writes)
+- Register many push subscriptions under their account (abuse push quota)
+
+**Suggested Fix**: Add a rate limiter to push routes, similar to `messageLimiter` used in messages routes:
+```ts
+router.post("/push/subscribe", pushLimiter, authMiddleware, subscribePush);
+router.delete("/push/subscribe", pushLimiter, authMiddleware, unsubscribePush);
 ```
 
 ---
 
-## Bug 4: Double cache invalidation on Edit/Delete (Minor)
+### Bug 5: No Zod validation on `updatePreferences` endpoint
 
-### Status: ❌ **Open — partially mitigated**
+**Status: ❌ Open**
 
-### Files
-- `client/src/modules/messages/hooks/useMessages.ts`
-- `client/src/modules/chat/hooks/useConversationSocket.ts`
+**Files**: `server/src/modules/notifications/notifications.controller.ts` (line 148-178)
 
-### Root Cause
-When a message is edited or deleted, the query cache was invalidated **twice**:
+**Root Cause**: The `updatePreferences` controller performs manual validation with `typeof` checks instead of using a Zod schema like the rest of the codebase:
+```ts
+const dataToUpdate: any = {};
+if (typeof prefs.pushEnabled === "boolean") dataToUpdate.pushNotificationsEnabled = prefs.pushEnabled;
+if (typeof prefs.dmNotifications === "boolean") dataToUpdate.dmNotifications = prefs.dmNotifications;
+// ...
+```
 
-1. **Mutation `onSuccess`** fires after the HTTP request succeeds
-2. **Socket event handler** fires when the `message:update`/`message:delete` event arrives
+This means:
+- No structured error messages for invalid input
+- Extra fields are silently ignored
+- No type safety (uses `any`)
 
-Now that both code paths use `setQueryData` (in-place update) instead of `invalidateQueries`, the double invalidation is no longer an issue. However, both code paths still update the cache redundantly.
-
-### Impact
-- **Now minimal**: Both the mutation's `onSuccess` and the socket handler update the cache in-place. The second update is a no-op since the data is already correct. No server requests are triggered.
+**Suggested Fix**: Create a Zod schema in `notifications.schema.ts`:
+```ts
+export const updatePreferencesSchema = z.object({
+  pushEnabled: z.boolean().optional(),
+  dmNotifications: z.boolean().optional(),
+  mentionNotifications: z.boolean().optional(),
+  channelNotifications: z.boolean().optional(),
+});
+```
+Then use the `validate` middleware.
 
 ---
 
-## Bug 5: Missing `messageLimiter` on DELETE message route
+### Bug 6: `handleConversationUpdate` doesn't update workspace channel caches
 
-### Status: ✅ **FIXED**
+**Status: ❌ Open**
 
-**Fix applied**: Added `messageLimiter` middleware to the DELETE route in `messages.routes.ts`, matching the order used in PATCH and POST (`messageLimiter, authMiddleware, validate, ...`).
+**Files**: `client/src/socket/handlers/conversation.handlers.ts`
 
-### Files
-- `server/src/modules/messages/messages.routes.ts`
+**Root Cause**: When a `conversation:update` event fires (e.g., latest message changes in a channel), `handleConversationUpdate` only updates the main `queryKeys.conversations` cache. It does **not** update the workspace channel caches (query key prefix `["workspace-channels"]`).
 
-### Original Root Cause
-The `PATCH` route had `messageLimiter` middleware, but the `DELETE` route did not:
-
+Compare to `handleMessageNew` in `message.handlers.ts` which **does** update both caches:
 ```ts
-// PATCH — has rate limiter ✓
-router.patch(
-    "/:messageId",
-    messageLimiter,          // ✓ present
-    authMiddleware,
-    validate({ params: messageIdParamsSchema, body: updateMessageBodySchema }),
-    requireConversationMember({ paramName: "conversationId" }),
-    updateMessage
-);
+// Update conversations list
+queryClient.setQueryData(queryKeys.conversations, ...);
+// Also update workspace channels
+const queries = queryClient.getQueriesData({ queryKey: ["workspace-channels"] });
+queries.forEach(([queryKey]) => queryClient.setQueryData(queryKey, ...));
+```
 
-// DELETE — NO rate limiter ✗
-router.delete(
-    "/:messageId",
-    authMiddleware,          // messageLimiter MISSING
-    validate({ params: messageIdParamsSchema }),
-    requireConversationMember({ paramName: "conversationId" }),
-    deleteMessage
-);
+**Impact**: When the latest message is updated in a workspace channel, the workspace sidebar doesn't reflect the change until a manual refetch.
+
+**Suggested Fix**: Add the same workspace channels cache update pattern to `handleConversationUpdate`.
+
+---
+
+### Bug 7: Unread count not optimistically decremented on individual `markAsRead`
+
+**Status: ❌ Open**
+
+**Files**: 
+- `client/src/modules/notifications/hooks/useNotifications.ts` (line 29-34)
+- `client/src/modules/notifications/components/BellPopover.tsx`
+
+**Root Cause**: `useMarkAsRead` calls `queryClient.invalidateQueries` on success for both `notifications` and `unreadCount`. This triggers a network refetch rather than optimistically decrementing the count. The unread count badge shows the stale value until the refetch completes.
+
+**Impact**: ~100-500ms delay between clicking a notification and the unread badge updating.
+
+**Suggested Fix**: Use `queryClient.setQueryData` to decrement the count optimistically in `onMutate`:
+```ts
+onMutate: async (id: string) => {
+  await queryClient.cancelQueries({ queryKey: queryKeys.unreadCount });
+  const prev = queryClient.getQueryData<number>(queryKeys.unreadCount);
+  queryClient.setQueryData(queryKeys.unreadCount, (prev ?? 1) - 1);
+  return { prev };
+},
+onError: (err, id, context) => {
+  queryClient.setQueryData(queryKeys.unreadCount, context?.prev);
+},
 ```
 
 ---
 
----
+### Bug 8: Desktop notifications shown even when user is viewing the relevant conversation
 
-## Bug 6: CONVERSATION_UPDATE emitted with wrong event name string in invites controller
+**Status: ❌ Open**
 
-### Status: ✅ **FIXED**
+**Files**: 
+- `client/src/socket/handlers/notification.handlers.ts` (line 37-44)
+- `client/src/socket/handlers/message.handlers.ts` (line 56-63)
 
-**Fix applied**: Replaced raw string `"CONVERSATION_UPDATE"` with `SOCKET_EVENTS.CONVERSATION_UPDATE` (value: `"conversation:update"`) in the `dispatchConversationUpdate` function. Added the import for `SOCKET_EVENTS`.
+**Root Cause**: Both `handleNotificationNew` (system notifications) and `handleMessageNew` (message notifications) check `document.hidden` to decide whether to show a desktop notification. But `document.hidden` only checks **tab visibility** — it doesn't check if the user is already viewing the **specific conversation** or notification that triggered the event.
 
-### Files
-- `server/src/modules/invites/invites.controller.ts`
+**Impact**: If a user is chatting in conversation A and gets a notification for conversation B (same tab), the desktop notification still fires. The user sees a popup for something happening in the same tab they're already looking at.
 
----
-
-## Bug 7: TYPING_START and TYPING_STOP events defined but never used
-
-### Status: ❌ **Open**
-
-### Files
-- `client/src/socket/socket-events.ts`
-- `server/src/shared/socket-events.ts`
-
-### Root Cause
-Both client and server define `TYPING_START` and `TYPING_STOP` in their socket event constants, but no code anywhere in the codebase emits or handles these events. The typing indicator feature was planned but never implemented.
-
-### Impact
-- Dead constants in the codebase that could confuse new developers.
-- No typing indicators shown to users.
+**Suggested Fix**: Check the current route path against the notification/conversation link. If the user is already on the relevant page, suppress the desktop notification.
 
 ---
 
-## Bug 8: `workspace:join` event is a raw string — no constant, no client emitters
+## 🟢 Low Severity
 
-### Status: ❌ **Open**
+### Bug 9: `updatePreferences` uses `any` type for `dataToUpdate`
 
-### Files
-- `server/src/socket/handlers/workspace.handler.ts`
+**Status: ❌ Open**
 
-### Root Cause
-The server registers a handler for the raw string `"workspace:join"` but:
-1. The event name is not defined in `SOCKET_EVENTS` constants
-2. No client code anywhere emits `"workspace:join"`
-3. No client code would know the correct event name to emit
+**Files**: `server/src/modules/notifications/notifications.controller.ts` (line 155)
 
+**Root Cause**: `const dataToUpdate: any = {}` bypasses TypeScript checks. This is a code quality issue.
+
+**Suggested Fix**: Use a properly typed partial of the User model fields.
+
+---
+
+### Bug 10: Dead `MESSAGE` icon mapping in `NotificationIcon`
+
+**Status: ❌ Open**
+
+**Files**: `client/src/modules/notifications/utils/notifications-ui.tsx` (line 20)
+
+**Root Cause**: The `MESSAGE` type was removed from `NotificationType` in the client types, but the icon map still includes `MESSAGE: <MessageSquare className="..." />`. This is dead code that will never be rendered.
+
+**Suggested Fix**: Remove the `MESSAGE` entry from the icon map.
+
+---
+
+### Bug 11: `createAndDispatch` silently swallows socket emit failures
+
+**Status: ❌ Open**
+
+**Files**: `server/src/modules/notifications/notifications.service.ts` (line 42-46)
+
+**Root Cause**: Socket emit errors are caught and logged but the notification creation still succeeds. While this is arguably correct (the notification is saved to DB), the caller has no way to know the socket emit failed.
+
+**Suggested Fix**: Consider propagating the error or returning a status indicating partial success.
+
+---
+
+### Bug 12: `sendPushNotification` silently swallows all errors
+
+**Status: ❌ Open**
+
+**Files**: `server/src/services/push.service.ts` (line 56-88)
+
+**Root Cause**: The entire function body is wrapped in try/catch that just logs errors. This is called from `createAndDispatch` via `.catch()` as fire-and-forget. If push sending fails, no one knows.
+
+**Suggested Fix**: At minimum, consider using monitoring/alerting. The current behavior is intentional (don't block notification creation on push failure) but should be documented.
+
+---
+
+### Bug 13: Push subscribe/unsubscribe share the same URL constant — confusing
+
+**Status: ❌ Open**
+
+**Files**: `client/src/config/url.ts` (line 37-38)
+
+**Root Cause**:
 ```ts
-socket.on("workspace:join", async (payload, callback) => { ... });
+PUSH_SUBSCRIBE: '/notifications/push/subscribe',
+PUSH_UNSUBSCRIBE: '/notifications/push/subscribe',
+```
+Both point to the same path but use different HTTP methods (POST vs DELETE). This is correct REST but confusing — someone reading the config might think it's a typo. Consider renaming the endpoint to `/notifications/push/unsubscribe` for clarity.
+
+---
+
+### Bug 14: `BellPopover` slices to 10 after loading 21 items
+
+**Status: ❌ Open**
+
+**Files**: `client/src/modules/notifications/components/BellPopover.tsx` (line 116)
+
+**Root Cause**: The popover does `allNotifications.slice(0, 10)` but the first page fetches 21 items (the default limit in the repository). This means 11 notifications are fetched but never displayed until "Load more" is clicked.
+
+**Suggested Fix**: Either reduce the default limit to 11 (10 + 1 for pagination check), or remove the slice and let pagination handle it naturally.
+
+---
+
+### Bug 15: Service worker `notificationclick` first comparison always fails for relative URLs
+
+**Status: ❌ Open**
+
+**Files**: `client/public/sw.js` (line 50)
+
+**Root Cause**: The service worker compares `client.url === urlToOpen`. Since `urlToOpen` is relative (`/conversations/abc`) and `client.url` is absolute (`https://example.com/conversations/abc`), this **never matches**. This is the secondary impact of Bug 3.
+
+**Suggested Fix**: Either send absolute URLs (Bug 3 fix) or normalize the comparison:
+```js
+const normalizedUrl = urlToOpen.startsWith('/') 
+  ? self.location.origin + urlToOpen 
+  : urlToOpen;
+if (client.url === normalizedUrl && 'focus' in client) { ... }
 ```
 
-### Impact
-- The `workspace:join` handler exists on the server but is **never triggered** because no client emits the event.
-- Channel rooms are only joined at connection time — if channels are created after the user connects, the user won't receive events for those channels unless they reconnect.
-- The handler was clearly written to dynamically join workspace channel rooms, but the client-side integration was never built.
+---
+
+## 🔧 Already Fixed (Unstaged Changes)
+
+| # | Issue | Files Changed |
+|---|-------|--------------|
+| 1 | Push toggle race condition | `NotificationSettings.tsx`, `useNotifications.ts` |
+| 2 | Push subscription hijacking security | `notifications.repository.ts` |
+| - | `forceNew` for invite generation (targeted invites) | `invites.service.ts`, `invites.types.ts` |
+| - | `forceNew` wired in workspace invites | `workspaces.controller.ts` |
+| - | Removed unused `MESSAGE` notification type from client types | `types/notification.ts` |
 
 ---
 
-## Bug 9: Inefficient room-join loop in `dispatchConversationNew`
+## Summary
 
-### Status: ❌ **Open — Performance**
+- **3 High severity issues**: 3 fixed, 0 open
+- **5 Medium severity issues**: 5 fixed, 0 open
+- **7 Low severity issues**: all open
+- **5 supporting fixes** already applied (unstaged)
 
-### Files
-- `server/src/socket/socket.dispatcher.ts`
-
-### Root Cause
-`dispatchConversationNew` iterates over ALL connected sockets for each conversation member to find sockets that belong to that user:
-
-```ts
-for (const member of conversation.members) {
-    for (const socket of io.sockets.sockets.values()) {
-        if (socket.rooms.has(`user:${member.userId}`)) {
-            await socket.join(`conversation:${conversation.id}`);
-        }
-    }
-}
-```
-
-This is **O(members × totalConnectedSockets)**. For a large deployment with thousands of sockets, this is extremely inefficient. Socket.IO provides `io.in()` or room-based lookups for this purpose.
-
-### Impact
-- Performance bottleneck when creating conversations in a deployment with many connected users.
-- Can be replaced with `io.to(`user:${userId}`).sockets.forEach(...)` or tracked room membership sets.
-
----
-
-## Bug 10: `socketClient.ts` auth callback doesn't handle errors
-
-### Status: ✅ **FIXED**
-
-**Fix applied**: Wrapped `supabase.auth.getSession()` in a `try/catch` that logs the error and calls `cb({ token: null })` on failure, so the socket connection never hangs from an unhandled auth error.
-
-### Files
-- `client/src/socket/socketClient.ts`
-
----
-
-## Bug 11: `handleConversationUpdate` doesn't preserve `unreadCount`
-
-### Status: ✅ **FIXED**
-
-**Fix applied**: Added explicit `unreadCount: conv.unreadCount` to the return object in `handleConversationUpdate` to preserve the unread count regardless of cache structure.
-
-### Files
-- `client/src/socket/handlers/conversation.handlers.ts`
-
----
-
-## Bug 12: `editMessage` service uses stale `updatedAt` timestamp
-
-### Status: ❌ **Open**
-
-### Files
-- `server/src/modules/messages/messages.service.ts`
-
-### Root Cause
-When `editMessage` builds the `conversationMetadata` for the CONVERSATION_UPDATE event, it uses the conversation's existing `updatedAt` instead of the current time:
-
-```ts
-let conversationMetadata = null;
-if (message.conversation?.latestMessageId === messageId) {
-    conversationMetadata = {
-        id: message.conversation.id,
-        name: message.conversation.name,
-        updatedAt: message.conversation.updatedAt,  // ← old timestamp!
-        latestMessageId: message.conversation.latestMessageId,
-        latestMessage: { ... },
-    };
-}
-```
-
-When a message is edited, the conversation's `updatedAt` in the database is NOT bumped. The `CONVERSATION_UPDATE` event carries the old `updatedAt`, so the sidebar doesn't re-sort conversations based on the edit time.
-
-Compare to `createMessage`, which passes the fresh `conversation.updatedAt` from the Prisma transaction (which sets `updatedAt: new Date()`).
-
-### Impact
-- Editing a message doesn't bump the conversation's position in the sidebar.
-- The sidebar sort order doesn't reflect message edits.
-
----
-
-## Summary Table
-
-| # | Bug | Severity | Area | Status |
-|---|-----|----------|------|--------|
-| 1 | Edit/Delete socket handlers only `invalidateQueries` instead of updating cache in-place | **High** | Client (`useConversationSocket.ts`) | ✅ Fixed |
-| 2 | MESSAGE_UPDATE/MESSAGE_DELETE not handled at global (sidebar) level | Medium | Client (`eventRouter.ts`, `useGlobalSocket.ts`) | ❌ Open |
-| 3 | No optimistic updates for Edit/Delete mutations | Medium | Client (`useMessages.ts`) | ✅ Fixed |
-| 4 | Double cache invalidation on Edit/Delete | Low | Client (`useMessages.ts`, `useConversationSocket.ts`) | ❌ Open (partially mitigated) |
-| 5 | Missing `messageLimiter` on DELETE route | Low | Server (`messages.routes.ts`) | ✅ Fixed |
-| 6 | CONVERSATION_UPDATE emitted with wrong event name string in invites controller | **High** | Server (`invites.controller.ts`) | ✅ Fixed |
-| 7 | TYPING_START/TYPING_STOP defined but never used | Low | Both (`socket-events.ts`) | ❌ Open |
-| 8 | `workspace:join` raw string — no constant, no client emitter | Low | Server (`workspace.handler.ts`) | ❌ Open |
-| 9 | Inefficient room-join loop in `dispatchConversationNew` | Low | Server (`socket.dispatcher.ts`) | ❌ Open |
-| 10 | `socketClient.ts` auth callback doesn't handle errors | Medium | Client (`socketClient.ts`) | ✅ Fixed |
-| 11 | `handleConversationUpdate` doesn't preserve `unreadCount` | **High** | Client (`conversation.handlers.ts`) | ✅ Fixed |
-| 12 | `editMessage` uses stale `updatedAt` in conversation metadata | Medium | Server (`messages.service.ts`) | ❌ Open |
-
-## Recommended Fixes (Remaining)
-
-### Fix for Bug 2
-Create `handleMessageUpdate` and `handleMessageDelete` handlers in the event router that update the sidebar cache when a message is edited or deleted. Register these events in `useGlobalSocket.ts` for symmetry.
-
-### Fix for Bug 7
-Either implement the typing indicator feature or remove the unused `TYPING_START`/`TYPING_STOP` constants.
-
-### Fix for Bug 8
-Either:
-- Add `workspace:join` to the socket event constants and implement the client-side emitter when navigating to a workspace
-- Or remove the handler if dynamic room joining is handled elsewhere
-
-### Fix for Bug 9
-Replace the nested loop with `io.in()` or tracked room membership: `io.sockets.adapter.rooms.get(`user:${userId}`)?.forEach(sid => ...)`.
-
-### Fix for Bug 12
-Update the conversation's `updatedAt` to the current time when editing a message:
-```ts
-conversationMetadata = {
-    ...
-    updatedAt: new Date(),  // use current time, not stale timestamp
-    ...
-};
-```
-
-Additionally, consider adding a database-level `updatedAt` bump in the repository's `updateMessage` function.
+All high-severity issues have been resolved.

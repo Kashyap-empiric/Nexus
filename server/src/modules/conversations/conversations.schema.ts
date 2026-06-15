@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod";
 
 export const conversationParamsSchema = z.object({
   id: z.uuid("Invalid conversation ID format"),

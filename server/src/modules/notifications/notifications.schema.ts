@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod";
 
 export const getNotificationsQuerySchema = z.object({
   cursor: z.string().optional(),
@@ -19,4 +19,11 @@ export const pushSubscriptionSchema = z.object({
 
 export const unsubscribePushSchema = z.object({
   endpoint: z.string().url()
+});
+
+export const updatePreferencesSchema = z.object({
+  pushEnabled: z.boolean().optional(),
+  dmNotifications: z.boolean().optional(),
+  mentionNotifications: z.boolean().optional(),
+  channelNotifications: z.boolean().optional(),
 });

@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/modules/conversations/components/Sidebar";
 import { NavigationRail } from "@/modules/chat/components/NavigationRail";
-import { ThemeToggle } from "@/shared/components/theme-toggle";
 import { BellPopover } from "@/modules/notifications/components/BellPopover";
 import { useChatStore } from "@/modules/chat/store/chatStore";
 import { cn } from "@/shared/lib/utils";
@@ -15,6 +14,26 @@ import Link from "next/link";
 import { APP_ROUTES } from "@/config/url";
 import { InviteModalProvider, useInviteModalContext } from "@/modules/invites/context/InviteModalContext";
 import { InviteModal } from "@/modules/invites/components/InviteModal";
+import { SharedSettingsModal, SettingsView } from "@/modules/settings/components/SharedSettingsModal";
+import { Info } from "lucide-react";
+import React, { createContext, useContext } from "react";
+
+export type InfoPanelView = 'about' | 'members' | 'pins';
+
+export interface LayoutUIContextType {
+  infoPanelOpen: boolean;
+  infoPanelView: InfoPanelView;
+  setInfoPanelView: (view: InfoPanelView) => void;
+  closeInfoPanel: () => void;
+}
+
+const LayoutUIContext = createContext<LayoutUIContextType | null>(null);
+
+export function useLayoutUI() {
+  const context = useContext(LayoutUIContext);
+  if (!context) throw new Error("useLayoutUI must be used within AppLayoutShell");
+  return context;
+}
 
 export function AppLayoutShell({
   children,
@@ -34,8 +53,13 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const headerInfo = useChatStore((state) => state.headerInfo);
-  const setMemberPanelOpen = useChatStore((state) => state.setMemberPanelOpen);
+  
+  // Local UI State (Single Source of Truth)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [infoPanelOpen, setInfoPanelOpen] = useState(false);
+  const [infoPanelView, setInfoPanelView] = useState<InfoPanelView>('about');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsView, setSettingsView] = useState<SettingsView>('profile');
 
   const isContentActive = 
     pathname?.includes(APP_ROUTES.CONVERSATIONS.INDEX + "/") || 
@@ -58,10 +82,14 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   const isChannel = mounted ? (headerInfo?.isChannel ?? false) : false;
-  const memberPanelOpen = mounted ? (headerInfo?.memberPanelOpen ?? false) : false;
 
   const inviteModal = useInviteModalContext();
   const closeMobileSidebar = useCallback(() => setMobileSidebarOpen(false), []);
+
+  const openSettings = (view: SettingsView) => {
+    setSettingsView(view);
+    setSettingsOpen(true);
+  };
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
@@ -81,7 +109,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
             (mobileSidebarOpen ? " translate-x-0" : " -translate-x-full md:translate-x-0")
           : "relative w-full md:w-auto"
       )}>
-        <NavigationRail />
+        <NavigationRail openSettings={openSettings} />
         <div className={cn(
           "flex-1 md:flex-initial",
           isContentActive ? "flex" : "flex flex-1 min-w-0 md:w-auto"
@@ -145,39 +173,48 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
 
           {/* Right side actions */}
           <div className="flex items-center gap-2 shrink-0">
+            {mounted && isChannel && (
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-muted/30 rounded-md border border-border/50 select-none">
+                <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground">9</span>
+              </div>
+            )}
             <div className="relative">
               <BellPopover />
             </div>
-            {mounted && isChannel && (
+            {mounted && (
               <button
-                onClick={() => setMemberPanelOpen(!memberPanelOpen)}
-                className={`p-2 rounded-md transition-colors ${memberPanelOpen ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"} md:hidden`}
-                title="Toggle Member List"
+                onClick={() => setInfoPanelOpen(!infoPanelOpen)}
+                className={`p-2 rounded-md transition-colors ${infoPanelOpen ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                title="Toggle Info"
               >
-                <Users className="h-5 w-5" />
+                <Info className="h-5 w-5" />
               </button>
             )}
-            {mounted && isChannel && (
-              <button
-                onClick={() => setMemberPanelOpen(!memberPanelOpen)}
-                className={`p-2 rounded-md transition-colors ${memberPanelOpen ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"} hidden md:block`}
-                title="Toggle Member List"
-              >
-                <Users className="h-5 w-5" />
-              </button>
-            )}
-            <ThemeToggle />
           </div>
         </div>
 
         {/* Content area */}
-        <div className="flex-1 min-h-0">
-          {children}
+        <div className="flex-1 min-h-0 flex">
+          <LayoutUIContext.Provider value={{
+            infoPanelOpen,
+            infoPanelView,
+            setInfoPanelView,
+            closeInfoPanel: () => setInfoPanelOpen(false),
+          }}>
+            {children}
+          </LayoutUIContext.Provider>
         </div>
       </main>
 
       {/* Global modals rendered at top level */}
       <InviteModal isOpen={inviteModal.isOpen} onClose={inviteModal.close} type={inviteModal.type} entityId={inviteModal.entityId} />
+      <SharedSettingsModal 
+        isOpen={settingsOpen} 
+        currentTab={settingsView} 
+        setTab={setSettingsView} 
+        closeSettings={() => setSettingsOpen(false)} 
+      />
     </div>
   );
 }

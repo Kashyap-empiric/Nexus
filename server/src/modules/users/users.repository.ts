@@ -31,6 +31,21 @@ export const findUserById = async (id: string) => {
   });
 };
 
+export const updateUser = async (
+  id: string,
+  data: {
+    username?: string;
+    displayName?: string | null;
+    avatarUrl?: string | null;
+    isOnboarded?: boolean;
+  }
+) => {
+  return prisma.user.update({
+    where: { id },
+    data,
+  });
+};
+
 export const findUserByUsername = async (username: string) => {
   return prisma.user.findFirst({
     where: { username: { equals: username, mode: "insensitive" } },

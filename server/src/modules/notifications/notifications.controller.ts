@@ -152,17 +152,24 @@ export const getPreferences = async (req: AuthRequest, res: Response): Promise<v
 /**
  * PUT /notifications/preferences
  * Updates notification preferences.
+ * Body is validated by the validate middleware using updatePreferencesSchema.
  */
 export const updatePreferences = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
-    const prefs = req.body;
-    
-    const dataToUpdate: any = {};
-    if (typeof prefs.pushEnabled === "boolean") dataToUpdate.pushNotificationsEnabled = prefs.pushEnabled;
-    if (typeof prefs.dmNotifications === "boolean") dataToUpdate.dmNotifications = prefs.dmNotifications;
-    if (typeof prefs.mentionNotifications === "boolean") dataToUpdate.mentionNotifications = prefs.mentionNotifications;
-    if (typeof prefs.channelNotifications === "boolean") dataToUpdate.channelNotifications = prefs.channelNotifications;
+    const prefs = req.body as {
+      pushEnabled?: boolean;
+      dmNotifications?: boolean;
+      mentionNotifications?: boolean;
+      channelNotifications?: boolean;
+    };
+
+    // Map client-facing field names to Prisma column names
+    const dataToUpdate: Record<string, boolean> = {};
+    if (prefs.pushEnabled !== undefined) dataToUpdate.pushNotificationsEnabled = prefs.pushEnabled;
+    if (prefs.dmNotifications !== undefined) dataToUpdate.dmNotifications = prefs.dmNotifications;
+    if (prefs.mentionNotifications !== undefined) dataToUpdate.mentionNotifications = prefs.mentionNotifications;
+    if (prefs.channelNotifications !== undefined) dataToUpdate.channelNotifications = prefs.channelNotifications;
 
     if (Object.keys(dataToUpdate).length > 0) {
       await prisma.user.update({
@@ -170,17 +177,18 @@ export const updatePreferences = async (req: AuthRequest, res: Response): Promis
         data: dataToUpdate,
       });
     }
-    
+
+    // Fetch and return the updated preferences
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { 
+      select: {
         pushNotificationsEnabled: true,
         dmNotifications: true,
         mentionNotifications: true,
         channelNotifications: true,
       }
     });
-    
+
     res.json({
       pushEnabled: user?.pushNotificationsEnabled ?? false,
       dmNotifications: user?.dmNotifications ?? true,

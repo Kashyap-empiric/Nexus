@@ -85,9 +85,16 @@ export const savePushSubscription = async (
   auth: string,
   userAgent?: string
 ) => {
+  // Security: If this endpoint is already registered under a different user,
+  // delete that record first. This prevents the endpoint from being
+  // hijacked/reassigned to another user via upsert (which only keys on endpoint).
+  await prisma.pushSubscription.deleteMany({
+    where: { endpoint, userId: { not: userId } },
+  });
+
   return prisma.pushSubscription.upsert({
     where: { endpoint },
-    update: { userId, p256dh, auth, userAgent },
+    update: { p256dh, auth, userAgent },
     create: { userId, endpoint, p256dh, auth, userAgent },
   });
 };

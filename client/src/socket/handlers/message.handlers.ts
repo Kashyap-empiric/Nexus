@@ -47,25 +47,34 @@ export const handleMessageNew = (queryClient: QueryClient) => {
       const currentUser = getAuthUser();
       if (currentUser && message.userId === currentUser.id) return;
 
-      const originalTitle = document.title.replace(/^\(\d+\)\s/, "");
-      document.title = `(1) New Message! - ${originalTitle}`;
+      // Suppress desktop notification if user is already viewing this conversation
+      const isViewingConversation =
+        typeof window !== "undefined" && (
+          window.location.pathname === `/conversations/${message.conversationId}` ||
+          window.location.pathname.includes(`/channels/${message.conversationId}`)
+        );
 
-      const onFocus = () => {
-        document.title = originalTitle;
-        window.removeEventListener("focus", onFocus);
-      };
-      window.addEventListener("focus", onFocus);
+      if (!isViewingConversation) {
+        const originalTitle = document.title.replace(/^\(\d+\)\s/, "");
+        document.title = `(1) New Message! - ${originalTitle}`;
 
-      // Show desktop notification
-      const senderName = message.user?.username || "Someone";
-      const conversationName = extractConversationName(queryClient, message.conversationId);
+        const onFocus = () => {
+          document.title = originalTitle;
+          window.removeEventListener("focus", onFocus);
+        };
+        window.addEventListener("focus", onFocus);
 
-      showMessageNotification(
-        senderName,
-        message.content,
-        message.conversationId,
-        conversationName,
-      );
+        // Show desktop notification
+        const senderName = message.user?.username || "Someone";
+        const conversationName = extractConversationName(queryClient, message.conversationId);
+
+        showMessageNotification(
+          senderName,
+          message.content,
+          message.conversationId,
+          conversationName,
+        );
+      }
     } catch (err) {
       console.error("Failed to parse incoming message", err);
     }

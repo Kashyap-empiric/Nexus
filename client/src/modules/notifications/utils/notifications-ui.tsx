@@ -1,4 +1,4 @@
-import { MessageSquare, Mail, CheckCircle, UserPlus, Hash, Bell, UserMinus } from "lucide-react";
+import { Mail, CheckCircle, UserPlus, Hash, Bell, UserMinus } from "lucide-react";
 
 export function timeAgo(dateStr: string): string {
   const now = Date.now();
@@ -17,7 +17,6 @@ export function timeAgo(dateStr: string): string {
 
 export function NotificationIcon({ type }: { type: string }) {
   const iconMap: Record<string, React.ReactNode> = {
-    MESSAGE: <MessageSquare className="h-4 w-4 text-blue-500" />,
     INVITE_RECEIVED: <Mail className="h-4 w-4 text-amber-500" />,
     INVITE_ACCEPTED: <CheckCircle className="h-4 w-4 text-green-500" />,
     MEMBER_JOINED: <UserPlus className="h-4 w-4 text-primary" />,

@@ -53,3 +53,9 @@ export const messageLimiter = createRateLimiter({
   max: ENV.MESSAGE_RATE_LIMIT_MAX,
   message: "You are sending messages too quickly.",
 });
+
+export const pushLimiter = createRateLimiter({
+  windowMs: ENV.PUSH_RATE_LIMIT_WINDOW_MS,
+  max: ENV.PUSH_RATE_LIMIT_MAX,
+  message: "Too many push subscription requests. Please try again later.",
+});
