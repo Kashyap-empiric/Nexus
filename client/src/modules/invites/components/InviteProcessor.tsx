@@ -1,47 +1,52 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/modules/auth/hooks/useAuth";
 import { useUser } from "@/modules/auth/store/useAuthStore";
 import { api } from "@/shared/lib/api";
-import { API_ROUTES } from "@/config/url";
+import { API_ROUTES, APP_ROUTES } from "@/config/url";
 import { toast } from "sonner";
+import { safeRedirect } from "@/shared/lib/utils";
 
 export function InviteProcessor() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const user = useUser();
   const { isLoading } = useAuth();
+  const resolvedRef = useRef(false);
 
   useEffect(() => {
     if (isLoading) return;
+    if (resolvedRef.current) return; // Prevent double-resolution
 
     const token = searchParams.get("token");
 
     if (!token) {
-      router.push("/");
+      safeRedirect(router, APP_ROUTES.HOME);
       return;
     }
 
     if (user) {
       // Authenticated -> Resolve directly
+      resolvedRef.current = true;
       api.post(API_ROUTES.INVITES.RESOLVE, { token })
         .then((res) => {
           if (res.data.redirectUrl) {
-            router.push(res.data.redirectUrl);
+            safeRedirect(router, res.data.redirectUrl);
           } else {
-            router.push("/");
+            safeRedirect(router, APP_ROUTES.HOME);
           }
         })
-        .catch(() => {
-          toast.error("Failed to join via invite");
-          router.push("/");
+        .catch((err: any) => {
+          const errorMsg = err?.response?.data?.error || err?.message || "Failed to join via invite";
+          toast.error(errorMsg);
+          safeRedirect(router, APP_ROUTES.HOME);
         });
     } else {
       // Unauthenticated -> Store and redirect to login
       sessionStorage.setItem("nexus_invite", token);
-      router.push("/login");
+      safeRedirect(router, APP_ROUTES.AUTH.LOGIN);
     }
   }, [searchParams, router, user, isLoading]);
 

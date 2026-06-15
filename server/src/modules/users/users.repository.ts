@@ -18,6 +18,7 @@ export const searchUsers = async (query: string, currentUserId: string) => {
     select: {
       id: true,
       username: true,
+      email: true,
       avatarUrl: true,
     },
     take: 10,
@@ -33,5 +34,17 @@ export const findUserById = async (id: string) => {
 export const findUserByUsername = async (username: string) => {
   return prisma.user.findFirst({
     where: { username: { equals: username, mode: "insensitive" } },
+  });
+};
+
+export const findUserByEmail = async (email: string) => {
+  return prisma.user.findUnique({
+    where: { email: email.toLowerCase() },
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      avatarUrl: true,
+    },
   });
 };

@@ -84,6 +84,8 @@ export const subscribePush = async (req: AuthRequest, res: Response): Promise<vo
     const body = pushSubscriptionSchema.parse(req.body);
     const userAgent = req.headers["user-agent"];
 
+    console.log(`[Push Backend] Received subscription request for user ${userId}. Endpoint: ${body.endpoint.substring(0, 50)}...`);
+
     await savePushSubscription(
       userId,
       body.endpoint,
@@ -92,9 +94,10 @@ export const subscribePush = async (req: AuthRequest, res: Response): Promise<vo
       userAgent
     );
 
+    console.log(`[Push Backend] Successfully saved push subscription for user ${userId}.`);
     res.status(201).json({ success: true });
   } catch (error) {
-    console.error("Error saving push subscription:", error);
+    console.error("[Push Backend] Error saving push subscription:", error);
     res.status(400).json({ error: "Invalid subscription data" });
   }
 };
@@ -105,11 +108,14 @@ export const subscribePush = async (req: AuthRequest, res: Response): Promise<vo
  */
 export const unsubscribePush = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const userId = req.user!.id;
     const body = unsubscribePushSchema.parse(req.body);
+    console.log(`[Push Backend] Received unsubscribe request for user ${userId}. Endpoint: ${body.endpoint.substring(0, 50)}...`);
     await deletePushSubscription(body.endpoint);
+    console.log(`[Push Backend] Successfully deleted push subscription for user ${userId}.`);
     res.json({ success: true });
   } catch (error) {
-    console.error("Error deleting push subscription:", error);
+    console.error("[Push Backend] Error deleting push subscription:", error);
     res.status(400).json({ error: "Invalid request data" });
   }
 };
@@ -123,14 +129,19 @@ export const getPreferences = async (req: AuthRequest, res: Response): Promise<v
     const userId = req.user!.id;
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { pushNotificationsEnabled: true }
+      select: { 
+        pushNotificationsEnabled: true,
+        dmNotifications: true,
+        mentionNotifications: true,
+        channelNotifications: true,
+      }
     });
     
     res.json({
-      pushEnabled: user?.pushNotificationsEnabled ?? true,
-      dmNotifications: true,
-      mentionNotifications: true,
-      channelNotifications: false,
+      pushEnabled: user?.pushNotificationsEnabled ?? false,
+      dmNotifications: user?.dmNotifications ?? true,
+      mentionNotifications: user?.mentionNotifications ?? true,
+      channelNotifications: user?.channelNotifications ?? false,
     });
   } catch (error) {
     console.error("Error fetching preferences:", error);
@@ -147,23 +158,34 @@ export const updatePreferences = async (req: AuthRequest, res: Response): Promis
     const userId = req.user!.id;
     const prefs = req.body;
     
-    if (typeof prefs.pushEnabled === "boolean") {
+    const dataToUpdate: any = {};
+    if (typeof prefs.pushEnabled === "boolean") dataToUpdate.pushNotificationsEnabled = prefs.pushEnabled;
+    if (typeof prefs.dmNotifications === "boolean") dataToUpdate.dmNotifications = prefs.dmNotifications;
+    if (typeof prefs.mentionNotifications === "boolean") dataToUpdate.mentionNotifications = prefs.mentionNotifications;
+    if (typeof prefs.channelNotifications === "boolean") dataToUpdate.channelNotifications = prefs.channelNotifications;
+
+    if (Object.keys(dataToUpdate).length > 0) {
       await prisma.user.update({
         where: { id: userId },
-        data: { pushNotificationsEnabled: prefs.pushEnabled },
+        data: dataToUpdate,
       });
     }
     
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { pushNotificationsEnabled: true }
+      select: { 
+        pushNotificationsEnabled: true,
+        dmNotifications: true,
+        mentionNotifications: true,
+        channelNotifications: true,
+      }
     });
     
     res.json({
-      pushEnabled: user?.pushNotificationsEnabled ?? true,
-      dmNotifications: prefs.dmNotifications ?? true,
-      mentionNotifications: prefs.mentionNotifications ?? true,
-      channelNotifications: prefs.channelNotifications ?? false,
+      pushEnabled: user?.pushNotificationsEnabled ?? false,
+      dmNotifications: user?.dmNotifications ?? true,
+      mentionNotifications: user?.mentionNotifications ?? true,
+      channelNotifications: user?.channelNotifications ?? false,
     });
   } catch (error) {
     console.error("Error updating preferences:", error);

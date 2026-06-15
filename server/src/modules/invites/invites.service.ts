@@ -132,3 +132,5 @@ export const deleteInvitesForEntity = async (tx: Prisma.TransactionClient, type:
 };
 
 import { runTransaction as prismaTransaction } from "@/lib/transaction.js";
+
+export type { GenerateInviteParams, GenerateInviteResult } from "./invites.types.js";

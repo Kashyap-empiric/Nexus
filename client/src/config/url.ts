@@ -43,18 +43,28 @@ export const API_ROUTES = {
 export const APP_ROUTES = {
   HOME: '/',
   AUTH: {
+    INDEX: '/auth',
     LOGIN: '/login',
     REGISTER: '/register',
     FORGOT_PASSWORD: '/forgot-password',
+    CALLBACK: '/auth/callback',
   },
   CONVERSATIONS: {
     INDEX: '/conversations',
     DETAIL: (id: string | number) => `/conversations/${id}`,
   },
+  INVITE: {
+    INDEX: '/invite',
+  },
+  WORKSPACES: {
+    CHANNELS_PATH: '/channels',
+    CHANNEL: (workspaceId: string, channelId: string) => `/workspaces/${workspaceId}/channels/${channelId}`,
+  },
   NOTIFICATIONS: {
     INDEX: '/notifications',
   },
   SETTINGS: {
+    INDEX: '/settings',
     NOTIFICATIONS: '/settings/notifications',
   },
 } as const;

@@ -5,13 +5,14 @@ import { Loader2 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { handleInviteContinuation } from "@/modules/invites/lib/handleInvite";
+import { APP_ROUTES } from "@/config/url";
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const isInitialized = useAuthInitialized();
   const user = useUser();
   const pathname = usePathname();
   const router = useRouter();
-  const isPublicRoute = pathname === "/" || pathname === "/login" || pathname === "/register" || pathname === "/invite";
+  const isPublicRoute = pathname === APP_ROUTES.HOME || pathname === APP_ROUTES.AUTH.LOGIN || pathname === APP_ROUTES.AUTH.REGISTER || pathname === APP_ROUTES.INVITE.INDEX;
 
   useEffect(() => {
     if (isInitialized && user) {

@@ -169,9 +169,10 @@ export const updateLastReadMessage = async (
   userId: string,
   messageId: string
 ) => {
-  return prisma.conversationMember.update({
+  return prisma.conversationMember.updateMany({
     where: {
-      conversationId_userId: { conversationId, userId },
+      conversationId,
+      userId,
     },
     data: { lastReadMessageId: messageId },
   });

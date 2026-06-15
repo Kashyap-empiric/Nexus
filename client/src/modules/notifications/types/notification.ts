@@ -3,7 +3,8 @@ export type NotificationType =
   | "INVITE_RECEIVED"
   | "INVITE_ACCEPTED"
   | "MEMBER_JOINED"
-  | "CHANNEL_CREATED";
+  | "CHANNEL_CREATED"
+  | "MEMBER_REMOVED";
 
 export interface Notification {
   id: string;

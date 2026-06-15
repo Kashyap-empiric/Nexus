@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(session?.user || null);
           if (session?.user) handleSignIn();
           // Only redirect if they are currently on auth routes
-          if (pathnameRef.current?.startsWith("/auth")) {
+          if (pathnameRef.current?.startsWith(APP_ROUTES.AUTH.INDEX)) {
             routerRef.current.push(APP_ROUTES.CONVERSATIONS.INDEX);
           }
           break;
@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           handleSignOut(queryClient);
           
           // Only redirect to login if they are currently on a protected route
-          const isPublicRoute = pathnameRef.current === "/" || pathnameRef.current?.startsWith("/auth");
+          const isPublicRoute = pathnameRef.current === APP_ROUTES.HOME || pathnameRef.current?.startsWith(APP_ROUTES.AUTH.INDEX);
           if (!isPublicRoute) {
             routerRef.current.push(APP_ROUTES.AUTH.LOGIN);
           }

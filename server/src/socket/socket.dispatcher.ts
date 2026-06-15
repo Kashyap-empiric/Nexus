@@ -109,11 +109,16 @@ export const dispatchChannelUpdate = (
 
 export const dispatchMemberUpdate = (
   workspaceId: string,
-  payload: { action: "ROLE_UPDATED"; member: any }
+  payload: { action: "ROLE_UPDATED" | "REMOVED"; member: any }
 ): void => {
   try {
     const io = getIO();
     io.to(`workspace:${workspaceId}`).emit(SOCKET_EVENTS.MEMBER_UPDATE, payload);
+
+    // For REMOVED action, also notify the removed user directly
+    if (payload.action === "REMOVED" && payload.member?.userId) {
+      io.to(`user:${payload.member.userId}`).emit(SOCKET_EVENTS.MEMBER_UPDATE, payload);
+    }
   } catch (err: unknown) {
     console.error("[Socket.io] Failed to dispatch MEMBER_UPDATE:", err);
   }

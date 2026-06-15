@@ -3,6 +3,7 @@ import { API_ROUTES } from "@/config/url";
 export interface UserResult {
   id: string;
   username: string;
+  email: string;
   avatarUrl: string | null;
 }
 export const searchUsers = async (query: string) => {

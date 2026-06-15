@@ -5,6 +5,7 @@ import { dispatchMessageEvent } from "../socket.dispatcher.js";
 import { verifyConversationMembership } from "@/shared/permissions.js";
 import { findById } from "@/modules/conversations/conversations.repository.js";
 import { sendPushNotification } from "@/services/push.service.js";
+import { prisma } from "@/lib/db.js";
 
 export const registerMessageHandlers = (io: Server, socket: Socket) => {
   socket.on(
@@ -58,20 +59,46 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
 
         dispatchMessageEvent("NEW", payload.conversationId, message, conversationMetadata);
 
-        findById(payload.conversationId).then(conv => {
-          if (conv && conv.type === "DM") {
-            const pushPromises = conv.members.map(member => {
-              if (member.userId !== userId) {
-                return sendPushNotification(member.userId, {
-                  title: message.user.username,
-                  body: message.content,
-                  url: `/conversations/${payload.conversationId}`,
-                  tag: payload.conversationId,
-                });
-              }
+        findById(payload.conversationId).then(async (conv) => {
+          if (!conv) return;
+
+          const pushPromises = conv.members.map(async (member) => {
+            if (member.userId === userId) return;
+
+            const memberUser = await prisma.user.findUnique({
+              where: { id: member.userId },
+              select: { pushNotificationsEnabled: true, dmNotifications: true, channelNotifications: true, mentionNotifications: true, username: true }
             });
-            Promise.all(pushPromises).catch(err => console.error("[Push] Error sending push for message", err));
-          }
+
+            if (!memberUser || !memberUser.pushNotificationsEnabled) return;
+
+            const isMentioned = payload.content.includes(`@${memberUser.username}`);
+            let shouldSendPush = false;
+
+            if (conv.type === "DM" && memberUser.dmNotifications) {
+              shouldSendPush = true;
+            } else if (conv.type === "CHANNEL") {
+              if (memberUser.channelNotifications || (memberUser.mentionNotifications && isMentioned)) {
+                shouldSendPush = true;
+              }
+            }
+
+            if (shouldSendPush) {
+              let title = message.user.username;
+              if (conv.type === "CHANNEL" && conv.name) {
+                title = `${message.user.username} in #${conv.name}`;
+              }
+
+              return sendPushNotification(member.userId, {
+                title,
+                body: message.content,
+                url: `/conversations/${payload.conversationId}`,
+                tag: payload.conversationId,
+              });
+            }
+          });
+
+          Promise.all(pushPromises).catch(err => console.error("[Push] Error sending push for message", err));
         }).catch(err => console.error("[Push] Failed to fetch conversation", err));
 
         return callback?.({

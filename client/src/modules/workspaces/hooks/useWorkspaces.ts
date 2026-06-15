@@ -37,7 +37,7 @@ export const useCreateChannel = () => {
   });
 };
 
-import { updateChannel, deleteChannel, fetchWorkspaceMembers, updateMemberRole } from "../api/workspaces.api";
+import { updateChannel, deleteChannel, fetchWorkspaceMembers, updateMemberRole, removeMember } from "../api/workspaces.api";
 
 export const useUpdateChannel = () => {
   const queryClient = useQueryClient();
@@ -76,6 +76,17 @@ export const useUpdateMemberRole = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["workspaces", variables.workspaceId] });
       queryClient.invalidateQueries({ queryKey: ["workspace-members", variables.workspaceId] });
+    },
+  });
+};
+
+export const useRemoveMember = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ workspaceId, userId }: { workspaceId: string; userId: string }) => removeMember(workspaceId, userId),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+      queryClient.invalidateQueries({ queryKey: ["workspace-members", data.workspaceId] });
     },
   });
 };

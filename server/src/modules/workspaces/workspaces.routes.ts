@@ -10,7 +10,9 @@ import {
   deleteChannel,
   getWorkspaceMembers,
   updateMemberRole,
+  removeWorkspaceMember,
   inviteMemberByUsername,
+  inviteMembers,
 } from "./workspaces.controller.js";
 
 const router = Router();
@@ -26,6 +28,8 @@ router.patch("/:id/channels/:channelId", updateChannel);
 router.delete("/:id/channels/:channelId", deleteChannel);
 router.get("/:id/members", getWorkspaceMembers);
 router.post("/:id/invite", inviteMemberByUsername);
+router.post("/:id/invite-multiple", inviteMembers);
 router.patch("/:id/members/:userId/role", updateMemberRole);
+router.delete("/:id/members/:userId", removeWorkspaceMember);
 
 export default router;

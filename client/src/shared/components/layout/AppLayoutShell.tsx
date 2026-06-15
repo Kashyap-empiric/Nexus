@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/modules/conversations/components/Sidebar";
 import { NavigationRail } from "@/modules/chat/components/NavigationRail";
 import { ThemeToggle } from "@/shared/components/theme-toggle";
@@ -13,31 +13,54 @@ import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { PresenceIndicator } from "@/modules/chat/components/PresenceIndicator";
 import Link from "next/link";
 import { APP_ROUTES } from "@/config/url";
+import { InviteModalProvider, useInviteModalContext } from "@/modules/invites/context/InviteModalContext";
+import { InviteModal } from "@/modules/invites/components/InviteModal";
 
 export function AppLayoutShell({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  return (
+    <InviteModalProvider>
+    <AppLayoutShellInner>
+      {children}
+    </AppLayoutShellInner>
+    </InviteModalProvider>
+  );
+}
+
+function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const pathname = usePathname();
   const headerInfo = useChatStore((state) => state.headerInfo);
   const setMemberPanelOpen = useChatStore((state) => state.setMemberPanelOpen);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  // Consider content active if we are deep in a conversation, channel, or settings route
   const isContentActive = 
-    pathname?.includes("/conversations/") || 
-    pathname?.includes("/channels/") ||
-    pathname?.includes("/settings/");
+    pathname?.includes(APP_ROUTES.CONVERSATIONS.INDEX + "/") || 
+    pathname?.includes(APP_ROUTES.WORKSPACES.CHANNELS_PATH + "/") ||
+    pathname?.startsWith(APP_ROUTES.SETTINGS.INDEX + "/");
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
-  }, []);
+
+    if ("serviceWorker" in navigator) {
+      const handleMessage = (event: MessageEvent) => {
+        if (event.data && event.data.type === 'NAVIGATE' && event.data.url) {
+          router.push(event.data.url);
+        }
+      };
+      navigator.serviceWorker.addEventListener("message", handleMessage);
+      return () => navigator.serviceWorker.removeEventListener("message", handleMessage);
+    }
+  }, [router]);
 
   const isChannel = mounted ? (headerInfo?.isChannel ?? false) : false;
   const memberPanelOpen = mounted ? (headerInfo?.memberPanelOpen ?? false) : false;
 
+  const inviteModal = useInviteModalContext();
   const closeMobileSidebar = useCallback(() => setMobileSidebarOpen(false), []);
 
   return (
@@ -152,6 +175,9 @@ export function AppLayoutShell({
           {children}
         </div>
       </main>
+
+      {/* Global modals rendered at top level */}
+      <InviteModal isOpen={inviteModal.isOpen} onClose={inviteModal.close} type={inviteModal.type} entityId={inviteModal.entityId} />
     </div>
   );
 }

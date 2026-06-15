@@ -9,7 +9,6 @@ const NewConversationModal = dynamic(() => import("./NewConversationModal").then
 import { useConversationsQuery } from "../hooks/useConversations";
 import { Button } from "@/shared/components/ui/button";
 import { useInviteModal } from "@/modules/invites/hooks/useInviteModal";
-const InviteModal = dynamic(() => import("@/modules/invites/components/InviteModal").then((m) => m.InviteModal), { ssr: false });
 
 export function EmptyState() {
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
@@ -58,7 +57,6 @@ export function EmptyState() {
       </div>
 
       <NewConversationModal isOpen={isNewModalOpen} onClose={() => setIsNewModalOpen(false)} />
-      <InviteModal isOpen={inviteModal.isOpen} onClose={inviteModal.close} type={inviteModal.type} entityId={inviteModal.entityId} />
     </div>
   );
 }
