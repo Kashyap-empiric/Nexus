@@ -25,6 +25,8 @@ export interface GenerateInviteParams {
   type: InviteType;
   entityId?: string;
   userId: string;
+  /** When true, skip the 24-hour rotation policy and always generate a fresh token. */
+  forceNew?: boolean;
 }
 
 export interface GenerateInviteResult {

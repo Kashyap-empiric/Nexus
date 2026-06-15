@@ -11,6 +11,8 @@ import { MessageListSkeleton } from "@/modules/messages/components/MessageListSk
 import { useWorkspaceDetails } from "@/modules/workspaces/hooks/useWorkspaces";
 import { MemberListPanel } from "@/modules/workspaces/components/MemberListPanel";
 import { X } from "lucide-react";
+import { useLayoutUI } from "@/shared/components/layout/AppLayoutShell";
+import { InfoPanel } from "./InfoPanel";
 
 interface ActiveConversationProps {
   conversationId: string;
@@ -95,6 +97,8 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
   const otherMember = isDM ? conversation.members.find((m) => m.userId !== currentUserId) : undefined;
   const myProfile = conversation.members.find((m) => m.userId === currentUserId)?.user;
 
+  const { infoPanelOpen, infoPanelView, setInfoPanelView, closeInfoPanel } = useLayoutUI();
+
   return (
     <div className="flex-1 flex h-full min-w-0">
       <div className="flex-1 flex flex-col h-full bg-background min-w-0">
@@ -103,44 +107,40 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
           currentUserId={currentUserId}
           myLastReadMessageId={conversation.members.find(m => m.userId === currentUserId)?.lastReadMessageId}
           partnerLastReadMessageId={otherMember?.lastReadMessageId}
+          members={isChannel ? conversation.members : undefined}
+          isChannel={isChannel || undefined}
         />
 
         <MessageInput conversationId={conversationId} currentUser={myProfile} />
       </div>
 
-      {/* Member List Sidebar for Workspaces */}
-      {isChannel && conversation.workspaceId && (
+      {/* Info Panel Sidebar */}
+      {isChannel && infoPanelOpen && (
         <>
           {/* Desktop version */}
-          <div className="hidden md:block">
-            {memberPanelOpen && (
-              <MemberListPanel workspaceId={conversation.workspaceId} />
-            )}
+          <div className="hidden md:block h-full border-l">
+            <InfoPanel 
+              workspaceId={conversation.workspaceId || undefined} 
+              view={infoPanelView}
+              setInfoPanelView={setInfoPanelView}
+              onClose={closeInfoPanel}
+            />
           </div>
           
           {/* Mobile version */}
-          <div className={`md:hidden flex flex-col fixed inset-y-0 right-0 z-50 w-[85vw] bg-background shadow-xl border-l transform transition-transform duration-300 ease-in-out ${memberPanelOpen ? "translate-x-0" : "translate-x-full"}`}>
-            <div className="flex items-center justify-between p-4 border-b shrink-0">
-              <h2 className="font-semibold text-lg text-foreground">Members</h2>
-              <button 
-                onClick={() => useChatStore.getState().setMemberPanelOpen(false)}
-                className="p-1.5 rounded-full hover:bg-muted text-muted-foreground transition-colors"
-                title="Close"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <MemberListPanel workspaceId={conversation.workspaceId} />
-            </div>
+          <div className="md:hidden flex flex-col fixed inset-y-0 right-0 z-50 transform transition-transform duration-300 ease-in-out translate-x-0">
+            <InfoPanel 
+              workspaceId={conversation.workspaceId || undefined} 
+              view={infoPanelView}
+              setInfoPanelView={setInfoPanelView}
+              onClose={closeInfoPanel}
+            />
           </div>
           {/* Mobile overlay */}
-          {memberPanelOpen && (
-            <div 
-              className="md:hidden fixed inset-0 z-40 bg-black/50 transition-opacity"
-              onClick={() => useChatStore.getState().setMemberPanelOpen(false)}
-            />
-          )}
+          <div 
+            className="md:hidden fixed inset-0 z-40 bg-black/50 transition-opacity"
+            onClick={closeInfoPanel}
+          />
         </>
       )}
     </div>

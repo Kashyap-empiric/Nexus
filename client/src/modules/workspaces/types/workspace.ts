@@ -20,4 +20,5 @@ export interface Workspace {
   createdAt: string;
   updatedAt: string;
   members?: WorkspaceMember[];
+  unreadCount?: number;
 }

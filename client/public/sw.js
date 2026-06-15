@@ -51,9 +51,14 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', function (event) {
   event.notification.close();
-  const urlToOpen = event.notification.data && event.notification.data.url;
+  let urlToOpen = event.notification.data && event.notification.data.url;
 
   if (urlToOpen) {
+    // Normalize relative URLs to absolute for reliable client comparisons
+    if (urlToOpen.startsWith('/')) {
+      urlToOpen = self.location.origin + urlToOpen;
+    }
+
     event.waitUntil(
       clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (windowClients) {
         // Check if there is already a window/tab open with the exact target URL

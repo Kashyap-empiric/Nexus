@@ -13,6 +13,8 @@ model User {
   createdAt                DateTime             @default(now())
   updatedAt                DateTime             @updatedAt
   username                 String
+  displayName              String?
+  isOnboarded              Boolean              @default(false)
   pushNotificationsEnabled Boolean              @default(false)
   dmNotifications          Boolean              @default(true)
   mentionNotifications     Boolean              @default(true)

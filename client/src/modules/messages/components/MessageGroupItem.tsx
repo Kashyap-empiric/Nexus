@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
+import { MarkdownRenderer } from "./MarkdownRenderer";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import type { MessageGroup } from "@/modules/chat/utils/groupMessages";
+import type { ConversationMember } from "@/modules/conversations/types/conversation";
 import { MessageStatus } from "./MessageStatus";
 import { MoreHorizontal, Pencil, Trash, Ban, Copy } from "lucide-react";
 import {
@@ -26,9 +28,11 @@ interface MessageGroupItemProps {
   group: MessageGroup;
   currentUserId?: string | null;
   partnerLastReadMessageId?: string | null;
+  members?: ConversationMember[];
+  isChannel?: boolean;
 }
 
-export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageId }: MessageGroupItemProps) {
+export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageId, members, isChannel }: MessageGroupItemProps) {
   const { user, messages } = group;
   const conversationId = messages[0]?.conversationId;
 
@@ -163,7 +167,11 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                       >
                         <span className={isDeleted ? "italic text-muted-foreground flex items-center gap-1.5" : ""}>
                           {isDeleted && <Ban className="h-3.5 w-3.5 inline-block mr-1" />}
-                          {isDeleted ? "This message was deleted." : msg.content}
+                          {isDeleted ? (
+                            <span className="italic text-muted-foreground">This message was deleted.</span>
+                          ) : (
+                            <MarkdownRenderer content={msg.content} />
+                          )}
                           {msg.isEdited && !isDeleted && (
                             <span className="text-xs text-muted-foreground ml-2">(edited)</span>
                           )}
@@ -234,6 +242,8 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                             messageId={msg.id}
                             isPending={msg.pending}
                             partnerLastReadMessageId={partnerLastReadMessageId}
+                            readCount={isChannel && members ? computeReadCount(msg.id, currentUserId, members) : undefined}
+                            isChannel={isChannel}
                             className=""
                           />
                         )}
@@ -268,4 +278,24 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
       </AlertDialog>
     </>
   );
+}
+
+/**
+ * Count how many channel members (excluding the current user) have read a message.
+ * A member is considered to have read the message if their lastReadMessageId
+ * is greater than or equal to the message's ID (messages use UUIDv7 which sorts chronologically).
+ */
+function computeReadCount(
+  messageId: string,
+  currentUserId: string | null | undefined,
+  members: ConversationMember[]
+): number {
+  if (!currentUserId) return 0;
+
+  return members.filter(
+    (m) =>
+      m.userId !== currentUserId &&
+      m.lastReadMessageId &&
+      m.lastReadMessageId >= messageId
+  ).length;
 }

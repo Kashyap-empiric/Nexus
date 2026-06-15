@@ -53,7 +53,7 @@ export const resolveInviteService = async ({ token, userId }: ResolveInviteParam
   return { redirectUrl, events: domainEvents };
 };
 
-export const generateInviteService = async ({ type, entityId, userId }: GenerateInviteParams): Promise<GenerateInviteResult> => {
+export const generateInviteService = async ({ type, entityId, userId, forceNew }: GenerateInviteParams): Promise<GenerateInviteResult> => {
   // 1. Validation
   let finalEntityId = entityId;
 
@@ -73,21 +73,24 @@ export const generateInviteService = async ({ type, entityId, userId }: Generate
     if (!finalEntityId) throw new Error("ENTITY_ID_REQUIRED");
   }
 
-  // 2. Active Invite Rotation Policy (24h window)
-  const existingActive = await invitesRepo.findExistingActiveInvite(type, finalEntityId as string, userId);
+  // 2. Active Invite Rotation Policy (24h window) — skip when forceNew is true
+  //    forceNew is used for targeted user invites where each invite needs a unique token
+  if (!forceNew) {
+    const existingActive = await invitesRepo.findExistingActiveInvite(type, finalEntityId as string, userId);
 
-  if (existingActive) {
-    const ageInMs = Date.now() - existingActive.createdAt.getTime();
-    const ageInHours = ageInMs / (1000 * 60 * 60);
+    if (existingActive) {
+      const ageInMs = Date.now() - existingActive.createdAt.getTime();
+      const ageInHours = ageInMs / (1000 * 60 * 60);
 
-    if (ageInHours < 24) {
-      return {
-        invitePath: `/invite?token=${existingActive.token}`,
-        token: existingActive.token,
-        expiresAt: existingActive.expiresAt?.toISOString() || null,
-      };
-    } else {
-      await invitesRepo.revokeInvite(existingActive.id);
+      if (ageInHours < 24) {
+        return {
+          invitePath: `/invite?token=${existingActive.token}`,
+          token: existingActive.token,
+          expiresAt: existingActive.expiresAt?.toISOString() || null,
+        };
+      } else {
+        await invitesRepo.revokeInvite(existingActive.id);
+      }
     }
   }
 

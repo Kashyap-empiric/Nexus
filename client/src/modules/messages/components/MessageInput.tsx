@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useSendMessageMutation } from "@/modules/messages/hooks/useMessages";
 import { SendHorizontal, Smile } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
@@ -9,6 +9,11 @@ import EmojiPicker, { Theme } from 'emoji-picker-react';
 import { useTheme } from "next-themes";
 import type { User } from "@/modules/conversations/types/conversation";
 
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Placeholder from '@tiptap/extension-placeholder';
+import { Markdown } from 'tiptap-markdown';
+
 interface MessageInputProps {
   conversationId: string;
   currentUser?: User;
@@ -16,97 +21,204 @@ interface MessageInputProps {
 }
 
 export function MessageInput({ conversationId, currentUser, disabled }: MessageInputProps) {
-  const [content, setContent] = useState("");
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const { theme } = useTheme();
   const { mutate: sendMessage } = useSendMessageMutation(conversationId, currentUser);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  const resizeTextarea = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    textarea.style.height = "auto";
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 140)}px`;
-  };
-
-  useEffect(() => {
-    resizeTextarea();
-  }, [content]);
 
   const submitMessage = () => {
-    if (!content.trim()) return;
+    if (!editor) return;
+    
+    // We get standard Markdown back from TipTap!
+    // @ts-ignore - tiptap-markdown doesn't provide strong types for storage by default
+    const markdownContent = editor.storage.markdown.getMarkdown();
+    
+    if (!markdownContent.trim()) return;
 
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-    sendMessage({ conversationId, content, tempId });
-    setContent("");
-
-    // Reset height explicitly
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-    }
+    sendMessage({ conversationId, content: markdownContent.trim(), tempId });
+    
+    editor.commands.clearContent(true);
   };
+
+  const [activeMarks, setActiveMarks] = useState({
+    bold: false,
+    italic: false,
+    code: false,
+    strike: false,
+  });
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: false,
+        bold: { HTMLAttributes: { class: 'font-bold text-foreground' } },
+        italic: { HTMLAttributes: { class: 'italic' } },
+        strike: { HTMLAttributes: { class: 'line-through' } },
+        bulletList: {
+          HTMLAttributes: {
+            class: 'list-disc list-outside ml-4 my-1 space-y-1',
+          },
+        },
+        orderedList: {
+          HTMLAttributes: {
+            class: 'list-decimal list-outside ml-4 my-1 space-y-1',
+          },
+        },
+        codeBlock: {
+          HTMLAttributes: {
+            class: 'bg-zinc-950 dark:bg-zinc-900/50 text-zinc-50 border border-border/50 rounded-md p-3 my-2 overflow-x-auto text-[13px] font-mono',
+          },
+        },
+        code: {
+          HTMLAttributes: {
+            class: 'bg-muted text-foreground px-1.5 py-0.5 rounded text-[13px] font-mono border border-border/50',
+          },
+        },
+        blockquote: {
+          HTMLAttributes: {
+            class: 'border-l-4 border-primary/50 pl-3 my-2 italic text-muted-foreground',
+          },
+        },
+      }),
+      Placeholder.configure({
+        placeholder: "Message...",
+        emptyEditorClass: 'is-editor-empty',
+      }),
+      Markdown.configure({
+        html: false, // only parse/serialize standard markdown, not raw HTML
+        transformPastedText: true,
+        transformCopiedText: true,
+      }),
+    ],
+    content: '',
+    editable: !disabled,
+    onTransaction: ({ editor }) => {
+      setActiveMarks({
+        bold: editor.isActive('bold'),
+        italic: editor.isActive('italic'),
+        code: editor.isActive('code'),
+        strike: editor.isActive('strike'),
+      });
+    },
+    editorProps: {
+      attributes: {
+        class: 'w-full min-h-[24px] max-h-[140px] px-3 py-1 bg-transparent border-0 focus:ring-0 text-base outline-none prose-p:my-0 prose-p:whitespace-pre-wrap overflow-y-auto disabled:opacity-50 break-words',
+      },
+      handleKeyDown: (view, event) => {
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+        if (event.key === 'Enter') {
+          if (isMobile) {
+            // On mobile, Enter adds a newline (let TipTap handle it)
+            return false;
+          }
+
+          // On desktop, Enter sends, Shift+Enter adds newline
+          if (!event.shiftKey) {
+            event.preventDefault();
+            submitMessage();
+            return true;
+          }
+        }
+        return false;
+      },
+    },
+  });
+
+  // Keep editor's editable state synced with disabled prop
+  useEffect(() => {
+    if (editor && editor.isEditable === disabled) {
+      editor.setEditable(!disabled);
+    }
+  }, [editor, disabled]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     submitMessage();
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Determine if we are on a mobile device
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-
-    if (e.key === 'Enter') {
-      if (isMobile) {
-        // On mobile, Enter just adds a new line (default behavior).
-        // User must tap the send button.
-        return;
-      }
-
-      // On desktop, Enter sends the message, Shift+Enter adds a new line
-      if (!e.shiftKey) {
-        e.preventDefault();
-        submitMessage();
-      }
+  const onEmojiClick = (emojiData: any) => {
+    if (editor) {
+      editor.chain().focus().insertContent(emojiData.emoji).run();
     }
   };
 
+  if (!editor) {
+    return null; // Or a loading skeleton
+  }
+
+  // To toggle states efficiently and prevent getting "stuck" due to schema exclusions (code excludes bold/italic)
+  const toggleBold = () => {
+    if (editor.isActive('code')) {
+      editor.chain().focus().unsetCode().toggleBold().run();
+    } else {
+      editor.chain().focus().toggleBold().run();
+    }
+  };
+
+  const toggleItalic = () => {
+    if (editor.isActive('code')) {
+      editor.chain().focus().unsetCode().toggleItalic().run();
+    } else {
+      editor.chain().focus().toggleItalic().run();
+    }
+  };
+
+  const toggleStrike = () => {
+    if (editor.isActive('code')) {
+      editor.chain().focus().unsetCode().toggleStrike().run();
+    } else {
+      editor.chain().focus().toggleStrike().run();
+    }
+  };
+
+  const toggleCode = () => {
+    // Code excludes other marks, so if we're turning it ON, we clear the others
+    if (!editor.isActive('code')) {
+      editor.chain().focus().unsetBold().unsetItalic().unsetStrike().toggleCode().run();
+    } else {
+      editor.chain().focus().toggleCode().run();
+    }
+  };
+
+  const isEmpty = editor.isEmpty;
+  const activeClass = "bg-primary/15 text-primary dark:bg-zinc-800 dark:text-zinc-100";
+
   return (
     <form onSubmit={handleSubmit} className="px-[15px] md:px-6 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-2 bg-background shrink-0 w-full">
-      <div className="w-full flex items-end gap-2 bg-background dark:bg-zinc-950 border rounded-xl px-3 py-2 shadow-sm transition-colors focus-within:ring-1 focus-within:ring-primary focus-within:border-primary">
-        <div className="flex-1 min-w-0 flex items-center">
-          <textarea
-            ref={textareaRef}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={disabled}
-            placeholder="Message..."
-            rows={1}
-            className="w-full bg-transparent border-0 focus:ring-0 px-2 py-1.5 text-base outline-none placeholder:text-muted-foreground resize-none block overflow-y-auto disabled:opacity-50"
-            style={{ maxHeight: "140px", minHeight: "36px" }}
-            autoFocus
-          />
-        </div>
-        <div className="flex items-center gap-1 shrink-0 pb-[1px]">
+      <div className="w-full flex flex-col bg-background dark:bg-zinc-950 border rounded-xl shadow-sm transition-colors focus-within:ring-1 focus-within:ring-primary focus-within:border-primary overflow-hidden">
+        
+        {/* Toolbar Row */}
+        <div className="flex items-center gap-1 px-2 pt-2 text-muted-foreground">
+          <button type="button" onClick={toggleBold} className={`p-1.5 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.bold ? activeClass : ''}`} title="Bold">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 12a4 4 0 0 0 0-8H6v8"/><path d="M15 20a4 4 0 0 0 0-8H6v8Z"/></svg>
+          </button>
+          <button type="button" onClick={toggleItalic} className={`p-1.5 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.italic ? activeClass : ''}`} title="Italic">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" x2="10" y1="4" y2="4"/><line x1="14" x2="5" y1="20" y2="20"/><line x1="15" x2="9" y1="4" y2="20"/></svg>
+          </button>
+          <button type="button" onClick={toggleCode} className={`p-1.5 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.code ? activeClass : ''}`} title="Code">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          </button>
+          <button type="button" onClick={toggleStrike} className={`p-1.5 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.strike ? activeClass : ''}`} title="Strikethrough">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4H9a3 3 0 0 0-2.83 4"/><path d="M14 12a4 4 0 0 1 0 8H6"/><line x1="4" x2="20" y1="12" y2="12"/></svg>
+          </button>
+          
           <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
             <PopoverTrigger
               type="button"
-              className="shrink-0 h-9 w-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center"
+              className="p-1.5 hover:bg-muted hover:text-foreground rounded-md transition-colors flex items-center justify-center"
+              title="Emoji"
             >
-              <Smile className="h-5 w-5" />
-              <span className="sr-only">Emoji</span>
+              <Smile className="h-4 w-4" />
             </PopoverTrigger>
             <PopoverContent
               side="top"
-              align="end"
+              align="start"
               className="w-auto p-0 border-none shadow-xl"
               sideOffset={8}
             >
               <EmojiPicker
-                onEmojiClick={(emojiData) => {
-                  setContent((prev) => prev + emojiData.emoji);
-                  textareaRef.current?.focus();
-                }}
+                onEmojiClick={onEmojiClick}
                 theme={theme === 'dark' ? Theme.DARK : Theme.LIGHT}
                 lazyLoadEmojis={true}
                 searchPlaceHolder="Search emojis..."
@@ -121,14 +233,24 @@ export function MessageInput({ conversationId, currentUser, disabled }: MessageI
               />
             </PopoverContent>
           </Popover>
+          {/* Attachment icon removed per request */}
+        </div>
+
+        {/* TipTap Editor and Send Button */}
+        <div className="flex items-end w-full px-3 py-1.5 gap-2">
+          <div className="flex-1 min-w-0 relative cursor-text" onClick={() => editor.commands.focus()}>
+            <EditorContent editor={editor} className="w-full" />
+          </div>
+
           <Button
             type="submit"
-            disabled={!content.trim() || disabled}
+            disabled={isEmpty || disabled}
             size="icon"
             variant="ghost"
-            className={`shrink-0 h-9 w-9 rounded-md transition-all flex items-center justify-center hover:bg-muted ${content.trim() ? "text-primary" : "text-muted-foreground opacity-50"}`}
+            className={`shrink-0 h-8 w-8 mb-[2px] rounded-md transition-all flex items-center justify-center hover:bg-muted ${!isEmpty ? "text-primary" : "text-muted-foreground opacity-50"}`}
+            title="Send message"
           >
-            <SendHorizontal className="h-6 w-6" />
+            <SendHorizontal className="h-5 w-5" />
             <span className="sr-only">Send</span>
           </Button>
         </div>

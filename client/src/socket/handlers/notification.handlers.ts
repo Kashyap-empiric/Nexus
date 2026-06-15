@@ -34,14 +34,22 @@ export const handleNotificationNew = (queryClient: QueryClient) => {
         (oldCount) => (oldCount ?? 0) + 1
       );
 
-      // Show desktop notification if tab is hidden
+      // Show desktop notification if tab is hidden and user is not already viewing
+      // the page this notification links to
       if (typeof document !== "undefined" && document.hidden) {
-        showNotification({
-          title: notification.title,
-          body: notification.body || "",
-          tag: notification.id,
-          onClickUrl: notification.link || undefined,
-        });
+        const isViewingRelevantPage =
+          notification.link &&
+          typeof window !== "undefined" &&
+          window.location.pathname === notification.link;
+
+        if (!isViewingRelevantPage) {
+          showNotification({
+            title: notification.title,
+            body: notification.body || "",
+            tag: notification.id,
+            onClickUrl: notification.link || undefined,
+          });
+        }
       }
     } catch (err) {
       console.error("Failed to handle incoming notification", err);

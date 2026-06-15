@@ -174,11 +174,13 @@ async function sendWorkspaceInvite(
   inviterName: string,
   workspaceImageUrl?: string,
 ) {
-  // Generate an invite token for this workspace
+  // Generate a unique invite token per user (forceNew skips the 24h rotation policy
+  // so each invited user gets their own unique token)
   const invite = await generateInviteService({
     type: "WORKSPACE",
     entityId: workspaceId,
     userId: inviterId,
+    forceNew: true,
   });
 
   // Create INVITE_RECEIVED notification with the token in the link

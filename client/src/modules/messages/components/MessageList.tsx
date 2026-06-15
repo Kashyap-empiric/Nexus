@@ -9,15 +9,18 @@ import { groupMessages } from "@/modules/chat/utils/groupMessages";
 import { MessageListSkeleton } from "./MessageListSkeleton";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
+import type { ConversationMember } from "@/modules/conversations/types/conversation";
 
 interface MessageListProps {
   conversationId: string;
   currentUserId?: string | null;
   myLastReadMessageId?: string | null;
   partnerLastReadMessageId?: string | null;
+  members?: ConversationMember[];
+  isChannel?: boolean;
 }
 
-export function MessageList({ conversationId, currentUserId, myLastReadMessageId, partnerLastReadMessageId }: MessageListProps) {
+export function MessageList({ conversationId, currentUserId, myLastReadMessageId, partnerLastReadMessageId, members, isChannel }: MessageListProps) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, error } = useMessagesInfiniteQuery(conversationId);
   const { mutate: markRead } = useMarkConversationReadMutation();
 
@@ -96,6 +99,8 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
                 group={group}
                 currentUserId={currentUserId}
                 partnerLastReadMessageId={partnerLastReadMessageId}
+                members={members}
+                isChannel={isChannel}
               />
             ))
           )}

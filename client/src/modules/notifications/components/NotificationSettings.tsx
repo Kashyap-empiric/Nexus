@@ -5,7 +5,7 @@ import { useNotificationPreferences } from "@/modules/notifications/hooks/useNot
 import { subscribeToPush, unsubscribeFromPush } from "@/shared/lib/push";
 
 export function NotificationSettings() {
-  const { preferences, isLoading, update, isUpdating } = useNotificationPreferences();
+  const { preferences, isLoading, update, updateAsync, isUpdating } = useNotificationPreferences();
   const [actualPushEnabled, setActualPushEnabled] = useState(false);
 
   useEffect(() => {
@@ -25,23 +25,30 @@ export function NotificationSettings() {
   }, [preferences?.pushEnabled]);
 
   const handleToggle = async (key: "pushEnabled" | "dmNotifications" | "mentionNotifications" | "channelNotifications") => {
-    if (preferences) {
-      const newValue = key === "pushEnabled" ? !actualPushEnabled : !preferences[key];
-      update({ [key]: newValue });
+    if (!preferences) return;
 
-      if (key === "pushEnabled") {
-        if (newValue) {
-          const sub = await subscribeToPush();
-          if (sub) {
-            setActualPushEnabled(true);
-          } else {
-            update({ [key]: false });
-          }
-        } else {
-          await unsubscribeFromPush();
-          setActualPushEnabled(false);
-        }
+    // Non-push toggles can be updated directly
+    if (key !== "pushEnabled") {
+      update({ [key]: !preferences[key] });
+      return;
+    }
+
+    // For push toggles, sequence operations to avoid race conditions:
+    // 1. First try the browser subscription/unsubscription
+    // 2. Only persist to server if the browser operation succeeds
+    if (actualPushEnabled) {
+      // Turning OFF: unsubscribe from browser first, then persist
+      await unsubscribeFromPush();
+      setActualPushEnabled(false);
+      await updateAsync({ pushEnabled: false });
+    } else {
+      // Turning ON: subscribe to browser push first, then persist
+      const sub = await subscribeToPush();
+      if (sub) {
+        setActualPushEnabled(true);
+        await updateAsync({ pushEnabled: true });
       }
+      // If subscription fails, don't update the server — preference stays false
     }
   };
 
@@ -54,59 +61,59 @@ export function NotificationSettings() {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="px-4 py-4 md:px-8 md:py-6 border-b shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10 sticky top-0">
-        <h1 className="text-xl md:text-2xl font-bold">Notification Settings</h1>
+      <div>
+        <h3 className="text-lg font-medium">Notifications</h3>
+        <p className="text-sm text-muted-foreground">
+          Manage how and when you receive alerts.
+        </p>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 max-w-3xl w-full">
-        <div className="space-y-6">
-          {/* Desktop Notifications toggle */}
-          <div className="space-y-3">
-            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-              Desktop Notifications
-            </h2>
-            <div className="border rounded-lg divide-y bg-card">
-              <ToggleRow
-                label="Enable Desktop Notifications"
-                description="Receive notifications when you get new messages or invites"
-                checked={actualPushEnabled}
-                disabled={isUpdating}
-                onChange={() => handleToggle("pushEnabled")}
-              />
-            </div>
+      <div className="space-y-6">
+        {/* Desktop Notifications toggle */}
+        <div className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            Desktop Notifications
+          </h2>
+          <div className="border rounded-lg divide-y bg-card">
+            <ToggleRow
+              label="Enable Desktop Notifications"
+              description="Receive notifications when you get new messages or invites"
+              checked={actualPushEnabled}
+              disabled={isUpdating}
+              onChange={() => handleToggle("pushEnabled")}
+            />
           </div>
+        </div>
 
-          {/* Notification Type toggles (next level) */}
-          <div className="space-y-3">
-            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-              Notification Types
-            </h2>
-            <div className="border rounded-lg divide-y bg-card">
-              <ToggleRow
-                label="Direct Messages"
-                description="Notify me when someone sends me a direct message"
-                checked={preferences?.dmNotifications ?? true}
-                disabled={isUpdating}
-                onChange={() => handleToggle("dmNotifications")}
-              />
-              <ToggleRow
-                label="Mentions"
-                description="Notify me when someone mentions me in a channel"
-                checked={preferences?.mentionNotifications ?? true}
-                disabled={isUpdating}
-                onChange={() => handleToggle("mentionNotifications")}
-              />
-              <ToggleRow
-                label="All Channel Messages"
-                description="Notify me for every message in channels I'm in"
-                checked={preferences?.channelNotifications ?? false}
-                disabled={isUpdating}
-                onChange={() => handleToggle("channelNotifications")}
-              />
-            </div>
+        {/* Notification Type toggles (next level) */}
+        <div className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            Notification Types
+          </h2>
+          <div className="border rounded-lg divide-y bg-card">
+            <ToggleRow
+              label="Direct Messages"
+              description="Notify me when someone sends me a direct message"
+              checked={preferences?.dmNotifications ?? true}
+              disabled={isUpdating}
+              onChange={() => handleToggle("dmNotifications")}
+            />
+            <ToggleRow
+              label="Mentions"
+              description="Notify me when someone mentions me in a channel"
+              checked={preferences?.mentionNotifications ?? true}
+              disabled={isUpdating}
+              onChange={() => handleToggle("mentionNotifications")}
+            />
+            <ToggleRow
+              label="All Channel Messages"
+              description="Notify me for every message in channels I'm in"
+              checked={preferences?.channelNotifications ?? false}
+              disabled={isUpdating}
+              onChange={() => handleToggle("channelNotifications")}
+            />
           </div>
         </div>
       </div>

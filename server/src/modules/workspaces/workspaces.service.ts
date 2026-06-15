@@ -6,7 +6,44 @@ import { WorkspaceRole } from "@prisma/client";
 import { isWorkspaceMember } from "@/shared/permissions.js";
 
 export const getUserWorkspaces = async (userId: string) => {
-  return workspacesRepo.findUserWorkspaces(userId);
+  const workspaces = await workspacesRepo.findUserWorkspaces(userId);
+
+  if (workspaces.length === 0) return workspaces;
+
+  const workspaceIds = workspaces.map((w) => w.id);
+
+  // Get all accessible channels across all user workspaces (includes workspaceId)
+  const accessibleChannels = await conversationsRepo.findChannelIdsByWorkspaceIds(
+    workspaceIds,
+    userId
+  );
+
+  if (accessibleChannels.length === 0) {
+    return workspaces.map((w) => ({ ...w, unreadCount: 0 }));
+  }
+
+  // Count unread messages per channel
+  const unreadCountsMap = await conversationsRepo.countUnreadByConversations(
+    userId,
+    accessibleChannels.map((c) => c.id)
+  );
+
+  // Aggregate by workspace using the workspaceId from the channel fetch
+  const workspaceUnreadTotals = new Map<string, number>();
+  for (const channel of accessibleChannels) {
+    if (channel.workspaceId) {
+      const unread = unreadCountsMap.get(channel.id) || 0;
+      workspaceUnreadTotals.set(
+        channel.workspaceId,
+        (workspaceUnreadTotals.get(channel.workspaceId) || 0) + unread
+      );
+    }
+  }
+
+  return workspaces.map((w) => ({
+    ...w,
+    unreadCount: workspaceUnreadTotals.get(w.id) || 0,
+  }));
 };
 
 export const getWorkspaceDetails = async (userId: string, slugOrId: string) => {
@@ -26,7 +63,18 @@ export const getWorkspaceChannels = async (userId: string, slugOrId: string) => 
   const isMember = await isWorkspaceMember(userId, workspace.id);
   if (!isMember) throw new Error("Forbidden: Not a member of this workspace");
 
-  return conversationsRepo.findChannelByWorkspaceId(workspace.id);
+  const channels = await conversationsRepo.findChannelByWorkspaceId(workspace.id, userId);
+
+  // Count unread messages for all channels in a single query
+  const unreadCountsMap = await conversationsRepo.countUnreadByConversations(
+    userId,
+    channels.map((c) => c.id)
+  );
+
+  return channels.map((channel) => ({
+    ...channel,
+    unreadCount: unreadCountsMap.get(channel.id) || 0,
+  }));
 };
 
 export const createWorkspace = async (userId: string, name: string, slug: string, imageUrl?: string) => {

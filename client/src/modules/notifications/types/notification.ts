@@ -1,5 +1,4 @@
 export type NotificationType =
-  | "MESSAGE"
   | "INVITE_RECEIVED"
   | "INVITE_ACCEPTED"
   | "MEMBER_JOINED"

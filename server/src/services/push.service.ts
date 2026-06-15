@@ -54,10 +54,18 @@ export const sendPushNotification = async (userId: string, payload: PushPayload)
 
     console.log(`[Push Backend] Found ${subscriptions.length} subscription(s) for user ${userId}.`);
 
+    // Normalize relative URLs to absolute so the service worker can match them
+    // against client.url (which is always an absolute URL like https://app.com/path)
+    const absoluteUrl = payload.url
+      ? payload.url.startsWith("http://") || payload.url.startsWith("https://")
+        ? payload.url
+        : `${ENV.CLIENT_URL.replace(/\/$/, "")}${payload.url}`
+      : undefined;
+
     const payloadString = JSON.stringify({
       title: payload.title,
       body: payload.body,
-      url: payload.url,
+      url: absoluteUrl,
       tag: payload.tag,
     });
 

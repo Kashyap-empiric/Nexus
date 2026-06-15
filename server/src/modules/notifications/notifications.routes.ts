@@ -1,5 +1,8 @@
 import { Router } from "express";
 import { authMiddleware } from "@/middlewares/auth.js";
+import { validate } from "@/middlewares/validate.js";
+import { pushLimiter } from "@/middlewares/rateLimiter.js";
+import { updatePreferencesSchema } from "./notifications.schema.js";
 import {
   getNotifications,
   getUnreadCount,
@@ -21,9 +24,9 @@ router.patch("/read-all", markAllAsRead);
 router.patch("/:id/read", markAsRead);
 
 router.get("/preferences", getPreferences);
-router.put("/preferences", updatePreferences);
+router.put("/preferences", validate({ body: updatePreferencesSchema }), updatePreferences);
 
-router.post("/push/subscribe", subscribePush);
-router.delete("/push/subscribe", unsubscribePush);
+router.post("/push/subscribe", pushLimiter, subscribePush);
+router.delete("/push/subscribe", pushLimiter, unsubscribePush);
 
 export default router;

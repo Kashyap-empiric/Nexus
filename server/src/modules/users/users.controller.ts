@@ -16,3 +16,26 @@ export const searchUsers = async (req: AuthRequest, res: Response): Promise<void
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+export const getMyProfile = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const profile = await usersService.getMyProfile(userId);
+    res.json({ data: profile });
+  } catch (error) {
+    console.error("Error getting profile:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const data = req.body;
+    const updatedProfile = await usersService.updateProfile(userId, data);
+    res.json({ data: updatedProfile });
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
