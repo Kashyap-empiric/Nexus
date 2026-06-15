@@ -29,3 +29,9 @@ export const findUserById = async (id: string) => {
     where: { id },
   });
 };
+
+export const findUserByUsername = async (username: string) => {
+  return prisma.user.findFirst({
+    where: { username: { equals: username, mode: "insensitive" } },
+  });
+};

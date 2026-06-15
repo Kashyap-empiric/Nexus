@@ -32,9 +32,9 @@ export const updatePreferences = async (prefs: Partial<NotificationPreference>):
 };
 
 export const subscribePush = async (endpoint: string, p256dh: string, auth: string): Promise<void> => {
-  await api.post(API_ROUTES.NOTIFICATIONS.PUSH_SUBSCRIBE, { endpoint, p256dh, auth });
+  await api.post(API_ROUTES.NOTIFICATIONS.PUSH_SUBSCRIBE, { endpoint, keys: { p256dh, auth } });
 };
 
-export const unsubscribePush = async (subscriptionId: string): Promise<void> => {
-  await api.delete(API_ROUTES.NOTIFICATIONS.PUSH_UNSUBSCRIBE(subscriptionId));
+export const unsubscribePush = async (endpoint: string): Promise<void> => {
+  await api.delete(API_ROUTES.NOTIFICATIONS.PUSH_UNSUBSCRIBE, { data: { endpoint } });
 };

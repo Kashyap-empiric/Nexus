@@ -24,10 +24,11 @@ export function AppLayoutShell({
   const setMemberPanelOpen = useChatStore((state) => state.setMemberPanelOpen);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  // Consider conversation active if we are deep in a conversation or channel route
-  const isConversationActive = 
+  // Consider content active if we are deep in a conversation, channel, or settings route
+  const isContentActive = 
     pathname?.includes("/conversations/") || 
-    pathname?.includes("/channels/");
+    pathname?.includes("/channels/") ||
+    pathname?.includes("/settings/");
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -52,7 +53,7 @@ export function AppLayoutShell({
       {/* Sidebar area — toggled by button on mobile */}
       <div className={cn(
         "shrink-0 flex transition-transform duration-300 ease-in-out",
-        isConversationActive
+        isContentActive
           ? "fixed inset-y-0 left-0 z-50 w-screen bg-background md:w-auto md:relative md:z-auto" +
             (mobileSidebarOpen ? " translate-x-0" : " -translate-x-full md:translate-x-0")
           : "relative w-full md:w-auto"
@@ -60,13 +61,13 @@ export function AppLayoutShell({
         <NavigationRail />
         <div className={cn(
           "flex-1 md:flex-initial",
-          isConversationActive ? "flex" : "flex flex-1 min-w-0 md:w-auto"
+          isContentActive ? "flex" : "flex flex-1 min-w-0 md:w-auto"
         )}>
           <Sidebar onNavigate={closeMobileSidebar} />
         </div>
       </div>
 
-      <main className={cn("flex-1 flex-col min-w-0 bg-background h-full", !isConversationActive ? "hidden md:flex" : "flex")}>
+      <main className={cn("flex-1 flex-col min-w-0 bg-background h-full", !isContentActive ? "hidden md:flex" : "flex")}>
         {/* Global header bar */}
         <div className="h-14 border-b flex items-center justify-between px-[15px] md:px-4 shrink-0 bg-background shadow-sm">
           <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">

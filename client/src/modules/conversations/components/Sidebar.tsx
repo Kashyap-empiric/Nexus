@@ -11,7 +11,7 @@ import type { ConversationMember } from "../types/conversation";
 import { useAuth } from "@/modules/auth";
 import { Input } from "@/shared/components/ui/input";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useGlobalSocket } from "@/modules/chat/hooks/useGlobalSocket";
 import { useChatStore } from "@/modules/chat/store/chatStore";
@@ -53,6 +53,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const params = useParams();
   const router = useRouter();
+  const pathname = usePathname();
   const activeId = (params?.channelId as string) || (params?.id as string);
   const lastVisitedChannels = useChatStore((state) => state.lastVisitedChannels);
   const setLastVisitedChannel = useChatStore((state) => state.setLastVisitedChannel);
@@ -71,6 +72,8 @@ export function Sidebar({ onNavigate }: SidebarProps) {
 
   // Redirect to last visited or fallback channel
   useEffect(() => {
+    if (pathname?.includes("/settings") || pathname?.includes("/notifications")) return;
+
     if (mode === "WORKSPACE" && activeWorkspaceId && workspaceChannels && workspaceChannels.length > 0) {
       const isCurrentlyInAChannel = workspaceChannels.some(c => c.id === activeId);
       if (!isCurrentlyInAChannel) {

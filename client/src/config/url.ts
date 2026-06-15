@@ -35,7 +35,7 @@ export const API_ROUTES = {
     MARK_ALL_READ: '/notifications/read-all',
     PREFERENCES: '/notifications/preferences',
     PUSH_SUBSCRIBE: '/notifications/push/subscribe',
-    PUSH_UNSUBSCRIBE: (id: string) => `/notifications/push/subscribe/${id}`,
+    PUSH_UNSUBSCRIBE: '/notifications/push/subscribe',
   },
 } as const;
 

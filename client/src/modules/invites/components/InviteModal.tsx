@@ -18,6 +18,25 @@ interface InviteModalProps {
 export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProps) {
   const { inviteUrl, expiresAt, isLoading, error, generate, reset } = useInviteLink();
   const [isCopied, setIsCopied] = useState(false);
+  const [username, setUsername] = useState("");
+  const [isInviting, setIsInviting] = useState(false);
+
+  const handleInviteByUsername = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username.trim() || type !== "WORKSPACE" || !entityId) return;
+
+    setIsInviting(true);
+    try {
+      const { inviteMemberByUsername } = await import("../../workspaces/api/workspaces.api");
+      await inviteMemberByUsername(entityId, username.trim());
+      toast.success(`Invite sent to ${username}`);
+      setUsername("");
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to send invite");
+    } finally {
+      setIsInviting(false);
+    }
+  };
 
   useEffect(() => {
     // We only want to run this once when the modal opens with a valid type
@@ -33,6 +52,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
       setTimeout(() => {
         reset();
         setIsCopied(false);
+        setUsername("");
       }, 300); // Wait for exit animation
     }
   }, [isOpen, reset]);
@@ -86,16 +106,49 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
         </div>
 
         <div className="p-6">
-          <div className="flex items-center justify-center mb-6">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <LinkIcon className="h-8 w-8 text-primary" />
+          {type === "WORKSPACE" && (
+            <div className="mb-6">
+              <h3 className="font-medium text-sm mb-2">Invite by username</h3>
+              <form onSubmit={handleInviteByUsername} className="flex gap-2">
+                <Input
+                  placeholder="Enter username..."
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="bg-muted focus-visible:ring-1"
+                  disabled={isInviting}
+                />
+                <Button type="submit" disabled={!username.trim() || isInviting}>
+                  {isInviting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Invite"}
+                </Button>
+              </form>
+              
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Or share link</span>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
+
+          {type !== "WORKSPACE" && (
+            <div className="flex items-center justify-center mb-6">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <LinkIcon className="h-8 w-8 text-primary" />
+              </div>
+            </div>
+          )}
           
-          <h3 className="text-center font-medium text-lg mb-2">Share this link</h3>
-          <p className="text-center text-muted-foreground text-sm mb-6">
-            Anyone with this link can join the conversation.
-          </p>
+          {type !== "WORKSPACE" && (
+            <>
+              <h3 className="text-center font-medium text-lg mb-2">Share this link</h3>
+              <p className="text-center text-muted-foreground text-sm mb-6">
+                Anyone with this link can join the conversation.
+              </p>
+            </>
+          )}
 
           {!type ? (
             <div className="text-center py-4 text-sm text-amber-500 bg-amber-500/10 rounded-md border border-amber-500/20">

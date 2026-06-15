@@ -5,10 +5,12 @@ import app from "./app.js";
 import { initSocket } from "./socket/socket.js";
 import { ENV } from "./config/env.js";
 import { connectRedis } from "./lib/redis.js";
+import { initPushService } from "./services/push.service.js";
 
 const PORT = ENV.PORT;
 
 connectRedis();
+initPushService();
 
 const httpServer = http.createServer(app);
 

@@ -169,15 +169,10 @@ export const updateLastReadMessage = async (
   userId: string,
   messageId: string
 ) => {
-  return prisma.conversationMember.upsert({
+  return prisma.conversationMember.update({
     where: {
       conversationId_userId: { conversationId, userId },
     },
-    update: { lastReadMessageId: messageId },
-    create: {
-      conversationId,
-      userId,
-      lastReadMessageId: messageId,
-    },
+    data: { lastReadMessageId: messageId },
   });
 };
