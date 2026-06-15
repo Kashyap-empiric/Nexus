@@ -31,15 +31,28 @@ export interface PushPayload {
 
 export const sendPushNotification = async (userId: string, payload: PushPayload) => {
   try {
+    console.log(`[Push Backend] Attempting to send push notification to user ${userId}`);
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { pushNotificationsEnabled: true }
     });
     
-    if (!user || !user.pushNotificationsEnabled) return;
+    if (!user) {
+      console.log(`[Push Backend] User ${userId} not found, skipping push.`);
+      return;
+    }
+    if (!user.pushNotificationsEnabled) {
+      console.log(`[Push Backend] User ${userId} has push notifications disabled, skipping.`);
+      return;
+    }
 
     const subscriptions = await getPushSubscriptionsByUserId(userId);
-    if (!subscriptions || subscriptions.length === 0) return;
+    if (!subscriptions || subscriptions.length === 0) {
+      console.log(`[Push Backend] No active push subscriptions found for user ${userId}.`);
+      return;
+    }
+
+    console.log(`[Push Backend] Found ${subscriptions.length} subscription(s) for user ${userId}.`);
 
     const payloadString = JSON.stringify({
       title: payload.title,
@@ -58,19 +71,22 @@ export const sendPushNotification = async (userId: string, payload: PushPayload)
       };
 
       try {
+        console.log(`[Push Backend] Sending to endpoint: ${pushSubscription.endpoint.substring(0, 50)}...`);
         await webpush.sendNotification(pushSubscription, payloadString);
+        console.log(`[Push Backend] Successfully sent push to endpoint: ${pushSubscription.endpoint.substring(0, 50)}...`);
       } catch (error: any) {
         if (error.statusCode === 410 || error.statusCode === 404) {
-          console.log(`[Push Service] Subscription expired. Deleting endpoint: ${sub.endpoint}`);
+          console.log(`[Push Backend] Subscription expired or invalid (Status ${error.statusCode}). Deleting endpoint: ${sub.endpoint}`);
           await deletePushSubscription(sub.endpoint);
         } else {
-          console.error("[Push Service] Error sending push:", error);
+          console.error(`[Push Backend] Error sending push to endpoint ${sub.endpoint}:`, error);
         }
       }
     });
 
     await Promise.all(promises);
+    console.log(`[Push Backend] Finished processing push notifications for user ${userId}.`);
   } catch (error) {
-    console.error("[Push Service] Failed to send push notifications:", error);
+    console.error("[Push Backend] Failed to send push notifications:", error);
   }
 };

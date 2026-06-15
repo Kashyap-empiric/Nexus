@@ -47,6 +47,7 @@ export const markAllAsRead = async (userId: string) => {
  * This is the central function used by all notification-producing flows.
  */
 export const createAndDispatch = async (input: CreateNotificationInput) => {
+  console.log(`[Notification Dispatch] Creating notification of type '${input.type}' for user ${input.userId}...`);
   const notification = await notificationsRepo.create({
     userId: input.userId,
     type: input.type as NotificationType,
@@ -56,22 +57,26 @@ export const createAndDispatch = async (input: CreateNotificationInput) => {
     imageUrl: input.imageUrl,
     metadata: (input.metadata as any) ?? undefined,
   });
+  console.log(`[Notification Dispatch] Notification created in DB with ID: ${notification.id}`);
 
   // Emit socket event to the user's personal room
   try {
+    console.log(`[Notification Dispatch] Emitting socket event to room 'user:${input.userId}'...`);
     const io = getIO();
     io.to(`user:${input.userId}`).emit(SOCKET_EVENTS.NOTIFICATION_NEW, notification);
+    console.log(`[Notification Dispatch] Socket event emitted.`);
   } catch (err) {
-    console.error("[Notifications] Failed to emit notification:new socket event:", err);
+    console.error("[Notification Dispatch] Failed to emit notification:new socket event:", err);
   }
 
   // Push delivery for offline/background
+  console.log(`[Notification Dispatch] Triggering Web Push delivery for user ${input.userId}...`);
   sendPushNotification(input.userId, {
     title: notification.title,
     body: notification.body || undefined,
     url: notification.link || undefined,
     tag: notification.id,
-  }).catch(err => console.error("[Notifications] Push send failed:", err));
+  }).catch(err => console.error("[Notification Dispatch] Push send failed:", err));
 
   return notification;
 };

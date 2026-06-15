@@ -21,13 +21,21 @@ export async function subscribeToPush() {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return null;
 
   try {
+    console.log("[Push Frontend] Explicitly registering service worker...");
+    await navigator.serviceWorker.register("/sw.js");
+
     const registration = await navigator.serviceWorker.ready;
-    if (!registration.pushManager) return null;
+    if (!registration.pushManager) {
+      console.warn("[Push Frontend] pushManager not available.");
+      return null;
+    }
 
     const existingSub = await registration.pushManager.getSubscription();
     if (existingSub) {
+      console.log("[Push Frontend] Found existing push subscription.");
       const subJSON = existingSub.toJSON();
       if (subJSON.endpoint && subJSON.keys?.p256dh && subJSON.keys?.auth) {
+        console.log("[Push Frontend] Syncing existing subscription to backend...");
         await apiSubscribePush(subJSON.endpoint, subJSON.keys.p256dh, subJSON.keys.auth);
       }
       return existingSub;
@@ -38,19 +46,22 @@ export async function subscribeToPush() {
       return null;
     }
 
+    console.log("[Push Frontend] Requesting new push subscription from browser...");
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(publicVapidKey),
     });
 
+    console.log("[Push Frontend] New subscription created. Sending to backend...");
     const subJSON = subscription.toJSON();
     if (subJSON.endpoint && subJSON.keys?.p256dh && subJSON.keys?.auth) {
       await apiSubscribePush(subJSON.endpoint, subJSON.keys.p256dh, subJSON.keys.auth);
+      console.log("[Push Frontend] Successfully synced new subscription to backend.");
     }
-    
+
     return subscription;
   } catch (error) {
-    console.error("Failed to subscribe to push notifications:", error);
+    console.error("[Push Frontend] Failed to subscribe to push notifications:", error);
     return null;
   }
 }
@@ -60,15 +71,23 @@ export async function unsubscribeFromPush() {
 
   try {
     const registration = await navigator.serviceWorker.ready;
-    if (!registration.pushManager) return;
-    
+    if (!registration.pushManager) {
+      console.warn("[Push Frontend] pushManager not available during unsubscribe.");
+      return;
+    }
+
     const subscription = await registration.pushManager.getSubscription();
-    
+
     if (subscription) {
+      console.log("[Push Frontend] Unsubscribing from push via backend...");
       await apiUnsubscribePush(subscription.endpoint);
+      console.log("[Push Frontend] Unsubscribing from push via browser...");
       await subscription.unsubscribe();
+      console.log("[Push Frontend] Successfully unsubscribed.");
+    } else {
+      console.log("[Push Frontend] No active subscription found to unsubscribe.");
     }
   } catch (error) {
-    console.error("Failed to unsubscribe from push notifications:", error);
+    console.error("[Push Frontend] Failed to unsubscribe from push notifications:", error);
   }
 }

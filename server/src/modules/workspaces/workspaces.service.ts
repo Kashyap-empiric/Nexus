@@ -174,3 +174,37 @@ export const updateMemberRole = async (slugOrId: string, memberUserId: string, r
 
   return workspacesRepo.updateWorkspaceMemberRole(workspace.id, memberUserId, role);
 };
+
+export const removeMember = async (slugOrId: string, memberUserId: string, userId: string) => {
+  const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(slugOrId);
+  if (!workspace) throw new Error("Workspace not found");
+
+  const currentUserMember = workspace.members.find(m => m.userId === userId);
+  if (!currentUserMember) throw new Error("Forbidden: Not a member of this workspace");
+
+  // Cannot remove yourself
+  if (memberUserId === userId) {
+    throw new Error("Forbidden: Cannot remove yourself from the workspace");
+  }
+
+  const targetMember = workspace.members.find(m => m.userId === memberUserId);
+  if (!targetMember) throw new Error("Member not found in this workspace");
+
+  // Cannot remove the workspace owner
+  if (targetMember.role === WorkspaceRole.OWNER) {
+    throw new Error("Forbidden: Cannot remove the workspace owner");
+  }
+
+  // Permission checks
+  const canRemove =
+    currentUserMember.role === WorkspaceRole.OWNER ||
+    (currentUserMember.role === WorkspaceRole.ADMIN && targetMember.role === WorkspaceRole.MEMBER);
+
+  if (!canRemove) {
+    throw new Error("Forbidden: You don't have permission to remove this member");
+  }
+
+  await workspacesRepo.removeWorkspaceMember(workspace.id, memberUserId);
+
+  return { workspaceId: workspace.id, userId: memberUserId };
+};

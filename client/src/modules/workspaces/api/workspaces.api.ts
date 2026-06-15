@@ -55,3 +55,23 @@ export const inviteMemberByUsername = async (workspaceId: string, username: stri
   const { data } = await api.post<{ success: boolean }>(`/workspaces/${workspaceId}/invite`, { username });
   return data;
 };
+
+export const inviteMembers = async (workspaceId: string, userIds: string[]): Promise<{
+  success: boolean;
+  invited: { userId: string }[];
+  skipped: { userId: string; reason: string }[];
+}> => {
+  const { data } = await api.post<{
+    success: boolean;
+    invited: { userId: string }[];
+    skipped: { userId: string; reason: string }[];
+  }>(`/workspaces/${workspaceId}/invite-multiple`, { userIds });
+  return data;
+};
+
+export const removeMember = async (workspaceId: string, userId: string): Promise<{ workspaceId: string; userId: string }> => {
+  const { data } = await api.delete<{ data: { workspaceId: string; userId: string } }>(
+    `/workspaces/${workspaceId}/members/${userId}`
+  );
+  return data.data;
+};

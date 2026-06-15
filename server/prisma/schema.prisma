@@ -7,20 +7,24 @@ datasource db {
 }
 
 model User {
-  id                   String               @id
-  email                String               @unique
-  avatarUrl            String?
-  createdAt            DateTime             @default(now())
-  updatedAt            DateTime             @updatedAt
-  username             String
-  createdConversations Conversation[]       @relation("ConversationCreator")
-  conversations        ConversationMember[]
-  invites              Invite[]
-  messages             Message[]
-  ownedWorkspaces      Workspace[]          @relation("WorkspaceOwner")
-  workspaces           WorkspaceMember[]
-  notifications        Notification[]
-  pushSubscriptions    PushSubscription[]
+  id                       String               @id
+  email                    String               @unique
+  avatarUrl                String?
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+  username                 String
+  pushNotificationsEnabled Boolean              @default(false)
+  dmNotifications          Boolean              @default(true)
+  mentionNotifications     Boolean              @default(true)
+  channelNotifications     Boolean              @default(false)
+  createdConversations     Conversation[]       @relation("ConversationCreator")
+  conversations            ConversationMember[]
+  invites                  Invite[]
+  messages                 Message[]
+  ownedWorkspaces          Workspace[]          @relation("WorkspaceOwner")
+  workspaces               WorkspaceMember[]
+  notifications            Notification[]
+  pushSubscriptions        PushSubscription[]
 }
 
 model Conversation {
@@ -145,6 +149,7 @@ enum NotificationType {
   INVITE_ACCEPTED
   MEMBER_JOINED
   CHANNEL_CREATED
+  MEMBER_REMOVED
 }
 
 model Notification {
@@ -172,6 +177,7 @@ model PushSubscription {
   auth      String
   userAgent String?
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])

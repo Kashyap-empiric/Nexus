@@ -1,6 +1,7 @@
 "use client";
 
-import { useWorkspaceMembersQuery, useUpdateMemberRole } from "../hooks/useWorkspaces";
+import { useState } from "react";
+import { useWorkspaceMembersQuery, useUpdateMemberRole, useRemoveMember } from "../hooks/useWorkspaces";
 import { useUser } from "@/modules/auth/store/useAuthStore";
 import { useSocketStore } from "@/socket/socketStore";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
@@ -11,8 +12,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
-import { MoreVertical, Shield, ShieldAlert, UserIcon } from "lucide-react";
-import type { WorkspaceRole } from "../types/workspace";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/components/ui/dialog";
+import { Button } from "@/shared/components/ui/button";
+import { MoreVertical, Shield, ShieldAlert, UserIcon, UserX } from "lucide-react";
+import { toast } from "sonner";
+import type { WorkspaceMember, WorkspaceRole } from "../types/workspace";
 
 interface MemberListPanelProps {
   workspaceId: string;
@@ -21,9 +32,13 @@ interface MemberListPanelProps {
 export function MemberListPanel({ workspaceId }: MemberListPanelProps) {
   const { data: members, isLoading } = useWorkspaceMembersQuery(workspaceId);
   const { mutate: updateRole } = useUpdateMemberRole();
+  const removeMemberMutation = useRemoveMember();
   const currentUser = useUser();
 
   const onlineUsers = useSocketStore(state => state.onlineUsers);
+
+  const [memberToRemove, setMemberToRemove] = useState<WorkspaceMember | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   if (isLoading || !members) {
     return (
@@ -41,15 +56,85 @@ export function MemberListPanel({ workspaceId }: MemberListPanelProps) {
 
   const currentUserMember = members.find(m => m.userId === currentUser?.id);
   const isOwner = currentUserMember?.role === "OWNER";
+  const isAdmin = currentUserMember?.role === "ADMIN";
 
   const handleRoleChange = (userId: string, role: string) => {
     updateRole({ workspaceId, userId, role });
   };
 
+  const handleRemoveMember = async () => {
+    if (!memberToRemove) return;
+    setIsRemoving(true);
+    try {
+      await removeMemberMutation.mutateAsync({
+        workspaceId,
+        userId: memberToRemove.userId,
+      });
+      toast.success(`${memberToRemove.user?.username || "User"} removed from workspace`);
+      setMemberToRemove(null);
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.error || err?.message || "Failed to remove member";
+      toast.error(errorMsg);
+    } finally {
+      setIsRemoving(false);
+    }
+  };
+
+  const canManage = (targetMember: WorkspaceMember) => {
+    if (isOwner) {
+      return targetMember.role !== "OWNER";
+    }
+    if (isAdmin) {
+      return targetMember.role === "MEMBER";
+    }
+    return false;
+  };
+
   const onlineMembers = members.filter(m => onlineUsers.has(m.userId));
   const offlineMembers = members.filter(m => !onlineUsers.has(m.userId));
 
-  const renderMember = (member: typeof members[0]) => {
+  const menuItems = (member: WorkspaceMember, isSelf: boolean) => {
+    if (isSelf || !canManage(member)) return null;
+
+    return (
+      <DropdownMenu key="menu">
+        <DropdownMenuTrigger className="opacity-0 group-hover:opacity-100 p-1 hover:bg-muted rounded text-muted-foreground transition-opacity focus-visible:outline-none">
+          <MoreVertical className="h-3.5 w-3.5" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48 border shadow-md">
+          {isOwner && (
+            <>
+              <DropdownMenuItem 
+                onClick={() => handleRoleChange(member.userId, "MEMBER")}
+                disabled={member.role === "MEMBER"}
+                className="cursor-pointer"
+              >
+                <UserIcon className="h-4 w-4 mr-2" />
+                Make Member
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleRoleChange(member.userId, "ADMIN")}
+                disabled={member.role === "ADMIN"}
+                className="cursor-pointer"
+              >
+                <Shield className="h-4 w-4 mr-2" />
+                Make Admin
+              </DropdownMenuItem>
+            </>
+          )}
+          <DropdownMenuItem 
+            onClick={() => setMemberToRemove(member)}
+            className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30"
+          >
+            <UserX className="h-4 w-4 mr-2" />
+            Remove from workspace
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+
+  const renderMember = (member: WorkspaceMember) => {
     const isSelf = member.userId === currentUser?.id;
 
     return (
@@ -73,31 +158,7 @@ export function MemberListPanel({ workspaceId }: MemberListPanelProps) {
           </div>
         </div>
 
-        {isOwner && !isSelf && (
-          <DropdownMenu>
-            <DropdownMenuTrigger className="opacity-0 group-hover:opacity-100 p-1 hover:bg-muted rounded text-muted-foreground transition-opacity focus-visible:outline-none">
-              <MoreVertical className="h-3.5 w-3.5" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 border shadow-md">
-              <DropdownMenuItem 
-                onClick={() => handleRoleChange(member.userId, "MEMBER")}
-                disabled={member.role === "MEMBER"}
-                className="cursor-pointer"
-              >
-                <UserIcon className="h-4 w-4 mr-2" />
-                Make Member
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => handleRoleChange(member.userId, "ADMIN")}
-                disabled={member.role === "ADMIN"}
-                className="cursor-pointer"
-              >
-                <Shield className="h-4 w-4 mr-2" />
-                Make Admin
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+        {menuItems(member, isSelf)}
       </div>
     );
   };
@@ -113,9 +174,7 @@ export function MemberListPanel({ workspaceId }: MemberListPanelProps) {
             {onlineMembers.map(renderMember)}
           </div>
         </div>
-      )}
-
-      {offlineMembers.length > 0 && (
+      )}          {offlineMembers.length > 0 && (
         <div>
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">
             Offline — {offlineMembers.length}
@@ -125,6 +184,28 @@ export function MemberListPanel({ workspaceId }: MemberListPanelProps) {
           </div>
         </div>
       )}
+
+      {/* Remove member confirmation dialog */}
+      <Dialog open={!!memberToRemove} onOpenChange={(open) => { if (!open && !isRemoving) setMemberToRemove(null); }}>
+        <DialogContent className="sm:max-w-sm" showCloseButton={!isRemoving}>
+          <DialogHeader>
+            <DialogTitle>Remove member</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove <strong>{memberToRemove?.user?.username || "this user"}</strong> from the workspace?
+              They will lose access to all channels and conversations in this workspace.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter showCloseButton={!isRemoving}>
+            <Button 
+              variant="destructive" 
+              onClick={handleRemoveMember}
+              disabled={isRemoving}
+            >
+              {isRemoving ? "Removing..." : "Remove"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

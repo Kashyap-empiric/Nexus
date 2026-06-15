@@ -17,6 +17,7 @@ import { useGlobalSocket } from "@/modules/chat/hooks/useGlobalSocket";
 import { useChatStore } from "@/modules/chat/store/chatStore";
 import { useSocketStore } from "@/socket/socketStore";
 import { cn } from "@/shared/lib/utils";
+import { APP_ROUTES } from "@/config/url";
 import { useUser } from "@/modules/auth/store/useAuthStore";
 import { useInviteModal } from "@/modules/invites/hooks/useInviteModal";
 import {
@@ -30,7 +31,6 @@ import { WorkspaceHeader } from "@/modules/workspaces/components/WorkspaceHeader
 import { useWorkspaceDetails } from "@/modules/workspaces/hooks/useWorkspaces";
 
 const NewConversationModal = dynamic(() => import("./NewConversationModal").then((m) => m.NewConversationModal), { ssr: false });
-const InviteModal = dynamic(() => import("@/modules/invites/components/InviteModal").then((m) => m.InviteModal), { ssr: false });
 const CreateChannelModal = dynamic(() => import("@/modules/workspaces/components/CreateChannelModal").then((m) => m.CreateChannelModal), { ssr: false });
 import { WorkspaceChannelItem } from "@/modules/workspaces/components/WorkspaceChannelItem";
 
@@ -72,7 +72,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
 
   // Redirect to last visited or fallback channel
   useEffect(() => {
-    if (pathname?.includes("/settings") || pathname?.includes("/notifications")) return;
+    if (pathname?.includes(APP_ROUTES.SETTINGS.INDEX) || pathname?.includes(APP_ROUTES.NOTIFICATIONS.INDEX)) return;
 
     if (mode === "WORKSPACE" && activeWorkspaceId && workspaceChannels && workspaceChannels.length > 0) {
       const isCurrentlyInAChannel = workspaceChannels.some(c => c.id === activeId);
@@ -373,7 +373,6 @@ export function Sidebar({ onNavigate }: SidebarProps) {
 
       <NewConversationModal isOpen={mode === "DM" && isNewModalOpen} onClose={() => setIsNewModalOpen(false)} />
       {mode === "WORKSPACE" && <CreateChannelModal isOpen={isNewModalOpen} onClose={() => setIsNewModalOpen(false)} workspaceId={activeWorkspaceId!} />}
-      <InviteModal isOpen={inviteModal.isOpen} onClose={inviteModal.close} type={inviteModal.type} entityId={inviteModal.entityId} />
     </>
   );
 }

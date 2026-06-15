@@ -71,9 +71,10 @@ export const createMessageTransaction = async (
         latestMessageId: true,
       },
     }),
-    prisma.conversationMember.update({
+    prisma.conversationMember.updateMany({
       where: {
-        conversationId_userId: { conversationId, userId },
+        conversationId,
+        userId,
       },
       data: { lastReadMessageId: messageId },
     }),

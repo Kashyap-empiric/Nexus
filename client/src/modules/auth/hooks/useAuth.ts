@@ -23,7 +23,7 @@ export const useAuth = () => {
       if (authError) throw authError;
 
       // On success, replace history with conversations page
-      router.replace("/conversations");
+      router.replace(APP_ROUTES.CONVERSATIONS.INDEX);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "An error occurred during login.";
       setError(message);
@@ -68,7 +68,7 @@ export const useAuth = () => {
       const { error: authError } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}${APP_ROUTES.AUTH.CALLBACK}`,
         },
       });
 

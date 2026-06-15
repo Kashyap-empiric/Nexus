@@ -4,6 +4,7 @@ import * as workspacesService from "./workspaces.service.js";
 import * as usersRepo from "../users/users.repository.js";
 import { dispatchConversationNew } from "@/socket/socket.dispatcher.js";
 import { createAndDispatch } from "../notifications/notifications.service.js";
+import { generateInviteService } from "../invites/invites.service.js";
 
 export const getUserWorkspaces = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -162,23 +163,60 @@ export const deleteChannel = async (req: AuthRequest, res: Response): Promise<vo
 };
 
 /**
+ * Helper to send an invite to a single user.
+ * Generates an invite token via the invite service and creates an INVITE_RECEIVED notification.
+ */
+async function sendWorkspaceInvite(
+  workspaceId: string,
+  targetUserId: string,
+  inviterId: string,
+  workspaceName: string,
+  inviterName: string,
+  workspaceImageUrl?: string,
+) {
+  // Generate an invite token for this workspace
+  const invite = await generateInviteService({
+    type: "WORKSPACE",
+    entityId: workspaceId,
+    userId: inviterId,
+  });
+
+  // Create INVITE_RECEIVED notification with the token in the link
+  await createAndDispatch({
+    userId: targetUserId,
+    type: "INVITE_RECEIVED",
+    title: "Workspace invite",
+    body: `You've been invited to ${workspaceName} by ${inviterName}`,
+    link: `/invite?token=${invite.token}`,
+    imageUrl: workspaceImageUrl || undefined,
+    metadata: {
+      workspaceId,
+      workspaceName,
+      inviterId,
+      inviterName,
+    },
+  });
+}
+
+/**
  * POST /workspaces/:id/invite
- * Invite a user to a workspace by username.
- * Creates an INVITE_RECEIVED notification for the target user.
+ * Invite a user to a workspace by username or email.
+ * Creates an INVITE_RECEIVED notification for the target user with a proper invite token.
  */
 export const inviteMemberByUsername = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id: workspaceId } = req.params as { id: string };
-    const { username } = req.body as { username: string };
+    const { username, email } = req.body as { username?: string; email?: string };
 
-    if (!username || typeof username !== "string") {
-      res.status(400).json({ error: "Username is required" });
-      return;
+    let targetUser;
+
+    if (email && typeof email === "string") {
+      targetUser = await usersRepo.findUserByEmail(email);
+    } else if (username && typeof username === "string") {
+      targetUser = await usersRepo.findUserByUsername(username);
     }
 
-    // Find the target user
-    const targetUser = await usersRepo.findUserByUsername(username);
     if (!targetUser) {
       res.status(404).json({ error: "User not found" });
       return;
@@ -200,25 +238,93 @@ export const inviteMemberByUsername = async (req: AuthRequest, res: Response): P
     // Get current user info for the notification
     const currentUser = await usersRepo.findUserById(userId);
 
-    // Create INVITE_RECEIVED notification for the target user
-    await createAndDispatch({
-      userId: targetUser.id,
-      type: "INVITE_RECEIVED",
-      title: "Workspace invite",
-      body: `You've been invited to ${workspace.name}`,
-      link: `/invite?workspace=${workspaceId}`,
-      imageUrl: (workspace as any).imageUrl || undefined,
-      metadata: {
-        workspaceId,
-        workspaceName: workspace.name,
-        inviterId: userId,
-        inviterName: currentUser?.username || "Unknown",
-      },
-    });
+    // Send invite with token-based flow
+    await sendWorkspaceInvite(
+      workspaceId,
+      targetUser.id,
+      userId,
+      workspace.name,
+      currentUser?.username || "Unknown",
+      (workspace as any).imageUrl,
+    );
 
     res.status(200).json({ success: true });
   } catch (error: any) {
-    console.error("Error inviting member by username:", error);
+    console.error("Error inviting member:", error);
+    if (error?.message?.startsWith("Forbidden")) {
+      res.status(403).json({ error: error.message });
+      return;
+    }
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+/**
+ * POST /workspaces/:id/invite-multiple
+ * Batch invite multiple users to a workspace by their user IDs.
+ * Each user gets a separate invite token and INVITE_RECEIVED notification.
+ */
+export const inviteMembers = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { id: workspaceId } = req.params as { id: string };
+    const { userIds } = req.body as { userIds: string[] };
+
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      res.status(400).json({ error: "userIds array is required" });
+      return;
+    }
+
+    if (userIds.length > 50) {
+      res.status(400).json({ error: "Cannot invite more than 50 users at once" });
+      return;
+    }
+
+    const workspace = await workspacesService.getWorkspaceDetails(userId, workspaceId);
+    const currentUser = await usersRepo.findUserById(userId);
+    const inviterName = currentUser?.username || "Unknown";
+    const workspaceImageUrl = (workspace as any).imageUrl;
+
+    const invited: { userId: string }[] = [];
+    const skipped: { userId: string; reason: string }[] = [];
+
+    for (const targetUserId of userIds) {
+      // Skip self
+      if (targetUserId === userId) {
+        skipped.push({ userId: targetUserId, reason: "Cannot invite yourself" });
+        continue;
+      }
+
+      // Check if already a member
+      const isAlreadyMember = workspace.members.some((m: any) => m.userId === targetUserId);
+      if (isAlreadyMember) {
+        skipped.push({ userId: targetUserId, reason: "Already a member" });
+        continue;
+      }
+
+      try {
+        await sendWorkspaceInvite(
+          workspaceId,
+          targetUserId,
+          userId,
+          workspace.name,
+          inviterName,
+          workspaceImageUrl,
+        );
+        invited.push({ userId: targetUserId });
+      } catch (err: any) {
+        console.error(`[inviteMembers] Failed to invite user ${targetUserId}:`, err);
+        skipped.push({ userId: targetUserId, reason: err.message || "Failed to send invite" });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      invited,
+      skipped,
+    });
+  } catch (error: any) {
+    console.error("Error inviting members:", error);
     if (error?.message?.startsWith("Forbidden")) {
       res.status(403).json({ error: error.message });
       return;
@@ -258,6 +364,49 @@ export const updateMemberRole = async (req: AuthRequest, res: Response): Promise
     res.json({ data: updatedMember });
   } catch (error: any) {
     console.error("Error updating member role:", error);
+    if (error?.message?.startsWith("Forbidden")) {
+      res.status(403).json({ error: error.message });
+      return;
+    }
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const removeWorkspaceMember = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { id: workspaceId, userId: memberUserId } = req.params as { id: string; userId: string };
+
+    const result = await workspacesService.removeMember(workspaceId, memberUserId, userId);
+    
+    // Dispatch to workspace room (all members see updated list)
+    dispatchMemberUpdate(workspaceId, { action: "REMOVED", member: { userId: memberUserId } });
+
+    // Create a MEMBER_REMOVED notification for the removed user
+    try {
+      const currentUser = await usersRepo.findUserById(userId);
+      const workspace = await workspacesService.getWorkspaceDetails(userId, workspaceId);
+
+      await createAndDispatch({
+        userId: memberUserId,
+        type: "MEMBER_REMOVED",
+        title: "Removed from workspace",
+        body: `You have been removed from ${workspace.name} by ${currentUser?.username || "a workspace admin"}`,
+        link: "/",
+        metadata: {
+          workspaceId,
+          workspaceName: workspace.name,
+          removedBy: userId,
+          removedByUsername: currentUser?.username,
+        },
+      });
+    } catch (notifError) {
+      console.error("[Notifications] Failed to create MEMBER_REMOVED notification:", notifError);
+    }
+
+    res.json({ data: result });
+  } catch (error: any) {
+    console.error("Error removing workspace member:", error);
     if (error?.message?.startsWith("Forbidden")) {
       res.status(403).json({ error: error.message });
       return;

@@ -173,3 +173,27 @@ export const updateWorkspaceMemberRole = async (workspaceId: string, userId: str
     },
   });
 };
+
+export const removeWorkspaceMember = async (workspaceId: string, userId: string) => {
+  // Remove from all workspace channels first
+  const workspaceChannels = await prisma.conversation.findMany({
+    where: { workspaceId },
+    select: { id: true },
+  });
+
+  const channelIds = workspaceChannels.map(c => c.id);
+
+  if (channelIds.length > 0) {
+    await prisma.conversationMember.deleteMany({
+      where: {
+        conversationId: { in: channelIds },
+        userId,
+      },
+    });
+  }
+
+  // Remove from workspace
+  return prisma.workspaceMember.delete({
+    where: { workspaceId_userId: { workspaceId, userId } },
+  });
+};
