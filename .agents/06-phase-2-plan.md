@@ -1,14 +1,14 @@
 # Nexus — Phase 2 Plan: Workspaces, Channels & Collaboration
 
-> **Status:** ✅ **Phase 2 Workspaces Complete** — `feat/workspaces` branch ready for merge
-> **Last Updated:** 2026-06-12
+> **Status:** ✅ **Phase 2 Workspaces Complete + Notifications Complete**
+> **Last Updated:** 2026-06-15
 >
-> All workspace and channel features are implemented. Remaining work is documented below.
-> For the prioritized list, see `README.md` or `PLAN.md` at the project root.
+> Workspaces, channels, in-app notifications, push notifications, user profiles, and settings are all implemented.
+> Active branch: `feat/notification`
 
 ---
 
-## ✅ Implemented (on `feat/workspaces`)
+## ✅ Implemented (Workspaces + Notifications)
 
 ### Server — Workspace Module (`server/src/modules/workspaces/`)
 
@@ -31,8 +31,8 @@
 | `Workspace` | ✅ | Full implementation with slug, ownerId |
 | `WorkspaceMember` | ✅ | Role-based (OWNER, ADMIN, MEMBER) |
 | `Conversation` extensions | ✅ | workspaceId FK, `createdBy`, `visibility` (ChannelVisibility enum) |
-| `Notification` | 🟡 | DB table exists (from migration); server endpoints not built |
-| `PushSubscription` | 🟡 | DB table exists (from migration); not implemented |
+| `Notification` | ✅ | Full implementation: controller, service, repository, routes, schema |
+| `PushSubscription` | ✅ | Full implementation with VAPID push, subscription management |
 
 ### Client — Workspace UI
 
@@ -46,7 +46,19 @@
 | `ActiveConversation.tsx` | ✅ | Displays both DMs and channels, member panel |
 | `WorkspaceChannelItem.tsx` | ✅ | Channel context menu (rename, delete) |
 | `MemberListPanel.tsx` | ✅ | Discord-style member list with presence + role badges |
+| `InfoPanel.tsx` | ✅ | Conversation details: About, Members, Pins tabs |
 | Channel routing | ✅ | `/workspaces/{slug}/channels/{channelId}` |
+
+### Client — Notifications & Settings UI
+
+| Component | Status | Notes |
+|---|---|---|
+| `BellPopover.tsx` | ✅ | Bell icon with unread badge, recent activity dropdown |
+| `NotificationSettings.tsx` | ✅ | Push toggle, DM/mention/channel toggles |
+| `ProfileSettings.tsx` | ✅ | Username, display name, avatar URL editing |
+| `AppearanceSettings.tsx` | ✅ | Theme toggle (light/dark/system) |
+| `SharedSettingsModal.tsx` | ✅ | Tabbed modal for all settings views |
+| Notifications page | ✅ | `/notifications` route with infinite scroll |
 
 ### Socket Events Added
 
@@ -56,15 +68,38 @@
 | `member:update` | S → C | `{ action, userId, role }` | Workspace role changed |
 | `workspace:update` | S → C | `{ action, workspace }` | Workspace metadata changed |
 | `workspace:join` | C → S | `{ workspaceId }` | Join workspace room on switch |
+| `notification:new` | S → C | Full Notification object | Real-time notification delivery |
+
+### Notification Flows Implemented
+
+| Trigger | Notification Type | Push |
+|---|---|---|
+| Workspace invite sent | `INVITE_RECEIVED` | ✅ |
+| Invite accepted | `INVITE_ACCEPTED` | ✅ |
+| Channel created | `CHANNEL_CREATED` | ✅ |
+| Member removed from workspace | `MEMBER_REMOVED` | ✅ |
+
+### API Endpoints Added
+
+| Module | Endpoints |
+|---|---|
+| Notifications | `GET /notifications`, `GET /notifications/unread-count`, `PATCH /notifications/:id/read`, `PATCH /notifications/read-all` |
+| Push | `POST /notifications/push/subscribe`, `DELETE /notifications/push/subscribe` |
+| Preferences | `GET /notifications/preferences`, `PUT /notifications/preferences` |
+| Users (Profile) | `GET /users/me`, `PATCH /users/me` |
+| Invites (Batch) | `POST /workspaces/:id/invite-multiple` |
 
 ### Security Fixes (beyond original plan)
 
 | Fix | Details |
 |---|---|
-| Private channel socket room leak | `findWorkspaceChannelsByUserId` now filters private channels by explicit membership |
+| Private channel socket room leak | `findWorkspaceChannelsByUserId` filters private channels by explicit membership |
 | Same leak in `workspace:join` handler | `findChannelIdsByWorkspaceId` accepts optional `userId` for private channel filtering |
-| Socket events silently lost | Workspace rooms (`workspace:{id}`) now joined on connect in `socket.ts` |
-| `verifyWorkspaceMember` duplication | Delegated to existing `isWorkspaceMember` instead of duplicating Prisma query |
+| Socket events silently lost | Workspace rooms now joined on connect |
+| `verifyWorkspaceMember` duplication | Delegated to existing `isWorkspaceMember` |
+| Push subscription hijacking | Endpoint reassignment to different user prevented via deleteMany |
+| Push notification URL normalization | Relative URLs converted to absolute for SW matching |
+| Push toggle race condition | Sequential subscribe/unsubscribe flow |
 
 ### Backward Compatibility
 
@@ -80,20 +115,25 @@ NavigationRail: switches between DM and WORKSPACE mode
 Sidebar: shows channels in WORKSPACE mode, conversations in DM mode
 Channel page: /workspaces/{slug}/channels/{channelId}
 Conversation page: /conversations/{id}
+Settings: /settings → SharedSettingsModal
+Notifications: /notifications
 ```
 
 ---
 
-## 🟡 Open Items (Post-Phase 2)
+## 🟡 Open Items (Post-Notifications)
 
 | Feature | Priority | Notes |
 |---------|----------|-------|
 | Message read receipts for channels | Medium | `partnerLastReadMessageId` is undefined for channels |
-| In-app notification system | Medium | DB schema + migration exist; server endpoints not yet built; client UI exists |
 | Optimistic channel creation | Low | Currently poll-based (5s interval) — should use socket events |
 | Non-transactional reads in editMessage | Medium | Pre-existing debt |
 | Horizontal scaling (Redis Pub/Sub) | Low | Pre-existing debt |
 | editMessage stale `updatedAt` | Low | Editing a message doesn't bump sidebar position |
+| Reactions (emoji) | Medium | Planned feature — no model or endpoints yet |
+| Mentions (@user) | Medium | Planned feature — no mention detection yet |
+| Pin messages | Low | Planned feature — no pinning yet |
+| File uploads | Low | Planned feature — no file storage yet |
 
 ---
 

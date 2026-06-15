@@ -2,14 +2,14 @@
 
 > **WARNING**: This file documents the *actual* implemented state of the Nexus system.
 > Do not assume missing features exist or that the system perfectly adheres to best practices.
-> **Last Updated:** 2026-06-12
+> **Last Updated:** 2026-06-15
 
 ---
 
 ## 1. Project Overview
 
 Nexus is a real-time messaging platform built as a full-stack TypeScript monorepo.
-Phase 1 (Core Messaging) is complete. Phase 2 (Workspaces & Channels) is complete on the `feat/workspaces` branch. Ready for merge to staging.
+Phase 1 (Core Messaging) is complete. Phase 2 (Workspaces & Channels) is complete and actively deployed. Notifications (in-app + push) are fully implemented.
 
 ---
 
@@ -24,21 +24,27 @@ Phase 1 (Core Messaging) is complete. Phase 2 (Workspaces & Channels) is complet
 - **Real-Time**: Socket.io handles message delivery, editing, deletion, read receipts, dynamic room joining, and workspace channel events.
 - **Presence**: Dual-write system utilizing Upstash Redis and an in-memory Map fallback.
 - **Message Editing/Deletion**: REST endpoints (`PATCH` / `DELETE`) with socket broadcasts.
-- **Invite System**: Secure deep-linked invites for USER, CONVERSATION, WORKSPACE types. 24h active rotation policy, atomic consumption via raw SQL, domain event dispatching.
-- **Workspaces**: Full workspace CRUD with membership and roles (OWNER/ADMIN/MEMBER). Workspace member list (Discord-style right panel).
+- **Invite System**: Secure deep-linked invites for USER, CONVERSATION, WORKSPACE types. 24h active rotation policy, atomic consumption via raw SQL, domain event dispatching. Batch invite support (`POST /workspaces/:id/invite-multiple`). Invite by email or username.
+- **Workspaces**: Full workspace CRUD with membership and roles (OWNER/ADMIN/MEMBER). Workspace member list (Discord-style right panel). Member removal with notification.
 - **Workspace Channels**: Public and private channels within workspaces. Channel creation via the sidebar. All workspace members auto-joined to new public channels. Channel rename, delete, and context menu.
-- **Frontend Module Architecture**: Feature modules cleanly split into `workspaces/`, `invites/`, `conversations/`, `messages/`, `chat/`, `auth/`, `users/`.
+- **In-App Notification System**: Full notification module with bell popover, unread badges, notifications page with infinite scroll pagination, real-time socket delivery (`notification:new`). Types: INVITE_RECEIVED, INVITE_ACCEPTED, MEMBER_JOINED, CHANNEL_CREATED, MEMBER_REMOVED.
+- **Web Push Notifications**: VAPID-based push via `web-push` library. Service Worker (`sw.js`) handles push events and `notificationclick` navigation. Push subscription management via API. Push rate limiting.
+- **User Profiles & Settings**: `GET/PATCH /users/me` for profile editing (username, displayName, avatarUrl). SharedSettingsModal with Profile, Appearance, and Notifications tabs. Notification preferences stored on User model.
+- **InfoPanel**: Conversation detail panel with About, Members, and Pins tabs.
+- **Markdown Rendering**: Messages render with `react-markdown` + `remark-gfm` (bold, italic, code, blockquotes, lists, links).
+- **Frontend Module Architecture**: Feature modules cleanly split into `notifications/`, `settings/`, `workspaces/`, `invites/`, `conversations/`, `messages/`, `chat/`, `auth/`, `users/`, `landing/`.
 - **Socket Module (`client/src/socket/`)**: Fully consolidated socket client module with typed events, store, provider, and handlers.
 - **Environment Variables**: All `process.env` references centralized into `config/env.ts` files (both server and client).
 
 ### 🔴 Open Issues / Tech Debt
 
 - **Read receipts in channels**: `partnerLastReadMessageId` is undefined for channels — double blue checkmark never shows.
-- **No in-app notification system**: Only desktop browser notifications exist; no bell icon, inbox, or notification history. (DB schema + migration exist; server-side endpoints not yet built.)
 - **Non-transactional reads in `editMessage`**: `getMessageById` called outside `$transaction`.
 - **Horizontal scaling trap**: Presence system's in-memory Map prevents scaling beyond single Node.js instance.
 - **CreateChannelModal redirects to `/conversations/`**: Should redirect to `/workspaces/{slug}/channels/{id}`.
 - **editMessage stale `updatedAt`**: Editing a message doesn't bump the conversation's position in the sidebar.
+- **Push subscription lifecycle**: No proactive re-subscription handling on service worker pushsubscriptionchange events.
+- **No message read receipts for channels**: Unread counts work but read status synchronization is incomplete.
 
 ---
 

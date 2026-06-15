@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Chat module is the orchestrator for the core chat experience. It coordinates between the conversations, messages, and workspace modules, manages the active conversation state, and hosts the main chat UI components. It contains what remains after extracting `workspaces/`, `invites/`, `conversations/`, and `messages/` into their own modules.
+The Chat module is the orchestrator for the core chat experience. It coordinates between the conversations, messages, workspace, and notifications modules, manages the active conversation state, and hosts the main chat UI components.
 
 ## Client-Side (`client/src/modules/chat`)
 
@@ -11,15 +11,16 @@ The Chat module is the orchestrator for the core chat experience. It coordinates
 | Component | Role |
 |-----------|------|
 | `ActiveConversation.tsx` | Main orchestrator — loads conversation details, renders MessageList + MessageInput + header |
-| `NavigationRail.tsx` | Left-side app navigation — DM icon, workspace icons, create workspace button |
+| `NavigationRail.tsx` | Left-side app navigation — DM icon, workspace icons, create workspace button, theme toggle |
 | `PresenceIndicator.tsx` | Green/gray online dot for user avatars |
+| `InfoPanel.tsx` | Right-side panel with tabs: About (description), Members (via MemberListPanel), Pins |
 
 ### Hooks
 
 | Hook | Role |
 |------|------|
-| `useConversationSocket.ts` | Socket event listeners for the active conversation (`message:new`, `message:read`, `message:update`, `message:delete`) |
-| `useGlobalSocket.ts` | Global socket listeners for sidebar-level events (read receipts, new conversations, conversation updates) |
+| `useConversationSocket.ts` | Socket event listeners for the active conversation (`message:new`, `message:read`, `message:update`, `message:delete`, `reaction:added`/`removed` - planned) |
+| `useGlobalSocket.ts` | Global socket listeners for sidebar-level events (read receipts, new conversations, conversation updates, notification:new) |
 | `useMessageScroll.ts` | Scroll behavior management for MessageList (auto-scroll, jump-to-bottom, infinite scroll) |
 
 ### Store
@@ -43,6 +44,7 @@ The chat module uses Socket.io for all real-time events:
    - `message:read` — Updates read receipt state
    - `conversation:new` — Prepends new conversation to sidebar
    - `conversation:update` — Updates sidebar metadata + re-sorts
+   - `notification:new` — Updates notification unread count + appends to cache
 
 2. **`useConversationSocket`** — Mounted per active conversation. Handles conversation-scoped events:
    - `message:new` — Appends new messages or replaces optimistic ones
@@ -54,3 +56,4 @@ The chat module uses Socket.io for all real-time events:
 - **Mode-based rendering**: `chatStore.mode` determines if the sidebar shows DMs or workspace channels
 - **Workspace routing**: When in WORKSPACE mode, channel clicks navigate to `/workspaces/{slug}/channels/{id}`
 - **Unread badge on mobile back button**: Shows total unread across all other conversations
+- **Markdown rendering**: Messages rendered via `react-markdown` + `remark-gfm` for bold, italic, code, blockquotes, lists, links

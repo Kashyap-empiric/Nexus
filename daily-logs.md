@@ -233,3 +233,13 @@
 
 - **Documentation audit**: Updated all `.agents/` files, `daily-logs.md`, `.docs/incremental-logs.md`, `.docs/major-changes.md`, `.docs/progress.txt`, `.docs/context.md`, `.docs/socket.md`, `.docs/deployment.md`, `.docs/TECHNICAL_DEBT.md`, `.docs/git-branches.md` to reflect the complete workspace implementation, backward compatibility fixes, env var centralization, and migration.
 
+---
+
+## 15th June 2026
+
+- Resolved formatting conflicts between Tailwind and the rich text editor.
+- Fixed an issue where the rich text editor would get permanently stuck in code-block formatting by implementing logic to clear conflicting formats when toggling styles.
+- Fixed rich text editor toolbar active state highlighting.
+- Overhauled the settings modal to remove the top-level theme toggle and consolidated appearance options.
+- Implemented a vertical mobile view for the settings modal with categorized, card-based navigation and drill-down pages.
+- Expanded the user profile settings tab to display the user's registered email address (read-only) and a one-click copyable Direct Message invite link.

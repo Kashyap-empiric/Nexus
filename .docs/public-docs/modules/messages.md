@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Messages module handles the lifecycle of individual chat messages — creating, reading, editing, and soft-deleting them. Messages are the core data unit of the Nexus platform.
+The Messages module handles the lifecycle of individual chat messages — creating, reading, editing, soft-deleting, and rendering them with markdown formatting. Messages are the core data unit of the Nexus platform.
 
 ## Server-Side (`server/src/modules/messages`)
 
@@ -23,6 +23,7 @@ The Messages module handles the lifecycle of individual chat messages — creati
 | `messages.controller.ts` | HTTP request handlers + socket event dispatch |
 | `messages.service.ts` | Business logic (Prisma queries, transactions) |
 | `messages.schema.ts` | Zod schemas for request validation |
+| `messages.types.ts` | TypeScript interfaces (MessageDTO, MessagePage, etc.) |
 
 ### Business Logic
 
@@ -42,20 +43,17 @@ The Messages module handles the lifecycle of individual chat messages — creati
 
 - **`deleteMessage`** — Soft-deletes by setting `deletedAt` to current timestamp:
   - Validates same ownership checks as edit
-  - ✅ **FIXED (2026-06-11)**: `nextLatestMessageId` is now computed **inside** `prisma.$transaction(async (tx) => { ... })` using `tx.message.findFirst` with `deletedAt: null` filter, eliminating the critical race condition.
+  - ✅ **FIXED**: `nextLatestMessageId` computed **inside** `prisma.$transaction` using `tx.message.findFirst` with `deletedAt: null` filter
   - Returns `conversationMetadata` only if deleting the latest message
 
 - **`getMessages`** — Cursor-based pagination:
-  - ✅ **FIXED (2026-06-11)**: Orders by `id: "desc"` (UUIDv7) for monotonic-safe cursor pagination
-  - ✅ **FIXED (2026-06-11)**: Filters `deletedAt: null` — soft-deleted messages are no longer returned
+  - ✅ Orders by `id: \"desc\"` (UUIDv7) for monotonic-safe cursor pagination
+  - ✅ Filters `deletedAt: null` — soft-deleted messages not returned
   - Fetches one extra record to determine `hasNextPage`
 
 ### Socket Integration
 
-The controller directly imports `dispatchMessageEvent` from `socket.dispatcher.ts` to broadcast socket events after successful database operations. This is called after the Prisma operation succeeds, meaning:
-
-- ✅ Messages are always persisted before being broadcast
-- ❌ The controller mixes HTTP and WebSocket concerns (known architectural debt)
+The controller directly imports `dispatchMessageEvent` from `socket.dispatcher.ts` to broadcast socket events after successful database operations.
 
 ## Client-Side
 
@@ -77,14 +75,39 @@ The controller directly imports `dispatchMessageEvent` from `socket.dispatcher.t
 | `useEditMessageMutation(conversationId)` | Edits via REST PATCH with optimistic cache update |
 | `useDeleteMessageMutation(conversationId)` | Deletes via REST DELETE with optimistic cache update |
 
+### Components
+
+| Component | Role |
+|-----------|------|
+| `MessageList.tsx` | Paginated message list with infinite scroll |
+| `MessageGroupItem.tsx` | Grouped message renderer with hover actions |
+| `MessageInput.tsx` | Compose + send messages with emoji picker |
+| `MessageStatus.tsx` | Pending/sent/read indicator |
+| `MarkdownRenderer.tsx` | Renders message content with react-markdown + remark-gfm |
+| `MessageListSkeleton.tsx` | Loading skeleton |
+
 ### Optimistic Update Strategy
 
-- **Send:** Message immediately appears with `pending: true` and a `tempId`. On server acknowledgment (`success: true`), the temp message is replaced with the real message.
+- **Send:** Message immediately appears with `pending: true` and a `tempId`. On server acknowledgment, the temp message is replaced with the real message.
 - **Edit:** Instantly updates the cache via `updateMessageInCache()`, rolls back on error.
 - **Delete:** Instantly marks message as deleted in cache via `markMessageDeletedInCache()`, rolls back on error.
 
+### Markdown Rendering
+
+Messages are stored as plain text and rendered client-side using `react-markdown` + `remark-gfm`:
+
+| Syntax | Rendered As |
+|---|---|
+| `**bold**` or `__bold__` | `<strong>` |
+| `*italic*` or `_italic_` | `<em>` |
+| `~~strikethrough~~` | `<del>` |
+| `` `code` `` | `<code>` |
+| ` ``` ``` ` (code blocks) | `<pre><code>` with copy button |
+| `> quote` | `<blockquote>` with left accent border |
+| `- list` / `1. list` | `<ul>` / `<ol>` |
+| `[text](url)` | `<a>` target="_blank" |
+
 ### Known Technical Debt
 
-See `.docs/TECHNICAL_DEBT.md` and `.docs/socket.md` for detailed documentation of:
-- 🔴 **Non-transactional reads in `editMessage`** — `getMessageById` is called outside the `$transaction` (still unresolved)
+- 🔴 **Non-transactional reads in `editMessage`** — `getMessageById` is called outside the `$transaction`
 - 🟡 Overloaded controllers mixing HTTP and socket concerns
