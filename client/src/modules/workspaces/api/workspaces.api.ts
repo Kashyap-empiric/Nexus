@@ -50,3 +50,8 @@ export const updateMemberRole = async (workspaceId: string, userId: string, role
   const { data } = await api.patch<{ data: WorkspaceMember }>(`/workspaces/${workspaceId}/members/${userId}/role`, { role });
   return data.data;
 };
+
+export const inviteMemberByUsername = async (workspaceId: string, username: string): Promise<{ success: boolean }> => {
+  const { data } = await api.post<{ success: boolean }>(`/workspaces/${workspaceId}/invite`, { username });
+  return data;
+};

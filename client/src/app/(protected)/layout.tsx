@@ -3,8 +3,10 @@ import { AppLayoutShell } from "@/shared/components/layout/AppLayoutShell";
 
 export default function ProtectedLayout({
   children,
+  modal,
 }: {
   children: React.ReactNode;
+  modal: React.ReactNode;
 }) {
   return (
     <>
@@ -12,6 +14,7 @@ export default function ProtectedLayout({
       <AppLayoutShell>
         {children}
       </AppLayoutShell>
+      {modal}
     </>
   );
 }

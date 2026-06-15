@@ -8,6 +8,19 @@ const isSupported = (): boolean => {
 };
 
 /**
+ * Registers the Service Worker required for push notifications on mobile devices.
+ */
+export async function registerServiceWorker() {
+  if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+    try {
+      await navigator.serviceWorker.register("/sw.js");
+    } catch (err) {
+      console.error("Service Worker registration failed:", err);
+    }
+  }
+}
+
+/**
  * Request permission to show desktop notifications.
  * - "default" → the user hasn't been asked yet; the browser prompt shows
  * - "granted" → already allowed; resolves immediately
@@ -15,6 +28,9 @@ const isSupported = (): boolean => {
  */
 export async function requestNotificationPermission(): Promise<NotificationPermission | null> {
   if (!isSupported()) return null;
+
+  // Ensure Service Worker is registered for mobile push support
+  await registerServiceWorker();
 
   // If already granted or denied, return the current state without prompting
   if (Notification.permission !== "default") {
@@ -50,28 +66,45 @@ export function showNotification(options: NotificationOptions): boolean {
   if (!isSupported()) return false;
   if (Notification.permission !== "granted") return false;
 
-  const notification = new Notification(options.title, {
-    body: options.body,
-    icon: options.icon || undefined,
-    tag: options.tag || options.conversationId, // Deduplicate by tag
-    silent: false,
-  });
+  try {
+    const notification = new Notification(options.title, {
+      body: options.body,
+      icon: options.icon || undefined,
+      tag: options.tag || options.conversationId, // Deduplicate by tag
+      silent: false,
+    });
 
-  // Navigate to conversation when notification is clicked
-  if (options.onClickUrl) {
-    notification.onclick = () => {
-      window.focus();
-      if (options.onClickUrl) {
-        window.location.href = options.onClickUrl;
-      }
-      notification.close();
-    };
+    // Navigate to conversation when notification is clicked
+    if (options.onClickUrl) {
+      notification.onclick = () => {
+        window.focus();
+        if (options.onClickUrl) {
+          window.location.href = options.onClickUrl;
+        }
+        notification.close();
+      };
+    }
+
+    // Auto-close after 8 seconds
+    setTimeout(() => notification.close(), 8000);
+
+    return true;
+  } catch (error: any) {
+    // Mobile Chrome/Android requires ServiceWorkerRegistration.showNotification()
+    if (error.name === 'TypeError' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.showNotification(options.title, {
+          body: options.body,
+          icon: options.icon || undefined,
+          tag: options.tag || options.conversationId,
+          data: { url: options.onClickUrl }
+        }).catch(err => console.error("ServiceWorker showNotification failed:", err));
+      }).catch(err => console.error("ServiceWorker ready failed:", err));
+      return true;
+    }
+    console.error("Failed to show desktop notification:", error);
+    return false;
   }
-
-  // Auto-close after 8 seconds
-  setTimeout(() => notification.close(), 8000);
-
-  return true;
 }
 
 /**

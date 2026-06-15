@@ -10,6 +10,7 @@ import conversationsRoutes from "./modules/conversations/conversations.routes.js
 import usersRoutes from "./modules/users/users.routes.js";
 import invitesRoutes from "./modules/invites/invites.routes.js";
 import workspacesRoutes from "./modules/workspaces/workspaces.routes.js";
+import notificationsRoutes from "./modules/notifications/notifications.routes.js";
 
 import { ENV } from "./config/env.js";
 import * as usersRepo from "./modules/users/users.repository.js";
@@ -17,7 +18,7 @@ import * as usersRepo from "./modules/users/users.repository.js";
 const app = express();
 
 const allowedOrigins = ENV.ALLOWED_ORIGINS;
-
+console.log(allowedOrigins)
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 app.use(morgan("dev"));
@@ -46,6 +47,7 @@ app.use("/api/conversations", conversationsRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/invites", invitesRoutes);
 app.use("/api/workspaces", workspacesRoutes);
+app.use("/api/notifications", notificationsRoutes);
 app.use(errorHandler);
 
 export default app;

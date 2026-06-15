@@ -42,7 +42,7 @@ export const handleMessageNew = (queryClient: QueryClient) => {
         }));
       });
 
-      if (typeof document === "undefined" || !document.hidden) return;
+      if (typeof document === "undefined") return;
 
       const currentUser = getAuthUser();
       if (currentUser && message.userId === currentUser.id) return;

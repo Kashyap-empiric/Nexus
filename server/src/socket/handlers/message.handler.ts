@@ -3,6 +3,8 @@ import { createMessage } from "@/modules/messages/messages.service.js";
 import { SOCKET_EVENTS } from "@/shared/socket-events.js";
 import { dispatchMessageEvent } from "../socket.dispatcher.js";
 import { verifyConversationMembership } from "@/shared/permissions.js";
+import { findById } from "@/modules/conversations/conversations.repository.js";
+import { sendPushNotification } from "@/services/push.service.js";
 
 export const registerMessageHandlers = (io: Server, socket: Socket) => {
   socket.on(
@@ -55,6 +57,22 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
         );
 
         dispatchMessageEvent("NEW", payload.conversationId, message, conversationMetadata);
+
+        findById(payload.conversationId).then(conv => {
+          if (conv && conv.type === "DM") {
+            const pushPromises = conv.members.map(member => {
+              if (member.userId !== userId) {
+                return sendPushNotification(member.userId, {
+                  title: message.user.username,
+                  body: message.content,
+                  url: `/conversations/${payload.conversationId}`,
+                  tag: payload.conversationId,
+                });
+              }
+            });
+            Promise.all(pushPromises).catch(err => console.error("[Push] Error sending push for message", err));
+          }
+        }).catch(err => console.error("[Push] Failed to fetch conversation", err));
 
         return callback?.({
           success: true,

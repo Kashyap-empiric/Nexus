@@ -1,5 +1,5 @@
 import { NotificationSettings } from "@/modules/notifications/components/NotificationSettings";
 
-export default function NotificationSettingsPage() {
+export default function InterceptedNotificationSettingsPage() {
   return <NotificationSettings />;
 }
