@@ -1,12 +1,10 @@
 # Notifications & Inbox — Implementation Plan
 
-> **Status:** 🟡 **Partially implemented — client UI complete, server backend missing.**
+> **Status:** 🟡 **In progress — client UI complete, server backend implemented, Phase 3 (web push) detailed below.**
 >
-> **What's done:** Client-side UI (BellPopover, notifications page, settings page), socket handler (`notification.handlers.ts`), API client, React Query hooks, DB schema (`Notification` + `PushSubscription` tables exist via migration).
+> **What's done:** Client-side UI (BellPopover, notifications page, settings page), socket handler (`notification.handlers.ts`), API client, React Query hooks, DB schema (`Notification` + `PushSubscription` tables exist via migration), server-side module (controller, service, repository, routes, socket dispatch), notification integration into invite/channel flows.
 >
-> **What's missing:** Server-side notification module (controller, service, repository, routes), server emitting `notification:new` socket events, integration into invite/channel flows.
->
-> **Consequence:** All notification API calls (`GET /notifications`, etc.) return 404s currently. The UI gracefully handles these as empty states.
+> **What's missing:** Web push notifications (Service Worker + VAPID) so notifications work when the browser window is closed.
 
 ---
 
@@ -76,7 +74,7 @@ stored in localStorage. Add `NotificationPreference` as a server model later whe
 
 ### 5. Push subscriptions table — keep as designed
 
-The `PushSubscription` model is correct and should stay. It's needed for push notifications in a later phase.
+The `PushSubscription` model is correct and should stay. It's needed for push notifications in Phase 3.
 
 ### 6. Bell badge = unread activity items, NOT unread messages
 
@@ -102,7 +100,7 @@ such as invites, mentions, join events, system events. This prevents duplicate i
 |---|---|
 | **Phase 1** | Bell icon + Activity table + workspace invites + invite accepted + channel/member events |
 | **Phase 2** | Mentions (`@user`) generate activity items |
-| **Phase 3** | Push notifications + Notification preferences + Service Worker + VAPID keys |
+| **Phase 3** | Push notifications — see detailed breakdown below |
 | **Phase 4** | Advanced notification routing |
 
 Unread messages and notifications remain two **separate systems**. This is the model used by Slack and Discord — it scales better and avoids turning the notifications table into a copy of the messages table.
@@ -170,7 +168,7 @@ model Notification {
   @@index([userId, createdAt])
 }
 
-// Phase 3:
+// Phase 3.4:
 // model NotificationPreference {
 //   userId    String  @id
 //   pushEnabled           Boolean @default(false)
@@ -226,22 +224,17 @@ Activity items are created by the **server** when events happen, not the client.
 - New messages do **not** create activity items (use `lastReadMessageId` for unread state)
 - No notification backfill on socket connect or login
 
-### 3. Push notifications strategy (two layers) — Phase 3+
+### 3. Push notifications strategy (two layers)
 
 **Layer 1: Socket-based (existing, enhanced)** — Works while the app has an active socket connection
 - Already works via `handleMessageNew` (fires when tab is hidden)
 - The existing desktop notification for new messages stays (it's a browser notification, not the activity inbox)
 - Phase 1: activity items delivered via `notification:new` socket event to update the bell badge in real-time
-- Phase 1: no desktop notifications for activity items — just badge + popover
 
-**Layer 2: Service Worker Push — implementation path** — Works when app is closed entirely
-- Deferred to Phase 3
-
-**MVP progression:**
-1. **Activity feed + bell** (Phase 1) — covers invites, joins, channel events
-2. **Mentions** (Phase 2) — `@user` generates activity items
-3. **Push notifications** (Phase 3) — Service Worker + `NotificationPreference` + VAPID
-4. **Advanced routing** (Phase 4)
+**Layer 2: Service Worker Push (detailed below)** — Works when app is closed entirely
+- Uses the Web Push API (VAPID + `web-push` library)
+- Service Worker listens for `push` events and shows native notifications
+- `notificationclick` handler navigates to the relevant conversation/page
 
 ---
 
@@ -258,27 +251,27 @@ Activity items are created by the **server** when events happen, not the client.
 
 #### Step 2: Notification repository and service
 
-- [ ] Create `server/src/modules/notifications/notifications.repository.ts` — ❌ **NOT STARTED**
-- [ ] Create `server/src/modules/notifications/notifications.service.ts` — ❌ **NOT STARTED**
+- [x] Create `server/src/modules/notifications/notifications.repository.ts` — ✅ **DONE**
+- [x] Create `server/src/modules/notifications/notifications.service.ts` — ✅ **DONE**
 
 #### Step 3: Integrate activity creation into existing flows
 
-- [ ] **Invite service**: Create `INVITE_RECEIVED` on workspace invite — ❌ **NOT STARTED**
-- [ ] **Channel creation**: Create `CHANNEL_CREATED` / `MEMBER_JOINED` — ❌ **NOT STARTED**
-- [ ] **Invite acceptance**: Create `INVITE_ACCEPTED` — ❌ **NOT STARTED**
+- [x] **Invite service**: Create `INVITE_RECEIVED` on workspace invite — ✅ **DONE**
+- [x] **Channel creation**: Create `CHANNEL_CREATED` / `MEMBER_JOINED` — ✅ **DONE**
+- [x] **Invite acceptance**: Create `INVITE_ACCEPTED` — ✅ **DONE**
 - [x] **Do NOT** integrate with socket dispatcher for messages — ✅ **Respected** (no message notifications created)
 
 #### Step 4: Activity API endpoints
 
-- [ ] `GET /notifications` — ❌ **NOT STARTED**
-- [ ] `GET /notifications/unread-count` — ❌ **NOT STARTED**
-- [ ] `PATCH /notifications/:id/read` — ❌ **NOT STARTED**
-- [ ] `PATCH /notifications/read-all` — ❌ **NOT STARTED**
+- [x] `GET /notifications` — ✅ **DONE**
+- [x] `GET /notifications/unread-count` — ✅ **DONE**
+- [x] `PATCH /notifications/:id/read` — ✅ **DONE**
+- [x] `PATCH /notifications/read-all` — ✅ **DONE**
 
 #### Step 5: Socket event for real-time activity delivery
 
 - [x] Add `NOTIFICATION_NEW: "notification:new"` to `SOCKET_EVENTS` — ✅ **DONE** (constants exist in both client and server)
-- [ ] When a notification is created, emit to `user:{userId}` room — ❌ **NOT STARTED** (server never emits it)
+- [x] When a notification is created, emit to `user:{userId}` room — ✅ **DONE**
 - [x] Payload: the full `Notification` object — ✅ **DONE** (client handler expects it)
 
 ### Phase 2: Client — Activity Feed
@@ -291,7 +284,7 @@ Activity items are created by the **server** when events happen, not the client.
   - `markAsRead(id)` — ✅ **DONE**
   - `markAllAsRead()` — ✅ **DONE**
   - `getPreferences()` / `updatePreferences()` — ✅ **DONE** (for settings page)
-  - `subscribePush()` / `unsubscribePush()` — ✅ **DONE** (for future Phase 3)
+  - `subscribePush()` / `unsubscribePush()` — ✅ **DONE** (for Phase 3)
 
 #### Step 7: Notification hooks
 
@@ -322,7 +315,7 @@ Activity items are created by the **server** when events happen, not the client.
 | `MEMBER_JOINED` | `UserPlus` | `New member` | `{username} joined #{channelName}` | ✅ **DONE** |
 | `CHANNEL_CREATED` | `Hash` | `New channel` | `#{channelName} was created in {workspaceName}` | ✅ **DONE** |
 
-### Phase 3: Client — Bell Icon Popover
+### Phase 2.5: Client — Bell Icon Popover
 
 #### Step 10: Bell icon component
 
@@ -355,13 +348,296 @@ Activity items are created by the **server** when events happen, not the client.
 - [ ] Add `MENTION` to `NotificationType` enum
 - [ ] Desktop notification for mentions when tab is hidden
 
-### Phase 3: Push + Preferences (Future)
+---
 
-- [ ] Add `NotificationPreference` model
-- [ ] Service Worker registration
-- [ ] VAPID key generation
-- [ ] Push subscription API
-- [ ] `web-push` integration
+### Phase 3: Web Push Notifications (Detailed Plan)
+
+> **Goal:** Deliver push notifications via the Web Push API (Service Worker + VAPID) so users get notified of activity events and new messages even when the browser window is closed.
+
+#### Phase 3 Architecture Overview
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                     Browser (Client)                      │
+│                                                          │
+│  ┌──────────────────────┐     ┌──────────────────────┐   │
+│  │   Next.js App (tab)   │     │   Service Worker      │   │
+│  │                       │     │   (sw.js)             │   │
+│  │  Socket.io (online)   │     │                       │   │
+│  │  PushManager.subscribe│     │  push event listener  │   │
+│  │  Send sub → API       │     │  notificationclick    │   │
+│  └──────┬───────────────┘     └──────────┬────────────┘   │
+│         │                                │                │
+└─────────┼────────────────────────────────┼────────────────┘
+          │           Browser Push Service (FCM/APNs/etc.)
+          │                                │
+┌─────────▼────────────────────────────────▼────────────────┐
+│                     Server (Node.js)                       │
+│                                                           │
+│  ┌─────────────────────┐    ┌─────────────────────────┐   │
+│  │  Notification Module │    │  Push Dispatcher        │   │
+│  │                      │    │                         │   │
+│  │  createAndDispatch() │───▶│  web-push.send()        │   │
+│  │  - Creates DB record  │    │  for each subscription  │   │
+│  │  - Emits socket event │    │  of the target user     │   │
+│  │  - Fires push (new)   │    │                         │   │
+│  └──────────────────────┘    └───────────┬─────────────┘   │
+│                                          │                 │
+│  ┌───────────────────────────────────────▼────────────────┐│
+│  │  Database (PostgreSQL)                                 ││
+│  │                                                         ││
+│  │  PushSubscription { endpoint, p256dh, auth, userId }    ││
+│  └─────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Two-Layer Delivery Strategy:**
+
+| Layer | Mechanism | Works When | Use Case |
+|---|---|---|---|
+| **Socket** | `socket.io` emit to `user:{userId}` room | App tab is open | Real-time updates to bell badge + popover |
+| **Web Push** | `web-push` library → Browser Push Service → Service Worker | Browser is closed / tab is hidden | Notifications that arrive regardless of app state |
+
+**Design Principle:** Both layers fire for every notification. The Service Worker decides whether to show the notification based on whether the tab is open and actively viewing the relevant content.
+
+---
+
+#### Phase 3 Key Decisions
+
+**3a. Separate PushSubscription from NotificationPreference**
+
+| Model | Purpose |
+|---|---|
+| `PushSubscription` | Browser push endpoint + encryption keys. One per browser/device. |
+| `NotificationPreference` | User-level settings: which notification types should trigger a push. |
+
+**3b. Presence-Aware Push (Deferred to post-MVP)**
+
+For MVP, **always send push** when a notification is created. Do not suppress pushes based on online status or conversation focus.
+
+**3c. Push for Activity Events First, Messages Second**
+
+| Priority | Notification Type | Push Behavior |
+|---|---|---|
+| P0 | Activity events (`INVITE_RECEIVED`, `INVITE_ACCEPTED`, `MEMBER_JOINED`, `CHANNEL_CREATED`) | Push on creation, regardless of online status |
+| P1 | Message notifications (new message when tab is hidden) | Push when user is not in the conversation and tab is hidden |
+
+**3d. VAPID Key Management**
+
+```
+VAPID_PUBLIC_KEY=...   (public — safe to expose to client)
+VAPID_PRIVATE_KEY=...  (secret — server only)
+VAPID_SUBJECT=mailto:admin@nexus.app
+```
+
+Generate with:
+```bash
+npx web-push generate-vapid-keys
+```
+
+**3e. No NotificationPreference Table (for now)**
+
+Defer the `NotificationPreference` Prisma model. Start with client-side-localStorage toggles for:
+- `pushEnabled` (boolean)
+- `pushForMessages` (boolean)
+- `pushForActivity` (boolean)
+
+---
+
+#### Phase 3.1: Infrastructure & VAPID Setup
+
+**Steps:**
+
+1. **Install `web-push` on server** — `cd server && npm install web-push`
+
+2. **Generate VAPID key pair** — `npx web-push generate-vapid-keys --json`, add to `.env`
+
+3. **Add VAPID env vars to `server/src/config/env.ts`**
+   ```typescript
+   VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY!,
+   VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY!,
+   VAPID_SUBJECT: process.env.VAPID_SUBJECT!,
+   ```
+
+4. **Create `server/src/services/push.service.ts`** — VAPID init, `sendPushNotification()`, `shouldPush()`
+   - `initPushService()` — calls `webpush.setVapidDetails()` at server startup
+   - `sendPushNotification(userId, payload)` — fetches subscriptions, sends to each, handles `410 Gone`
+
+5. **Add push repository functions** to `notifications.repository.ts`
+   - `savePushSubscription(userId, subscription, userAgent)` — upsert by endpoint
+   - `getPushSubscriptionsByUserId(userId)` — get all subscriptions
+   - `deletePushSubscription(endpoint)` — remove invalid subscription
+
+6. **Add push subscription API endpoints**
+   - `POST /notifications/push/subscribe` — save subscription
+   - `DELETE /notifications/push/subscribe/:id` — remove subscription
+
+---
+
+#### Phase 3.2: Service Worker Registration & Push Subscription
+
+**Steps:**
+
+1. **Create `client/public/sw.js`** — Service Worker with handlers for:
+   - `install` — `self.skipWaiting()`
+   - `activate` — `clients.claim()`
+   - `push` — parse payload, call `self.registration.showNotification()`
+   - `notificationclick` — close notification, focus existing tab or open new one, navigate to URL
+   - `pushsubscriptionchange` — re-subscribe and send new subscription to server
+
+2. **Update `client/src/shared/lib/notifications.ts`**
+   - Fix `registerServiceWorker()` path to `/sw.js`
+   - Add `subscribeToPush()` — calls `pushManager.subscribe()` with VAPID public key
+   - Add `unsubscribeFromPush()` — unsubscribes and calls unsubscribe API
+
+3. **Add VAPID public key to client env**: `NEXT_PUBLIC_VAPID_PUBLIC_KEY`
+
+4. **Integrate subscription flow:**
+   - When user grants permission AND `pushEnabled` → subscribe + send to API
+   - On logout → unsubscribe + clean up on server
+
+---
+
+#### Phase 3.3: Push Delivery Logic
+
+**Modify `createAndDispatch()` in `notifications.service.ts`:**
+
+```typescript
+export const createAndDispatch = async (input: CreateNotificationInput) => {
+  const notification = await notificationsRepo.create({ ... });
+
+  // 1. Socket delivery (existing) — real-time for open tabs
+  try {
+    const io = getIO();
+    io.to(`user:${input.userId}`).emit(SOCKET_EVENTS.NOTIFICATION_NEW, notification);
+  } catch (err) {
+    console.error("[Notifications] Socket emit failed:", err);
+  }
+
+  // 2. Push delivery (new) — for closed tabs (fire-and-forget)
+  sendPushNotification(input.userId, {
+    title: notification.title,
+    body: notification.body || undefined,
+    url: notification.link || undefined,
+    tag: notification.id,
+  }).catch(err => console.error("[Notifications] Push send failed:", err));
+
+  return notification;
+};
+```
+
+---
+
+#### Phase 3.4: Notification Preferences UI
+
+**Steps:**
+
+1. **Create `client/src/modules/notifications/utils/notification-preferences.ts`** — localStorage-backed preferences
+   ```typescript
+   interface NotificationPreferences {
+     pushEnabled: boolean;
+     notifyDMs: boolean;
+     notifyChannels: boolean;
+     notifyActivity: boolean;
+   }
+   ```
+
+2. **Extend settings page** at `(protected)/settings/notifications/page.tsx` with:
+   - Push Notifications toggle
+   - Sub-toggles for DMs, channels, activity events
+   - Reset to default button
+
+3. **Wire preferences into push flow** — subscribe/unsubscribe based on toggle state
+
+---
+
+#### Phase 3.5: Message Push Notifications
+
+**Design:**
+
+| Scenario | Push? |
+|---|---|
+| User is viewing the conversation | ❌ No (they see it live) |
+| User is viewing a different conversation | ✅ Yes (tag = conversationId for dedup) |
+| User is in a different app / tab is hidden | ✅ Yes |
+| User is offline (browser closed) | ✅ Yes (delivered on reconnect) |
+
+**Implementation:**
+
+1. **Track active conversation** via `conversation:focus` socket event → server-side `Map<userId, conversationId>`
+
+2. **Modify `message.handler.ts`** — after creating and emitting message, iterate members and push to those not viewing the conversation
+
+```typescript
+async function dispatchMessagePush(message: Message, conversationId: string) {
+  const members = await getConversationMemberIds(conversationId);
+  for (const memberId of members) {
+    if (memberId === message.userId) continue;
+    const activeConv = activeConversations.get(memberId);
+    if (activeConv === conversationId) continue;
+    await sendPushNotification(memberId, {
+      title: message.user.username,
+      body: message.content,
+      url: `/conversations/${conversationId}`,
+      tag: conversationId,
+    });
+  }
+}
+```
+
+---
+
+#### Phase 3.6: Activity Event Push Notifications
+
+Already handled by the modified `createAndDispatch()` — no additional changes needed.
+
+| Event | Push Title | Push Body | Action URL |
+|---|---|---|---|
+| `INVITE_RECEIVED` | "Workspace invite" | "You've been invited to {workspaceName}" | `/invite?workspace={workspaceId}` |
+| `INVITE_ACCEPTED` | "{username} joined" | "{username} accepted your invite to {workspaceName}" | `/workspaces/{workspaceId}` |
+| `MEMBER_JOINED` | "New member" | "{username} joined the workspace" | `/workspaces/{workspaceId}` |
+| `CHANNEL_CREATED` | "New channel" | "#{channelName} was created in {workspaceName}" | `/workspaces/{workspaceId}/channels/{channelId}` |
+
+---
+
+### Presence-Aware Delivery (Post-MVP Enhancement)
+
+| User State | Action |
+|---|---|
+| User offline (no socket, no active tab) | Send push via web-push |
+| User online, viewing OTHER conversation / page | Send push |
+| User online, viewing THIS conversation / page | Skip push (they see it live) |
+| User online, but tab is hidden | Send push (browser shows it as a native notification) |
+
+**Implementation:**
+1. Server-side presence tracking already exists (presenceStore + Redis)
+2. Active conversation tracking via `conversation:focus` socket event
+3. Combine both in a `shouldPush()` function
+
+---
+
+## Security & Edge Cases (Phase 3)
+
+### Security
+
+| Concern | Mitigation |
+|---|---|
+| VAPID private key exposure | Store in server env only. Never expose to client. |
+| Stale push subscriptions | Catch `410 Gone` errors from `web-push`, delete from DB. |
+| Push subscription endpoint misuse | Validate subscription belongs to authenticated user. |
+| Notification spam | Client-side preferences control which notifications trigger a push. |
+
+### Edge Cases
+
+| Scenario | Handling |
+|---|---|
+| User clears browser data | Next page load detects existing permission but no subscription → re-subscribe. `410` on server also cleans up. |
+| User revokes notification permission | `pushManager.subscribe()` will fail → catch error, update UI, disable push toggle. |
+| Multiple devices | Each device has its own `PushSubscription` record. Server sends to all. |
+| Push subscription expires | Browser emits `pushsubscriptionchange` event in Service Worker. Re-subscribe and update server. |
+| User logs out | Call `unsubscribeFromPush()` on all subscriptions. |
+| Rapid successive pushes to same tag | Browser shows only the latest notification for that tag (native dedup). |
+| Large payload | Keep push payloads small (< 4KB). Use `data` field only for navigation URL + ID. |
 
 ---
 
@@ -374,7 +650,8 @@ Admin searches for user by username
   → POST /workspaces/:slug/invite { username }
   → Server finds user, creates Notification (type: INVITE_RECEIVED)
   → Server emits notification:new to user:{targetUserId}
-  → Target user sees activity item in bell popover
+  → (Phase 3) Server sends web push via Service Worker
+  → Target user sees activity item in bell popover (or push notification)
   → Click → navigate to workspace join page
 ```
 
@@ -385,7 +662,8 @@ User accepts invite (via link or inbox)
   → Server adds user to workspace
   → Server creates Notification (type: INVITE_ACCEPTED) for the inviter
   → Server emits notification:new to user:{inviterId}
-  → Inviter sees activity item in bell popover
+  → (Phase 3) Server sends web push
+  → Inviter sees activity item in bell popover (or push notification)
 ```
 
 ### New message → unread state (no notification created)
@@ -398,7 +676,8 @@ User sends message
       → If NOT viewing the conversation:
           → Sidebar shows unread count (from lastReadMessageId)
           → No activity item created
-          → If tab hidden: existing desktop notification fires (keeps existing behavior)
+          → If tab hidden: existing desktop notification fires
+          → (Phase 3.5) Web push sent if not viewing the conversation
 ```
 
 ### Viewing unread conversations
@@ -486,51 +765,89 @@ The bell icon sits in the header bar alongside the theme toggle. No settings gea
 
 ### Server
 
-| File | Change |
-|---|---|
-| `prisma/schema.prisma` | Add `Notification` model and `NotificationType` enum (no `MESSAGE` type). `PushSubscription` model kept. `NotificationPreference` **deferred**. |
-| `server/src/modules/notifications/notifications.repository.ts` | **New** — CRUD for notifications |
-| `server/src/modules/notifications/notifications.service.ts` | **New** — notification creation + query logic |
-| `server/src/modules/notifications/notifications.controller.ts` | **New** — activity feed + push subscription API endpoints |
-| `server/src/modules/notifications/notifications.routes.ts` | **New** — route registration |
-| `server/src/modules/notifications/notifications.schema.ts` | **New** — request validation |
-| `server/src/shared/socket-events.ts` | Add `NOTIFICATION_NEW` event constant |
-| `server/src/modules/invites/invites.service.ts` | Create `INVITE_RECEIVED` notification when workspace invite is sent to specific user |
-| `server/src/app.ts` | Register notification routes |
+| File | Change | Phase |
+|---|---|---|
+| `prisma/schema.prisma` | Add `Notification` model and `NotificationType` enum (no `MESSAGE` type). `PushSubscription` model kept. | 1 |
+| `server/src/modules/notifications/notifications.repository.ts` | **New** — CRUD for notifications | 1 |
+| `server/src/modules/notifications/notifications.service.ts` | **New** — notification creation + query logic | 1 |
+| `server/src/modules/notifications/notifications.controller.ts` | **New** — activity feed + push subscription API endpoints | 1 |
+| `server/src/modules/notifications/notifications.routes.ts` | **New** — route registration | 1 |
+| `server/src/modules/notifications/notifications.schema.ts` | **New** — request validation | 1 |
+| `server/src/shared/socket-events.ts` | Add `NOTIFICATION_NEW` event constant | 1 |
+| `server/src/modules/invites/resolvers/workspaceResolver.ts` | Create `INVITE_RECEIVED` + `INVITE_ACCEPTED` notifications | 1 |
+| `server/src/app.ts` | Register notification routes | 1 |
+| `server/package.json` | Add `web-push` dependency | 3.1 |
+| `server/.env` | Add VAPID keys | 3.1 |
+| `server/src/config/env.ts` | Add VAPID env variables | 3.1 |
+| `server/src/server.ts` | Call `initPushService()` at startup | 3.1 |
+| `server/src/services/push.service.ts` | **New** — VAPID init, `sendPushNotification()`, `shouldPush()` | 3.1 |
+| `server/src/modules/notifications/notifications.repository.ts` | Add push subscription CRUD | 3.1 |
+| `server/src/modules/notifications/notifications.service.ts` | Extend `createAndDispatch()` with push | 3.3 |
+| `server/src/modules/messages/messages.service.ts` | Add push dispatch for new messages | 3.5 |
 
 **Notably NOT changed:**
 - `server/src/socket/socket.dispatcher.ts` — no message notification creation
 
 ### Client
 
-| File | Change |
-|---|---|
-| `client/src/modules/notifications/api/notifications.api.ts` | **New** — API client (no preferences/subscribe for MVP) |
-| `client/src/modules/notifications/hooks/useNotifications.ts` | **New** — query hooks |
-| `client/src/modules/notifications/components/BellPopover.tsx` | **New** — bell icon + dropdown |
-| `client/src/app/(protected)/notifications/page.tsx` | **New** — activity feed page |
-| `client/src/socket/handlers/notification.handlers.ts` | **New** — `handleNotificationNew` |
-| `client/src/socket/eventRouter.ts` | Register notification handler |
-| `client/src/modules/chat/hooks/useGlobalSocket.ts` | Register `notification:new` event |
-| `client/src/modules/notifications/components/AppLayoutShell.tsx` | Add header top bar with bell icon |
-| `client/src/config/url.ts` | Add notification API routes + activity feed + settings app routes |
+| File | Change | Phase |
+|---|---|---|
+| `client/src/modules/notifications/api/notifications.api.ts` | **New** — API client | 2 |
+| `client/src/modules/notifications/hooks/useNotifications.ts` | **New** — query hooks | 2 |
+| `client/src/modules/notifications/components/BellPopover.tsx` | **New** — bell icon + dropdown | 2 |
+| `client/src/app/(protected)/notifications/page.tsx` | **New** — activity feed page | 2 |
+| `client/src/socket/handlers/notification.handlers.ts` | **New** — `handleNotificationNew` | 2 |
+| `client/src/socket/eventRouter.ts` | Register notification handler | 2 |
+| `client/src/modules/chat/hooks/useGlobalSocket.ts` | Register `notification:new` event | 2 |
+| `client/src/modules/notifications/components/AppLayoutShell.tsx` | Add header top bar with bell icon | 2 |
+| `client/src/config/url.ts` | Add notification API routes + activity feed + settings app routes | 2 |
+| `client/public/sw.js` | **New** — Service Worker with push + notificationclick handlers | 3.2 |
+| `client/.env` | Add `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | 3.2 |
+| `client/src/config/env.ts` | Add VAPID public key env variable | 3.2 |
+| `client/src/shared/lib/notifications.ts` | Fix SW path, add subscribe/unsubscribe functions | 3.2 |
+| `client/src/modules/notifications/utils/notification-preferences.ts` | **New** — localStorage preferences | 3.4 |
+| `client/src/app/(protected)/settings/notifications/page.tsx` | Add push toggle section | 3.4 |
+| `client/src/socket/socketClient.ts` | Add `conversation:focus` emit helper | 3.5 |
 
-**Notably NOT changed in Phase 1:**
-- Notification settings page (`/settings/notifications`) — deferred
-- `NotificationPreference` API — deferred
-- Push subscription API — deferred
+---
+
+## Verification Plan (Phase 3)
+
+### Manual Testing
+
+1. **Service Worker registration:** Open DevTools → Application → Service Workers. Confirm `/sw.js` is registered.
+2. **Push subscription:** After granting notification permission, check that `POST /notifications/push/subscribe` is called with the subscription object.
+3. **Push delivery:** Send an invite to a user. Close all browser tabs. Verify the notification appears on desktop.
+4. **Notification click:** Click the notification. Verify it navigates to the correct URL and focuses the app.
+5. **Expired subscription:** Manually delete a subscription from the DB. Trigger a push. Verify the server deletes the stale record on `410`.
+6. **Multiple devices:** Subscribe on two browsers. Send one notification. Verify both receive it.
+
+### Automated Testing
+
+| Test | Scope |
+|---|---|
+| Push service sends notification with valid subscription | Unit |
+| Push service handles `410 Gone` gracefully | Unit |
+| Push service skips invalid subscriptions | Unit |
+| `createAndDispatch()` calls both socket emit and push send | Integration |
+| Client registers Service Worker on permission grant | E2E |
 
 ---
 
 ## Future Considerations (NOT for MVP)
 
 - **Mentions (`@user`)** — Phase 2: parse mentions in messages and create `MENTION` notification
-- **Push notifications** — Phase 3: Service Worker + VAPID + `web-push`
-- **NotificationPreference** — Phase 3: per-type toggles stored on server
+- **Presence-aware push suppression** — Post-Phase 3: only push when user is offline or not viewing the content
+- **NotificationPreference Prisma model** — Post-Phase 3: server-side sync of preferences across devices
+- **Push notification sounds** — Post-Phase 3
+- **Do Not Disturb scheduling** — Post-Phase 3
 - **Notification retention/cleanup** — periodic job to delete notifications older than 90 days
 - **In-app notification sounds** — configurable sound per notification type
 - **Notification snoozing** — "Do not disturb" mode with schedule
+- **Email fallback for push** — Future
+- **Firebase Cloud Messaging for native mobile** — Future
 - **Mobile push** — via Firebase Cloud Messaging for native mobile apps
+- **Batch push delivery (coalesce multiple notifications)** — Future
 
 ---
 
@@ -553,7 +870,6 @@ This is the model used by Slack and Discord — it scales much better and avoids
 ### No notification backfill
 
 On socket connect or login, **do not** generate activity items from unread messages. The `lastReadMessageId` field already captures unread state. Backfill introduces:
-
 - Duplication (messages already read elsewhere)
 - Race conditions (concurrent socket connections)
 - Cleanup complexity (removing stale items)
@@ -562,20 +878,15 @@ On socket connect or login, **do not** generate activity items from unread messa
 
 Desktop notification permission is user-controlled from a simple client-side toggle, not enforced server-side.
 
-Initial MVP:
-- Browser's native permission prompt on first trigger
-- No settings page needed
-- The existing `requestNotificationPermission()` call in `SocketProvider` is sufficient
-
 When push is added (Phase 3), add:
 ```
 Enable Push Notifications
 ```
-toggle that drives `NotificationPreference.pushEnabled`.
+toggle that drives push subscription.
 
-### Presence-aware delivery (Phase 3+)
+### Presence-aware delivery (Phase 3.5+)
 
-For push notifications (not Phase 1):
+For push notifications:
 
 | User state | Action |
 |---|---|
@@ -584,14 +895,27 @@ For push notifications (not Phase 1):
 | User online, viewing THIS conversation | No push (they see it live) |
 | User online, viewing this conversation but tab is hidden | Send push via `notification:new` socket event |
 
-This avoids the common annoyance of getting a push for something you're already reading.
-
 ### Invite-to-user flow
 
 Two invite methods coexist:
 - **Link-based invites** (existing): For external sharing — generate a link, share it anywhere
 - **User-based invites** (new): For internal invites — search by username, sends an inbox notification
 
-Add `POST /workspaces/:slug/members` with `{ username }` body.
+---
+
+## Migration / Rollback (Phase 3)
+
+### Data Migration
+
+No migration needed. The `PushSubscription` model already exists in the schema.
+
+### Rollback Plan
+
+1. Remove `NEXT_PUBLIC_VAPID_PUBLIC_KEY` from client env
+2. Remove VAPID keys from server env
+3. Revert `createAndDispatch()` to socket-only
+4. Delete `server/src/services/push.service.ts`
+5. Delete `client/public/sw.js`
+6. Remove `POST/DELETE push/subscribe` routes
 
 <!-- End of plan -->
