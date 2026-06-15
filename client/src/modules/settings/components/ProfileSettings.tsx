@@ -14,7 +14,12 @@ import { UserAvatar } from "@/shared/components/ui/user-avatar";
 const profileSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters").max(30),
   displayName: z.string().max(50).nullable().optional(),
-  avatarUrl: z.string().url("Must be a valid URL").nullable().optional().or(z.literal("")),
+  avatarUrl: z
+    .string()
+    .url("Must be a valid URL")
+    .nullable()
+    .optional()
+    .or(z.literal("")),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -65,14 +70,16 @@ export const ProfileSettings = () => {
   };
 
   if (isLoading) {
-    return <div className="animate-pulse space-y-6">
-      <div className="h-8 w-1/4 bg-muted rounded"></div>
-      <div className="h-4 w-1/2 bg-muted rounded"></div>
-      <div className="space-y-4">
-        <div className="h-10 bg-muted rounded"></div>
-        <div className="h-10 bg-muted rounded"></div>
+    return (
+      <div className="animate-pulse space-y-6">
+        <div className="h-8 w-1/4 bg-muted rounded"></div>
+        <div className="h-4 w-1/2 bg-muted rounded"></div>
+        <div className="space-y-4">
+          <div className="h-10 bg-muted rounded"></div>
+          <div className="h-10 bg-muted rounded"></div>
+        </div>
       </div>
-    </div>;
+    );
   }
 
   return (
@@ -99,26 +106,82 @@ export const ProfileSettings = () => {
               {...register("avatarUrl")}
             />
             {errors.avatarUrl && (
-              <p className="text-sm text-destructive">{errors.avatarUrl.message}</p>
+              <p className="text-sm text-destructive">
+                {errors.avatarUrl.message}
+              </p>
             )}
           </div>
         </div>
 
         <div className="space-y-4">
           <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              value={profile?.email || ""}
+              disabled
+              className="bg-muted/50"
+            />
+            <p className="text-xs text-muted-foreground">
+              Email address cannot be changed.
+            </p>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
             <Input id="username" {...register("username")} />
             {errors.username && (
-              <p className="text-sm text-destructive">{errors.username.message}</p>
+              <p className="text-sm text-destructive">
+                {errors.username.message}
+              </p>
             )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="displayName">Display Name</Label>
-            <Input id="displayName" placeholder="How should we call you?" {...register("displayName")} />
+            <Input
+              id="displayName"
+              placeholder="How should we call you?"
+              {...register("displayName")}
+            />
             {errors.displayName && (
-              <p className="text-sm text-destructive">{errors.displayName.message}</p>
+              <p className="text-sm text-destructive">
+                {errors.displayName.message}
+              </p>
             )}
+          </div>
+
+          <div className="space-y-2 pt-2">
+            <Label>Direct Message Invite Link</Label>
+            <div className="flex gap-2">
+              <Input
+                readOnly
+                value={
+                  typeof window !== "undefined"
+                    ? `${window.location.origin}/dm/${profile?.username}`
+                    : ""
+                }
+                className="bg-muted/50 font-mono text-xs"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  if (typeof window !== "undefined" && profile?.username) {
+                    navigator.clipboard.writeText(
+                      `${window.location.origin}/dm/${profile.username}`,
+                    );
+                    toast.success("Invite link copied to clipboard");
+                  }
+                }}
+              >
+                Copy
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Share this link with others so they can easily start a direct
+              message with you.
+            </p>
           </div>
         </div>
 

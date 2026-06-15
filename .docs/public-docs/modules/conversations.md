@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Conversations module manages the logical containers for messages. Conversations can be either Direct Messages (`type: DM`) between two users or Channels (`type: CHANNEL`) within a workspace. The module handles creation, listing, metadata management, and read receipts for both types.
+The Conversations module manages the logical containers for messages. Conversations can be either Direct Messages (`type: DM`) between two users or Channels (`type: CHANNEL`) within a workspace. The module handles creation, listing, metadata management, read receipts, and unread counting for both types.
 
 ## Server-Side (`server/src/modules/conversations`)
 
@@ -31,8 +31,10 @@ The Conversations module manages the logical containers for messages. Conversati
 - **dmPair Strategy:** Prevents duplicate DMs using a sorted, concatenated pair of user IDs (`userA_userB`) as a unique constraint.
 - **`createOrGetDM`:** Tries to create a DM, catches `P2002` (duplicate) and returns existing.
 - **Read Receipts:** Updates `ConversationMember.lastReadMessageId` via upsert, broadcasts `message:read` via socket.
-- **Unread Counting:** For DMs, counts messages newer than the user's `lastReadMessageId` from other users. Unread count is included in the conversation list response.
+- **Unread Counting:** For DMs and channels, counts messages newer than the user's `lastReadMessageId` from other users. Uses raw SQL `$queryRaw` for efficient bulk counting via `countUnreadByConversations()`.
 - **Channel access check:** Uses `checkConversationAccess()` which allows workspace members to access non-private channels without explicit membership records.
+- **Private channel filtering:** `findChannelIdsByWorkspaceId` and `findChannelByWorkspaceId` accept an optional `userId` parameter to filter private channels by explicit membership, preventing socket room leaks.
+- **Bulk channel queries:** `findChannelIdsByWorkspaceIds` supports multiple workspace IDs for aggregate unread counting.
 
 ## Client-Side (`client/src/modules/conversations`)
 
@@ -40,7 +42,7 @@ The Conversations module manages the logical containers for messages. Conversati
 
 | Component | Role |
 |-----------|------|
-| `Sidebar.tsx` | Conversation/channel list with search, mode switching (DM vs workspace) |
+| `Sidebar.tsx` | Conversation/channel list with search, mode switching (DM vs workspace), public/private channel separation |
 | `NewConversationModal.tsx` | User search + DM creation |
 | `EmptyState.tsx` | Shown when no conversation is selected |
 | `EmptyStateSkeleton.tsx` | Loading skeleton |
@@ -62,4 +64,4 @@ The Conversations module manages the logical containers for messages. Conversati
 ### Known Issues
 
 - Read receipts (`partnerLastReadMessageId`) only work for DMs, not channels
-- Channel unread counts are not computed (only DM conversations get unread counts)
+- Channel unread counts are computed but channel-level read receipts are not synchronized

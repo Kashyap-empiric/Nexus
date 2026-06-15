@@ -12,14 +12,15 @@ This document outlines the high-level file and directory structure of the Nexus 
     - `DOCUMENTATION.md` — Entry point to all public docs
     - `data-flow.md` — Application data flow with Mermaid diagrams
     - `file-structure.md` — This file
-    - `modules/` — Per-module documentation
-      - `auth.md` — Authentication module
-      - `chat.md` — Chat orchestrator module
-      - `conversations.md` — Conversations module (DM + Channels)
-      - `messages.md` — Messages module
-      - `workspaces.md` — Workspaces module
-      - `users.md` — Users module
-      - `landing.md` — Landing page module
+  - `modules/` — Per-module documentation
+    - `auth.md` — Authentication module
+    - `chat.md` — Chat orchestrator module
+    - `conversations.md` — Conversations module (DM + Channels)
+    - `messages.md` — Messages module
+    - `workspaces.md` — Workspaces module
+    - `users.md` — Users module
+    - `notifications.md` — Notifications module (planned)
+    - `landing.md` — Landing page module
 - `PLAN.md` — Implementation plan for remaining workspace features
 - `client/` — React/Next.js 16 frontend application
 - `server/` — Node.js/Express backend API
@@ -43,6 +44,8 @@ This document outlines the high-level file and directory structure of the Nexus 
     - `messages/` — Message components (MessageList, MessageGroupItem, MessageInput, MessageStatus)
     - `invites/` — Invite link generation and resolution
     - `users/` — User profiles and search
+    - `notifications/` — Notification UI (BellPopover, settings, hooks, API, socket handlers)
+    - `settings/` — Settings UI (profile, appearance, notification toggles)
     - `landing/` — Landing page components
   - `socket/` — Socket.io client infrastructure (provider, store, events, handlers)
   - `shared/` — Shared components (ui/*), providers, lib utilities, constants
@@ -58,9 +61,12 @@ This document outlines the high-level file and directory structure of the Nexus 
     - `workspaces/` — Workspace CRUD, channel management, membership
     - `conversations/` — DM management, read receipts
     - `messages/` — Message CRUD, pagination, soft-delete
-    - `users/` — User data
+    - `users/` — User data, profile management, search
     - `invites/` — Invite generation, resolution, domain events
+    - `notifications/` — Notification CRUD, push subscription management, preferences
     - `auth/` — Auth service (`auth.service.ts`) and repository (`auth.repository.ts`)
+  - `services/` — Application services
+    - `push.service.ts` — VAPID-based Web Push notification delivery
   - `socket/` — Socket.io infrastructure
     - `socket.ts` — Server initialization, auth, room joining
     - `socket.dispatcher.ts` — Typed dispatch helpers for all socket events

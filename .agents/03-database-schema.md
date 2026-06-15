@@ -1,6 +1,6 @@
 # Nexus Database Schema (Phase 1 + Workspaces)
 
-> **Last Updated:** 2026-06-12
+> **Last Updated:** 2026-06-15
 
 This document details the exact PostgreSQL database schema for the Nexus project, implemented via Prisma.
 
@@ -120,7 +120,7 @@ Stores secure invite links for various entity types.
 - `@@index([token])`
 - `@@index([type, entityId])`
 
-### 6. `Workspace` — NEW
+### 6. `Workspace`
 A team workspace that contains channels and members.
 
 | Field | Type | Attributes | Description |
@@ -138,7 +138,7 @@ A team workspace that contains channels and members.
 - `members WorkspaceMember[]` — workspace memberships
 - `channels Conversation[]` — channels within this workspace (type=CHANNEL)
 
-### 7. `WorkspaceMember` — NEW
+### 7. `WorkspaceMember`
 Junction table for workspace membership.
 
 | Field | Type | Attributes | Description |
@@ -156,6 +156,49 @@ Junction table for workspace membership.
 - `@@id([workspaceId, userId])`: Composite primary key
 - `@@index([userId])`:
 
+### 8. `Notification`
+Tracks activity feed items for users (invites, channel events, etc.).
+
+| Field | Type | Attributes | Description |
+|---|---|---|---|
+| `id` | `String` | `@id @default(cuid())` | |
+| `userId` | `String` | | FK to `User` (recipient) |
+| `type` | `NotificationType` | | Enum: `INVITE_RECEIVED`, `INVITE_ACCEPTED`, `MEMBER_JOINED`, `CHANNEL_CREATED`, `MEMBER_REMOVED` |
+| `title` | `String` | | Short title |
+| `body` | `String?` | | Optional body text |
+| `link` | `String?` | | Deep link for navigation |
+| `imageUrl` | `String?` | | Optional image |
+| `read` | `Boolean` | `@default(false)` | Read/unread state |
+| `metadata` | `Json?` | | Flexible payload |
+| `createdAt` | `DateTime` | `@default(now())` | |
+
+**Relations:**
+- `user User` (cascade delete)
+
+**Indexes:**
+- `@@index([userId, read, createdAt])`
+- `@@index([userId, createdAt])`
+
+### 9. `PushSubscription`
+Stores browser push notification subscriptions.
+
+| Field | Type | Attributes | Description |
+|---|---|---|---|
+| `id` | `String` | `@id @default(cuid())` | |
+| `userId` | `String` | | FK to `User` |
+| `endpoint` | `String` | `@unique @db.Text` | Browser push endpoint URL |
+| `p256dh` | `String` | | Encryption public key |
+| `auth` | `String` | | Auth secret |
+| `userAgent` | `String?` | | Browser/device description |
+| `createdAt` | `DateTime` | `@default(now())` | |
+| `updatedAt` | `DateTime` | `@updatedAt` | |
+
+**Relations:**
+- `user User` (cascade delete)
+
+**Indexes:**
+- `@@index([userId])`
+
 ---
 
 ## Enums
@@ -165,6 +208,14 @@ Junction table for workspace membership.
 enum ConversationType {
   DM
   CHANNEL
+}
+```
+
+### `ChannelVisibility`
+```prisma
+enum ChannelVisibility {
+  PUBLIC
+  PRIVATE
 }
 ```
 
@@ -184,6 +235,17 @@ enum WorkspaceRole {
   OWNER
   ADMIN
   MEMBER
+}
+```
+
+### `NotificationType`
+```prisma
+enum NotificationType {
+  INVITE_RECEIVED
+  INVITE_ACCEPTED
+  MEMBER_JOINED
+  CHANNEL_CREATED
+  MEMBER_REMOVED
 }
 ```
 

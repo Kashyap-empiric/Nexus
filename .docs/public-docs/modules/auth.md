@@ -58,7 +58,7 @@ The auth middleware:
 
 ### Database Trigger Sync
 
-Supabase Auth users are synced to the Prisma `User` table via a database trigger defined in `server/prisma/SUPABASE_QUERIES.sql`:
+Supabase Auth users are synced to the Prisma `User` table via a database trigger defined in server's Prisma queries:
 
 - **Trigger:** `on_auth_user_created` on `auth.users`
 - **Function:** `handle_new_user()` — inserts into `public.User`
@@ -73,8 +73,9 @@ Supabase Auth users are synced to the Prisma `User` table via a database trigger
 | Method | Route | Auth | Description |
 |---|---|---|---|
 | `GET` | `/api/me` | Yes | Returns the current Prisma user for a valid Supabase JWT |
-| `GET` | `/api/users` | Yes | List all registered users |
 | `GET` | `/api/users/search?q=` | Yes | Search users by username/email |
+| `GET` | `/api/users/me` | Yes | Get own profile with full data (email, displayName, avatarUrl) |
+| `PATCH` | `/api/users/me` | Yes | Update own profile (username, displayName, avatarUrl, isOnboarded) |
 
 ## Explicit Non-Goals
 

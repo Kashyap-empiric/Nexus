@@ -1,4 +1,4 @@
-# Nexus Workspace — Analysis & Implementation Plan
+# Nexus Feature Implementation Plan
 
 ## Project Overview
 
@@ -7,263 +7,123 @@ Nexus is a real-time chat application (Slack/Discord-like) built with:
 - **Backend:** Express.js, Prisma (PostgreSQL), Socket.IO, Redis (presence tracking)
 - **Auth:** Supabase
 
-The app supports **Direct Messages (DMs)** and **Workspace Channels**. Workspaces contain members, and within each workspace there are channels (conversations). The NavigationRail switches between DM mode and workspace mode.
+The app supports **Direct Messages (DMs)** and **Workspace Channels**. Workspaces contain members, and within each workspace there are channels. Notifications (in-app + push) are fully implemented.
 
 ---
 
-## Issue 1: Message Read Icon Not Working in Channels
+## ✅ Completed Features
 
-### Current Behavior
+### Core Messaging
+- [x] Real-time message delivery (Socket.io)
+- [x] Message editing + soft deletion
+- [x] Cursor-based pagination (UUIDv7)
+- [x] Optimistic UI with tempId + rollback
+- [x] Read receipts (DMs working, channels partial)
+- [x] Emoji picker in MessageInput
+- [x] Markdown rendering (react-markdown + remark-gfm)
 
-The `MessageStatus` component in `client/src/modules/messages/components/MessageStatus.tsx`:
-- Pending messages → clock icon
-- Read messages (`partnerLastReadMessageId >= messageId`) → double blue checkmark (`CheckCheck`)
-- Otherwise → single checkmark (`Check`)
+### Workspaces & Channels
+- [x] Full workspace CRUD with slug-based routing
+- [x] Public/private channels with ChannelVisibility enum
+- [x] #general channel auto-creation, protected from deletion
+- [x] Role-based access (OWNER, ADMIN, MEMBER)
+- [x] Channel rename, delete, context menu
+- [x] Sidebar with public/private channel separation
+- [x] Member list panel (Discord-style right panel)
+- [x] Member role management (promote/demote/remove)
+- [x] Batch invite by email or username
+- [x] Workspace-level unread counts
 
-The problem is that `partnerLastReadMessageId` is only passed for **DMs**, not for channels.
+### Notifications & Push
+- [x] In-app notification system (bell popover + full page)
+- [x] Socket delivery via `notification:new` event
+- [x] Web Push notifications (VAPID + web-push library)
+- [x] Push subscription management API
+- [x] Notification types: INVITE_RECEIVED, INVITE_ACCEPTED, MEMBER_JOINED, CHANNEL_CREATED, MEMBER_REMOVED
+- [x] React Query hooks with optimistic unread count updates
 
-**Root cause in `ActiveConversation.tsx` (line ~144-146):**
-```tsx
-const otherMember = isDM ? conversation.members.find((m) => m.userId !== currentUserId) : undefined;
-// ...
-partnerLastReadMessageId={otherMember?.lastReadMessageId}
-```
+### Settings & Profiles
+- [x] Profile editing (username, displayName, avatarUrl)
+- [x] Appearance settings (theme toggle)
+- [x] Notification preferences (push, DM, mention, channel toggles)
+- [x] SharedSettingsModal with tabs
 
-Since `otherMember` is `undefined` for channels, `partnerLastReadMessageId` is always `undefined` in channels, so the double blue checkmark never shows.
+### Invites
+- [x] Token-based invite system
+- [x] 24h active link rotation
+- [x] Atomic consumption via raw SQL
+- [x] Workspace, conversation, channel, user resolvers
+- [x] Batch invite (multiple users at once)
+- [x] Invite continuation after login redirect
 
-### What Needs to Change
-
-**Approach: For channels, show a "read by X" indicator when at least one other member has read the message.**
-
-1. **`ActiveConversation.tsx`** — For channels, compute which members have read past each sent message. Pass channel members' `lastReadMessageId` data down to `MessageList`.
-
-2. **`MessageList.tsx`** — Accept a new prop, e.g., `channelLastReadMessageIds: Record<string, string | null>` (memberId → their lastReadMessageId), and pass it to `MessageGroupItem`.
-
-3. **`MessageGroupItem.tsx`** — For the current user's messages in a channel, compute how many other members have `lastReadMessageId >= messageId`. Show:
-   - `"Read by N"` tooltip/text next to the message status
-   - The double checkmark when at least one other person has read it
-
-4. **Server (`conversations.repository.ts`)** — Ensure the `findById` and `findChannelByWorkspaceId` queries include `lastReadMessageId` for all members (they already do).
-
-5. **Stronger sorting fix for `MessageStatus.tsx`** — The current comparison `messageId <= partnerLastReadMessageId` uses string comparison on UUIDv7 IDs (which are time-sortable), but this can be fragile. Use a proper timestamp-based comparator or ensure UUIDv7 sorting consistency.
-
-**Files to modify:**
-- `client/src/modules/messages/components/MessageStatus.tsx`
-- `client/src/modules/messages/components/MessageGroupItem.tsx`
-- `client/src/modules/messages/components/MessageList.tsx`
-- `client/src/modules/chat/components/ActiveConversation.tsx`
-- `client/src/modules/workspaces/hooks/useWorkspaceChannels.ts` (if we need to refetch members)
-
----
-
-## Issue 2: Member List (Discord-Style)
-
-### Current State
-
-- Presence tracking is implemented (Redis-based, socket events for online/offline)
-- `PresenceIndicator.tsx` shows a green/gray dot on avatars
-- Workspace details API (`GET /workspaces/:id`) returns members with user data
-- Workspace members are fetched but not displayed in a dedicated member list view
-
-### What Needs to Build
-
-**A "Members" panel that shows all workspace members, separated by online/offline status.**
-
-1. **New Component: `MemberListSidebar.tsx`**
-   - Located in `client/src/modules/workspaces/components/`
-   - Shows when user clicks a "Members" button in the workspace header
-   - Displays members grouped by:
-     - **Online** (currently connected) — friends/dot in green
-     - **Offline** (not connected) — grayed out
-   - Each member shows: avatar, username, role badge (OWNER/ADMIN/MEMBER)
-   - Real-time presence updates (via existing socket events)
-
-2. **Integration with workspace sidebar**
-   - Add a "Members" toggle/header section in the workspace sidebar (below "Channels", above the user profile)
-   - The number of online members shown as a badge
-   - Clicking opens the member list
-
-3. **API: Create dedicated workspace members endpoint** (or use existing workspace details)
-   - `GET /workspaces/:id/members` → returns members with user data
-   - Already partially available via `GET /workspaces/:id` which includes members
-
-**Files to create/modify:**
-- `client/src/modules/workspaces/components/MemberList.tsx` (NEW)
-- `client/src/modules/workspaces/components/WorkspaceHeader.tsx` (add Members button)
-- `client/src/modules/conversations/components/Sidebar.tsx` (add members section in workspace mode)
-- `client/src/modules/workspaces/api/workspaces.api.ts` (optional: add members fetch)
-- `server/src/modules/workspaces/workspaces.routes.ts` (optional: add members endpoint)
-
-### Design Notes (Discord-Style)
-- Sidebar panel (not a modal), similar to Discord's member list on the right side
-- Or, an expandable section in the existing sidebar below "Channels"
-- Real-time presence updates: when a user comes online/goes offline, the list updates live
-- Role badges with colored dots: Owner (red), Admin (blue), Member (gray)
+### Infrastructure
+- [x] Centralized environment variables (config/env.ts)
+- [x] Prisma + PostgreSQL with backward-compatible migrations
+- [x] Socket.io with typed dispatcher
+- [x] Presence tracking (Redis + in-memory dual-write)
+- [x] Rate limiting (general, message, push)
+- [x] Frontend module architecture (workspaces, notifications, settings, etc.)
 
 ---
 
-## Issue 3: In-App Notification System
+## 🟡 Open Issues
 
-### Current State
+### Issue 1: Message Read Icon Not Working in Channels
+**Problem:** `partnerLastReadMessageId` is only passed for DMs, not channels.
+**Files:** `ActiveConversation.tsx`, `MessageStatus.tsx`
+**Fix Scope:** For channels, show "Read by N" indicator when at least one other member has read the message.
 
-- Desktop browser notifications work (via `Notification API`)
-- When tab is hidden and a message arrives, it shows a desktop notification
-- The notification navigates to the conversation on click
-- No in-app notification panel, bell icon, or dedicated inbox view
-- No notification history store
+### Issue 2: No Typing Indicators
+**Problem:** `TYPING_START` and `TYPING_STOP` socket events defined but never used.
+**Fix Scope:** Add typing indicator component + connect to socket events.
 
-### What Needs to Build
+### Issue 3: No Reactions (Emoji)
+**Planned feature** — see `.docs/new/reactions.md`
 
-#### 3a. Notification Data Model & Store
+### Issue 4: No @Mentions
+**Planned feature** — see `.docs/new/mentions.md`
 
-**Server-side:**
-- New Prisma model for notifications:
-  ```prisma
-  model Notification {
-    id             String   @id
-    userId         String
-    type           String   // "NEW_MESSAGE", "INVITE", "MENTION", "CHANNEL_INVITE"
-    title          String
-    body           String   // message preview
-    conversationId String?
-    workspaceId    String?
-    senderId       String?
-    isRead         Boolean  @default(false)
-    createdAt      DateTime @default(now())
+### Issue 5: No Message Search
+**Problem:** Search bar only filters conversation list. No global message search.
+**Fix Scope:** Cmd+K command palette, search across all conversations.
 
-    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-    sender User?  @relation("NotificationSender", fields: [senderId], references: [id])
-    
-    @@index([userId, isRead])
-    @@index([userId, createdAt])
-  }
-  ```
+### Issue 6: CreateChannelModal Navigation Bug
+**Problem:** Redirects to `/conversations/${channel.id}` instead of workspace URL.
+**Fix Scope:** Update redirect URL in `CreateChannelModal`.
 
-- New socket event: `notification:new`
-- When a message is created, if the recipient is not currently viewing the conversation, create a notification and emit it
+### Issue 7: Optimistic Channel Creation
+**Problem:** Channel list polls every 5s instead of using socket events.
+**Fix Scope:** Use `channel:update` (CREATED) socket event for real-time channel list updates.
 
-**Client-side:**
-- New notification store (Zustand): `useNotificationStore`
-  - Stores notification list
-  - Unread count
-  - Methods: fetch, markRead, markAllRead
-
-#### 3b. Bell Icon in Header (Popover)
-
-- **Location:** `ActiveConversation.tsx` header bar (next to theme toggle)
-- **Icon:** `Bell` from lucide-react
-- **Badge:** Shows unread notification count
-- **Popover:** Uses existing `Popover` UI component
-  - Lists recent notifications (last 20)
-  - Each notification shows: sender avatar, message preview, time ago
-  - Click marks as read and navigates to the conversation
-  - "Mark all as read" button
-  - Uses `client/src/shared/components/ui/popover.tsx`
-
-#### 3c. Inbox Icon in Navigation Rail
-
-- **Location:** `NavigationRail.tsx` — Add an `Inbox` icon button
-- **Behavior:** Clicking opens a dedicated notifications page (like Discord's Inbox view)
-- **Route:** `/inbox` (new route)
-- **Page:** Lists ALL notifications with filters:
-  - All
-  - Unread
-  - Mentions
-  - Filter by conversation/channel
-- Supports pagination (infinite scroll)
-
-#### 3d. Notification Creation Logic
-
-**Server-side (`messages.service.ts` or a new notification service):**
-- After creating a message, determine who needs to be notified:
-  - For DMs: notify the other user
-  - For channels: notify all channel members except the sender
-  - Only notify if the user is not currently viewing the conversation (check via socket rooms)
-- Create notification in DB
-- Emit `notification:new` via socket to each recipient's `user:<userId>` room
-
-**Files to create/modify:**
-- `server/prisma/schema.prisma` (add Notification model + migration)
-- `server/src/modules/notifications/` (NEW folder with service, controller, routes, types)
-- `server/src/shared/socket-events.ts` (add `NOTIFICATION_NEW`)
-- `server/src/socket/socket.dispatcher.ts` (add notification dispatch)
-- `server/src/modules/messages/messages.service.ts` (create notification after message send)
-- `client/src/modules/notifications/` (NEW folder with store, hooks, components, API)
-- `client/src/modules/chat/components/ActiveConversation.tsx` (add bell icon)
-- `client/src/modules/chat/components/NavigationRail.tsx` (add inbox icon)
-- `client/src/app/(protected)/inbox/` (NEW route + page)
-- `client/src/shared/socket-events.ts` (add client event)
+### Issue 8: Non-transactional reads in editMessage
+**Problem:** `getMessageById` called outside `$transaction`.
+**Fix Scope:** Move read inside transaction.
 
 ---
 
-## Issue 4: Channel Separation in Sidebar (Public vs Private)
+## ❌ Planned Features (Not Started)
 
-### Current State
-
-- Channels in workspace mode are shown as a flat list
-- No visual distinction between public and private channels
-- The `isPrivate` field already exists on the `Conversation` model
-
-### What Needs to Change
-
-1. **`CreateChannelModal.tsx`** — Add a toggle/radio to select channel type:
-   - Public Channel (default) — visible to all workspace members, auto-joins all
-   - Private Channel — only visible to selected members, requires invitation
-   - Currently, all channels are created as public (`isPrivate: false`)
-
-2. **`Sidebar.tsx`** — Filter channels into two groups:
-   - **Public Channels** header — shows `# channel-name` for each public channel
-   - **Private Channels** header — shows 🔒 `channel-name` for each private channel
-   - Collapsible sections (optional, nice-to-have)
-
-3. **`useWorkspaceChannels.ts`** — Ensure the query returns `isPrivate` field (already does, included in `Conversation` type)
-
-**Files to modify:**
-- `client/src/modules/conversations/components/Sidebar.tsx`
-- `client/src/modules/workspaces/components/CreateChannelModal.tsx`
-- `server/src/modules/workspaces/workspaces.service.ts` (allow creating private channels)
-
----
-
-## Additional Suggestions & Observations
-
-### A. CreateChannelModal Navigation Bug
-The `CreateChannelModal` redirects to `/conversations/${channel.id}` on success, but workspace channels should redirect to `/workspaces/${slug}/channels/${channel.id}`. Fix this to navigate correctly.
-
-### B. Channel Route URL Fix
-The workspace channel page route `workspaces/[slug]/channels/[channelId]` uses the workspace slug as `activeWorkspaceId`, but the `CreateChannelModal` uses the workspace ID (UUID). This can cause mismatches in the sidebar. Need to ensure consistency.
-
-### C. "Mark as Read" for Channels
-Currently, `markConversationAsRead` only updates `lastReadMessageId` for a specific user. For channels, when you view a channel, it should:
-- Mark your own `lastReadMessageId` (already works)
-- Emit `message:read` to notify others you've read their messages (already works)
-- Visibility: These events should be shown for the sender's messages in the channel
-
-### D. Backfill Slug Migration
-The `scripts/backfill-slugs.ts` script suggests slugs are being added to existing workspaces. Ensure slugs are stable and URLs are bookmarkable.
-
-### E. Optimistic Channel Creation
-Newly created channels should appear in the sidebar instantly without polling. Currently the workspace channels query polls every 5 seconds (`refetchInterval: 5000`). Consider using socket events for channel creation instead.
-
-### F. Workspace Member Off-boarding
-When a user leaves a workspace, they should be removed from all channel member lists and their socket should leave the workspace room.
+| Feature | Priority | Effort | Doc |
+|---------|----------|--------|-----|
+| Reactions (emoji) | Medium | 4-6h | `.docs/new/reactions.md` |
+| @Mentions | Medium | 4-6h | `.docs/new/mentions.md` |
+| Pin Messages | Low | 3-5h | `.docs/new/pins.md` |
+| URL Unfurling | Low | 3-5h | `.docs/new/url-unfurling.md` |
+| File Uploads | Low | 8-12h | Planned |
+| Message Threads | Medium | 8-12h | Planned |
+| Global Search | Low | 4-6h | Planned |
+| Onboarding Flow | Medium | 4-6h | Planned |
+| Typing Indicators | Low | 2-3h | Planned |
 
 ---
 
 ## Implementation Order (Recommended)
 
-1. **Quick fixes first** — Channel separation in sidebar (Issue 4) + CreateChannelModal navigation fix (Suggestion A)
-2. **Read receipt fix** (Issue 1) — Affects current functionality, relatively contained change
-3. **Member list** (Issue 2) — Adds visible value, leverages existing presence infra
-4. **Notification system** (Issue 3) — Largest feature, builds on everything else
-
----
-
-## File Change Summary
-
-| Issue | Server Files | Client Files | New Files |
-|-------|-------------|-------------|-----------|
-| #1 Read icon | None | `ActiveConversation.tsx`, `MessageList.tsx`, `MessageGroupItem.tsx`, `MessageStatus.tsx` | None |
-| #2 Member list | None (existing endpoint) | `Sidebar.tsx`, `WorkspaceHeader.tsx` | `MemberList.tsx` |
-| #3 Notifications | `schema.prisma`, `messages.service.ts`, new notification module, `socket-events.ts`, `socket.dispatcher.ts` | `ActiveConversation.tsx`, `NavigationRail.tsx`, `socket-events.ts` | Notification store, API, components, `/inbox` page |
-| #4 Channel separation | `workspaces.service.ts` | `Sidebar.tsx`, `CreateChannelModal.tsx` | None |
+1. **Reactions** (4-6h) — Most visible feature, self-contained, reuses existing emoji picker
+2. **@Mentions** (4-6h) — Leverages notification system, high collaboration value
+3. **Pin Messages** (3-5h) — Quick win, InfoPanel Pins tab already built
+4. **URL Unfurling** (3-5h) — Link previews, independent of other features
+5. **File Uploads** (8-12h) — Most complex, requires storage setup
+6. **Message Threads** (8-12h) — Major UX change
+7. **Global Search** (4-6h) — Search infrastructure
+8. **Onboarding Flow** (4-6h) — Guided first-time experience

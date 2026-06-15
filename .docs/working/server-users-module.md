@@ -4,7 +4,7 @@
 
 ## Overview
 
-The Users module provides user search functionality and user profile lookup. It is intentionally minimal — user CRUD (creation, avatar management, profile editing) is handled by Supabase Auth; the server only reads user records for search and display purposes.
+The Users module provides user search, profile management, and user lookup. Profile editing (username, displayName, avatarUrl) is available via REST API.
 
 ---
 
@@ -13,31 +13,39 @@ The Users module provides user search functionality and user profile lookup. It 
 ### `users.service.ts`
 Business logic layer.
 
-| Function | Signature | Purpose | Why Used |
-|---|---|---|---|
-| `searchUsers` | `(query: string, currentUserId: string) => Promise<UserSearchResult[]>` | Searches users by username or email, excluding the current user | Powers the "New Message" search modal and invite-by-username flow. Excludes current user to prevent self-DM from search. |
+| Function | Signature | Purpose |
+|---|---|---|
+| `searchUsers` | `(query, currentUserId) => Promise<UserSearchResult[]>` | Searches users by username or email, excluding current user |
+| `getMyProfile` | `(userId) => Promise<User>` | Returns full user record with notification preferences |
+| `updateProfile` | `(userId, data) => Promise<User>` | Updates username, displayName, avatarUrl, isOnboarded |
 
 ### `users.repository.ts`
 Data access layer.
 
-| Function | Signature | Purpose | Why Used |
-|---|---|---|---|
-| `searchUsers` | `(query, currentUserId) => Promise<User[]>` | Prisma query: case-insensitive search on `username` and `email`, limited to 10 results, excludes current user | Efficient database search with insensitive mode |
-| `findUserById` | `(id: string) => Promise<User\|null>` | Finds a user by their UUID | Used in `/api/me` endpoint and invite flow to get user details |
-| `findUserByUsername` | `(username: string) => Promise<User\|null>` | Case-insensitive lookup by username | Used by the invite-by-username flow in workspaces controller |
+| Function | Signature | Purpose |
+|---|---|---|
+| `searchUsers` | `(query, currentUserId) => Promise<User[]>` | Prisma query: case-insensitive search on `username` and `email`, includes `email` in results, limited to 10 |
+| `findUserById` | `(id) => Promise<User\|null>` | Finds a user by UUID |
+| `updateUser` | `(id, data) => Promise<User>` | Updates user profile fields |
+| `findUserByUsername` | `(username) => Promise<User\|null>` | Case-insensitive lookup by username |
+| `findUserByEmail` | `(email) => Promise<User\|null>` | Unique lookup by email (lowercased) |
 
 ### `users.controller.ts`
-HTTP request handler.
+HTTP request handlers.
 
-| Function | Signature | Purpose | Why Used |
-|---|---|---|---|
-| `searchUsers` | `(req: AuthRequest, res: Response) => Promise<void>` | Handles `GET /api/users/search?q=...` | Extracts query param, calls service, returns JSON response |
+| Function | Endpoint | Purpose |
+|---|---|---|
+| `searchUsers` | `GET /api/users/search?q=...` | Searches users, returns with email in results |
+| `getMyProfile` | `GET /api/users/me` | Returns full authenticated user profile |
+| `updateProfile` | `PATCH /api/users/me` | Updates profile fields with Zod validation |
 
 ### `users.routes.ts`
 Route registration.
 
 | Endpoint | Middleware | Handler |
 |---|---|---|
+| `GET /me` | `authMiddleware` | `getMyProfile` |
+| `PATCH /me` | `authMiddleware`, `validate({ body: updateProfileSchema })` | `updateProfile` |
 | `GET /search` | `authMiddleware`, `validate({ query: searchUsersQuerySchema })` | `searchUsers` |
 
 ### `users.schema.ts`
@@ -45,22 +53,17 @@ Zod validation schemas.
 
 | Schema | Fields | Purpose |
 |---|---|---|
-| `searchUsersQuerySchema` | `q: z.string().max(100).optional().default("")` | Validates the search query parameter |
-
-### `users.types.ts`
-TypeScript types.
-
-| Type | Fields | Purpose |
-|---|---|---|
-| `UserSearchResult` | `{ id, username, avatarUrl }` | Return type for user search — limited to public profile data |
-| `UserSearchParams` | `{ query, currentUserId }` | Input type for the search service function |
+| `searchUsersQuerySchema` | `q: z.string().max(100).default("")` | Validates search query |
+| `updateProfileSchema` | `username?, displayName?, avatarUrl?, isOnboarded?` | Validates profile updates |
 
 ---
 
 ## Architecture Decisions
 
-1. **Minimalist read-only module**: Users module does NOT handle registration, login, password changes, or profile updates. These are owned by Supabase Auth. This keeps the surface area small and avoids duplicating auth logic.
+1. **Profile editing on User model**: Profile fields (displayName, avatarUrl) are stored directly on the `User` model rather than a separate profile table, avoiding 1:1 sync complexity.
 
-2. **Case-insensitive search**: The `mode: "insensitive"` Prisma option enables case-insensitive username/email search, which is critical for a good UX when searching by usernames.
+2. **Email returned in search**: Email is included in search results (as `email` field) to support email-based invite flows. This is the unique identifier for user lookup.
 
-3. **10-result limit**: Search results are capped at 10 to avoid excessive payload sizes and ensure fast responses.
+3. **Notification preferences on User model**: `pushNotificationsEnabled`, `dmNotifications`, `mentionNotifications`, `channelNotifications` are stored directly on `User` to avoid a separate preferences table and enable fast short-circuit checks in push service.
+
+4. **Partial updates**: The `PATCH /users/me` endpoint supports partial updates — only send the fields that changed.

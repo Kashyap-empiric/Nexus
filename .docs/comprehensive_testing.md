@@ -53,7 +53,7 @@
 ### 2.2 Auth on Socket
 - [ ] Open browser console, verify no `[Socket] Auth error` messages
 - [ ] Verify socket handshake includes valid JWT token
-- [ ] Kill Supabase locally (if possible): socket should fail auth gracefully (Bug 10 fix)
+- [ ] Kill Supabase locally (if possible): socket should fail auth gracefully
 
 ---
 
@@ -74,12 +74,11 @@
 
 ### 3.3 DM View
 - [ ] Click a DM in sidebar — opens conversation view
-- [ ] Header shows: user avatar, username, presence indicator (green dot if online)
+- [ ] Header shows: user avatar, username, presence indicator
 - [ ] Message list loads with pagination (scroll up loads older messages)
 - [ ] "Jump to bottom" button appears when scrolled up
 - [ ] New messages from other user appear in real-time
 - [ ] Empty conversation shows "No messages yet" prompt
-- [ ] Send the first message — "No messages yet" prompt disappears, message appears
 
 ### 3.4 Sending Messages
 - [ ] Type in message input — send button activates when text is non-empty
@@ -91,23 +90,32 @@
 - [ ] User B's browser: message appears in real-time
 - [ ] Emoji picker: click emoji → inserted into input at cursor position
 
-### 3.5 Editing Messages
-- [ ] Hover own message — edit icon appears (desktop)
+### 3.5 Markdown Rendering
+- [ ] Send `**bold**` — renders as bold
+- [ ] Send `*italic*` — renders as italic
+- [ ] Send `` `code` `` — renders as inline code
+- [ ] Send code block (triple backticks) — renders as code block with copy button
+- [ ] Send `> quote` — renders as blockquote with left accent border
+- [ ] Send `- list item` — renders as unordered list
+- [ ] Send `1. numbered` — renders as ordered list
+- [ ] Send `[link](url)` — renders as clickable link opening in new tab
+
+### 3.6 Editing Messages
+- [ ] Hover own message — edit icon appears
 - [ ] Click edit — message becomes a textarea with current content
 - [ ] Edit content, press Enter or click Save — message updates instantly
 - [ ] `(edited)` label appears next to edited message content
 - [ ] Press Escape — edit cancelled, message restored
-- [ ] User B's browser: sees updated message in real-time (no delay — Bug 1 fix)
-- [ ] Edit a message that's been deleted — should show error
+- [ ] User B's browser: sees updated message in real-time
 
-### 3.6 Deleting Messages
-- [ ] Hover own message — delete icon appears (desktop)
+### 3.7 Deleting Messages
+- [ ] Hover own message — delete icon appears
 - [ ] Click delete — confirmation dialog appears
 - [ ] Confirm — message shows "This message was deleted."
 - [ ] User B's browser: sees deleted state in real-time
 - [ ] Try to delete another user's message — option should not appear
 
-### 3.7 Read Receipts
+### 3.8 Read Receipts
 - [ ] User A sends message to User B
 - [ ] User B opens the conversation — User A sees double blue checkmark
 - [ ] User B has not opened conversation — User A sees single checkmark
@@ -129,8 +137,7 @@
 - [ ] Each workspace shows initials or uploaded image
 - [ ] Active workspace has a highlighted indicator bar
 - [ ] Click DM icon — switches to DM mode
-- [ ] Click workspace icon — switches to workspace mode, opens last-visited channel
-- [ ] First visit to workspace — auto-redirects to "general" channel
+- [ ] Click workspace icon — switches to workspace mode
 
 ### 4.3 Workspace Header
 - [ ] Workspace header shows workspace name with dropdown
@@ -140,196 +147,207 @@
 ### 4.4 Channel List (Sidebar)
 - [ ] Sidebar shows channel list when in workspace mode
 - [ ] Each channel shows `# name` format
+- [ ] Channels split into public/private sections
 - [ ] Active channel is highlighted
-- [ ] Search input filters channels by name
 - [ ] Click "+" button to create a new channel
 
 ### 4.5 Creating Channels
 - [ ] Click "+" by "Channels" header — modal opens
+- [ ] Public/Private toggle works
 - [ ] Enter channel name, click Create — channel appears in sidebar
-- [ ] All workspace members are auto-joined to the new public channel
-- [ ] After creation, redirected to the workspace channel URL (`/workspaces/{slug}/channels/{id}`)
-      **Known bug**: currently redirects to `/conversations/{id}` instead
-- [ ] Try creating a channel with a name that's too long (30 char max)
-- [ ] Try creating channel with empty name — button disabled
+- [ ] All workspace members are auto-joined to new public channels
+- [ ] Private channels only show creator as member
 
-### 4.6 Workspace Channel View
-- [ ] Click a channel in sidebar — opens channel view
-- [ ] Header shows: `#` icon, channel name, workspace name below
+### 4.6 Channel View
+- [ ] Header shows `#` icon, channel name, workspace name
 - [ ] Sending messages in channel works identically to DMs
 - [ ] Edit/delete messages in channels works identically to DMs
-- [ ] Messages appear in real-time for all workspace members in the channel
+- [ ] Messages appear in real-time for all workspace members
+
+### 4.7 Workspace Members
+- [ ] Click Members in InfoPanel or sidebar — member list appears
+- [ ] Shows all members with presence indicators
+- [ ] Online members shown first, then offline
+- [ ] Role badges (OWNER crown, ADMIN crown)
+- [ ] Click member — starts DM with that member
+
+### 4.8 Member Removal
+- [ ] OWNER/ADMIN can remove members
+- [ ] Cannot remove OWNER
+- [ ] Member gets MEMBER_REMOVED notification
+- [ ] Removed member can no longer access workspace channels
 
 ---
 
 ## 5. Real-Time Events (Socket)
 
 ### 5.1 Message Events
-- [ ] User A sends message → User B receives `message:new` (console: `SOCKET_EVENTS.MESSAGE_NEW`)
-- [ ] User A edits message → User B receives `message:update` immediately (Bug 1 fix)
-- [ ] User A deletes message → User B receives `message:delete` immediately (Bug 1 fix)
-- [ ] User A edits latest message → User B sees sidebar update via `conversation:update`
+- [ ] User A sends message → User B receives `message:new`
+- [ ] User A edits message → User B receives `message:update` immediately
+- [ ] User A deletes message → User B receives `message:delete` immediately
 
 ### 5.2 Conversation Events
-- [ ] User A creates new DM with User C → User C receives `conversation:new` with room join
-- [ ] User A creates new workspace channel → all online members receive `conversation:new`
-- [ ] New channel appears in sidebar without page refresh
-- [ ] Edited/deleted latest message updates sidebar preview (via `conversation:update`)
+- [ ] User A creates new DM → User C receives `conversation:new`
+- [ ] User A creates new channel → all online members receive notification
 
 ### 5.3 Presence Events
-- [ ] User A comes online → User B sees `user:online` event → green dot appears
-- [ ] User A goes offline → User B sees `user:offline` event → green dot disappears
-- [ ] On connection, `presence:initial` populates the online users set
+- [ ] User A comes online → User B sees `user:online` → green dot appears
+- [ ] User A goes offline → User B sees `user:offline` → green dot disappears
 - [ ] Multi-tab: opening a second tab keeps user online; closing both goes offline
 
-### 5.4 Invite Events
-- [ ] User A generates invite for a conversation
-- [ ] User B resolves invite → User A sees `conversation:update` (verify Bug 6 fix)
-- [ ] Check console: event emitted as `"conversation:update"` not `"CONVERSATION_UPDATE"`
-
-### 5.5 Unread Count Persistence (Bug 11 fix)
-- [ ] User B has unread messages in a conversation
-- [ ] A `conversation:update` event arrives (e.g., User A edits a message)
-- [ ] User B's unread count should NOT reset to 0
-- [ ] Verify: sidebar still shows the unread badge after the update event
+### 5.4 Notification Events
+- [ ] User A sends invite to User B → User B receives `notification:new`
+- [ ] Bell badge increments
+- [ ] User B clicks notification → navigated to invite page
 
 ---
 
-## 6. Messages — Edge Cases
+## 6. Notifications
 
-### 6.1 Rate Limiting
-- [ ] Send messages rapidly (>10 in 10 seconds) — "sending too quickly" error toast
-- [ ] Rate limiter only applies to message sending, not other actions
-- [ ] After rate limit window expires, sending works again
+### 6.1 Bell Popover
+- [ ] Bell icon shows in top bar
+- [ ] Unread badge shows count (0 if none)
+- [ ] Click bell — popover opens with recent notifications
+- [ ] Each notification shows: icon, title, body, timestamp
+- [ ] Click notification → navigates to link + marks as read
+- [ ] "Mark all as read" — marks all as read
+- [ ] "View all" → navigates to `/notifications`
+- [ ] Close on click outside or Escape
 
-### 6.2 Optimistic Updates
-- [ ] Send a message while offline (disconnect network) — message appears with clock icon
-- [ ] Reconnect — pending messages resolve or show error
-- [ ] Edit a message while offline — edit appears instantly, resolves on reconnect
-- [ ] Delete a message while offline — delete appears instantly, resolves on reconnect
+### 6.2 Notifications Page
+- [ ] Visit `/notifications` — full page with paginated list
+- [ ] Infinite scroll loads more notifications
+- [ ] Empty state: "No activity yet"
+- [ ] Each type shows correct icon (Mail, UserCheck, UserPlus, Hash)
+- [ ] Unread items visually distinct from read items
 
-### 6.3 Long Messages
-- [ ] Send a message with very long content (2000 chars) — works
-- [ ] Send with exactly 2000 chars — works
-- [ ] Send with >2000 chars — validation error
+### 6.3 Notification Types
+- [ ] **INVITE_RECEIVED**: "Workspace invite" — "You've been invited to {workspace} by {inviter}"
+- [ ] **INVITE_ACCEPTED**: "{username} joined" — "{user} accepted your invite to {workspace}"
+- [ ] **CHANNEL_CREATED**: "New channel" — "#{channel} was created in {workspace}"
+- [ ] **MEMBER_REMOVED**: "Removed from workspace" — notification received by removed user
 
-### 6.4 Pagination
-- [ ] Scroll up in a conversation with many messages — older messages load
-- [ ] "Loading older messages..." indicator shows during fetch
-- [ ] After loading all messages, no more fetch attempts
+### 6.4 Real-time Notification Delivery
+- [ ] User A invites User B to a workspace via username
+- [ ] User B sees notification appear instantly (no page refresh)
+- [ ] Unread count increments in bell badge
+- [ ] Notification appears in bell popover
+- [ ] Notification appears at top of notifications page
 
-### 6.5 Concurrency
-- [ ] User A and User B edit the same message simultaneously — last write wins
-- [ ] User A deletes message while User B is editing it — User B's edit fails
-- [ ] User A sends message while offline — User B sends in same conversation — order is maintained
+### 6.5 Push Notifications
+- [ ] Service Worker registered (`/sw.js` visible in DevTools → Application → Service Workers)
+- [ ] Enable push notifications in settings
+- [ ] Browser asks for notification permission → grant
+- [ ] Verify `POST /notifications/push/subscribe` is called with subscription object
+- [ ] Close all browser tabs for User B
+- [ ] User A sends invite/channel create — User B receives desktop push notification
+- [ ] Click push notification → app opens/focuses and navigates to correct URL
+
+### 6.6 Notification Preferences
+- [ ] Settings → Notifications tab has push toggle
+- [ ] DM notifications toggle
+- [ ] Mention notifications toggle
+- [ ] Channel notifications toggle
+- [ ] Toggle changes persist across page reload
+- [ ] Disabling push stops push notifications (but in-app still works)
 
 ---
 
 ## 7. Invites
 
 ### 7.1 Generating Invites
-- [ ] Generate invite for a conversation — returns token and invite path
 - [ ] Generate invite for a workspace — returns token and invite path
+- [ ] Batch invite multiple users by email — all invited
+- [ ] Invite by username — user found and invited
 - [ ] Check that existing active invites (same creator + entity <24h) are reused
 
-### 7.2 Resolving Invites
-- [ ] Open invite link while logged in — resolves immediately, redirects to conversation/workspace
+### 7.2 Invite Modal
+- [ ] Type email/username in invite modal — debounced search shows results
+- [ ] Click search result — added as chip/tag
+- [ ] Multiple users can be added as chips
+- [ ] Chips are removable with × button
+- [ ] Backspace in empty input removes last chip
+- [ ] Submit button shows count: "Invite N users"
+- [ ] Success toast shows count of invited users
+- [ ] Skipped users shown with reason
+
+### 7.3 Resolving Invites
+- [ ] Open invite link while logged in — resolves immediately
 - [ ] Open invite link while logged out — stored in sessionStorage, resolves after login
 - [ ] Resolve expired invite — error shown
 - [ ] Resolve max-use invite — error shown
-- [ ] Resolve revoked invite — error shown
-- [ ] Duplicate resolve — gracefully handles (P2002 constraint)
+- [ ] Duplicate resolve — gracefully handled
 
-### 7.3 Invite Side Effects
-- [ ] After resolving workspace invite — user added to workspace, joined to "general" channel
-- [ ] After resolving channel invite — user added to channel members
-- [ ] Other workspace members see new member via socket event (verify Bug 6 fix)
-
----
-
-## 8. Navigation & UI
-
-### 8.1 Navigation Rail
-- [ ] DM icon is active when in DM mode
-- [ ] Workspace icons appear for each workspace
-- [ ] Active workspace has visual indicator
-- [ ] "+" button opens CreateWorkspaceModal
-- [ ] Clicking DM icon switches to DM mode, clears active workspace
-- [ ] Clicking workspace switches to workspace mode, opens last channel
-
-### 8.2 Responsive Layout
-- [ ] Desktop (>768px): sidebar visible, message list centered
-- [ ] Mobile (<768px): sidebar hidden, back arrow in header to return
-- [ ] Mobile: sidebar takes full width when open
-- [ ] Message input adapts to screen width
-
-### 8.3 Theme
-- [ ] Theme toggle in conversation header switches dark/light mode
-- [ ] All components properly themed (sidebar, inputs, modals, messages)
-- [ ] Theme persists across page reloads
+### 7.4 Invite Side Effects
+- [ ] After resolving workspace invite — user added to workspace + #general channel
+- [ ] INVITE_ACCEPTED notification sent to inviter
+- [ ] MEMBER_JOINED notification sent to existing members
 
 ---
 
-## 9. Error Handling
+## 8. Settings
 
-### 9.1 Server Errors
-- [ ] Kill server — UI shows "Connection lost" toast via socket `connect_error`
-- [ ] Make API call while server is down — appropriate error toast shown
-- [ ] Restart server — socket reconnects, normal operation resumes
+### 8.1 Profile Settings
+- [ ] Open settings → Profile tab
+- [ ] Shows current avatar, username, displayName
+- [ ] Avatar URL input updates avatar preview
+- [ ] Username validation (min 3, max 30 chars)
+- [ ] Save changes — profile updates across the app
+- [ ] Success toast shown
+- [ ] Cancel/discard works
 
-### 9.2 API Errors
+### 8.2 Appearance Settings
+- [ ] Theme selector: Dark / Light / System
+- [ ] Click Dark — app switches to dark theme
+- [ ] Click Light — app switches to light theme
+- [ ] Click System — follows OS preference
+- [ ] Theme persists across page reload
+
+### 8.3 Notification Settings
+- [ ] Push notifications toggle
+- [ ] DM notifications toggle
+- [ ] Mention notifications toggle
+- [ ] Channel notifications toggle
+- [ ] Toggles show current state from server
+- [ ] Changes persist across page reload
+
+### 8.4 Settings Modal
+- [ ] Open from anywhere (sidebar or navigation rail)
+- [ ] Tabs switch between Profile, Appearance, Notifications
+- [ ] Close with × button, Escape, or click outside
+- [ ] Mobile responsive layout
+
+---
+
+## 9. Edge Cases
+
+### 9.1 Rate Limiting
+- [ ] Send messages rapidly (>10 in 10 seconds) — "sending too quickly" error toast
+- [ ] Subscribe/unsubscribe push rapidly — push rate limiter kicks in
+- [ ] After rate limit expires, normal operation resumes
+
+### 9.2 Optimistic Updates
+- [ ] Send a message while offline — message appears with clock icon
+- [ ] Reconnect — pending messages resolve or show error
+- [ ] Edit a message while offline — edit appears instantly
+
+### 9.3 Pagination
+- [ ] Scroll up in a conversation with many messages — older messages load
+- [ ] "Loading older messages..." indicator shows during fetch
+- [ ] After loading all messages, no more fetch attempts
+
+### 9.4 Error Handling
 - [ ] Try to access conversation you're not a member of — 403 error
 - [ ] Try to edit another user's message — 403 error
-- [ ] Try to delete another user's message — 403 error
-- [ ] Try to edit a message that's been deleted — 400 error
-- [ ] Try to delete a message that's already deleted — 400 error
+- [ ] Try to edit a deleted message — 400 error
 - [ ] Invalid UUID in route — validation error
 - [ ] Empty message content — validation error
 
-### 9.3 Edge Cases
-- [ ] User A deletes their account — User B sees "Deleted user" in sidebar
-- [ ] DM with deleted user who has no messages — hidden from sidebar
-- [ ] Navigate directly to non-existent conversation ID — "Conversation not found"
-- [ ] Workspace slug with invalid characters — slug validation error on creation
-
 ---
 
-## 10. Workspace Membership & Permissions
+## 10. Regression Checklist
 
-### 10.1 Workspace Membership
-- [ ] User not in workspace: viewing workspace returns 403
-- [ ] User not in workspace:  accessing channel returns 403
-- [ ] User in workspace: can view all public channels
-- [ ] User not in workspace: invited via link can join
-
-### 10.2 Role-Based Access (Database Level)
-- [ ] `WorkspaceRole` enum has: `OWNER`, `ADMIN`, `MEMBER`
-- [ ] `isWorkspaceMember()` correctly checks membership
-- [ ] `verifyConversationMembership()` correctly checks channel access
-- [ ] `checkConversationAccess()` handles public channels: accessible to any workspace member
-
----
-
-## 11. Build & TypeScript
-
-### 11.1 TypeScript Compilation
-- [ ] Client: `npx tsc --noEmit` — zero errors
-- [ ] Server: `npx tsc --noEmit` — zero errors
-
-### 11.2 Build
-- [ ] Client: `npm run build` or `next build` — succeeds
-- [ ] Server: `npm run build` — succeeds
-
-### 11.3 Warnings
-- [ ] No `any` type casts (search for `as any` — should be minimal)
-- [ ] No `@ts-ignore` comments
-- [ ] No unused imports or variables
-
----
-
-## 12. Regression Checklist
-
-Test these after any code change to ensure nothing is broken:
+Test these after any code change:
 
 - [ ] Can log in and see DM list
 - [ ] Can send, edit, delete messages
@@ -338,9 +356,9 @@ Test these after any code change to ensure nothing is broken:
 - [ ] Channels appear in sidebar, messages work in channels
 - [ ] Presence indicators work correctly
 - [ ] Invites can be generated and resolved
-- [ ] Search filters conversations and users
-- [ ] Unread badges don't randomly reset (Bug 11 fix — verify)
-- [ ] Socket connects and stays connected
+- [ ] Notification bell shows badge and popover
+- [ ] Push notifications arrive when browser is closed
+- [ ] Settings persist and function correctly
 - [ ] No console errors
 - [ ] TypeScript compiles cleanly
 
@@ -348,29 +366,10 @@ Test these after any code change to ensure nothing is broken:
 
 ## Known Bugs (Still Open)
 
-Refer to `bugs-found.md` for the current status of all known bugs:
+Refer to `bugs-found.md` for current status:
 
-- Bug 2: MESSAGE_UPDATE/MESSAGE_DELETE not handled at sidebar level
-- Bug 4: Double cache invalidation (partially mitigated)
-- Bug 7: TYPING_START/TYPING_STOP defined but never used
-- Bug 8: `workspace:join` event exists on server but no client emits it
-- Bug 9: Inefficient room-join loop in `dispatchConversationNew`
-- Bug 12: `editMessage` uses stale `updatedAt` in conversation metadata
-
----
-
-## Environment Setup for Testing
-
-```bash
-# Terminal 1 — Server
-cd server
-npm run dev
-
-# Terminal 2 — Client
-cd client
-npm run dev
-
-# Open two browser windows
-# Window 1: User A (login with account 1)
-# Window 2: User B (login with account 2)
-```
+- Channel read receipts not fully working
+- Non-transactional reads in `editMessage`
+- CreateChannelModal redirects to wrong URL
+- Channel list polls instead of using socket events
+- Push subscription lifecycle not fully handled
