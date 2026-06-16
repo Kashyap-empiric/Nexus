@@ -3,6 +3,22 @@ import { SOCKET_EVENTS } from "@/shared/socket-events.js";
 
 const messageRateLimits = new Map<string, { count: number; resetAt: number }>();
 
+// Clean up expired rate limit entries every 60 seconds to prevent memory leak
+const CLEANUP_INTERVAL_MS = 60_000;
+const cleanupTimer = setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of messageRateLimits.entries()) {
+    if (value.resetAt <= now) {
+      messageRateLimits.delete(key);
+    }
+  }
+}, CLEANUP_INTERVAL_MS);
+
+// Don't prevent process exit
+if (cleanupTimer.unref) {
+  cleanupTimer.unref();
+}
+
 export const socketRateLimiterMiddleware = (socket: Socket) => {
   return (packet: any[], next: (err?: any) => void) => {
     const eventName = packet[0];

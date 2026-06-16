@@ -1,9 +1,6 @@
 import { uuidv7 } from "uuidv7"
+import type { Prisma } from "@prisma/client";
 import * as conversationsRepo from "./conversations.repository.js";
-
-const buildDmPair = (userIdA: string, userIdB: string) => {
-    return [userIdA, userIdB].sort().join(":");
-};
 
 export const getConversationById = async (conversationId: string) => {
     return conversationsRepo.findById(conversationId);
@@ -47,21 +44,28 @@ export const getUserConversations = async (userId: string) => {
     }));
 };
 
-export const getDMByUsers = async (userIdA: string, userIdB: string) => {
+const buildDmPair = (userIdA: string, userIdB: string) => {
+    return [userIdA, userIdB].sort().join(":");
+};
+
+export const getDMByUsers = async (userIdA: string, userIdB: string, tx?: Prisma.TransactionClient) => {
     const dmPair = buildDmPair(userIdA, userIdB);
+    if (tx) {
+        return conversationsRepo.findDMByPairInTransaction(tx, dmPair);
+    }
     return conversationsRepo.findDMByPair(dmPair);
 }
 
 /**
  * Schema Invariant: DMs must ALWAYS have a null workspaceId.
  */
-export const createDM = async (userIdA: string, userIdB: string) => {
+export const createDM = async (userIdA: string, userIdB: string, tx?: Prisma.TransactionClient) => {
     const dmPair = buildDmPair(userIdA, userIdB);
-    return conversationsRepo.createDM({
+    const data = {
         id: uuidv7(),
-        type: "DM",
+        type: "DM" as const,
         workspaceId: null,
-        isPrivate: true,
+        isPrivate: true as const,
         dmPair,
         members: {
             create: [
@@ -69,22 +73,27 @@ export const createDM = async (userIdA: string, userIdB: string) => {
                 { userId: userIdB },
             ]
         }
-    });
+    };
+    if (tx) {
+        return conversationsRepo.createDMInTransaction(tx, data);
+    }
+    return conversationsRepo.createDM(data);
 }
 
-export const createOrGetDM = async (userIdA: string, userIdB: string) => {
-    const existingConversation = await getDMByUsers(userIdA, userIdB);
+export const createOrGetDM = async (userIdA: string, userIdB: string, tx?: Prisma.TransactionClient) => {
+    const existingConversation = await getDMByUsers(userIdA, userIdB, tx);
     if (existingConversation) {
         return { created: false, conversation: existingConversation };
     }
     try {
-        const conversation = await createDM(userIdA, userIdB);
+        const conversation = await createDM(userIdA, userIdB, tx);
         return { created: true, conversation };
     } catch (error: any) {
         if (error.code === "P2002") {
             const conversation = await getDMByUsers(
                 userIdA,
-                userIdB
+                userIdB,
+                tx
             );
             if (conversation) {
                 return { created: false, conversation };

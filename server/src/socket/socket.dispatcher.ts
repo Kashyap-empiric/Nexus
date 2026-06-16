@@ -16,14 +16,13 @@ export const dispatchConversationNew = async (conversation: ConversationWithMemb
     const io = getIO();
 
     for (const member of conversation.members) {
-      for (const socket of io.sockets.sockets.values()) {
-        if (socket.rooms.has(`user:${member.userId}`)) {
-          try {
-            await socket.join(`conversation:${conversation.id}`);
-          } catch (err: unknown) {
-            console.error("[Socket.io] failed to join room", err);
-          }
+      try {
+        const sockets = await io.in(`user:${member.userId}`).fetchSockets();
+        for (const socket of sockets) {
+          await socket.join(`conversation:${conversation.id}`);
         }
+      } catch (err: unknown) {
+        console.error("[Socket.io] failed to join room", err);
       }
     }
 
@@ -172,7 +171,7 @@ export const dispatchPinEvent = (
   try {
     const io = getIO();
     const eventName = action === "pin" ? SOCKET_EVENTS.MESSAGE_PIN : SOCKET_EVENTS.MESSAGE_UNPIN;
-    io.to(`conversation:${conversationId}`).emit(eventName, { ...payload, conversationId });
+    io.to(`conversation:${conversationId}`).emit(eventName, { ...payload, conversationId, action });
   } catch (err: unknown) {
     console.error("[Socket.io] Failed to dispatch pin event:", err);
   }
@@ -189,14 +188,13 @@ export const dispatchChannelMemberUpdate = async (
 
     if (action === "ADDED" && payload.addedMembers) {
       for (const member of payload.addedMembers) {
-        for (const socket of io.sockets.sockets.values()) {
-          if (socket.rooms.has(`user:${member.id}`)) {
-            try {
-              await socket.join(`conversation:${channelId}`);
-            } catch (err: unknown) {
-              console.error("[Socket.io] failed to join room for channel member", err);
-            }
+        try {
+          const sockets = await io.in(`user:${member.id}`).fetchSockets();
+          for (const socket of sockets) {
+            await socket.join(`conversation:${channelId}`);
           }
+        } catch (err: unknown) {
+          console.error("[Socket.io] failed to join room for channel member", err);
         }
       }
       io.to(`conversation:${channelId}`).emit(SOCKET_EVENTS.CHANNEL_MEMBER_ADDED, {

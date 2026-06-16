@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { type ResolveInviteParams, type ResolveInviteResult, type GenerateInviteParams, type GenerateInviteResult, type DomainEvent } from "./invites.types.js";
+import type { CreateNotificationInput } from "../notifications/notifications.types.js";
 import { InviteType } from "@prisma/client";
 import crypto from "crypto";
 import { ENV } from "../../config/env.js";
@@ -8,11 +9,12 @@ import * as invitesRepo from "./invites.repository.js";
 import * as conversationsRepo from "../conversations/conversations.repository.js";
 import * as workspacesService from "../workspaces/workspaces.service.js";
 
-import { isWorkspaceMember } from "@/shared/permissions.js";
+import * as authRepo from "../auth/auth.repository.js";
 
 export const resolveInviteService = async ({ token, userId }: ResolveInviteParams): Promise<ResolveInviteResult> => {
   let redirectUrl = "";
   let domainEvents: DomainEvent[] = [];
+  let pendingNotifications: CreateNotificationInput[] = [];
 
   try {
     await prismaTransaction(async (tx) => {
@@ -33,6 +35,7 @@ export const resolveInviteService = async ({ token, userId }: ResolveInviteParam
       const result = await resolver.resolve({ tx, invite, actorId: userId });
       redirectUrl = result.redirectUrl;
       domainEvents = result.events || [];
+      pendingNotifications = result.pendingNotifications || [];
 
       // 4. Consume Invite Atomically via Raw SQL (Guards against concurrency)
       if (result.consumed !== false) {
@@ -43,6 +46,19 @@ export const resolveInviteService = async ({ token, userId }: ResolveInviteParam
         }
       }
     });
+
+    // Dispatch pending notifications AFTER the transaction commits successfully.
+    // This prevents phantom notifications on rollback (C1).
+    if (pendingNotifications.length > 0) {
+      // Fire-and-forget — these are non-critical notifications, don't block the response
+      Promise.all(
+        pendingNotifications.map(notif => createAndDispatch(notif).catch(err => {
+          console.error("[resolveInviteService] Failed to dispatch pending notification:", err);
+        }))
+      ).catch(err => {
+        console.error("[resolveInviteService] Failed to dispatch pending notifications:", err);
+      });
+    }
   } catch (error: any) {
     if (error.message === "INVALID_OR_EXPIRED_INVITE") throw error;
     if (error.message === "NOT_IMPLEMENTED") throw error;
@@ -65,8 +81,12 @@ export const generateInviteService = async ({ type, entityId, userId, forceNew }
     if (conversation.members.length === 0) throw new Error("UNAUTHORIZED");
   } else if (type === "WORKSPACE") {
     if (!finalEntityId) throw new Error("ENTITY_ID_REQUIRED");
-    const isMember = await isWorkspaceMember(userId, finalEntityId).catch(() => false);
-    if (!isMember) throw new Error("UNAUTHORIZED");
+    const member = await authRepo.findWorkspaceMember(userId, finalEntityId).catch(() => null);
+    if (!member) throw new Error("UNAUTHORIZED");
+    // H2: Only workspace admins and owners can generate invite links
+    if (member.role !== "ADMIN" && member.role !== "OWNER") {
+      throw new Error("UNAUTHORIZED");
+    }
   } else if (type === "USER") {
     finalEntityId = userId;
   } else {
@@ -79,18 +99,25 @@ export const generateInviteService = async ({ type, entityId, userId, forceNew }
     const existingActive = await invitesRepo.findExistingActiveInvite(type, finalEntityId as string, userId);
 
     if (existingActive) {
-      const ageInMs = Date.now() - existingActive.createdAt.getTime();
-      const ageInHours = ageInMs / (1000 * 60 * 60);
+      // Check if the invite is exhausted (H1): if maxUses is set and usedCount >= maxUses,
+      // treat it as expired rather than returning an exhausted token
+      const isExhausted = existingActive.maxUses !== null && existingActive.usedCount >= existingActive.maxUses;
 
-      if (ageInHours < 24) {
-        return {
-          invitePath: `/invite?token=${existingActive.token}`,
-          token: existingActive.token,
-          expiresAt: existingActive.expiresAt?.toISOString() || null,
-        };
-      } else {
-        await invitesRepo.revokeInvite(existingActive.id);
+      if (!isExhausted) {
+        const ageInMs = Date.now() - existingActive.createdAt.getTime();
+        const ageInHours = ageInMs / (1000 * 60 * 60);
+
+        if (ageInHours < 24) {
+          return {
+            invitePath: `/invite?token=${existingActive.token}`,
+            token: existingActive.token,
+            expiresAt: existingActive.expiresAt?.toISOString() || null,
+          };
+        }
       }
+
+      // Revoke either way — exhausted or expired
+      await invitesRepo.revokeInvite(existingActive.id);
     }
   }
 
@@ -134,6 +161,7 @@ export const deleteInvitesForEntity = async (tx: Prisma.TransactionClient, type:
   return invitesRepo.deleteInvitesForEntityInTransaction(tx, type, entityId);
 };
 
+import { createAndDispatch } from "../notifications/notifications.service.js";
 import { runTransaction as prismaTransaction } from "@/lib/transaction.js";
 
 export type { GenerateInviteParams, GenerateInviteResult } from "./invites.types.js";

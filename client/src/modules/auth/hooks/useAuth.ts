@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/shared/lib/supabase";
-import { APP_ROUTES } from "@/config/url";
+import { api } from "@/shared/lib/api";
+import { APP_ROUTES, API_ROUTES } from "@/config/url";
 import type { LoginFormData, RegisterFormData } from "../schemas/auth";
 
 export const useAuth = () => {
@@ -11,12 +12,25 @@ export const useAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const resolveEmail = async (identifier: string): Promise<string> => {
+    if (identifier.includes("@")) return identifier;
+    try {
+      const { data } = await api.post<{ email: string | null }>(API_ROUTES.USERS.RESOLVE_USERNAME, { username: identifier });
+      // Return the resolved email, or a dummy email so Supabase returns a generic "Invalid login credentials"
+      return data.email || `${identifier}@nonexistent.local`;
+    } catch {
+      return `${identifier}@nonexistent.local`;
+    }
+  };
+
   const login = async (data: LoginFormData) => {
     setIsLoading(true);
     setError(null);
     try {
+      const email = await resolveEmail(data.identifier);
+
       const { error: authError } = await supabase.auth.signInWithPassword({
-        email: data.email,
+        email,
         password: data.password,
       });
 
@@ -65,14 +79,23 @@ export const useAuth = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const { error: authError } = await supabase.auth.signInWithOAuth({
+      const { data, error: authError } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
           redirectTo: `${window.location.origin}${APP_ROUTES.AUTH.CALLBACK}`,
         },
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        // Check if the popup was blocked and fall back to redirect
+        if (authError.message?.toLowerCase().includes('popup') || authError.message?.toLowerCase().includes('blocked')) {
+          if (data?.url) {
+            window.location.href = data.url;
+            return;
+          }
+        }
+        throw authError;
+      }
       setIsLoading(false);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "An error occurred during GitHub login.";

@@ -23,11 +23,14 @@
 ### Messages
 | Method | Route | Auth | Description |
 |--------|-------|------|-------------|
-| GET | `/api/conversations/:id/messages` | ✅ | Cursor-based pagination |
+| GET | `/api/conversations/:id/messages` | ✅ | Cursor-based pagination (includes `pinnedMessageIds`) |
 | POST | `/api/conversations/:id/messages` | ✅ | Send message |
 | PATCH | `/api/conversations/:id/messages/:messageId` | ✅ | Edit message |
 | DELETE | `/api/conversations/:id/messages/:messageId` | ✅ | Soft-delete message |
 | GET | `/api/messages/search?q=` | ✅ | Search messages |
+| POST | `/api/conversations/:id/pins/:messageId` | ✅ | Pin a message to conversation |
+| DELETE | `/api/conversations/:id/pins/:messageId` | ✅ | Unpin a message from conversation |
+| GET | `/api/conversations/:id/pins` | ✅ | List pinned messages for conversation |
 
 ### Users
 | Method | Route | Auth | Description |
@@ -106,6 +109,8 @@
 | `workspace:update` | `{ action, workspace }` | Workspace updated |
 | `channel:member-added` | `{ workspaceId, channelId, addedMembers }` | Members added to channel |
 | `channel:member-removed` | `{ workspaceId, channelId, removedUserId }` | Member removed from channel |
+| `message:pin` | `{ messageId, conversationId, pinnedBy, pinnedByUsername, action }` | Message pinned |
+| `message:unpin` | `{ messageId, conversationId, pinnedBy, action }` | Message unpinned |
 | `notification:new` | `Notification` | New notification |
 | `user:online` | `{ userId }` | User came online (from presence) |
 | `typing:start` | `{ conversationId, username }` | User started typing |

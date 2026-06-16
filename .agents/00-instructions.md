@@ -100,11 +100,27 @@ Format:
 
 ### Daily Logs (Manual — Only When User Instructs)
 When the user says "log progress" or "update daily logs":
-1. Open `work/logs/daily-logs.md`.
-2. Append a new section at the bottom.
-3. Use Level 2 Heading: `## [Day] [Month] [Year]` (e.g., `## 16th June 2026`).
-4. Write 3-4 concise bullet points summarizing only architectural changes, features, or critical bugs.
-5. Optionally reference specific entries from `incremental-logs.md` for more detail.
+1. Read `work/logs/logging-instructions.txt` for the exact format specification.
+2. Open `work/logs/daily-logs.md`.
+3. Append a new section at the bottom.
+4. Use the format from `logging-instructions.txt`:
+
+```
+Date: <>
+
+Completed: <>
+
+In Progress: <>
+
+Next Plan: <>
+
+Blockers
+  Any issues or dependencies:
+Learning
+  One new thing that you learned today:
+```
+
+5. Describe what new functionality was added or fixed — do NOT write vague items like "updated docs" or "updated agents". Do NOT write actual function names, only describe features and fixes in plain language.
 
 ## 6. Coding Standards
 - **REST APIs**: Extract data from wrappers correctly (e.g. `const { data } = await api.get()`). If the backend returns `{ data: T }`, handle the wrapper properly in the frontend API client so components receive clean types.

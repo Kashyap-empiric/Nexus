@@ -1,7 +1,37 @@
-import type { Response } from "express";
+import type { Request, Response } from "express";
 import type { AuthRequest } from "@/types/shared.js";
 import * as usersService from "./users.service.js";
 import type { SearchUsersQuery } from "./users.schema.js";
+
+export const checkUsername = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const username = req.query.username as string;
+    if (!username || typeof username !== "string" || username.length < 3) {
+      res.status(400).json({ error: "Username must be at least 3 characters." });
+      return;
+    }
+    const existing = await usersService.findByUsername(username);
+    res.json({ available: !existing });
+  } catch (error) {
+    console.error("Error checking username:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const resolveUsername = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { username } = req.body as { username?: string };
+    if (!username || typeof username !== "string") {
+      res.status(400).json({ error: "Username is required." });
+      return;
+    }
+    const user = await usersService.findByUsername(username);
+    res.json({ email: user?.email || null });
+  } catch (error) {
+    console.error("Error resolving username:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 
 export const searchUsers = async (req: AuthRequest, res: Response): Promise<void> => {
   try {

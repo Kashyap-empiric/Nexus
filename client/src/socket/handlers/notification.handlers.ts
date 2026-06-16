@@ -34,12 +34,17 @@ export const handleNotificationNew = (queryClient: QueryClient) => {
         (oldCount) => (oldCount ?? 0) + 1
       );
 
-      // Show desktop notification if tab is hidden and user is not already viewing
-      // the page this notification links to
-      if (typeof document !== "undefined" && document.hidden) {
+      // Show desktop notification if the tab is visible but the user is not viewing
+      // the relevant page. When the tab is hidden (document.hidden === true),
+      // we suppress the browser Notification API because the Service Worker
+      // will handle it via Web Push — showing both would cause duplicates (C8).
+      if (
+        typeof document !== "undefined" &&
+        !document.hidden &&
+        typeof window !== "undefined"
+      ) {
         const isViewingRelevantPage =
           notification.link &&
-          typeof window !== "undefined" &&
           window.location.pathname === notification.link;
 
         if (!isViewingRelevantPage) {

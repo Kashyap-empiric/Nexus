@@ -252,7 +252,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
   };
 
   const isEmpty = editor.isEmpty;
-  const activeClass = "bg-primary/15 text-primary dark:bg-zinc-800 dark:text-zinc-100";
+  const activeClass = "bg-primary/20 text-primary dark:bg-primary/25 dark:text-primary ring-1 ring-primary/30";
 
   return (
     <form onSubmit={handleSubmit} className="px-4 md:px-6 xl:px-8 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:pb-6 pt-2 bg-background shrink-0 w-full">

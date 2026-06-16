@@ -1,10 +1,11 @@
 import type { InviteResolver, ResolveInviteContext } from "./index.js";
+import type { CreateNotificationInput } from "../../notifications/notifications.types.js";
 import * as workspacesRepo from "../../workspaces/workspaces.repository.js";
-import { createAndDispatch } from "../../notifications/notifications.service.js";
 
 export const workspaceInviteResolver: InviteResolver = {
   async resolve({ tx, invite, actorId }: ResolveInviteContext) {
     const workspaceId = invite.entityId;
+    const pendingNotifications: CreateNotificationInput[] = [];
 
     // Verify workspace exists and get workspace details
     const workspace = await tx.workspace.findUnique({
@@ -19,7 +20,7 @@ export const workspaceInviteResolver: InviteResolver = {
     // Call the onboarding service to securely handle joining the workspace & default channels
     const { generalChannelId } = await workspacesRepo.onboardUserToWorkspaceInTransaction(tx as any, workspaceId, actorId);
 
-    // Send MEMBER_JOINED notifications to all other workspace members
+    // Collect MEMBER_JOINED notifications (dispatched after transaction commit to prevent phantom notifications)
     try {
       const workspaceMembers = await tx.workspaceMember.findMany({
         where: { workspaceId, userId: { not: actorId } },
@@ -43,7 +44,7 @@ export const workspaceInviteResolver: InviteResolver = {
           : undefined;
 
         for (const member of workspaceMembers) {
-          await createAndDispatch({
+          pendingNotifications.push({
             userId: member.userId,
             type: "MEMBER_JOINED",
             title: "New member",
@@ -60,10 +61,10 @@ export const workspaceInviteResolver: InviteResolver = {
         }
       }
     } catch (err) {
-      console.error("[workspaceResolver] Failed to create MEMBER_JOINED notifications:", err);
+      console.error("[workspaceResolver] Failed to collect MEMBER_JOINED notifications:", err);
     }
 
-    // Create INVITE_ACCEPTED notification for the invite creator (the inviter)
+    // Collect INVITE_ACCEPTED notification (dispatched after transaction commit)
     try {
       const joiner = await tx.user.findUnique({
         where: { id: actorId },
@@ -71,7 +72,7 @@ export const workspaceInviteResolver: InviteResolver = {
       });
 
       if (joiner && invite.createdBy && invite.createdBy !== actorId) {
-        await createAndDispatch({
+        pendingNotifications.push({
           userId: invite.createdBy,
           type: "INVITE_ACCEPTED",
           title: `${joiner.username} joined`,
@@ -87,12 +88,13 @@ export const workspaceInviteResolver: InviteResolver = {
         });
       }
     } catch (err) {
-      console.error("[workspaceResolver] Failed to create INVITE_ACCEPTED notification:", err);
+      console.error("[workspaceResolver] Failed to collect INVITE_ACCEPTED notification:", err);
     }
 
     // Return the new dedicated workspace route structure
     return {
       redirectUrl: `/workspaces/${workspaceId}/channels/${generalChannelId}`,
+      pendingNotifications: pendingNotifications.length > 0 ? pendingNotifications : undefined,
     };
   }
 };
