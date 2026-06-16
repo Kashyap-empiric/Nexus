@@ -40,8 +40,8 @@ export const AppearanceSettings = () => {
               className={cn(
                 "flex flex-col items-center justify-center gap-4 rounded-xl border-2 p-6 transition-all",
                 isActive
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:bg-accent"
+                  ? "border-brand bg-brand/10 text-brand"
+                  : "border-border bg-card text-muted-foreground hover:border-brand/50 hover:bg-accent"
               )}
             >
               <Icon className="h-8 w-8" />

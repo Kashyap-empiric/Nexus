@@ -5,7 +5,7 @@ import { APP_ROUTES } from "@/config/url";
 
 export const LandingPage = () => {
   return (
-    <div className="flex flex-col min-h-dvh bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 font-sans selection:bg-emerald-500/30">
+    <div className="flex flex-col min-h-dvh bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 font-sans selection:bg-brand/30">
 
       {/* Navigation Bar */}
       <header className="px-6 lg:px-12 h-16 flex items-center border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md sticky top-0 z-50">
@@ -21,7 +21,7 @@ export const LandingPage = () => {
             Log in
           </Link>
           <Link
-            className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white transition-colors bg-emerald-600 rounded-md hover:bg-emerald-700 shadow-sm"
+            className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-brand-foreground transition-colors bg-brand rounded-md hover:bg-brand/80 shadow-sm"
             href={APP_ROUTES.AUTH.REGISTER}
           >
             Sign up
@@ -43,7 +43,7 @@ export const LandingPage = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
               <Link
                 href={APP_ROUTES.AUTH.REGISTER}
-                className="inline-flex h-12 items-center justify-center rounded-md bg-emerald-600 px-8 text-base font-medium text-white shadow-sm transition-colors hover:bg-emerald-700"
+                className="inline-flex h-12 items-center justify-center rounded-md bg-brand px-8 text-base font-medium text-brand-foreground shadow-sm transition-colors hover:bg-brand/80"
               >
                 Get Started
               </Link>
@@ -70,8 +70,8 @@ export const LandingPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {/* Feature 1 */}
               <div className="flex flex-col space-y-4 p-6 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-950 shadow-sm">
-                <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
-                  <Zap className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                <div className="w-12 h-12 bg-brand-muted dark:bg-brand-muted/50 rounded-lg flex items-center justify-center">
+                  <Zap className="h-6 w-6 text-brand dark:text-brand/80" />
                 </div>
                 <h3 className="text-xl font-semibold">Real-time Messaging</h3>
                 <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
@@ -81,8 +81,8 @@ export const LandingPage = () => {
 
               {/* Feature 2 */}
               <div className="flex flex-col space-y-4 p-6 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-950 shadow-sm">
-                <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
-                  <Shield className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                <div className="w-12 h-12 bg-brand-muted dark:bg-brand-muted/50 rounded-lg flex items-center justify-center">
+                  <Shield className="h-6 w-6 text-brand dark:text-brand/80" />
                 </div>
                 <h3 className="text-xl font-semibold">Enterprise Security</h3>
                 <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
@@ -92,8 +92,8 @@ export const LandingPage = () => {
 
               {/* Feature 3 */}
               <div className="flex flex-col space-y-4 p-6 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-950 shadow-sm">
-                <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
-                  <LayoutDashboard className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                <div className="w-12 h-12 bg-brand-muted dark:bg-brand-muted/50 rounded-lg flex items-center justify-center">
+                  <LayoutDashboard className="h-6 w-6 text-brand dark:text-brand/80" />
                 </div>
                 <h3 className="text-xl font-semibold">Clean Interface</h3>
                 <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
@@ -113,7 +113,7 @@ export const LandingPage = () => {
             </p>
             <Link
               href={APP_ROUTES.AUTH.REGISTER}
-              className="inline-flex h-12 items-center justify-center rounded-md bg-emerald-600 px-8 text-base font-medium text-white shadow-sm transition-colors hover:bg-emerald-700"
+              className="inline-flex h-12 items-center justify-center rounded-md bg-brand px-8 text-base font-medium text-brand-foreground shadow-sm transition-colors hover:bg-brand/80"
             >
               Create a free account
             </Link>

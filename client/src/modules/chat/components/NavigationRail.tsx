@@ -24,7 +24,7 @@ export function NavigationRail({ openSettings }: NavigationRailProps) {
             href={APP_ROUTES.CONVERSATIONS.INDEX}
             className={cn(
               "w-[40px] h-[40px] rounded-2xl bg-primary/10 text-primary flex items-center justify-center transition-all duration-200 hover:rounded-xl",
-              mode === "DM" ? "bg-primary text-primary-foreground rounded-xl" : ""
+              mode === "DM" ? "bg-brand text-brand-foreground rounded-xl" : ""
             )}
             title="Direct Messages"
             onClick={() => {
@@ -37,43 +37,43 @@ export function NavigationRail({ openSettings }: NavigationRailProps) {
 
           <div className="w-8 h-[2px] bg-border rounded-full shrink-0" />
 
-        {workspaces.map((workspace) => {
-          const unreadCount = workspace.unreadCount || 0;
-          const isActive = mode === "WORKSPACE" && activeWorkspaceId === workspace.slug;
-          
-          return (
-            <button
-              key={workspace.id}
-              onClick={() => {
-                setMode("WORKSPACE");
-                setActiveWorkspaceId(workspace.slug);
-              }}
-              title={workspace.name}
-              className={cn(
-                "w-[40px] h-[40px] rounded-2xl bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center transition-all duration-200 hover:rounded-xl font-semibold text-lg overflow-hidden relative",
-                isActive
-                  ? "bg-primary text-primary-foreground rounded-xl"
-                  : "text-foreground"
-              )}
-            >
-              {workspace.imageUrl ? (
-                <img src={workspace.imageUrl} alt={workspace.name} className="w-full h-full object-cover" />
-              ) : (
-                workspace.name.substring(0, 2).toUpperCase()
-              )}
-              
-              {isActive && (
-                <div className="absolute -left-1 w-2 h-10 bg-primary rounded-r-md" />
-              )}
+          {workspaces.map((workspace) => {
+            const unreadCount = workspace.unreadCount || 0;
+            const isActive = mode === "WORKSPACE" && activeWorkspaceId === workspace.slug;
 
-              {unreadCount > 0 && !isActive && (
-                <div className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none border-2 border-background">
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </div>
-              )}
-            </button>
-          );
-        })}
+            return (
+              <button
+                key={workspace.id}
+                onClick={() => {
+                  setMode("WORKSPACE");
+                  setActiveWorkspaceId(workspace.slug);
+                }}
+                title={workspace.name}
+                className={cn(
+                  "w-[40px] h-[40px] rounded-2xl bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center transition-all duration-200 hover:rounded-xl font-semibold text-lg relative",
+                  isActive
+                    ? "bg-brand text-brand-foreground rounded-xl"
+                    : "text-foreground"
+                )}
+              >
+                {workspace.imageUrl ? (
+                  <img src={workspace.imageUrl} alt={workspace.name} className="w-full h-full object-cover rounded-[inherit]" />
+                ) : (
+                  workspace.name.substring(0, 2).toUpperCase()
+                )}
+
+                {isActive && (
+                  <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-brand rounded-r-full" />
+                )}
+
+                {unreadCount > 0 && !isActive && (
+                  <div className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none border-2 border-background shadow-sm z-10">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </div>
+                )}
+              </button>
+            );
+          })}
 
           <button
             onClick={() => setIsCreateModalOpen(true)}
@@ -95,9 +95,9 @@ export function NavigationRail({ openSettings }: NavigationRailProps) {
         </div>
       </aside>
 
-      <CreateWorkspaceModal 
-        isOpen={isCreateModalOpen} 
-        onClose={() => setIsCreateModalOpen(false)} 
+      <CreateWorkspaceModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
       />
     </>
   );

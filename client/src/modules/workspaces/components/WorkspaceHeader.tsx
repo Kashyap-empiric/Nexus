@@ -28,7 +28,7 @@ export function WorkspaceHeader({ workspace, onInviteClick, rightElement }: Work
         <DropdownMenuContent className="w-56" align="start">
         <DropdownMenuItem
           onClick={onInviteClick}
-          className="text-primary focus:text-primary focus:bg-primary/10 cursor-pointer"
+          className="text-brand focus:text-brand focus:bg-brand/10 cursor-pointer"
         >
           <UserPlus className="h-4 w-4 mr-2" />
           Invite People

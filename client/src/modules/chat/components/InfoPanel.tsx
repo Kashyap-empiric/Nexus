@@ -19,10 +19,10 @@ interface InfoPanelProps {
 }
 
 const STATUS_LABELS: Record<string, { label: string; dotClass: string }> = {
-  AVAILABLE: { label: "Available", dotClass: "bg-green-500" },
-  AWAY: { label: "Away", dotClass: "bg-yellow-500" },
-  DND: { label: "Do Not Disturb", dotClass: "bg-red-500" },
-  INVISIBLE: { label: "Offline", dotClass: "bg-muted-foreground" },
+  AVAILABLE: { label: "Available", dotClass: "bg-status-online" },
+  AWAY: { label: "Away", dotClass: "bg-status-away" },
+  DND: { label: "Do Not Disturb", dotClass: "bg-status-dnd" },
+  INVISIBLE: { label: "Offline", dotClass: "bg-status-offline" },
 };
 
 export function InfoPanel({ workspaceId, userId, view, setInfoPanelView, onClose }: InfoPanelProps) {
@@ -58,7 +58,7 @@ export function InfoPanel({ workspaceId, userId, view, setInfoPanelView, onClose
           onClick={() => setInfoPanelView('about')}
           className={cn(
             "flex-1 pb-2 pt-3 text-sm font-medium text-center border-b-2 transition-colors",
-            view === 'about' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+            view === 'about' ? "border-brand text-brand" : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
           {isDM ? "Profile" : "About"}
@@ -68,7 +68,7 @@ export function InfoPanel({ workspaceId, userId, view, setInfoPanelView, onClose
             onClick={() => setInfoPanelView('members')}
             className={cn(
               "flex-1 pb-2 pt-3 text-sm font-medium text-center border-b-2 transition-colors",
-              view === 'members' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+              view === 'members' ? "border-brand text-brand" : "border-transparent text-muted-foreground hover:text-foreground"
             )}
           >
             Members

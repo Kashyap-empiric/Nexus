@@ -93,7 +93,7 @@ export const SharedSettingsModal = ({ isOpen, currentTab, setTab, closeSettings 
                         className={cn(
                           "group flex items-center justify-between px-4 md:px-3 py-3.5 md:py-2 text-base md:text-sm font-medium transition-colors w-full text-left",
                           isActive && !showMobileMenu
-                            ? "bg-primary/10 text-primary md:rounded-md"
+                            ? "bg-brand/10 text-brand md:rounded-md"
                             : "text-foreground md:text-muted-foreground hover:bg-muted/50 md:hover:bg-muted hover:text-foreground md:rounded-md"
                         )}
                       >

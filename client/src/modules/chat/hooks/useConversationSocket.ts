@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { SOCKET_EVENTS } from "@/socket/socket-events";
 import { useSocketEvents, SocketHandlerMap } from "@/socket/useSocketEvent";
+import { useSocketStore } from "@/socket/socketStore";
 import { queryKeys } from "@/shared/constants/queryKeys";
 import type { Message, MessagePage } from "@/modules/messages/types/message";
 import type { Conversation } from "@/modules/conversations/types/conversation";
@@ -15,6 +16,19 @@ export const useConversationSocket = (conversationId: string) => {
 
   const events = useMemo(() => {
     if (!conversationId) return {} as SocketHandlerMap;
+
+    const addTypingUser = useSocketStore.getState().addTypingUser;
+    const removeTypingUser = useSocketStore.getState().removeTypingUser;
+
+    const onTypingStart = (payload: { conversationId: string; userId: string; username: string }) => {
+      if (payload.conversationId !== conversationId) return;
+      addTypingUser(payload.conversationId, payload.userId, payload.username);
+    };
+
+    const onTypingStop = (payload: { conversationId: string; userId: string }) => {
+      if (payload.conversationId !== conversationId) return;
+      removeTypingUser(payload.conversationId, payload.userId);
+    };
 
     const onMessageNew = (message: Message) => {
       try {
@@ -144,6 +158,8 @@ export const useConversationSocket = (conversationId: string) => {
     };
 
     return {
+      [SOCKET_EVENTS.TYPING_START]: onTypingStart,
+      [SOCKET_EVENTS.TYPING_STOP]: onTypingStop,
       [SOCKET_EVENTS.MESSAGE_NEW]: onMessageNew,
       [SOCKET_EVENTS.MESSAGE_READ]: onMessageRead,
       [SOCKET_EVENTS.MESSAGE_UPDATE]: onMessageUpdate,

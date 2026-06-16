@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSendMessageMutation } from "@/modules/messages/hooks/useMessages";
-import { SendHorizontal, Smile, X, Reply } from "lucide-react";
+import { SendHorizontal, Smile, X, Reply, List, ListOrdered } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/components/ui/popover";
 import EmojiPicker, { Theme } from 'emoji-picker-react';
 import { useTheme } from "next-themes";
 import type { User } from "@/modules/conversations/types/conversation";
+import { SOCKET_EVENTS } from "@/socket/socket-events";
+import { socket } from "@/socket/socketClient";
 
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -27,6 +29,48 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
   const { theme } = useTheme();
   const { mutate: sendMessage } = useSendMessageMutation(conversationId, currentUser);
 
+  // Typing indicator state
+  const isTypingRef = useRef(false);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const emitTypingStart = useCallback(() => {
+    if (!socket.connected || isTypingRef.current) return;
+    isTypingRef.current = true;
+    socket.emit(SOCKET_EVENTS.TYPING_START, {
+      conversationId,
+      username: currentUser?.username || "Unknown",
+    });
+  }, [conversationId, currentUser?.username]);
+
+  const emitTypingStop = useCallback(() => {
+    if (!socket.connected || !isTypingRef.current) return;
+    isTypingRef.current = false;
+    socket.emit(SOCKET_EVENTS.TYPING_STOP, { conversationId });
+  }, [conversationId]);
+
+  const handleTypingActivity = useCallback(() => {
+    // Emit typing:start on first keystroke after inactivity
+    if (!isTypingRef.current) {
+      emitTypingStart();
+    }
+
+    // Debounce typing:stop — reset timer on every keystroke
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    typingTimeoutRef.current = setTimeout(() => {
+      emitTypingStop();
+    }, 1500);
+  }, [emitTypingStart, emitTypingStop]);
+
+  // Clean up typing state on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      emitTypingStop();
+    };
+  }, [emitTypingStop]);
+
   const submitMessage = () => {
     if (!editor) return;
     
@@ -36,10 +80,13 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
     
     if (!markdownContent.trim()) return;
 
+    // Stop typing on send
+    emitTypingStop();
+
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     sendMessage({ conversationId, content: markdownContent.trim(), tempId, replyToId: replyingTo?.id || null });
     
-    editor.commands.clearContent(true);
+    editor.commands.clearContent(false);
     onClearReply?.();
   };
 
@@ -48,9 +95,12 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
     italic: false,
     code: false,
     strike: false,
+    bulletList: false,
+    orderedList: false,
   });
 
   const editor = useEditor({
+    immediatelyRender: true,
     extensions: [
       StarterKit.configure({
         heading: false,
@@ -95,12 +145,17 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
     ],
     content: '',
     editable: !disabled,
+    onUpdate: () => {
+      handleTypingActivity();
+    },
     onTransaction: ({ editor }) => {
       setActiveMarks({
         bold: editor.isActive('bold'),
         italic: editor.isActive('italic'),
         code: editor.isActive('code'),
         strike: editor.isActive('strike'),
+        bulletList: editor.isActive('bulletList'),
+        orderedList: editor.isActive('orderedList'),
       });
     },
     editorProps: {
@@ -118,6 +173,10 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
 
           // On desktop, Enter sends, Shift+Enter adds newline
           if (!event.shiftKey) {
+            // Don't send on Enter inside lists — let TipTap create new list items
+            if (editor?.isActive('bulletList') || editor?.isActive('orderedList')) {
+              return false;
+            }
             event.preventDefault();
             submitMessage();
             return true;
@@ -184,6 +243,14 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
     }
   };
 
+  const toggleBulletList = () => {
+    editor.chain().focus().toggleBulletList().run();
+  };
+
+  const toggleOrderedList = () => {
+    editor.chain().focus().toggleOrderedList().run();
+  };
+
   const isEmpty = editor.isEmpty;
   const activeClass = "bg-primary/15 text-primary dark:bg-zinc-800 dark:text-zinc-100";
 
@@ -209,7 +276,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
         </div>
       )}
 
-      <div className="w-full flex flex-col bg-background dark:bg-zinc-950 border rounded-xl shadow-sm transition-colors focus-within:ring-1 focus-within:ring-primary focus-within:border-primary overflow-hidden">
+      <div className="w-full flex flex-col bg-card dark:bg-card border border-border/60 rounded-xl shadow-sm transition-colors focus-within:ring-1 focus-within:ring-brand/30 focus-within:border-brand/40 overflow-hidden">
         
         {/* Toolbar Row */}
         <div className="flex items-center gap-1 px-2 pt-2 text-muted-foreground">
@@ -225,7 +292,18 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
           <button type="button" onClick={toggleStrike} className={`p-1.5 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.strike ? activeClass : ''}`} title="Strikethrough">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4H9a3 3 0 0 0-2.83 4"/><path d="M14 12a4 4 0 0 1 0 8H6"/><line x1="4" x2="20" y1="12" y2="12"/></svg>
           </button>
-          
+
+          <div className="w-px h-5 bg-border mx-0.5" />
+
+          <button type="button" onClick={toggleBulletList} className={`p-1.5 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.bulletList ? activeClass : ''}`} title="Bullet List">
+            <List className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={toggleOrderedList} className={`p-1.5 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.orderedList ? activeClass : ''}`} title="Numbered List">
+            <ListOrdered className="h-4 w-4" />
+          </button>
+
+          <div className="w-px h-5 bg-border mx-0.5" />
+
           <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
             <PopoverTrigger
               type="button"

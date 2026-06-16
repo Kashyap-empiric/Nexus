@@ -7,6 +7,7 @@ import { useMessageScroll } from "@/modules/chat/hooks/useMessageScroll";
 import { MessageGroupItem } from "./MessageGroupItem";
 import { groupMessages } from "@/modules/chat/utils/groupMessages";
 import { MessageListSkeleton } from "./MessageListSkeleton";
+import { TypingIndicator } from "./TypingIndicator";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import type { ConversationMember } from "@/modules/conversations/types/conversation";
@@ -106,6 +107,12 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
               />
             ))
           )}
+
+          {/* Typing indicator */}
+          <TypingIndicator
+            conversationId={conversationId}
+            currentUserId={currentUserId}
+          />
 
           <div ref={bottomRef} className="h-1" />
         </div>

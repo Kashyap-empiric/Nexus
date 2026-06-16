@@ -42,9 +42,9 @@ export function AppLayoutShell({
 }) {
   return (
     <InviteModalProvider>
-    <AppLayoutShellInner>
-      {children}
-    </AppLayoutShellInner>
+      <AppLayoutShellInner>
+        {children}
+      </AppLayoutShellInner>
     </InviteModalProvider>
   );
 }
@@ -53,7 +53,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const headerInfo = useChatStore((state) => state.headerInfo);
-  
+
   // Local UI State (Single Source of Truth)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [infoPanelOpen, setInfoPanelOpen] = useState(false);
@@ -61,8 +61,8 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsView, setSettingsView] = useState<SettingsView>('profile');
 
-  const isContentActive = 
-    pathname?.includes(APP_ROUTES.CONVERSATIONS.INDEX + "/") || 
+  const isContentActive =
+    pathname?.includes(APP_ROUTES.CONVERSATIONS.INDEX + "/") ||
     pathname?.includes(APP_ROUTES.WORKSPACES.CHANNELS_PATH + "/") ||
     pathname?.startsWith(APP_ROUTES.SETTINGS.INDEX + "/");
 
@@ -95,7 +95,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
     <div className="flex h-dvh overflow-hidden bg-background">
       {/* Mobile sidebar overlay */}
       {mobileSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-transparent md:hidden"
           onClick={closeMobileSidebar}
         />
@@ -106,7 +106,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
         "shrink-0 flex transition-transform duration-300 ease-in-out",
         isContentActive
           ? "fixed inset-y-0 left-0 z-50 w-screen bg-background md:w-auto md:relative md:z-auto" +
-            (mobileSidebarOpen ? " translate-x-0" : " -translate-x-full md:translate-x-0")
+          (mobileSidebarOpen ? " translate-x-0" : " -translate-x-full md:translate-x-0")
           : "relative w-full md:w-auto"
       )}>
         <NavigationRail openSettings={openSettings} />
@@ -154,7 +154,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <div className="relative shrink-0">
                   <UserAvatar
                     name={headerInfo.title}
@@ -166,7 +166,12 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
                     <PresenceIndicator userId={headerInfo.otherMember.userId} className="-bottom-0.5 -right-0.5" />
                   )}
                 </div>
-                <h2 className="text-base font-bold text-foreground leading-none truncate">{headerInfo.title}</h2>
+                <div className="flex flex-col min-w-0">
+                  <h2 className="text-base font-bold text-foreground leading-none truncate">{headerInfo.title}</h2>
+                  <span className="text-[11px] text-muted-foreground/60 leading-tight truncate">
+                    {headerInfo.otherMember?.userId ? "Online" : "Offline"}
+                  </span>
+                </div>
               </div>
             )}
           </div>
@@ -209,11 +214,11 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
 
       {/* Global modals rendered at top level */}
       <InviteModal isOpen={inviteModal.isOpen} onClose={inviteModal.close} type={inviteModal.type} entityId={inviteModal.entityId} />
-      <SharedSettingsModal 
-        isOpen={settingsOpen} 
-        currentTab={settingsView} 
-        setTab={setSettingsView} 
-        closeSettings={() => setSettingsOpen(false)} 
+      <SharedSettingsModal
+        isOpen={settingsOpen}
+        currentTab={settingsView}
+        setTab={setSettingsView}
+        closeSettings={() => setSettingsOpen(false)}
       />
     </div>
   );

@@ -5,7 +5,7 @@ import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import type { MessageGroup } from "@/modules/chat/utils/groupMessages";
 import type { ConversationMember } from "@/modules/conversations/types/conversation";
 import { MessageStatus } from "./MessageStatus";
-import { MoreHorizontal, Pencil, Trash, Ban, Copy, Reply } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash, Ban, Copy, Reply, Text } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +25,7 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 import { useEditMessageMutation, useDeleteMessageMutation } from "@/modules/messages/hooks/useMessages";
 import { Button } from "@/shared/components/ui/button";
+import { stripMarkdown } from "@/shared/lib/utils";
 
 interface MessageGroupItemProps {
   group: MessageGroup;
@@ -115,7 +116,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
 
   return (
     <>
-      <div className="mt-2 mb-1">
+      <div className="mt-3 mb-1.5">
         {messages.map((msg, index) => {
           const isFirst = index === 0;
           const isMyMessage = msg.userId === currentUserId;
@@ -130,7 +131,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
             <div
               key={msg.id}
               id={`msg-${msg.id}`}
-              className={`group/row flex hover:bg-black/10 dark:hover:bg-white/10 px-[15px] md:px-4 animate-in fade-in slide-in-from-bottom-1 duration-300 ease-out ${isFirst ? "pt-2 pb-0.5" : "py-0.5"} ${msg.optimistic || msg.pending ? "opacity-70" : ""}`}
+              className={`group/row flex hover:bg-black/[0.06] dark:hover:bg-white/[0.06] mx-2 rounded-lg px-[15px] md:px-4 animate-in fade-in slide-in-from-bottom-1 duration-300 ease-out ${isFirst ? "pt-2.5 pb-0.5" : "py-0.5"} ${msg.optimistic || msg.pending ? "opacity-70" : ""}`}
             >
               <div className="w-[36px] shrink-0 flex justify-center items-start relative select-none">
                 {isFirst ? (
@@ -140,11 +141,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                     className="h-9 w-9 mt-0.5 absolute left-0"
                     fallbackClassName="bg-primary/20 text-primary font-medium"
                   />
-                ) : (
-                  <span className="text-[10px] text-muted-foreground opacity-0 group-hover/row:opacity-100 mt-[5px] absolute right-2 leading-none">
-                    {time}
-                  </span>
-                )}
+                ) : null}
               </div>
 
               <div className="flex-1 min-w-0 ml-2">
@@ -170,17 +167,17 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                 )}
 
                 {isFirst && (
-                  <div className="flex items-baseline gap-2 mb-0.5">
-                    <span className="font-bold text-foreground hover:underline cursor-pointer">
+                  <div className="flex items-baseline gap-1.5 mb-0.5">
+                    <span className="font-extrabold text-[15px] text-foreground hover:text-brand hover:underline cursor-pointer transition-colors">
                       <Link href={`/users/${user?.id}`}>{user?.username || "Deleted user"}</Link>
                     </span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-[11px] text-muted-foreground/60 font-medium">
                       {time}
                     </span>
                   </div>
                 )}
 
-                <div className="text-[15px] text-foreground whitespace-pre-wrap break-words leading-snug flex items-center justify-between group/msg relative min-h-[22px]">
+                <div className="text-[15px] text-foreground whitespace-pre-wrap break-words leading-relaxed group/msg relative min-h-[22px] max-w-[min(100%,700px)]">
                   {/* !isDeleted prevents stuck edit states during concurrent multi-device deletions or rapid click race conditions */}
                   {editingMessageId === msg.id && !isDeleted ? (
                     <div className="flex flex-col gap-2 w-full mt-1 mb-2">
@@ -201,10 +198,10 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                   ) : (
                     <>
                       <div 
-                        className="flex-1 relative" 
+                        className="flex-1 relative inline" 
                         onContextMenu={(e) => handleContextMenu(e, msg.id, isDeleted)}
                       >
-                        <span className={isDeleted ? "italic text-muted-foreground flex items-center gap-1.5" : ""}>
+                        <span className={isDeleted ? "italic text-muted-foreground flex items-center gap-1.5" : "inline"}>
                           {isDeleted && <Ban className="h-3.5 w-3.5 inline-block mr-1" />}
                           {isDeleted ? (
                             <span className="italic text-muted-foreground">This message was deleted.</span>
@@ -234,7 +231,18 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                             </>
                           )}
                           {msg.isEdited && !isDeleted && (
-                            <span className="text-xs text-muted-foreground ml-2">(edited)</span>
+                            <span className="text-xs text-muted-foreground ml-2 align-middle leading-none">(edited)</span>
+                          )}
+                          {isMyMessage && !isDeleted && (
+                            <span className="inline-flex items-center ml-1.5 align-middle leading-none">
+                              <MessageStatus
+                                messageId={msg.id}
+                                isPending={msg.pending}
+                                partnerLastReadMessageId={partnerLastReadMessageId}
+                                readCount={isChannel && members ? computeReadCount(msg.id, currentUserId, members) : undefined}
+                                isChannel={isChannel}
+                              />
+                            </span>
                           )}
                         </span>
 
@@ -290,7 +298,10 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                   <Reply className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(msg.content)}>
-                                  <Copy className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy Text</span>
+                                  <Copy className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(stripMarkdown(msg.content))}>
+                                  <Text className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy as plain text</span>
                                 </DropdownMenuItem>
                                 {isMyMessage && (
                                   <>
@@ -313,12 +324,15 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                            <div className="md:hidden">
                              <DropdownMenu open={openMenuId === msg.id} onOpenChange={(open) => setOpenMenuId(open ? msg.id : null)}>
                                <DropdownMenuTrigger className="absolute right-0 top-0 w-full h-full opacity-0 pointer-events-none" aria-hidden="true" tabIndex={-1} />
-                               <DropdownMenuContent align="end" side="bottom" sideOffset={4} className="w-40">
+                               <DropdownMenuContent align="end" side="bottom" sideOffset={4} className="w-48">
                                  <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => onReply?.(msg.id, user?.username || "Unknown", msg.content)}>
                                    <Reply className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply</span>
                                  </DropdownMenuItem>
                                  <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(msg.content)}>
-                                   <Copy className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy Text</span>
+                                   <Copy className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy</span>
+                                 </DropdownMenuItem>
+                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(stripMarkdown(msg.content))}>
+                                   <Text className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy as plain text</span>
                                  </DropdownMenuItem>
                                  {isMyMessage && (
                                    <>
@@ -335,19 +349,6 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                </DropdownMenuContent>
                              </DropdownMenu>
                            </div>
-                        )}
-                      </div>
-
-                      <div className="flex items-center ml-2 shrink-0">
-                        {isMyMessage && !isDeleted && (
-                          <MessageStatus
-                            messageId={msg.id}
-                            isPending={msg.pending}
-                            partnerLastReadMessageId={partnerLastReadMessageId}
-                            readCount={isChannel && members ? computeReadCount(msg.id, currentUserId, members) : undefined}
-                            isChannel={isChannel}
-                            className=""
-                          />
                         )}
                       </div>
                     </>

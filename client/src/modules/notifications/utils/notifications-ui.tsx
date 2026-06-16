@@ -19,7 +19,7 @@ export function NotificationIcon({ type }: { type: string }) {
   const iconMap: Record<string, React.ReactNode> = {
     INVITE_RECEIVED: <Mail className="h-4 w-4 text-amber-500" />,
     INVITE_ACCEPTED: <CheckCircle className="h-4 w-4 text-green-500" />,
-    MEMBER_JOINED: <UserPlus className="h-4 w-4 text-primary" />,
+    MEMBER_JOINED: <UserPlus className="h-4 w-4 text-brand" />,
     CHANNEL_CREATED: <Hash className="h-4 w-4 text-muted-foreground" />,
     MEMBER_REMOVED: <UserMinus className="h-4 w-4 text-destructive" />,
   };

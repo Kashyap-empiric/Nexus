@@ -33,7 +33,7 @@ function NotificationItem({
       onClick={handleClick}
       className={cn(
         "w-full text-left px-3 py-2.5 flex items-start gap-2 transition-colors hover:bg-muted/50",
-        !notification.read && "bg-primary/5"
+        !notification.read && "bg-brand/5"
       )}
     >
       <NotificationIcon type={notification.type} />
@@ -51,7 +51,7 @@ function NotificationItem({
         </p>
       </div>
       {!notification.read && (
-        <span className="w-2 h-2 rounded-full bg-primary shrink-0 mt-1.5" />
+        <span className="w-2 h-2 rounded-full bg-brand shrink-0 mt-1.5" />
       )}
     </button>
   );

@@ -16,7 +16,7 @@ import { useEffect, useRef } from "react";
 import { useGlobalSocket } from "@/modules/chat/hooks/useGlobalSocket";
 import { useChatStore } from "@/modules/chat/store/chatStore";
 import { useSocketStore } from "@/socket/socketStore";
-import { cn } from "@/shared/lib/utils";
+import { cn, stripMarkdown } from "@/shared/lib/utils";
 import { APP_ROUTES } from "@/config/url";
 import { useUser } from "@/modules/auth/store/useAuthStore";
 import { useInviteModal } from "@/modules/invites/hooks/useInviteModal";
@@ -44,7 +44,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   useGlobalSocket();
   const { logout } = useAuth();
   const { data: conversations, isLoading } = useConversationsQuery();
-  
+
   const mode = useChatStore((state) => state.mode);
   const activeWorkspaceId = useChatStore((state) => state.activeWorkspaceId);
   const { data: workspaceChannels, isLoading: isLoadingChannels } = useWorkspaceChannelsQuery(mode === "WORKSPACE" ? activeWorkspaceId : null);
@@ -81,11 +81,11 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       if (!isCurrentlyInAChannel) {
         const savedChannelId = lastVisitedChannels[activeWorkspaceId];
         const savedChannelExists = savedChannelId && workspaceChannels.some(c => c.id === savedChannelId);
-        
-        const targetId = savedChannelExists 
-          ? savedChannelId 
+
+        const targetId = savedChannelExists
+          ? savedChannelId
           : (workspaceChannels.find(c => c.name === "general") || workspaceChannels[0]).id;
-        
+
         if (activeId !== targetId && pendingRedirect.current !== targetId) {
           pendingRedirect.current = targetId;
           router.push(`/workspaces/${activeWorkspaceId}/channels/${targetId}`);
@@ -99,37 +99,37 @@ export function Sidebar({ onNavigate }: SidebarProps) {
 
   const socketStatus = useSocketStore((state) => state.socketStatus);
   const statusStr = dbProfile?.status;
-  const statusLabel = socketStatus === "connected" 
+  const statusLabel = socketStatus === "connected"
     ? (dbProfile?.statusText || (statusStr === "AWAY" ? "Away" : statusStr === "DND" ? "Do Not Disturb" : statusStr === "INVISIBLE" ? "Offline" : "Online"))
     : socketStatus === "connecting" ? "Connecting..." : "Offline";
 
-  const displayList = mode === "DM" 
+  const displayList = mode === "DM"
     ? [...(conversations || [])]
-        .filter((c) => {
-          if (c.type !== "DM") return false;
-          const otherMember = c.members.find((m) => m.userId !== currentAuthUser?.id);
-          const isOtherDeleted = !otherMember?.user;
-          const hasNoMessages = !c.latestMessageId;
-          if (isOtherDeleted && hasNoMessages) return false;
+      .filter((c) => {
+        if (c.type !== "DM") return false;
+        const otherMember = c.members.find((m) => m.userId !== currentAuthUser?.id);
+        const isOtherDeleted = !otherMember?.user;
+        const hasNoMessages = !c.latestMessageId;
+        if (isOtherDeleted && hasNoMessages) return false;
 
-          if (searchQuery.trim()) {
-            const name = otherMember?.user.username?.toLowerCase() || "";
-            if (!name.includes(searchQuery.toLowerCase())) {
-              return false;
-            }
+        if (searchQuery.trim()) {
+          const name = otherMember?.user.username?.toLowerCase() || "";
+          if (!name.includes(searchQuery.toLowerCase())) {
+            return false;
           }
+        }
 
-          return true;
-        })
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        return true;
+      })
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     : [...(workspaceChannels || [])]
-        .filter((c) => {
-          if (searchQuery.trim() && c.name) {
-            return c.name.toLowerCase().includes(searchQuery.toLowerCase());
-          }
-          return true;
-        })
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      .filter((c) => {
+        if (searchQuery.trim() && c.name) {
+          return c.name.toLowerCase().includes(searchQuery.toLowerCase());
+        }
+        return true;
+      })
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
   const isListLoading = mode === "DM" ? isLoading : isLoadingChannels;
 
@@ -137,11 +137,11 @@ export function Sidebar({ onNavigate }: SidebarProps) {
     <>
       <aside className="w-full md:w-72 border-r bg-background md:bg-muted/30 md:dark:bg-muted/10 flex flex-col shrink-0">
         {mode === "WORKSPACE" && workspaceDetails ? (
-          <WorkspaceHeader 
-            workspace={workspaceDetails.workspace} 
+          <WorkspaceHeader
+            workspace={workspaceDetails.workspace}
             onInviteClick={() => inviteModal.open("WORKSPACE", workspaceDetails.workspace.id)}
             rightElement={
-              <button 
+              <button
                 type="button"
                 onClick={(e) => {
                   e.preventDefault();
@@ -166,7 +166,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                 className="pl-9 py-1.5 bg-muted/50 border-transparent hover:border-border focus-visible:border-border focus-visible:ring-1 w-full"
               />
             </div>
-            <button 
+            <button
               type="button"
               onClick={(e) => {
                 e.preventDefault();
@@ -188,7 +188,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
               <span>{mode === "DM" ? "Direct Messages" : "Channels"}</span>
               {mode === "DM" ? (
                 <DropdownMenu>
-                  <DropdownMenuTrigger className="flex items-center gap-1 transition-colors py-1 px-2.5 -mr-1 rounded-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary/10 text-primary hover:bg-primary/20 normal-case tracking-normal font-medium leading-none">
+                  <DropdownMenuTrigger className="flex items-center gap-1 transition-colors py-1 px-2.5 -mr-1 rounded-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-brand/10 text-brand hover:bg-brand/20 normal-case tracking-normal font-medium leading-none">
                     <span className="text-xs leading-none">New</span>
                     <Plus className="h-3.5 w-3.5" />
                   </DropdownMenuTrigger>
@@ -246,7 +246,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                       prefetch={false}
                       onClick={() => onNavigate?.()}
                       className={`flex items-center gap-3 px-2 py-2 rounded-md transition-colors ${isActive
-                        ? "bg-primary/10 text-primary dark:bg-white/10 dark:text-foreground"
+                        ? "bg-brand/10 text-brand dark:bg-brand/10 dark:text-brand"
                         : "text-muted-foreground hover:bg-muted/80 hover:text-foreground dark:hover:bg-white/5"
                         }`}
                     >
@@ -270,8 +270,8 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                             {chat.latestMessage.deletedAt
                               ? <span className="italic">This message was deleted</span>
                               : chat.latestMessage.userId === currentAuthUser?.id
-                                ? `You: ${chat.latestMessage.content}`
-                                : `${chat.latestMessage.user.username}: ${chat.latestMessage.content}`
+                                ? `You: ${stripMarkdown(chat.latestMessage.content)}`
+                                : `${chat.latestMessage.user.username}: ${stripMarkdown(chat.latestMessage.content)}`
                             }
                           </span>
                         )}
@@ -295,9 +295,9 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                     const canManage = workspaceDetails?.workspace.members?.some(
                       m => m.userId === currentAuthUser?.id && (m.role === "OWNER" || m.role === "ADMIN")
                     ) || false;
-                    
+
                     return (
-                      <WorkspaceChannelItem 
+                      <WorkspaceChannelItem
                         key={chat.id}
                         channel={chat as any}
                         isActive={isActive}
@@ -322,9 +322,9 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                         const canManage = workspaceDetails?.workspace.members?.some(
                           m => m.userId === currentAuthUser?.id && (m.role === "OWNER" || m.role === "ADMIN")
                         ) || false;
-                        
+
                         return (
-                          <WorkspaceChannelItem 
+                          <WorkspaceChannelItem
                             key={chat.id}
                             channel={chat as any}
                             isActive={isActive}

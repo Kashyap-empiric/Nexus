@@ -15,10 +15,10 @@ import { Circle, Moon, MinusCircle, UserCircle, Save } from "lucide-react";
 import { toast } from "sonner";
 
 const STATUS_OPTIONS = [
-  { value: "AVAILABLE", label: "Available", icon: Circle, color: "text-green-500 fill-current" },
-  { value: "AWAY", label: "Away", icon: Moon, color: "text-yellow-500 fill-current" },
-  { value: "DND", label: "Do Not Disturb", icon: MinusCircle, color: "text-red-500 fill-current" },
-  { value: "INVISIBLE", label: "Invisible", icon: UserCircle, color: "text-muted-foreground" },
+  { value: "AVAILABLE", label: "Available", icon: Circle, color: "text-status-online fill-current" },
+  { value: "AWAY", label: "Away", icon: Moon, color: "text-status-away fill-current" },
+  { value: "DND", label: "Do Not Disturb", icon: MinusCircle, color: "text-status-dnd fill-current" },
+  { value: "INVISIBLE", label: "Invisible", icon: UserCircle, color: "text-status-offline fill-current" },
 ] as const;
 
 export function StatusSelector() {
@@ -60,10 +60,10 @@ export function StatusSelector() {
       <DropdownMenuTrigger className="flex items-center justify-center focus:outline-none transition-transform hover:scale-110">
         <span
           className={`h-3 w-3 rounded-full border-2 border-background cursor-pointer ${
-            currentStatus.value === "DND" ? "bg-red-500" :
-            currentStatus.value === "AWAY" ? "bg-yellow-500" :
-            currentStatus.value === "INVISIBLE" ? "bg-muted-foreground" :
-            "bg-green-500"
+            currentStatus.value === "DND" ? "bg-status-dnd" :
+            currentStatus.value === "AWAY" ? "bg-status-away" :
+            currentStatus.value === "INVISIBLE" ? "bg-status-offline" :
+            "bg-status-online"
           }`}
         />
       </DropdownMenuTrigger>

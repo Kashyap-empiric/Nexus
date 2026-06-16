@@ -15,11 +15,11 @@ export const PresenceIndicator = ({ userId, className, status }: PresenceIndicat
   // Otherwise show status color or default green for AVAILABLE.
   const isActuallyOnline = isOnline && status !== "INVISIBLE";
   
-  let colorClass = "bg-muted-foreground";
+  let colorClass = "bg-status-offline";
   if (isActuallyOnline) {
-    if (status === "DND") colorClass = "bg-red-500";
-    else if (status === "AWAY") colorClass = "bg-yellow-500";
-    else colorClass = "bg-green-500";
+    if (status === "DND") colorClass = "bg-status-dnd";
+    else if (status === "AWAY") colorClass = "bg-status-away";
+    else colorClass = "bg-status-online";
   }
 
   return (
