@@ -25,7 +25,7 @@ export const RegisterForm = () => {
   return (
     <Card className="w-full max-w-md border-0 shadow-none bg-transparent">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-heading font-bold tracking-tight text-center">Create an account</CardTitle>
+        <CardTitle className="text-2xl font-sans font-bold tracking-tight text-center">Create an account</CardTitle>
         <CardDescription className="text-center text-muted-foreground">
           Enter your details below to create your account and get started.
         </CardDescription>

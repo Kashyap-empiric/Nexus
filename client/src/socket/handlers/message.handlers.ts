@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/shared/constants/queryKeys";
 import type { Message } from "@/modules/messages/types/message";
 import type { Conversation } from "@/modules/conversations/types/conversation";
+import type { Workspace } from "@/modules/workspaces/types/workspace";
 
 import { getAuthUser } from "@/modules/auth/store/useAuthStore";
 import { showMessageNotification } from "@/shared/lib/notifications";
@@ -42,9 +43,31 @@ export const handleMessageNew = (queryClient: QueryClient) => {
         }));
       });
 
+      // Also update workspace-level unread count (for the navigation rail badge)
+      const currentUser = getAuthUser();
+      if (message.userId !== currentUser?.id) {
+        const channelQueries = queryClient.getQueriesData<Conversation[]>({ queryKey: ["workspace-channels"] });
+        for (const [, channels] of channelQueries) {
+          if (!Array.isArray(channels)) continue;
+          const channel = channels.find(c => c.id === message.conversationId);
+          if (channel?.workspaceId) {
+            queryClient.setQueryData<Workspace[]>(["workspaces"], (oldData) => {
+              if (!Array.isArray(oldData)) return oldData;
+              return oldData.map((ws) => {
+                if (ws.id !== channel.workspaceId) return ws;
+                return {
+                  ...ws,
+                  unreadCount: (ws.unreadCount || 0) + 1,
+                };
+              });
+            });
+            break;
+          }
+        }
+      }
+
       if (typeof document === "undefined") return;
 
-      const currentUser = getAuthUser();
       if (currentUser && message.userId === currentUser.id) return;
 
       // Suppress desktop notification if user is already viewing this conversation

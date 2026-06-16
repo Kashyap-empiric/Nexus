@@ -338,7 +338,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
         </div>
 
         {/* TipTap Editor and Send Button */}
-        <div className="flex items-end w-full px-3 py-1.5 gap-2">
+        <div className="flex items-end w-full pl-[2px] pr-3 py-1.5 gap-2">
           <div className="flex-1 min-w-0 relative cursor-text" onClick={() => editor.commands.focus()}>
             <EditorContent editor={editor} className="w-full" />
           </div>

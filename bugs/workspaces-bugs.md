@@ -4,6 +4,62 @@ Covers server (`server/src/modules/workspaces/`) and client (`client/src/modules
 
 ---
 
+## CRITICAL BUGS
+
+### 1. No Zod Validation on ANY Workspace Routes (11 Routes)
+
+**File:** `server/src/modules/workspaces/workspaces.routes.ts:1-38`
+
+Every workspace route handler destructures `req.body` and `req.params` without Zod validation:
+
+| Route | Method | Unvalidated Fields |
+|-------|--------|-------------------|
+| `/workspaces` | GET | (none — params) |
+| `/workspaces` | POST | `name`, `slug`, `imageUrl` |
+| `/workspaces/:id` | GET | `:id` |
+| `/workspaces/:id/channels` | GET | `:id` |
+| `/workspaces/:id/channels` | POST | `:id`, `name`, `visibility` |
+| `/workspaces/:id/channels/:channelId` | PATCH | `:id`, `:channelId`, `name`, `visibility` |
+| `/workspaces/:id/channels/:channelId` | DELETE | `:id`, `:channelId` |
+| `/workspaces/:id/members` | GET | `:id` |
+| `/workspaces/:id/invite` | POST | `:id`, `username`, `email` |
+| `/workspaces/:id/invite-multiple` | POST | `:id`, `userIds[]` |
+| `/workspaces/:id/members/:userId` | PATCH | `:id`, `:userId`, `role` |
+| `/workspaces/:id/members/:userId` | DELETE | `:id`, `:userId` |
+
+**All 11 routes** are completely unprotected from malformed input. Compare with `messages.routes.ts` and `users.routes.ts` which consistently use `validate()` middleware.
+
+This means:
+- `name` could be empty, 10000 chars, contain control characters
+- `slug` validity is only checked inside `createWorkspace` service (after DB work begins)
+- `visibility` could be any string, not just `"PUBLIC"` / `"PRIVATE"` — Prisma throws a 500
+- `userIds[]` in batch invite is only checked for `Array.isArray` — could contain invalid UUIDs
+- Route params like `:id`, `:channelId`, `:userId` are never verified as valid UUIDs
+- `role` in `updateMemberRole` is typed as `WorkspaceRole` but could be any string at runtime
+
+### 2. Channel Name Can Be Changed by Any Workspace Member
+
+**File:** `server/src/modules/workspaces/workspaces.service.ts:149-174`
+
+```typescript
+export const updateChannel = async (..., data: { name?: string; visibility?: ... }, userId: string) => {
+  // ...
+  if (member.role !== OWNER && member.role !== ADMIN) {
+    // Only check visibility changes
+    if (data.visibility) throw new Error("Forbidden...");
+  }
+  // name changes have NO role check
+};
+```
+
+The permission check at line 159 only guards `visibility` changes. Name changes (line 156: `"Any workspace member can update a channel name"`) have **zero authorization**. Any workspace member, regardless of role, can rename any channel — including `#general`.
+
+**Impact:** A disgruntled member could rename `#general` to `#we-got-hacked`, rename project channels to offensive names, or cause confusion by renaming channels arbitrarily.
+
+**Fix:** Add a role check for name changes, at minimum requiring ADMIN or OWNER.
+
+---
+
 ## MEDIUM BUGS
 
 ### 1. `createWorkspace` Has No Request Body Validation
@@ -127,3 +183,47 @@ The `sendWorkspaceInvite` helper is called from `inviteMemberByUsername` and `in
 **File:** `server/src/modules/workspaces/workspaces.controller.ts:377-418`
 
 The `dispatchMemberUpdate` emits to the workspace room. But if the removed user has multiple sessions, only one gets the direct `user:` room notification. Their other sessions won't know they were removed until they attempt an action and hit the 403.
+
+### 16. `createChannel` Calls `getWorkspaceDetails` Twice — Redundant DB Query
+
+**File:** `server/src/modules/workspaces/workspaces.controller.ts:70-119, 84`
+
+```typescript
+const channel = await workspacesService.createChannel(workspaceId, name, visibility, userId);
+// ...
+const workspace = await workspacesService.getWorkspaceDetails(userId, workspaceId);  // ← second query
+```
+
+`createChannel` at line 76 calls `workspacesService.createChannel` which internally calls `findWorkspaceByIdOrSlug` (a DB query). Then on line 84, the controller calls `getWorkspaceDetails` which ALSO calls `findWorkspaceByIdOrSlug` — the second query is completely redundant. The workspace object already exists in the first call's scope but is never returned.
+
+**Fix:** Return the workspace from `createChannel` or pass it from the controller.
+
+### 17. `removeMember` Prevents Self-Removal But Has No "Leave Workspace" Alternative
+
+**File:** `server/src/modules/workspaces/workspaces.service.ts:234`
+
+```typescript
+if (memberUserId === userId) {
+  throw new Error("Forbidden: Cannot remove yourself from the workspace");
+}
+```
+
+There is no "Leave workspace" API endpoint. A user who wants to leave a workspace must ask an admin to remove them. The check at line 234 is correct for the removal endpoint, but there's no independent `leaveWorkspace` endpoint.
+
+### 18. `createWorkspace` Doesn't Check Slug Uniqueness Before Transaction
+
+**File:** `server/src/modules/workspaces/workspaces.service.ts:80-115`
+
+`createWorkspace` starts a Prisma transaction and tries to create the workspace. If the slug already exists, the transaction fails with a `P2002` unique constraint violation, and the entire transaction rolls back. The user gets a generic 500 error.
+
+**Better approach:** Check slug existence before starting the transaction (like `onboarding.service.ts` does), and return a user-friendly error like "This workspace URL is already taken."
+
+### 19. `workspace.members.some((m: any)` Uses `any` Type in Controller
+
+**File:** `server/src/modules/workspaces/workspaces.controller.ts:234, 301`
+
+```typescript
+const isAlreadyMember = workspace.members.some((m: any) => m.userId === targetUser.id);
+```
+
+The `as any` pattern appears in multiple places (line 234, 250, 288, 301). This bypasses TypeScript's type checking — if the `WorkspaceDetails` response shape changes (e.g., members is renamed to `memberships`), these lines silently break with a runtime error.

@@ -159,6 +159,7 @@ enum NotificationType {
   MEMBER_JOINED
   CHANNEL_CREATED
   MEMBER_REMOVED
+  MESSAGE_REPLIED
 }
 
 model Notification {

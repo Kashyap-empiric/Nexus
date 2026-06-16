@@ -17,13 +17,17 @@ type ProfileResponse = {
   };
 };
 
+import { useUser } from "@/modules/auth/store/useAuthStore";
+
 export const useProfile = () => {
+  const user = useUser();
   return useQuery({
     queryKey: ["users", "me"],
     queryFn: async () => {
       const { data } = await api.get<ProfileResponse>("/users/me");
       return data.data;
     },
+    enabled: !!user,
   });
 };
 

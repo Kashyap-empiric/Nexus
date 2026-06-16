@@ -1,6 +1,7 @@
 import { uuidv7 } from "uuidv7";
 import * as messagesRepo from "./messages.repository.js";
 import * as conversationsRepo from "../conversations/conversations.repository.js";
+import { createAndDispatch } from "../notifications/notifications.service.js";
 
 export const getMessages = async (conversationId: string, cursor: string | undefined, limit: number) => {
   const messages = await messagesRepo.findMessages(conversationId, cursor, limit);
@@ -23,6 +24,7 @@ export const createMessage = async (conversationId: string, userId: string, cont
   const messageId = uuidv7();
 
   // Validate replyToId belongs to the same conversation (prevent cross-conversation replies)
+  let parentMessageUserId: string | null = null;
   if (replyToId) {
     const parentMessage = await messagesRepo.findById(replyToId);
     if (!parentMessage) {
@@ -31,6 +33,7 @@ export const createMessage = async (conversationId: string, userId: string, cont
     if (parentMessage.conversationId !== conversationId) {
       throw new Error("Cannot reply to a message in a different conversation.");
     }
+    parentMessageUserId = parentMessage.userId;
   }
 
   const [message, conversation] = await messagesRepo.createMessageTransaction(
@@ -54,6 +57,32 @@ export const createMessage = async (conversationId: string, userId: string, cont
       }
     }
   };
+
+  // If this is a reply to another user's message, create a notification
+  if (replyToId && parentMessageUserId && parentMessageUserId !== userId) {
+    try {
+      const conversation = await conversationsRepo.findById(conversationId);
+      const channelName = conversation?.name;
+      const isChannel = conversation?.type === "CHANNEL";
+      const location = isChannel && channelName ? `#${channelName}` : "a conversation";
+
+      await createAndDispatch({
+        userId: parentMessageUserId,
+        type: "MESSAGE_REPLIED",
+        title: `Reply from ${message.user.username}`,
+        body: message.content,
+        link: `/conversations/${conversationId}?highlight=${message.id}`,
+        metadata: {
+          conversationId,
+          messageId: message.id,
+          replyToId,
+          username: message.user.username,
+        },
+      });
+    } catch (err) {
+      console.error("[Reply Notification] Failed to create reply notification:", err);
+    }
+  }
 
   return { message, conversationMetadata };
 };

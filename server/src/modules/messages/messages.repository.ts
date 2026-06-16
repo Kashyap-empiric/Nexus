@@ -19,7 +19,7 @@ export const findMessages = async (
     orderBy: { id: "desc" },
     include: {
       user: {
-        select: { id: true, username: true, fullName: true, avatarUrl: true },
+        select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
       },
       replyTo: {
         select: { id: true, content: true, deletedAt: true, user: { select: { username: true } } },
@@ -58,7 +58,7 @@ export const createMessageTransaction = async (
       data: { id: messageId, conversationId, userId, content, replyToId: replyToId ?? undefined },
       include: {
         user: {
-          select: { id: true, username: true, fullName: true, avatarUrl: true },
+          select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
         },
         replyTo: {
           select: { id: true, content: true, deletedAt: true, user: { select: { username: true } } },
@@ -100,7 +100,7 @@ export const updateMessage = async (
     },
     include: {
       user: {
-        select: { id: true, username: true, fullName: true, avatarUrl: true },
+        select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
       },
       replyTo: {
         select: { id: true, content: true, deletedAt: true, user: { select: { username: true } } },
@@ -135,7 +135,7 @@ export const softDeleteMessageInTransaction = async (
     data: { deletedAt: new Date() },
     include: {
       user: {
-        select: { id: true, username: true, fullName: true, avatarUrl: true },
+        select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
       },
       replyTo: {
         select: { id: true, content: true, deletedAt: true, user: { select: { username: true } } },

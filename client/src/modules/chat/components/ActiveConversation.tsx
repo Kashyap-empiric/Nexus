@@ -16,9 +16,10 @@ import { InfoPanel } from "./InfoPanel";
 
 interface ActiveConversationProps {
   conversationId: string;
+  highlightMessageId?: string;
 }
 
-export function ActiveConversation({ conversationId }: ActiveConversationProps) {
+export function ActiveConversation({ conversationId, highlightMessageId }: ActiveConversationProps) {
   useConversationSocket(conversationId);
   const user = useUser();
   const currentUserId = user?.id || null;
@@ -118,6 +119,7 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
           members={isChannel ? conversation.members : undefined}
           isChannel={isChannel || undefined}
           onReply={handleReply}
+          highlightMessageId={highlightMessageId}
         />
 
         <MessageInput

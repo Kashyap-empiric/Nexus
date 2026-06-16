@@ -41,6 +41,9 @@ export const API_ROUTES = {
     PUSH_SUBSCRIBE: '/notifications/push/subscribe',
     PUSH_UNSUBSCRIBE: '/notifications/push/subscribe',
   },
+  ONBOARDING: {
+    COMPLETE: '/onboarding/complete',
+  },
 } as const;
 
 

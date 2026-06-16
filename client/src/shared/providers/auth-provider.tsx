@@ -50,7 +50,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           handleSignOut(queryClient);
           
           // Only redirect to login if they are currently on a protected route
-          const isPublicRoute = pathnameRef.current === APP_ROUTES.HOME || pathnameRef.current?.startsWith(APP_ROUTES.AUTH.INDEX);
+          const isPublicRoute = pathnameRef.current === APP_ROUTES.HOME || 
+                                pathnameRef.current === APP_ROUTES.AUTH.LOGIN || 
+                                pathnameRef.current === APP_ROUTES.AUTH.REGISTER || 
+                                pathnameRef.current === APP_ROUTES.AUTH.FORGOT_PASSWORD ||
+                                pathnameRef.current?.startsWith(APP_ROUTES.AUTH.INDEX);
           if (!isPublicRoute) {
             routerRef.current.push(APP_ROUTES.AUTH.LOGIN);
           }
