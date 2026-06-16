@@ -1,9 +1,11 @@
 # Global Loading, Error Pages & Onboarding Flow — Implementation Plan
 
-> **Status:** Draft Plan
+> **Status:** Revised Plan (v2)
 > **Last Updated:** 2026-06-16
 > **Covers:** Global `loading.tsx` · Global `error.tsx` · Onboarding wizard for new users
 > **Prerequisites:** Auth module complete. Workspace module complete (CRUD, channels). Profiles module complete.
+> **Revision Note:** This v2 plan incorporates 10 architectural corrections from a thorough code review.
+> See [Architectural Decisions & Rationale](#10-architectural-decisions--rationale) for what changed and why.
 
 ---
 
@@ -17,6 +19,8 @@
 6. [Implementation Order](#6-implementation-order)
 7. [File Changes Summary](#7-file-changes-summary)
 8. [Edge Cases & Risks](#8-edge-cases--risks)
+9. [Design Guidelines](#9-design-guidelines)
+10. [Architectural Decisions & Rationale](#10-architectural-decisions--rationale)
 
 ---
 
@@ -33,6 +37,7 @@
 | AuthGate loading state | `client/src/shared/providers/AuthGate.tsx` | ✅ Inline spinner + "Authenticating..." text |
 | EmptyStateSkeleton | `client/src/modules/conversations/components/EmptyStateSkeleton.tsx` | ✅ Basic skeleton for empty state |
 | `AppLayoutShell` | `client/src/shared/components/layout/AppLayoutShell.tsx` | ✅ Main app shell with header, sidebar, modals |
+| `onboardUserToWorkspaceInTransaction` | `server/src/modules/workspaces/workspaces.repository.ts` | ✅ Server-side onboarding transaction helper |
 
 ### What's Missing
 
@@ -43,6 +48,7 @@
 | **No onboarding flow** | New users land on empty `/conversations` with no guidance — no workspace creation prompt, no profile setup |
 | **No global error boundary** | Uncaught errors bubble up to React's default error overlay (dev) or blank page (prod) |
 | **No suspended loading states** | `Suspense` is only used in `login/page.tsx` wrapping `LoginForm` — nowhere else |
+| **No `onboardingCompleted` on User model** | Cannot deterministically track onboarding completion |
 
 ### Key Observations
 
@@ -54,7 +60,7 @@
 
 4. **After registration, user lands on `/conversations`** — The `auth-provider.tsx` redirects `SIGNED_IN` → `/conversations`. For brand new users with no conversations, workspaces, or profile data, this is a dead end.
 
-5. **Server-side onboarding exists** — `onboardUserToWorkspaceInTransaction` already handles adding a user to a workspace's `#general` channel. This needs a client-facing onboarding flow to call it.
+5. **Server-side onboarding exists** — `onboardUserToWorkspaceInTransaction` already handles adding a user to a workspace's `#general` channel. This needs a client-facing onboarding flow and a transactional completion endpoint.
 
 ---
 
@@ -66,7 +72,7 @@ Next.js supports `loading.tsx` and `error.tsx` at every route segment level. The
 
 ```
 app/
-├── loading.tsx          ← Root loading (full-screen, shown during initial load)
+├── loading.tsx          ← Root loading (simple — rarely visible)
 ├── error.tsx            ← Root error boundary (catches unhandled errors)
 ├── not-found.tsx         ← 404 page (existing)
 │
@@ -76,67 +82,187 @@ app/
 │   └── error.tsx         ← Auth error boundary
 │
 ├── (protected)/
-│   ├── layout.tsx        ← Protected layout with AppLayoutShell (existing)
-│   ├── loading.tsx       ← Protected loading (shown inside AppLayoutShell)
+│   ├── layout.tsx        ← Protected layout with AppLayoutShell (existing — needs Suspense wrapper)
+│   ├── loading.tsx       ← Protected loading (wrapped in Suspense inside layout)
 │   └── error.tsx         ← Protected error boundary (shown inside AppLayoutShell)
-│
-└── (protected)/
-    └── settings/
-        ├── loading.tsx   ← Settings-specific loading skeleton
-        └── error.tsx     ← Settings-specific error boundary
+│   │
+│   ├── onboarding/       ← NEW: Inside (protected) to reuse AuthGate
+│   │   ├── layout.tsx    ← Minimal layout (no sidebar, just header + progress)
+│   │   ├── page.tsx      ← Onboarding wizard (client component)
+│   │   ├── loading.tsx   ← Onboarding loading skeleton
+│   │   └── error.tsx     ← Onboarding error boundary
+│   │
+│   └── settings/
+│       ├── loading.tsx   ← Settings-specific loading skeleton
+│       └── error.tsx     ← Settings-specific error boundary
 ```
 
-**Key decision: Place `loading.tsx` and `error.tsx` at the route group level** — this provides the best balance of coverage vs. granularity. Individual page-level loading/error files can be added later if needed.
+**Key decisions:**
+- **`loading.tsx` and `error.tsx` at route group level** — best balance of coverage vs. granularity.
+- **Onboarding inside `(protected)`** — reuses AuthGate, authenticated user state, prevents anonymous access.
+- **Suspense in protected layout** — Without `<Suspense fallback={...}>` inside the layout, the `loading.tsx` may not render as expected. The protected layout must explicitly wrap children in a Suspense boundary.
 
 ### 2.2 Loading UX Strategy
 
-| Level | Component | Behavior |
-|---|---|---|
-| **Root (`app/`)** | Full-screen Nexus logo + "Loading..." | Shown during initial JS bundle evaluation, font loading, etc. |
-| **Auth (`(auth)/`)** | Minimal skeleton (sidebar + form placeholder) | Shown during auth page transitions (login → register) |
-| **Protected (`(protected)/`)** | AppLayoutShell-compatible skeleton | Shown inside the shell (sidebar + content area skeleton) |
-| **Settings** | Settings page skeleton | Shown during settings page loads |
+| Level | Component | Behavior | Visibility |
+|---|---|---|---|
+| **Root (`app/`)** | Simple centered spinner | Shown during initial route suspense/streaming | **Rarely visible** — don't invest in elaborate animations |
+| **Auth (`(auth)/`)** | Minimal skeleton (sidebar + form placeholder) | Shown during auth page transitions | Occasional |
+| **Protected (`(protected)/`)** | Content-area spinner | **Must be wrapped in `<Suspense>` inside the layout** | Common on slow navigation |
+| **Settings** | Settings page skeleton | Shown during settings page loads | Occasional |
+| **Onboarding** | Minimal skeleton with progress bar | Shown during onboarding load | Rare (one-time) |
 
 ### 2.3 Error UX Strategy
 
-| Level | Component | Behavior |
+| Level | Component | Recovery Actions |
 |---|---|---|
-| **Root (`app/`)** | Full-screen error with "Try Again" button | Catches errors that break the entire app (critical JS errors) |
-| **Auth (`(auth)/`)** | Auth-styled error card | Catches login/register/forgot-password errors |
-| **Protected (`(protected)/`)** | In-app error card with retry + "Go Home" | Catches errors in the main app area (sidebar still visible) |
-| **Settings** | Settings-specific error card | Catches settings page errors |
+| **Root (`app/`)** | Full-screen error with multiple recovery options | **Try Again** · **Go Home** · **Reload Page** |
+| **Auth (`(auth)/`)** | Auth-styled error card | **Try Again** · **Back to Login** |
+| **Protected (`(protected)/`)** | In-app error card with retry + navigation | **Try Again** · **Go Home** |
+| **Settings** | Settings-specific error card | **Retry** |
+| **Onboarding** | Onboarding-styled error card | **Try Again** · **Skip to Home** |
 
-### 2.4 Onboarding Entry Points
+Every error page includes navigation recovery options because `reset()` cannot recover from all failures — sometimes only a hard navigation or page reload works.
 
-| Trigger | Action |
-|---|---|
-| **User registers for the first time** | After auth callback → redirect to `/onboarding` |
-| **User has no workspaces** | Show workspace creation prompt in the empty state OR redirect to onboarding |
-| **User clicks "Skip" on onboarding** | Redirect to `/conversations` (can access onboarding later from settings) |
+### 2.4 Onboarding Detection
 
-**Detection strategy:** Check if the user has zero workspaces and zero DMs. If both are empty, they're a brand new user. If they have workspaces but no profile data (no `fullName`, no `bio`), show profile completion prompts.
+**Source of truth:** `User.onboardingCompleted` boolean on the Prisma `User` model.
 
-### 2.5 Onboarding as a Step Wizard
-
-Break onboarding into steps so users can complete them at their own pace:
-
-```
-Step 1: Set up your profile    (username, full name, bio, avatar)
-Step 2: Create a workspace     (name, slug — or skip to join via invite)
-Step 3: Invite teammates       (email-based multi-invite)
-Step 4: Done! 🎉               (redirect to workspace + celebration)
+```prisma
+model User {
+  // ... existing fields
+  
+  onboardingCompleted Boolean @default(false)
+}
 ```
 
-**Route:** `/onboarding` — placed at the app root level (not inside `(protected)` or `(auth)`) so it's accessible after auth but before the full app shell.
+Alternative (timestamp-based):
 
-```diff
- app/
-+├── onboarding/
-+│   ├── page.tsx              ← Onboarding wizard page (client component)
-+│   ├── layout.tsx            ← Minimal layout (no sidebar, just header with progress)
-+│   ├── loading.tsx           ← Loading state for onboarding
-+│   └── error.tsx             ← Error boundary for onboarding
+```prisma
+model User {
+  // ... existing fields
+  
+  onboardingCompletedAt DateTime?
+}
 ```
+
+**Detection logic** (in `AuthGate.tsx` or a dedicated hook):
+
+```typescript
+function shouldOnboard(user: User): boolean {
+  // Single deterministic check
+  return !user.onboardingCompleted;
+}
+```
+
+**Why not heuristics (`!hasWorkspaces && !hasProfile`):**
+- User intentionally deletes all workspaces → shows onboarding again
+- User joins via invite and never fills profile → shows onboarding again
+- Workspace migration bug → false positive
+- Imported users → false positive
+
+A single boolean field avoids all these edge cases.
+
+**Why not localStorage:**
+- User switches devices → onboarding shows again
+- User clears storage → onboarding shows again
+- Difficult to query/administer
+- Mobile app/web mismatch later
+
+### 2.5 Onboarding Simplified (MVP)
+
+```
+Step 1: Set up your profile    (full name, bio, avatar — username from auth)
+Step 2: Create your workspace  (name, slug — required, no skip)
+Step 3: Done! 🎉               (redirect to workspace #general)
+```
+
+**Removed from MVP:**
+- ~~Invite teammates step~~ (invite flow exists elsewhere; adds API complexity; users often skip; friction during first-time activation)
+- ~~Tour step~~ (post-MVP)
+- ~~Join existing workspace branch~~ (post-MVP)
+- ~~Username availability checks~~ (post-MVP)
+- ~~Complex resume-progress logic~~ (post-MVP)
+
+### 2.6 Workspace Creation Required (No "Skip")
+
+For MVP, workspace creation is **required** during onboarding. Users cannot skip it.
+
+**Rationale:** Nexus is workspace-centric. Without a workspace, the user has almost nothing to do. "Skip" creates a dead end.
+
+**Default behavior:**
+- Auto-generate workspace name from user's name: `"{Full Name}'s Workspace"`
+- One-click creation: `[Create Workspace]`
+- Creates `#general` channel automatically
+
+This dramatically increases activation by reducing the shortest successful path to:
+
+```
+Register → Create workspace → Start using product
+```
+
+### 2.7 Transactional Onboarding Completion
+
+**Do NOT make individual API calls per step.** Use a single transactional endpoint.
+
+```http
+POST /api/onboarding/complete
+```
+
+Payload:
+
+```json
+{
+  "fullName": "Jane Doe",
+  "bio": "Engineer at Acme",
+  "avatarPath": "users/uuid/avatar.jpg",
+  "workspaceName": "Jane's Workspace",
+  "workspaceSlug": "janes-workspace"
+}
+```
+
+Server transaction (single atomic operation):
+
+```
+prisma.$transaction(async (tx) => {
+  1. Update user profile (fullName, bio)
+  2. Create workspace with owner membership
+  3. Create #general channel
+  4. Add user to #general
+  5. Set onboardingCompleted = true
+})
+```
+
+**Benefits:**
+- One rollback point
+- No partially-completed onboarding states
+- Much easier to reason about and debug
+- The client sends all data at once after collecting it locally
+
+### 2.8 State Management for Wizard
+
+**Do NOT store all wizard state in global Zustand.** Use a lighter approach:
+
+```
+React Hook Form          → step-local form state (profile fields, workspace fields)
+URL step parameter       → current step (survives refreshes)
+Minimal Zustand/state    → createdWorkspaceId (set after API response)
+```
+
+**Step as URL parameter:**
+
+```txt
+/(protected)/onboarding        → step 1 (profile)
+/(protected)/onboarding?step=2 → step 2 (workspace)
+/(protected)/onboarding?step=3 → step 3 (done)
+```
+
+This survives page refreshes automatically with zero extra code.
+
+**Form state:**
+- Step 1 profile fields → local React Hook Form (or simple `useState`)
+- Step 2 workspace fields → local React Hook Form (or simple `useState`)
+- On "Finish" → collect all local state → send to `POST /api/onboarding/complete`
 
 ---
 
@@ -144,40 +270,23 @@ Step 4: Done! 🎉               (redirect to workspace + celebration)
 
 ### 3.1 Root Loading (`app/loading.tsx`)
 
+**Note:** This will rarely appear in practice — `app/loading.tsx` primarily shows during route segment suspension/streaming, not during initial JS evaluation. Keep it simple.
+
 ```tsx
 // app/loading.tsx
-// Full-screen centered loading state
-// Shown during initial JS evaluation, font loading, etc.
+// Simple centered spinner — keep minimal since this is rarely visible
 
 export default function RootLoading() {
   return (
-    <div className="min-h-dvh bg-background flex flex-col items-center justify-center gap-4">
-      {/* Animated Nexus logo */}
-      <div className="relative">
-        <div className="w-16 h-16 rounded-2xl bg-brand flex items-center justify-center shadow-lg">
-          <MessageSquare className="h-8 w-8 text-brand-foreground" />
-        </div>
-        {/* Pulse ring animation */}
-        <div className="absolute -inset-2 rounded-2xl bg-brand/20 animate-ping" />
-      </div>
-      
-      {/* Loading text with dots animation */}
-      <div className="flex items-center gap-1 text-muted-foreground">
-        <span className="text-sm font-medium">Loading Nexus</span>
-        <span className="animate-bounce delay-0">.</span>
-        <span className="animate-bounce delay-150">.</span>
-        <span className="animate-bounce delay-300">.</span>
+    <div className="min-h-dvh bg-background flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 rounded-full border-2 border-border border-t-brand animate-spin" />
+        <p className="text-sm text-muted-foreground">Loading Nexus</p>
       </div>
     </div>
   );
 }
 ```
-
-**Key details:**
-- Uses `MessageSquare` icon from `lucide-react` (same as existing Nexus logo in `MobileAuthHeader`)
-- Animated ping ring for visual polish
-- Bouncing dots for loading progress indication
-- Dark/light mode compatible via CSS variables
 
 ### 3.2 Auth Loading (`app/(auth)/loading.tsx`)
 
@@ -203,7 +312,6 @@ export default function AuthLoading() {
       {/* Form area skeleton */}
       <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8">
         <div className="w-full max-w-[400px] space-y-6 animate-in fade-in">
-          {/* Card skeleton */}
           <div className="space-y-4">
             <div className="h-8 w-32 bg-muted animate-pulse rounded mx-auto" />
             <div className="space-y-3">
@@ -222,24 +330,46 @@ export default function AuthLoading() {
 
 ### 3.3 Protected Loading (`app/(protected)/loading.tsx`)
 
-This is the most important loading page — it renders inside the `AppLayoutShell` structure so users see a meaningful skeleton instead of a flash of nothing.
+**⚠️ Important:** This loading state will NOT automatically render inside `AppLayoutShell`. Next.js `loading.tsx` works via Suspense boundaries. The protected layout must explicitly wrap children:
+
+```tsx
+// app/(protected)/layout.tsx (MODIFIED)
+import { Suspense } from 'react';
+import { SocketProvider } from "@/socket/socketProvider";
+import { AppLayoutShell } from "@/shared/components/layout/AppLayoutShell";
+import ProtectedLoading from './loading';
+
+export default function ProtectedLayout({
+  children,
+  modal,
+}: {
+  children: React.ReactNode;
+  modal: React.ReactNode;
+}) {
+  return (
+    <>
+      <SocketProvider />
+      <AppLayoutShell>
+        <Suspense fallback={<ProtectedLoading />}>
+          {children}
+        </Suspense>
+      </AppLayoutShell>
+      {modal}
+    </>
+  );
+}
+```
 
 ```tsx
 // app/(protected)/loading.tsx
-// Loading state shown inside AppLayoutShell
+// Loading state shown inside AppLayoutShell via Suspense
 
 export default function ProtectedLoading() {
   return (
-    <div className="flex-1 flex flex-col h-full">
-      {/* Content area skeleton */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="flex flex-col items-center gap-4">
-          {/* Animated spinner */}
-          <div className="relative">
-            <div className="w-12 h-12 rounded-full border-[3px] border-border/50 border-t-brand animate-spin" />
-          </div>
-          <p className="text-sm text-muted-foreground animate-pulse">Loading content...</p>
-        </div>
+    <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-10 h-10 rounded-full border-[3px] border-border/50 border-t-brand animate-spin" />
+        <p className="text-sm text-muted-foreground animate-pulse">Loading content...</p>
       </div>
     </div>
   );
@@ -250,19 +380,16 @@ export default function ProtectedLoading() {
 
 ```tsx
 // app/(protected)/settings/loading.tsx
-// Settings-page-specific skeleton
 
 export default function SettingsLoading() {
   return (
     <div className="flex-1 flex h-full">
-      {/* Settings sidebar skeleton */}
       <aside className="w-64 border-r p-4 space-y-2 hidden md:block">
         {[1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="h-9 bg-muted animate-pulse rounded-md" />
         ))}
       </aside>
 
-      {/* Settings content skeleton */}
       <div className="flex-1 p-6 space-y-6">
         <div className="h-8 w-48 bg-muted animate-pulse rounded" />
         <div className="space-y-4">
@@ -276,18 +403,38 @@ export default function SettingsLoading() {
 }
 ```
 
+### 3.5 Onboarding Loading (`app/(protected)/onboarding/loading.tsx`)
+
+```tsx
+// app/(protected)/onboarding/loading.tsx
+
+export default function OnboardingLoading() {
+  return (
+    <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-8 h-8 rounded-full border-2 border-border border-t-brand animate-spin" />
+        <p className="text-sm text-muted-foreground">Loading onboarding...</p>
+      </div>
+    </div>
+  );
+}
+```
+
 ---
 
 ## 4. Global Error Pages
 
 ### 4.1 Root Error (`app/error.tsx`)
 
+Includes multiple recovery options because `reset()` alone cannot recover from all failures.
+
 ```tsx
 // app/error.tsx
 'use client';
 
 import { useEffect } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Home, RotateCcw } from 'lucide-react';
+import Link from 'next/link';
 
 export default function RootError({
   error,
@@ -297,13 +444,12 @@ export default function RootError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log to error reporting service
     console.error('Root error:', error);
   }, [error]);
 
   return (
     <div className="min-h-dvh bg-background flex flex-col items-center justify-center p-4">
-      <div className="max-w-md w-full text-center space-y-6">
+      <div className="max-w-md w-full text-center space-y-8">
         <div className="relative mx-auto w-20 h-20 flex items-center justify-center">
           <div className="absolute inset-0 bg-destructive/20 rounded-full animate-pulse blur-xl" />
           <AlertTriangle className="w-12 h-12 text-destructive relative z-10" />
@@ -321,13 +467,29 @@ export default function RootError({
           )}
         </div>
 
-        <button
-          onClick={reset}
-          className="inline-flex items-center justify-center h-10 px-6 rounded-md bg-brand text-brand-foreground hover:bg-brand/90 text-sm font-medium shadow transition-colors gap-2"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Try Again
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <button
+            onClick={reset}
+            className="inline-flex items-center justify-center h-10 px-6 rounded-md bg-brand text-brand-foreground hover:bg-brand/90 text-sm font-medium shadow transition-colors gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Try Again
+          </button>
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center h-10 px-6 rounded-md border border-border hover:bg-muted text-sm font-medium transition-colors gap-2"
+          >
+            <Home className="w-4 h-4" />
+            Go Home
+          </Link>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center justify-center h-10 px-6 rounded-md border border-border hover:bg-muted text-sm font-medium transition-colors gap-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Reload Page
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -340,7 +502,7 @@ export default function RootError({
 // app/(auth)/error.tsx
 'use client';
 
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { APP_ROUTES } from '@/config/url';
 
@@ -368,8 +530,9 @@ export default function AuthError({
         <div className="flex flex-col gap-2 pt-2">
           <button
             onClick={reset}
-            className="w-full h-9 rounded-md bg-brand text-brand-foreground hover:bg-brand/90 text-sm font-medium transition-colors"
+            className="w-full h-9 rounded-md bg-brand text-brand-foreground hover:bg-brand/90 text-sm font-medium transition-colors gap-2 inline-flex items-center justify-center"
           >
+            <RefreshCw className="w-4 h-4" />
             Try Again
           </button>
           <Link
@@ -392,7 +555,7 @@ export default function AuthError({
 'use client';
 
 import { useEffect } from 'react';
-import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Home, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 import { APP_ROUTES } from '@/config/url';
 
@@ -436,6 +599,13 @@ export default function ProtectedError({
             <Home className="w-4 h-4" />
             Go Home
           </Link>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center justify-center h-9 px-5 rounded-md border border-border hover:bg-muted text-sm font-medium transition-colors gap-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Reload Page
+          </button>
         </div>
       </div>
     </div>
@@ -483,9 +653,55 @@ export default function SettingsError({
 }
 ```
 
-### 4.5 Onboarding Error (`app/onboarding/error.tsx`)
+### 4.5 Onboarding Error (`app/(protected)/onboarding/error.tsx`)
 
-Similar in style to the auth error but with onboarding-specific messaging.
+```tsx
+// app/(protected)/onboarding/error.tsx
+'use client';
+
+import { AlertCircle, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
+import { APP_ROUTES } from '@/config/url';
+
+export default function OnboardingError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  return (
+    <div className="flex-1 flex items-center justify-center p-8">
+      <div className="max-w-sm w-full bg-card border rounded-xl p-8 text-center space-y-4 shadow-sm">
+        <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+          <AlertCircle className="h-6 w-6 text-destructive" />
+        </div>
+        <div className="space-y-1">
+          <h3 className="font-semibold text-foreground">Something went wrong</h3>
+          <p className="text-sm text-muted-foreground">
+            We couldn't complete the setup. Please try again.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2 pt-2">
+          <button
+            onClick={reset}
+            className="w-full h-9 rounded-md bg-brand text-brand-foreground hover:bg-brand/90 text-sm font-medium transition-colors gap-2 inline-flex items-center justify-center"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Try Again
+          </button>
+          <Link
+            href={APP_ROUTES.CONVERSATIONS.INDEX}
+            className="w-full h-9 rounded-md border border-border hover:bg-muted text-sm font-medium transition-colors inline-flex items-center justify-center"
+          >
+            Skip to Home
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
 
 ---
 
@@ -493,13 +709,13 @@ Similar in style to the auth error but with onboarding-specific messaging.
 
 ### 5.1 Architecture
 
-**Route:** `/onboarding` — standalone layout, no sidebar or navigation rail.
+**Route:** `/(protected)/onboarding` — inside protected layout group, reusing AuthGate.
 
-**Layout:**
+**Layout:** Minimal — overrides the normal `AppLayoutShell` with a simpler shell.
 
 ```tsx
-// app/onboarding/layout.tsx
-// Minimal layout — just progress bar + content
+// app/(protected)/onboarding/layout.tsx
+// Minimal layout — just branding header + progress + content
 
 export default function OnboardingLayout({
   children,
@@ -531,35 +747,24 @@ export default function OnboardingLayout({
 
 **State Management:**
 
-Use a zustand store (`client/src/modules/onboarding/store/onboardingStore.ts`):
+Minimal — use URL `?step=` for current step, local `useState`/`React Hook Form` for form data:
 
-```typescript
-interface OnboardingState {
-  currentStep: number;
-  totalSteps: number;
-  
-  // Step 1: Profile
-  username: string;
-  fullName: string;
-  bio: string;
-  avatarFile: File | null;
-  
-  // Step 2: Workspace
-  workspaceName: string;
-  workspaceSlug: string;
-  skipWorkspace: boolean;
-  
-  // Step 3: Invites
-  invitedUsers: Array<{ id: string; email: string; username: string }>;
-  
-  // Actions
-  setStep: (step: number) => void;
-  nextStep: () => void;
-  prevStep: () => void;
-  resetOnboarding: () => void;
-  // ... individual field setters
-}
 ```
+URL: /(protected)/onboarding          → step 1
+URL: /(protected)/onboarding?step=2   → step 2
+URL: /(protected)/onboarding?step=3   → step 3 (completion)
+
+State per step:
+  Step 1 → useState (fullName, bio, avatarFile)
+  Step 2 → useState (workspaceName, workspaceSlug)
+  
+On "Finish":
+  → Collect all data from both steps
+  → POST /api/onboarding/complete
+  → Redirect to workspace #general
+```
+
+No global store needed for MVP. The only piece of persistent state across steps is `createdWorkspaceId` which is set after the API response.
 
 ### 5.2 Step Components
 
@@ -567,277 +772,241 @@ interface OnboardingState {
 
 ```
 ┌──────────────────────────────────┐
-│  Welcome to Nexus! 👋            │
-│  Let's get your profile set up.  │
+│  ● ─── ○ ─── ○                   │
+│  Profile  Workspace  Done         │
 │                                  │
 │  ┌──────────────────────────────┐│
-│  │     [Avatar Upload Circle]   ││
-│  │         (click to add)       ││
+│  │ [Avatar Upload Circle]       ││
+│  │    (click to add photo)      ││
 │  └──────────────────────────────┘│
+│                                  │
+│  Welcome to Nexus!               │
+│  Let's set up your profile.      │
 │                                  │
 │  Display Name                    │
 │  ┌──────────────────────────────┐│
 │  │  e.g. Jane Doe               ││
 │  └──────────────────────────────┘│
 │                                  │
-│  Username                        │
-│  ┌──────────────────────────────┐│
-│  │  @jane_doe                   ││
-│  └──────────────────────────────┘│
-│                                  │
-│  Bio (optional)                  │
+│  About Me (optional)             │
 │  ┌──────────────────────────────┐│
 │  │  Tell us about yourself...   ││
 │  └──────────────────────────────┘│
 │                                  │
-│  [Continue]         [Skip →]     │
+│  [Continue →]                    │
 └──────────────────────────────────┘
 ```
 
 **Component:** `SetupProfileStep.tsx`
 - Avatar upload (reuses `uploadAvatar` from `@/shared/lib/upload.ts`)
-- Username input (with availability check / debounced validation)
-- Full name input
+- Full name input (required)
 - Bio textarea (optional)
-- "Continue" and "Skip" buttons
+- Username is **not** shown here — it comes from Supabase auth metadata
+- "Continue" button only (no skip — workspace is required)
 
-#### Step 2: Create or Join a Workspace
+#### Step 2: Create Your Workspace
 
 ```
 ┌──────────────────────────────────┐
-│  Create Your Workspace           │
+│  ○ ─── ● ─── ○                   │
+│  Profile  Workspace  Done         │
+│                                  │
+│  Create Your Workspace            │
 │                                  │
 │  A workspace is where you and    │
 │  your team collaborate.          │
 │                                  │
-│  ┌──────────────────────────────┐│
-│  │ ○ Create a new workspace    ││
-│  │   (recommended)              ││
-│  ├──────────────────────────────┤│
-│  │ ○ Join an existing one      ││
-│  │   (enter invite code)        ││
-│  └──────────────────────────────┘│
-│                                  │
-│  (if "Create" selected:)         │
 │  Workspace Name                  │
 │  ┌──────────────────────────────┐│
-│  │  e.g. Acme Corp              ││
+│  │  Jane's Workspace            ││
 │  └──────────────────────────────┘│
 │                                  │
 │  Workspace URL                   │
 │  ┌──────────────────────────────┐│
-│  │  nexus.app/acme-corp         ││
+│  │  janes-workspace             ││
 │  └──────────────────────────────┘│
 │                                  │
-│  [Continue]  [Skip →]            │
+│  [Create Workspace]              │
 └──────────────────────────────────┘
 ```
 
 **Component:** `CreateWorkspaceStep.tsx`
-- Radio selection: create new or join existing
 - Workspace name → auto-generates slug
-- Slug input (editable, validates uniqueness)
-- "Skip" creates a default personal workspace or skips entirely
+- Slug input (editable, with uniqueness validation)
+- **No "skip" option** — workspace creation is required
+- Default name: `"{FullName}'s Workspace"`
+- Button: "Create Workspace" (one click)
 
-**Server Integration:**
-- Creates workspace via `POST /api/workspaces`
-- Creates default `#general` channel
-- Adds creator as `OWNER`
-- Uses `onboardUserToWorkspaceInTransaction` pattern
-
-#### Step 3: Invite Teammates (Optional)
+#### Step 3 (Complete): You're All Set! 🎉
 
 ```
 ┌──────────────────────────────────┐
-│  Invite Your Teammates           │
+│  ○ ─── ○ ─── ●                   │
+│  Profile  Workspace  Done         │
 │                                  │
-│  Add people by email to start    │
-│  collaborating right away.       │
-│                                  │
-│  ┌──────────────────────────────┐│
-│  │ [john@acme.com ×]           ││
-│  │ [jane@co.com ×]             ││
-│  │ [type email to search... 🔍] ││
-│  └──────────────────────────────┘│
-│                                  │
-│  ┌──────────────────────────────┐│
-│  │ 📧 jane@company.com — Jane  ││
-│  │ 📧 john@acme.com — John Doe ││
-│  └──────────────────────────────┘│
-│                                  │
-│  [Invite & Continue] [Skip]      │
-└──────────────────────────────────┘
-```
-
-**Component:** `InviteTeammatesStep.tsx`
-- Email-based multi-user search (reuses existing `searchUsers` API)
-- Chip/tag input (same as proposed for invite modal)
-- Batch invite via `POST /workspaces/:id/invite-multiple`
-- Progress indication for each invite
-
-#### Step 4: Done! 🎉
-
-```
-┌──────────────────────────────────┐
 │  🎉 You're All Set!              │
 │                                  │
 │  ┌──────────────────────────────┐│
 │  │  ✓ Profile created           ││
 │  │  ✓ Workspace ready           ││
-│  │  ✓ Invites sent              ││
 │  └──────────────────────────────┘│
 │                                  │
-│  What would you like to do?      │
-│                                  │
-│  [Start chatting in #general]   │
-│  [Explore settings]              │
-│  [Take a tour ✨]                │
+│  [Start chatting in #general →]  │
 └──────────────────────────────────┘
 ```
 
 **Component:** `OnboardingCompleteStep.tsx`
 - Summary of what was set up
-- "Start chatting" → redirects to workspace's `#general` channel
-- "Explore settings" → opens settings modal
-- "Take a tour" → highlights key UI elements (navigation rail, sidebar, etc.)
+- "Start chatting in #general" → redirects to `/(protected)/workspaces/{slug}/channels/{generalId}`
+- Single CTA button — no secondary options to reduce decision fatigue
 
-### 5.3 Progress Bar
-
-A horizontal progress indicator at the top of the onboarding layout:
+### 5.3 Progress Indicator
 
 ```tsx
 // Components: StepProgress.tsx
+
 interface StepProgressProps {
   currentStep: number;
   totalSteps: number;
-  steps: Array<{ label: string; icon: React.ReactNode }>;
+  steps: Array<{ label: string }>;
 }
 ```
 
 Renders as:
+
 ```
-    ● ─── ● ─── ○ ─── ○
-  Profile  Workspace  Invite  Done
+    ● ─── ○ ─── ○
+  Profile  Workspace  Done
 ```
 
 ### 5.4 Onboarding Detection & Redirection
 
-Modify `AuthGate.tsx` or create a new component to detect new users after login:
+**Location:** `AuthGate.tsx` — after auth is initialized and user is confirmed.
+
+**New client-side API call:** `GET /api/me` should return `onboardingCompleted`.
 
 ```typescript
-// In AuthGate.tsx or a new OnboardingGate.tsx
-// After auth is initialized + user is logged in:
+// In AuthGate.tsx
+
+const { data: profile } = useQuery({
+  queryKey: ['my-profile'],
+  queryFn: () => api.get('/api/me'),
+  enabled: isInitialized && !!user,
+});
 
 useEffect(() => {
-  if (isInitialized && user) {
-    if (shouldShowOnboarding()) {
+  if (isInitialized && user && profile) {
+    if (!profile.onboardingCompleted) {
       router.push('/onboarding');
     }
   }
-}, [isInitialized, user]);
-
-function shouldShowOnboarding(): boolean {
-  // Check if the user has completed onboarding
-  const onboardingCompleted = localStorage.getItem('nexus_onboarding_completed');
-  if (onboardingCompleted === 'true') return false;
-  
-  // Check if user has any workspaces
-  const hasWorkspaces = workspaces.length > 0;
-  
-  // Check if user has a fullName set (proxy for "has completed profile")
-  const hasProfile = !!user.user_metadata?.fullName;
-  
-  return !hasWorkspaces && !hasProfile;
-}
+}, [isInitialized, user, profile]);
 ```
 
-**Detection strategies (choose one):**
+Alternatively, if `GET /api/me` is already called by the app on load, extend it to include `onboardingCompleted` and use its result directly.
 
-| Strategy | Pros | Cons |
-|---|---|---|
-| **Local storage flag** | Simple, fast, no API call | User can clear storage; no server-side record |
-| **Server-side `onboardingCompleted` field** | Persistent, reliable | Requires DB migration; extra API call on load |
-| **Heuristic (no workspaces + no profile)** | No new fields needed | Could trigger for returning users who skipped profile setup |
-| **Query `GET /api/me` on auth** | Only one API call | Slightly longer initial load |
+### 5.5 Transactional Completion Flow
 
-**Recommended:** Heuristic approach — check `workspaces.length === 0` and `!currentUserProfile.fullName`. This avoids DB schema changes and accurately detects new users. Store a `nexus_onboarding_completed` localStorage flag as a quick cache so returning users don't re-trigger.
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant W as Wizard (Client)
+    participant API as POST /api/onboarding/complete
+    participant DB as Prisma Transaction
 
-### 5.5 Onboarding Module Structure
+    U->>W: Step 1: Fill profile
+    W->>W: Store in local state (React Hook Form)
+    U->>W: Step 2: Fill workspace
+    W->>W: Store in local state
+    
+    U->>W: Click "Create Workspace"
+    W->>W: Validate all fields
+    W->>API: POST /api/onboarding/complete { fullName, bio, avatarPath, workspaceName, workspaceSlug }
+    
+    API->>DB: $transaction
+    DB->>DB: Update user (fullName, bio, onboardingCompleted = true)
+    DB->>DB: Create workspace
+    DB->>DB: Create #general channel
+    DB->>DB: Add user as workspace owner
+    DB->>DB: Add user to #general channel
+    DB-->>API: { workspaceId, generalChannelId, workspaceSlug }
+    
+    API-->>W: 201 { workspaceId, generalChannelId, workspaceSlug }
+    
+    W->>W: Invalidate query cache (workspaces, profile)
+    W->>W: Navigate to workspace #general
+```
+
+### 5.6 Onboarding Module Structure
 
 ```
 client/src/modules/onboarding/
 ├── index.ts                               ← Public exports
 ├── components/
-│   ├── OnboardingWizard.tsx                ← Main wizard orchestrator (step management)
+│   ├── OnboardingWizard.tsx                ← Main wizard orchestrator (reads URL step)
 │   ├── SetupProfileStep.tsx                ← Step 1: Profile setup
-│   ├── CreateWorkspaceStep.tsx             ← Step 2: Workspace creation
-│   ├── InviteTeammatesStep.tsx             ← Step 3: Invite teammates
-│   ├── OnboardingCompleteStep.tsx          ← Step 4: Completion + celebration
-│   ├── StepProgress.tsx                   ← Progress indicator bar
-│   ├── OnboardingSkeleton.tsx             ← Loading state for onboarding
-│   └── UserSearchInput.tsx                ← Reusable email/username multi-select input
-├── store/
-│   └── onboardingStore.ts                 ← Zustand store for wizard state
-├── hooks/
-│   ├── useOnboarding.ts                   ← Main wizard hook
-│   └── useShouldOnboard.ts                ← Detection hook
+│   ├── CreateWorkspaceStep.tsx             ← Step 2: Workspace creation (required)
+│   ├── OnboardingCompleteStep.tsx          ← Step 3 (complete): Celebration + redirect
+│   └── StepProgress.tsx                   ← Progress indicator bar
+├── api/
+│   └── onboarding.api.ts                  ← POST /api/onboarding/complete
 └── types/
     └── onboarding.ts                      ← TypeScript types
 ```
 
-### 5.6 Data Flow
+**File count: 7 files** (down from ~18 in v1 — removed unused store, hooks, invite components, user search input, skeleton)
+
+### 5.7 Data Flow
 
 ```
-User registers → auth callback → AuthGate detects new user
-  → redirect to /onboarding
+User registers → auth callback → AuthGate detects !onboardingCompleted
+  → router.push('/onboarding')
 
-Step 1: SetupProfileStep
-  → PATCH /api/users/me { fullName, bio }
-  → uploadAvatar() to Supabase Storage
-  → Next step
+OnboardingWizard renders based on URL ?step=:
 
-Step 2: CreateWorkspaceStep  
-  → POST /api/workspaces { name, slug }
-  → Server creates workspace + #general channel + owner membership
-  → Server emits workspace:new socket event
-  → Client stores workspace ID for Step 3
-  → Next step (or skip → no workspace created)
+  Step 1 (?step=1 or no param):
+    → SetupProfileStep collects: fullName, bio, avatarFile
+    → Upload avatar to Supabase Storage (returns avatarPath)
+    → "Continue" → router.push('/onboarding?step=2')
 
-Step 3: InviteTeammatesStep
-  → POST /api/workspaces/:id/invite-multiple { userIds: [...] }
-  → Server creates invites + notifications
-  → Next step (or skip)
+  Step 2 (?step=2):
+    → CreateWorkspaceStep collects: workspaceName, workspaceSlug
+    → "Create Workspace" → 
+        POST /api/onboarding/complete {
+          fullName, bio, avatarPath,
+          workspaceName, workspaceSlug
+        }
+    → On success → router.push('/onboarding?step=3')
 
-Step 4: OnboardingCompleteStep
-  → localStorage.setItem('nexus_onboarding_completed', 'true')
-  → Redirect to workspace #general channel
+  Step 3 (?step=3):
+    → OnboardingCompleteStep shows summary
+    → "Start chatting" → router.push(workspace URL)
 
-IF user clicks "Skip" at any step:
-  → Store partial progress
-  → Redirect to /conversations
-  → Show prompt at top: "Complete your profile in Settings → Profile"
+  Any refresh during steps → URL preserves step position
+  No global state lost because all form data is local
 ```
 
 ---
 
 ## 6. Implementation Order
 
-| Step | Feature | Dependencies | Est. Files Changed |
+| Step | Feature | Dependencies | Est. Files |
 |---|---|---|---|
-| 1 | Root `loading.tsx` | None | 1 new file |
-| 2 | Root `error.tsx` | None | 1 new file |
-| 3 | Auth `loading.tsx` + `error.tsx` | None | 2 new files |
-| 4 | Protected `loading.tsx` + `error.tsx` | None | 2 new files |
-| 5 | Settings `loading.tsx` + `error.tsx` | None | 2 new files |
-| 6 | Onboarding store + types | None | 2 new files |
-| 7 | Step components (Profile) | Step 6 | 2 new files |
-| 8 | Step components (Workspace) | Step 6 | 1 new file |
-| 9 | Step components (Invite) | Step 6 | 1 new file |
-| 10 | Step components (Complete) | Step 6 | 1 new file |
-| 11 | Onboarding wizard + layout | Steps 7-10 | 3 new files (layout, page, wizard) |
-| 12 | Onboarding detection + redirect | Step 11 | Modify `AuthGate.tsx` |
-| 13 | `UserSearchInput` reusable component | None | 1 new file |
-| 14 | Testing & review | All above | — |
+| 1 | DB migration: add `onboardingCompleted` to `User` model | None | 2 (prisma schema + migration) |
+| 2 | Server: `POST /api/onboarding/complete` endpoint | Step 1 | 3-4 (controller, service, route, schema) |
+| 3 | Root `loading.tsx` + `error.tsx` | None | 2 new files |
+| 4 | Auth `loading.tsx` + `error.tsx` | None | 2 new files |
+| 5 | Protected `loading.tsx` + Suspense in layout | None | 2 files (1 new, 1 modified) |
+| 6 | Settings `loading.tsx` + `error.tsx` | None | 2 new files |
+| 7 | Onboarding layout + page routing | Step 1 | 2 new files |
+| 8 | Onboarding `loading.tsx` + `error.tsx` | None | 2 new files |
+| 9 | Onboarding API client (`onboarding.api.ts`) | Step 2 | 1 new file |
+| 10 | `SetupProfileStep` component | None | 2 new files (component + types) |
+| 11 | `CreateWorkspaceStep` component | Step 10 | 1 new file |
+| 12 | `OnboardingCompleteStep` component | None | 1 new file |
+| 13 | `OnboardingWizard` + `StepProgress` | Steps 10-12 | 2 new files |
+| 14 | Detection + redirect in `AuthGate.tsx` | Step 13 | 1 modified file |
+| 15 | Testing & review | All above | — |
 
 ---
 
@@ -847,40 +1016,50 @@ IF user clicks "Skip" at any step:
 
 | File | Description |
 |---|---|
-| `app/loading.tsx` | Root loading — full-screen Nexus logo + animation |
-| `app/error.tsx` | Root error boundary — "Something went wrong" + Try Again |
+| `server/prisma/schema.prisma` | Add `onboardingCompleted Boolean @default(false)` to User |
+| `server/.../onboarding/` | Onboarding module (controller, service, route, schema) |
+| `app/loading.tsx` | Root loading — simple spinner |
+| `app/error.tsx` | Root error — Try Again + Go Home + Reload Page |
 | `app/(auth)/loading.tsx` | Auth loading — sidebar + form skeleton |
 | `app/(auth)/error.tsx` | Auth error — card with Try Again + Back to Login |
-| `app/(protected)/loading.tsx` | Protected loading — spinner inside AppLayoutShell |
-| `app/(protected)/error.tsx` | Protected error — card with Try Again + Go Home |
+| `app/(protected)/loading.tsx` | Protected loading — spinner |
+| `app/(protected)/error.tsx` | Protected error — Try Again + Go Home + Reload Page |
 | `app/(protected)/settings/loading.tsx` | Settings loading — sidebar + content skeleton |
 | `app/(protected)/settings/error.tsx` | Settings error — simple retry card |
-| `app/onboarding/layout.tsx` | Onboarding layout — minimal top bar + content |
-| `app/onboarding/page.tsx` | Onboarding page — renders OnboardingWizard |
-| `app/onboarding/loading.tsx` | Onboarding loading |
-| `app/onboarding/error.tsx` | Onboarding error |
+| `app/(protected)/onboarding/layout.tsx` | Onboarding layout — minimal top bar + content |
+| `app/(protected)/onboarding/page.tsx` | Onboarding page — renders OnboardingWizard |
+| `app/(protected)/onboarding/loading.tsx` | Onboarding loading |
+| `app/(protected)/onboarding/error.tsx` | Onboarding error |
 | `modules/onboarding/index.ts` | Onboarding module exports |
-| `modules/onboarding/store/onboardingStore.ts` | Zustand store for wizard state |
+| `modules/onboarding/api/onboarding.api.ts` | API client for `POST /api/onboarding/complete` |
 | `modules/onboarding/types/onboarding.ts` | TypeScript types |
-| `modules/onboarding/hooks/useOnboarding.ts` | Main wizard hook |
-| `modules/onboarding/hooks/useShouldOnboard.ts` | Detection hook |
-| `modules/onboarding/components/OnboardingWizard.tsx` | Step orchestrator |
-| `modules/onboarding/components/SetupProfileStep.tsx` | Step 1 |
-| `modules/onboarding/components/CreateWorkspaceStep.tsx` | Step 2 |
-| `modules/onboarding/components/InviteTeammatesStep.tsx` | Step 3 |
-| `modules/onboarding/components/OnboardingCompleteStep.tsx` | Step 4 |
+| `modules/onboarding/components/OnboardingWizard.tsx` | Step orchestrator (reads URL `?step=`) |
+| `modules/onboarding/components/SetupProfileStep.tsx` | Step 1: Profile setup |
+| `modules/onboarding/components/CreateWorkspaceStep.tsx` | Step 2: Workspace (required, no skip) |
+| `modules/onboarding/components/OnboardingCompleteStep.tsx` | Step 3: Completion + celebration |
 | `modules/onboarding/components/StepProgress.tsx` | Progress bar |
-| `modules/onboarding/components/OnboardingSkeleton.tsx` | Loading skeleton |
-| `modules/onboarding/components/UserSearchInput.tsx` | Reusable multi-user search input |
 
 ### Modified Files
 
 | File | Change |
 |---|---|
-| `app/layout.tsx` | Add `<Suspense>` wrapper around children for streaming |
-| `app/(protected)/layout.tsx` | Optional: Add `<Suspense>` for modal loading |
-| `shared/providers/AuthGate.tsx` | Add onboarding detection + redirect logic |
-| `modules/auth/lib/auth-orchestrator.ts` | Optional: Reset onboarding flag on sign out |
+| `server/prisma/schema.prisma` | Add `onboardingCompleted` field |
+| `server/src/app.ts` | Register onboarding routes |
+| `app/(protected)/layout.tsx` | Add `<Suspense fallback={<ProtectedLoading />}>` wrapper |
+| `shared/providers/AuthGate.tsx` | Add onboarding detection + redirect via `onboardingCompleted` |
+
+### Removed from v1 Plan
+
+| Item | Reason |
+|---|---|
+| `modules/onboarding/store/` | Not needed — URL `?step=` handles step, React Hook Form for local state |
+| `modules/onboarding/hooks/` | Not needed — logic lives in wizard component and API client |
+| `InviteTeammatesStep` | Deferred — invite flow exists elsewhere; adds complexity to first-time activation |
+| `UserSearchInput` | Deferred — only needed for invite step |
+| `OnboardingSkeleton` | Not needed — onboarding loading.tsx is sufficient |
+| `useShouldOnboard` hook | Logic lives in AuthGate directly |
+| localStorage detection | Replaced by server-side `onboardingCompleted` field |
+| Heuristic detection (workspaces + profile check) | Replaced by single boolean field |
 
 ---
 
@@ -890,49 +1069,114 @@ IF user clicks "Skip" at any step:
 
 | Scenario | Handling |
 |---|---|
-| **User refreshes on onboarding step 3** | Store current step in localStorage so they return to the same step |
-| **User navigates away from onboarding** | Warn via `beforeunload` event (if they have unsaved profile changes) |
-| **User has workspaces but no profile data** | Show inline banner in settings: "Complete your profile" — don't force onboarding |
-| **User registers via invite link** | After auth callback, process invite FIRST, then show onboarding (or skip if workspace context is set) |
-| **Supabase OAuth callback during onboarding** | AuthGate already handles `handleInviteContinuation` — ensure onboarding doesn't conflict |
-| **Upload avatar fails** | Show error toast, allow retry, don't block step progression |
-| **Workspace name already taken** | Show inline validation error with suggestions |
-| **User has no workspaces but has DMs** | They're not a "new" user — skip onboarding entirely |
-| **Browser back button during onboarding** | Call `prevStep()` — don't navigate away |
+| **User refreshes on step 2** | URL preserves `?step=2`. Form data is lost — user re-enters fields. Acceptable for MVP. |
+| **User navigates away from onboarding** | No warning needed — they can return via `/onboarding` later. `onboardingCompleted` is false until API call succeeds. |
+| **User has workspaces but no `onboardingCompleted`** | Rare, but possible if user joined via invite. Detect via server check on `/onboarding` load — if already has workspace, mark onboarding complete and redirect. |
+| **User registers via invite link** | Process invite FIRST (existing `handleInviteContinuation`), then check `onboardingCompleted`. |
+| **Supabase OAuth callback during onboarding** | AuthGate runs first, `handleInviteContinuation` processes any invite, then onboarding detection fires. |
+| **Upload avatar fails** | Continue without avatar. Don't block onboarding for an image upload. |
+| **Workspace slug already taken** | Show inline error + suggest alternatives (e.g., `janes-workspace-2`). |
+| **`POST /api/onboarding/complete` fails mid-transaction** | Prisma rolls back. User sees error toast + "Try Again" button. No partial state. |
+| **User has no workspaces but has DMs** | They're not a "new" user — `onboardingCompleted` should be `true` for existing users via data migration. |
+| **Browser back button** | Step goes back if URL step param changes. `router.push` with query param handles this. |
 
 ### Risks
 
 | Risk | Likelihood | Mitigation |
 |---|---|---|
-| **Onboarding detection false positives** (returning user shown onboarding) | Medium | Use localStorage flag + heuristic check. Add server-side `onboardingCompleted` field if needed later |
-| **OAuth flow redirects to onboarding** (conflict with auth callback) | Medium | Check for invite tokens and query params BEFORE redirecting to onboarding. Process invite first. |
-| **Onboarding step 2 workspace creation fails** | Low | Show error toast, allow retry, allow skip |
-| **Onboarding adds extra API calls on every load** | Low | Cache detection result in localStorage; only re-check on login |
+| **Existing users need `onboardingCompleted = true`** | High (data migration) | Run migration: `UPDATE "User" SET "onboardingCompleted" = true WHERE "fullName" IS NOT NULL OR EXISTS (SELECT 1 FROM "WorkspaceMember" WHERE "userId" = "User"."id")` |
+| **AuthGate already has complex redirect logic** | Medium | Add onboarding check AFTER invite continuation check, with clear comment. |
+| **Onboarding endpoint creates rate-limit concerns** | Low | Rate-limit `POST /api/onboarding/complete` like other write endpoints. One call per user per lifetime. |
+| **Workspace slug collision on auto-generated name** | Low | Try suffix incrementally: `janes-workspace`, `janes-workspace-1`, etc. |
 
 ---
 
-## Appendix: Design Guidelines
+## 9. Design Guidelines
 
 ### Loading States — Visual Principles
 
 1. **Never show a blank screen** — Always show a skeleton or spinner within 200ms
-2. **Match the layout** — Loading skeletons should mirror the final layout structure (same dimensions, same alignment)
-3. **Use CSS animations** — `animate-pulse` (opacity fade) or `animate-spin` (rotating circles) — consistent with existing codebase
-4. **Don't over-animate** — One animated element per loading state is enough
+2. **Match the layout** — Loading skeletons should mirror the final layout structure
+3. **Use CSS animations** — `animate-pulse` (opacity fade) or `animate-spin` (rotating circles)
+4. **Keep root loading simple** — It's rarely visible; don't invest in elaborate animations
 5. **Respect reduced motion** — Use `prefers-reduced-motion: reduce` media query
 
 ### Error Pages — Visual Principles
 
 1. **Clear, human-readable message** — No technical jargon
-2. **Actionable** — Always provide a "Try Again" or navigation option
+2. **Multiple recovery options** — Try Again + Go Home + Reload Page
 3. **On-brand** — Use brand colors, consistent with existing `not-found.tsx`
 4. **Error ID for support** — Include `error.digest` for production debugging
-5. **Log to console** — Always `console.error` the error for debugging
+5. **Log to console** — Always `console.error` the error
 
 ### Onboarding — Visual Principles
 
 1. **Progress visibility** — Always show where the user is and how many steps remain
-2. **No dead ends** — Every step has a "Skip" option
-3. **Celebrate completion** — Step 4 should feel rewarding
+2. **No dead ends** — Every step leads to the next; onboarding is finite
+3. **Celebrate completion** — Final step should feel rewarding
 4. **Mobile-first** — Works on small screens (single column, full-width inputs)
 5. **Keyboard navigable** — Tab through inputs, Enter to continue
+6. **One primary action per step** — Reduce decision fatigue
+
+---
+
+## 10. Architectural Decisions & Rationale
+
+This section summarizes what changed from v1 to v2 and why.
+
+| # | v1 Decision | v2 Decision | Rationale |
+|---|---|---|---|
+| 1 | localStorage for onboarding detection | `User.onboardingCompleted` DB field | Deterministic, survives device switch & storage clear, queryable/administerable |
+| 2 | Heuristic detection (`!workspaces && !profile`) | Single boolean check (`!user.onboardingCompleted`) | Heuristics break for edge cases (deleted workspaces, invite joins, migrations, imports) |
+| 3 | `/onboarding` at app root | `/(protected)/onboarding` | Reuses AuthGate, authenticated state, prevents anonymous access, simpler routing |
+| 4 | Full Zustand store for wizard state | URL step param + local React Hook Form | Survives refreshes naturally; no global store needed for a 2-step flow |
+| 5 | `loading.tsx` automatically renders inside layout | Need explicit `<Suspense>` wrapper in layout | Common Next.js misconception — loading files need a Suspense boundary to trigger |
+| 6 | Elaborate root loading animation | Simple spinner | Root `loading.tsx` is rarely visible; don't invest heavily in animations |
+| 7 | "Try Again" only on error pages | Try Again + Go Home + Reload Page | `reset()` cannot recover from all failures; navigation options are necessary |
+| 8 | 4-step onboarding (Profile → Workspace → Invite → Done) | 3-step (Profile → Workspace → Done) | Invite step adds API complexity; users often skip; invite flow exists elsewhere |
+| 9 | "Skip workspace" option available | Workspace creation is required | Nexus is workspace-centric; skipping creates a dead end; one-click default reduces friction |
+| 10 | Per-step API calls (PATCH profile, then POST workspace) | Single `POST /api/onboarding/complete` transaction | One rollback point; no partially-completed states; easier to reason about |
+| — | ~28 new files | ~22 new files (removed 6) | Removed store, 2 hooks, invite step, user search input, separate skeleton |
+
+### What v2 Ships for MVP
+
+```
+Global Loading/Error
+├── app/error.tsx                          ← With Try Again + Go Home + Reload Page
+├── app/loading.tsx                        ← Simple spinner (rarely visible)
+├── (auth)/error.tsx                       ← Card with Try Again + Back to Login
+├── (protected)/error.tsx                  ← With Try Again + Go Home + Reload Page
+├── (protected)/loading.tsx               ← Spinner (wrapped in Suspense)
+├── (protected)/settings/error.tsx         ← Simple retry
+└── (protected)/settings/loading.tsx       ← Settings skeleton
+
+Onboarding
+├── Step 1: Profile setup (name, bio, avatar)
+├── Step 2: Create workspace (name, slug — required)
+├── Step 3: Done with redirect to #general
+
+Database
+├── User.onboardingCompleted (Boolean, default false)
+
+Server
+├── POST /api/onboarding/complete (transactional: profile + workspace + channels + memberships)
+├── Data migration for existing users (set onboardingCompleted = true)
+
+Routing
+├── (protected)/onboarding/ layout + page + loading + error
+
+Detection
+├── AuthGate checks onboardingCompleted from profile query
+└── Heuristic-based new-user detection → replaced by DB field
+```
+
+### Post-MVP Additions (not in this plan)
+
+| Feature | When |
+|---|---|
+| Invite teammates step in onboarding | After invite API is stable and tested |
+| Interactive tour (highlighting key UI elements) | Post-MVP |
+| Join existing workspace via onboarding | Post-MVP |
+| Username availability checks during step 1 | Post-MVP |
+| Resume-progress on page refresh (persist partial form data to sessionStorage) | Post-MVP |
+| Skip workspace option (with fallback to workspace-less view) | If workspace-less flows are added |
