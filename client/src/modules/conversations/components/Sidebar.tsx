@@ -135,7 +135,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
 
   return (
     <>
-      <aside className="w-full md:w-72 border-r bg-background md:bg-muted/30 md:dark:bg-muted/10 flex flex-col shrink-0">
+      <aside className="w-full md:w-72 lg:w-80 border-r bg-background md:bg-muted/30 md:dark:bg-muted/10 flex flex-col shrink-0">
         {mode === "WORKSPACE" && workspaceDetails ? (
           <WorkspaceHeader
             workspace={workspaceDetails.workspace}

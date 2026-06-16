@@ -66,6 +66,65 @@ export const searchMessages = async (query: string, userId: string, limit: numbe
   });
 };
 
+// ====== Pins ======
+
+export const getPinnedMessages = async (conversationId: string) => {
+  return prisma.pinnedMessage.findMany({
+    where: { conversationId },
+    include: {
+      message: {
+        include: {
+          user: {
+            select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
+          },
+        },
+      },
+      pinnedByUser: {
+        select: { id: true, username: true, avatarUrl: true },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+};
+
+export const createPin = async (messageId: string, conversationId: string, pinnedBy: string) => {
+  return prisma.pinnedMessage.create({
+    data: { messageId, conversationId, pinnedBy },
+    include: {
+      message: {
+        include: {
+          user: {
+            select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
+          },
+        },
+      },
+      pinnedByUser: {
+        select: { id: true, username: true, avatarUrl: true },
+      },
+    },
+  });
+};
+
+export const deletePin = async (messageId: string) => {
+  return prisma.pinnedMessage.delete({
+    where: { messageId },
+  });
+};
+
+export const findPinByMessageId = async (messageId: string) => {
+  return prisma.pinnedMessage.findUnique({
+    where: { messageId },
+  });
+};
+
+export const findPinnedMessageIds = async (conversationId: string): Promise<string[]> => {
+  const pins = await prisma.pinnedMessage.findMany({
+    where: { conversationId },
+    select: { messageId: true },
+  });
+  return pins.map(p => p.messageId);
+};
+
 // ====== Writes ======
 
 export const createMessageTransaction = async (

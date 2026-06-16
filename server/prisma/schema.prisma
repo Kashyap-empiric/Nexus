@@ -31,6 +31,7 @@ model User {
   workspaces               WorkspaceMember[]
   notifications            Notification[]
   pushSubscriptions        PushSubscription[]
+  userPins                 PinnedMessage[] @relation("PinToUser")
 }
 
 model Conversation {
@@ -50,6 +51,7 @@ model Conversation {
   workspace       Workspace?           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   members         ConversationMember[]
   messages        Message[]
+  pinnedMessages  PinnedMessage[] @relation("PinToConversation")
 }
 
 model ConversationMember {
@@ -82,6 +84,7 @@ model Message {
   readByMembers  ConversationMember[] @relation("ConversationMemberLastRead")
   conversation   Conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pinRecord      PinnedMessage?  @relation("PinToMessage")
 
   @@index([conversationId, id])
 }
@@ -160,6 +163,21 @@ enum NotificationType {
   CHANNEL_CREATED
   MEMBER_REMOVED
   MESSAGE_REPLIED
+}
+
+model PinnedMessage {
+  id             String       @id @default(cuid())
+  messageId      String
+  conversationId String
+  pinnedBy       String
+  createdAt      DateTime     @default(now())
+
+  message      Message      @relation("PinToMessage", fields: [messageId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation("PinToConversation", fields: [conversationId], references: [id], onDelete: Cascade)
+  pinnedByUser User         @relation("PinToUser", fields: [pinnedBy], references: [id])
+
+  @@unique([messageId])
+  @@index([conversationId])
 }
 
 model Notification {

@@ -11,10 +11,32 @@ import { createConversationSchema, markReadSchema } from "./conversations.schema
 import { requireConversationMember } from "@/middlewares/requireConversationMember.js";
 
 import messagesRoutes from "@/modules/messages/messages.routes.js";
+import { pinMessage, unpinMessage, getPinnedMessages } from "@/modules/messages/messages.controller.js";
 
 const router = Router();
 
 router.use("/:conversationId/messages", messagesRoutes);
+
+router.post(
+  "/:conversationId/pins/:messageId",
+  authMiddleware,
+  requireConversationMember({ paramName: "conversationId" }),
+  pinMessage
+);
+
+router.delete(
+  "/:conversationId/pins/:messageId",
+  authMiddleware,
+  requireConversationMember({ paramName: "conversationId" }),
+  unpinMessage
+);
+
+router.get(
+  "/:conversationId/pins",
+  authMiddleware,
+  requireConversationMember({ paramName: "conversationId" }),
+  getPinnedMessages
+);
 
 router.get(
   "/",

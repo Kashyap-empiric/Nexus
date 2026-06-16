@@ -222,6 +222,13 @@ export const handleMessageDelete = (queryClient: QueryClient) => {
   };
 };
 
+export const handlePinEvent = (queryClient: QueryClient) => {
+  return (payload: { messageId: string; conversationId: string }) => {
+    if (!payload || !payload.conversationId) return;
+    queryClient.invalidateQueries({ queryKey: [...queryKeys.conversation(payload.conversationId), "pins"] });
+  };
+};
+
 function extractConversationName(queryClient: QueryClient, conversationId: string): string | null {
   const conversations = queryClient.getQueryData<Conversation[]>(queryKeys.conversations);
   let conversation = Array.isArray(conversations) ? conversations.find((c) => c.id === conversationId) : undefined;

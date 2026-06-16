@@ -2,6 +2,7 @@ import { uuidv7 } from "uuidv7";
 import * as messagesRepo from "./messages.repository.js";
 import * as conversationsRepo from "../conversations/conversations.repository.js";
 import { createAndDispatch } from "../notifications/notifications.service.js";
+import { dispatchPinEvent } from "@/socket/socket.dispatcher.js";
 
 export const getMessages = async (conversationId: string, cursor: string | undefined, limit: number) => {
   const messages = await messagesRepo.findMessages(conversationId, cursor, limit);
@@ -14,9 +15,12 @@ export const getMessages = async (conversationId: string, cursor: string | undef
 
   const nextCursor = hasNextPage ? messages[messages.length - 1].id : null;
 
+  const pinnedMessageIds = await messagesRepo.findPinnedMessageIds(conversationId);
+
   return {
     messages,
     nextCursor,
+    pinnedMessageIds,
   };
 };
 
@@ -89,6 +93,44 @@ export const createMessage = async (conversationId: string, userId: string, cont
 
 export const searchMessages = async (query: string, userId: string, limit: number) => {
   return messagesRepo.searchMessages(query, userId, limit);
+};
+
+export const pinMessage = async (messageId: string, conversationId: string, userId: string) => {
+  const message = await messagesRepo.findById(messageId);
+  if (!message) {
+    throw new Error("Message not found.");
+  }
+  if (message.conversationId !== conversationId) {
+    throw new Error("Message does not belong to this conversation.");
+  }
+  const existing = await messagesRepo.findPinByMessageId(messageId);
+  if (existing) {
+    throw new Error("Message is already pinned.");
+  }
+  const pin = await messagesRepo.createPin(messageId, conversationId, userId);
+  dispatchPinEvent("pin", conversationId, {
+    messageId,
+    pinnedBy: userId,
+    pinnedByUsername: pin.pinnedByUser.username,
+  });
+  return pin;
+};
+
+export const unpinMessage = async (messageId: string, conversationId: string, userId: string) => {
+  const existing = await messagesRepo.findPinByMessageId(messageId);
+  if (!existing) {
+    throw new Error("Message is not pinned.");
+  }
+  await messagesRepo.deletePin(messageId);
+  dispatchPinEvent("unpin", conversationId, {
+    messageId,
+    pinnedBy: userId,
+  });
+  return { messageId, conversationId };
+};
+
+export const getPinnedMessages = async (conversationId: string) => {
+  return messagesRepo.getPinnedMessages(conversationId);
 };
 
 export const getMessageById = async (messageId: string) => {

@@ -27,6 +27,8 @@ export const API_ROUTES = {
       return cursor ? `${baseUrl}?cursor=${cursor}` : baseUrl;
     },
     MESSAGE_DETAIL: (conversationId: string, messageId: string) => `/conversations/${conversationId}/messages/${messageId}`,
+    PINS: (conversationId: string) => `/conversations/${conversationId}/pins`,
+    PIN_DETAIL: (conversationId: string, messageId: string) => `/conversations/${conversationId}/pins/${messageId}`,
   },
   INVITES: {
     RESOLVE: '/invites/resolve',
@@ -47,6 +49,10 @@ export const API_ROUTES = {
   MESSAGES: {
     SEARCH: (query: string) => `/messages/search?q=${encodeURIComponent(query)}`,
   },
+  CHANNEL_MEMBERS: (workspaceId: string, channelId: string) =>
+    `/workspaces/${workspaceId}/channels/${channelId}/members`,
+  CHANNEL_MEMBER: (workspaceId: string, channelId: string, userId: string) =>
+    `/workspaces/${workspaceId}/channels/${channelId}/members/${userId}`,
 } as const;
 
 

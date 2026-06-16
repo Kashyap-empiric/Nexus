@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useWorkspaceMembersQuery, useUpdateMemberRole, useRemoveMember } from "../hooks/useWorkspaces";
+import { useChannelMembersQuery } from "../hooks/useChannelMembers";
 import { useUser } from "@/modules/auth/store/useAuthStore";
 import { useSocketStore } from "@/socket/socketStore";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
@@ -22,16 +23,19 @@ import {
   DialogTitle,
 } from "@/shared/components/ui/dialog";
 import { Button } from "@/shared/components/ui/button";
-import { MoreVertical, Shield, ShieldAlert, UserIcon, UserX } from "lucide-react";
+import { MoreVertical, Shield, ShieldAlert, UserIcon, UserX, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import type { WorkspaceMember, WorkspaceRole } from "../types/workspace";
+import type { ConversationMember } from "@/modules/conversations/types/conversation";
 
 interface MemberListPanelProps {
   workspaceId: string;
+  channelId?: string;
 }
 
-export function MemberListPanel({ workspaceId }: MemberListPanelProps) {
-  const { data: members, isLoading } = useWorkspaceMembersQuery(workspaceId);
+export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps) {
+  const { data: wsMembers, isLoading: wsLoading } = useWorkspaceMembersQuery(workspaceId);
+  const { data: chMembers, isLoading: chLoading } = useChannelMembersQuery(workspaceId, channelId || null);
   const { mutate: updateRole } = useUpdateMemberRole();
   const removeMemberMutation = useRemoveMember();
   const currentUser = useUser();
@@ -40,6 +44,10 @@ export function MemberListPanel({ workspaceId }: MemberListPanelProps) {
 
   const [memberToRemove, setMemberToRemove] = useState<WorkspaceMember | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
+
+  const isChannelView = !!channelId;
+  const members = isChannelView ? chMembers : wsMembers;
+  const isLoading = isChannelView ? chLoading : wsLoading;
 
   if (isLoading || !members) {
     return (
@@ -55,9 +63,9 @@ export function MemberListPanel({ workspaceId }: MemberListPanelProps) {
     );
   }
 
-  const currentUserMember = members.find(m => m.userId === currentUser?.id);
-  const isOwner = currentUserMember?.role === "OWNER";
-  const isAdmin = currentUserMember?.role === "ADMIN";
+  const currentUserMember = !isChannelView ? (members as WorkspaceMember[]).find(m => m.userId === currentUser?.id) : null;
+  const isOwner = (currentUserMember as any)?.role === "OWNER";
+  const isAdmin = (currentUserMember as any)?.role === "ADMIN";
 
   const handleRoleChange = (userId: string, role: string) => {
     updateRole({ workspaceId, userId, role });
@@ -95,6 +103,7 @@ export function MemberListPanel({ workspaceId }: MemberListPanelProps) {
   const offlineMembers = members.filter(m => !onlineUsers.has(m.userId));
 
   const menuItems = (member: WorkspaceMember, isSelf: boolean) => {
+    if (isChannelView) return null;
     if (isSelf || !canManage(member)) return null;
 
     return (
@@ -136,7 +145,7 @@ export function MemberListPanel({ workspaceId }: MemberListPanelProps) {
     );
   };
 
-  const renderMember = (member: WorkspaceMember) => {
+  const renderMember = (member: any) => {
     const isSelf = member.userId === currentUser?.id;
 
     return (
@@ -158,8 +167,8 @@ export function MemberListPanel({ workspaceId }: MemberListPanelProps) {
           <div className="flex flex-col min-w-0">
             <span className="text-sm font-medium truncate flex items-center gap-1.5">
               {member.user?.username || "User"}
-              {member.role === "OWNER" && <ShieldAlert className="h-3 w-3 text-yellow-600" />}
-              {member.role === "ADMIN" && <Shield className="h-3 w-3 text-blue-500" />}
+              {!isChannelView && member.role === "OWNER" && <ShieldAlert className="h-3 w-3 text-yellow-600" />}
+              {!isChannelView && member.role === "ADMIN" && <Shield className="h-3 w-3 text-blue-500" />}
             </span>
           </div>
         </div>
@@ -174,16 +183,17 @@ export function MemberListPanel({ workspaceId }: MemberListPanelProps) {
       {onlineMembers.length > 0 && (
         <div>
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">
-            Online — {onlineMembers.length}
+            {isChannelView ? "In Channel" : "Online"} — {onlineMembers.length}
           </h3>
           <div className="space-y-0.5">
             {onlineMembers.map(renderMember)}
           </div>
         </div>
-      )}          {offlineMembers.length > 0 && (
+      )}
+      {offlineMembers.length > 0 && (
         <div>
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">
-            Offline — {offlineMembers.length}
+            {isChannelView ? "In Channel" : "Offline"} — {offlineMembers.length}
           </h3>
           <div className="space-y-0.5">
             {offlineMembers.map(renderMember)}
@@ -191,27 +201,29 @@ export function MemberListPanel({ workspaceId }: MemberListPanelProps) {
         </div>
       )}
 
-      {/* Remove member confirmation dialog */}
-      <Dialog open={!!memberToRemove} onOpenChange={(open) => { if (!open && !isRemoving) setMemberToRemove(null); }}>
-        <DialogContent className="sm:max-w-sm" showCloseButton={!isRemoving}>
-          <DialogHeader>
-            <DialogTitle>Remove member</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to remove <strong>{memberToRemove?.user?.username || "this user"}</strong> from the workspace?
-              They will lose access to all channels and conversations in this workspace.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter showCloseButton={!isRemoving}>
-            <Button 
-              variant="destructive" 
-              onClick={handleRemoveMember}
-              disabled={isRemoving}
-            >
-              {isRemoving ? "Removing..." : "Remove"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Remove member confirmation dialog (workspace view only) */}
+      {!isChannelView && (
+        <Dialog open={!!memberToRemove} onOpenChange={(open) => { if (!open && !isRemoving) setMemberToRemove(null); }}>
+          <DialogContent className="sm:max-w-sm" showCloseButton={!isRemoving}>
+            <DialogHeader>
+              <DialogTitle>Remove member</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to remove <strong>{memberToRemove?.user?.username || "this user"}</strong> from the workspace?
+                They will lose access to all channels and conversations in this workspace.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter showCloseButton={!isRemoving}>
+              <Button 
+                variant="destructive" 
+                onClick={handleRemoveMember}
+                disabled={isRemoving}
+              >
+                {isRemoving ? "Removing..." : "Remove"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

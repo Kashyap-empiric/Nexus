@@ -174,6 +174,30 @@ export const updateWorkspaceMemberRole = async (workspaceId: string, userId: str
   });
 };
 
+export const getChannelMembers = async (channelId: string) => {
+  return prisma.conversationMember.findMany({
+    where: { conversationId: channelId },
+    include: {
+      user: {
+        select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true, status: true, statusText: true },
+      },
+    },
+  });
+};
+
+export const addChannelMembers = async (channelId: string, userIds: string[]) => {
+  return prisma.conversationMember.createMany({
+    data: userIds.map((userId) => ({ conversationId: channelId, userId })),
+    skipDuplicates: true,
+  });
+};
+
+export const removeChannelMember = async (channelId: string, userId: string) => {
+  return prisma.conversationMember.delete({
+    where: { conversationId_userId: { conversationId: channelId, userId } },
+  });
+};
+
 export const removeWorkspaceMember = async (workspaceId: string, userId: string) => {
   // Remove from all workspace channels first
   const workspaceChannels = await prisma.conversation.findMany({

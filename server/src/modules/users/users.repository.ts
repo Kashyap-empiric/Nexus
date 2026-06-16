@@ -19,7 +19,6 @@ export const searchUsers = async (query: string, currentUserId: string) => {
       id: true,
       username: true,
       fullName: true,
-      email: true,
       avatarUrl: true,
       avatarPath: true,
     },

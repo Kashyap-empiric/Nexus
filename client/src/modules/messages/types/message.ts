@@ -16,10 +16,25 @@ export interface Message {
   user: User;
   isEdited: boolean;
   deletedAt: string | null;
+  isPinned?: boolean;
   replyToId?: string | null;
   replyTo?: ReplyTo | null;
   pending?: boolean;
   optimistic?: boolean;
+}
+
+export interface PinnedMessage {
+  id: string;
+  messageId: string;
+  conversationId: string;
+  pinnedBy: string;
+  createdAt: string;
+  message: Message;
+  pinnedByUser: {
+    id: string;
+    username: string;
+    avatarUrl: string | null;
+  };
 }
 
 export interface MessagePage {

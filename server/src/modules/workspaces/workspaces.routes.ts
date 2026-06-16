@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authMiddleware } from "@/middlewares/auth.js";
+import { validate } from "@/middlewares/validate.js";
 import {
   getUserWorkspaces,
   getWorkspaceDetails,
@@ -13,23 +14,42 @@ import {
   removeWorkspaceMember,
   inviteMemberByUsername,
   inviteMembers,
+  getChannelMembers,
+  addChannelMembers,
+  removeChannelMember,
 } from "./workspaces.controller.js";
+import {
+  workspaceIdParamsSchema,
+  channelIdParamsSchema,
+  channelMemberIdParamsSchema,
+  memberIdParamsSchema,
+  createWorkspaceBodySchema,
+  createChannelBodySchema,
+  updateChannelBodySchema,
+  inviteByUsernameBodySchema,
+  inviteMultipleBodySchema,
+  updateMemberRoleBodySchema,
+  addChannelMembersSchema,
+} from "./workspaces.schema.js";
 
 const router = Router();
 
 router.use(authMiddleware);
 
 router.get("/", getUserWorkspaces);
-router.post("/", createWorkspace);
-router.get("/:id", getWorkspaceDetails);
-router.get("/:id/channels", getWorkspaceChannels);
-router.post("/:id/channels", createChannel);
-router.patch("/:id/channels/:channelId", updateChannel);
-router.delete("/:id/channels/:channelId", deleteChannel);
-router.get("/:id/members", getWorkspaceMembers);
-router.post("/:id/invite", inviteMemberByUsername);
-router.post("/:id/invite-multiple", inviteMembers);
-router.patch("/:id/members/:userId/role", updateMemberRole);
-router.delete("/:id/members/:userId", removeWorkspaceMember);
+router.post("/", validate({ body: createWorkspaceBodySchema }), createWorkspace);
+router.get("/:id", validate({ params: workspaceIdParamsSchema }), getWorkspaceDetails);
+router.get("/:id/channels", validate({ params: workspaceIdParamsSchema }), getWorkspaceChannels);
+router.post("/:id/channels", validate({ params: workspaceIdParamsSchema, body: createChannelBodySchema }), createChannel);
+router.patch("/:id/channels/:channelId", validate({ params: channelIdParamsSchema, body: updateChannelBodySchema }), updateChannel);
+router.delete("/:id/channels/:channelId", validate({ params: channelIdParamsSchema }), deleteChannel);
+router.get("/:id/members", validate({ params: workspaceIdParamsSchema }), getWorkspaceMembers);
+router.post("/:id/invite", validate({ params: workspaceIdParamsSchema, body: inviteByUsernameBodySchema }), inviteMemberByUsername);
+router.post("/:id/invite-multiple", validate({ params: workspaceIdParamsSchema, body: inviteMultipleBodySchema }), inviteMembers);
+router.get("/:id/channels/:channelId/members", validate({ params: channelIdParamsSchema }), getChannelMembers);
+router.post("/:id/channels/:channelId/members", validate({ params: channelIdParamsSchema, body: addChannelMembersSchema }), addChannelMembers);
+router.delete("/:id/channels/:channelId/members/:userId", validate({ params: channelMemberIdParamsSchema }), removeChannelMember);
+router.patch("/:id/members/:userId/role", validate({ params: memberIdParamsSchema, body: updateMemberRoleBodySchema }), updateMemberRole);
+router.delete("/:id/members/:userId", validate({ params: memberIdParamsSchema }), removeWorkspaceMember);
 
 export default router;

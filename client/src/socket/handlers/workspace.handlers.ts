@@ -90,3 +90,30 @@ export const handleMemberUpdate = (queryClient: QueryClient) => {
     queryClient.invalidateQueries({ queryKey: ["workspaces"] });
   };
 };
+
+export const handleChannelMemberAdded = (queryClient: QueryClient) => {
+  return (payload: { workspaceId: string; channelId: string; addedMembers: any[] }) => {
+    if (!payload?.workspaceId || !payload?.channelId) return;
+    queryClient.invalidateQueries({
+      queryKey: ["workspaces", payload.workspaceId, "channels", payload.channelId, "members"],
+    });
+  };
+};
+
+export const handleChannelMemberRemoved = (queryClient: QueryClient) => {
+  return (payload: { workspaceId: string; channelId: string; removedUserId: string }) => {
+    if (!payload?.workspaceId || !payload?.channelId || !payload?.removedUserId) return;
+
+    queryClient.invalidateQueries({
+      queryKey: ["workspaces", payload.workspaceId, "channels", payload.channelId, "members"],
+    });
+
+    const currentUser = getAuthUser();
+    if (currentUser?.id === payload.removedUserId) {
+      toast.error("You have been removed from the channel");
+      setTimeout(() => {
+        window.location.href = APP_ROUTES.CONVERSATIONS.INDEX;
+      }, 1500);
+    }
+  };
+};

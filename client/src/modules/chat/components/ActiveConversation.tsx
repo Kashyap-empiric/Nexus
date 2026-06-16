@@ -110,8 +110,8 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
   const myProfile = conversation.members.find((m) => m.userId === currentUserId)?.user;
 
   return (
-    <div className="flex-1 flex h-full min-w-0">
-      <div className="flex-1 flex flex-col h-full bg-background min-w-0">
+    <div className="flex-1 flex h-full min-w-0 max-w-full">
+      <div className="flex-1 flex flex-col h-full bg-background min-w-0 mx-auto w-full max-w-4xl 2xl:max-w-5xl">
         <MessageList
           conversationId={conversationId}
           currentUserId={currentUserId}
@@ -138,7 +138,9 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
           {/* Desktop version */}
           <div className="hidden md:block h-full border-l">
             <InfoPanel 
+              conversationId={conversationId}
               workspaceId={isChannel ? conversation.workspaceId || undefined : undefined}
+              channelId={isChannel ? conversationId : undefined}
               userId={isDM ? otherMember?.userId : undefined}
               view={infoPanelView}
               setInfoPanelView={setInfoPanelView}
@@ -149,7 +151,9 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
           {/* Mobile version */}
           <div className="md:hidden flex flex-col fixed inset-y-0 right-0 z-50 transform transition-transform duration-300 ease-in-out translate-x-0">
             <InfoPanel 
+              conversationId={conversationId}
               workspaceId={isChannel ? conversation.workspaceId || undefined : undefined}
+              channelId={isChannel ? conversationId : undefined}
               userId={isDM ? otherMember?.userId : undefined}
               view={infoPanelView}
               setInfoPanelView={setInfoPanelView}

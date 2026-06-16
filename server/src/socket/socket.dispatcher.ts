@@ -164,6 +164,58 @@ export const dispatchChannelUpdate = (
   }
 };
 
+export const dispatchPinEvent = (
+  action: "pin" | "unpin",
+  conversationId: string,
+  payload: { messageId: string; pinnedBy?: string; pinnedByUsername?: string }
+): void => {
+  try {
+    const io = getIO();
+    const eventName = action === "pin" ? SOCKET_EVENTS.MESSAGE_PIN : SOCKET_EVENTS.MESSAGE_UNPIN;
+    io.to(`conversation:${conversationId}`).emit(eventName, { ...payload, conversationId });
+  } catch (err: unknown) {
+    console.error("[Socket.io] Failed to dispatch pin event:", err);
+  }
+};
+
+export const dispatchChannelMemberUpdate = async (
+  workspaceId: string,
+  channelId: string,
+  action: "ADDED" | "REMOVED",
+  payload: { addedMembers?: { id: string; username: string; fullName: string | null; avatarUrl: string | null }[]; removedUserId?: string }
+): Promise<void> => {
+  try {
+    const io = getIO();
+
+    if (action === "ADDED" && payload.addedMembers) {
+      for (const member of payload.addedMembers) {
+        for (const socket of io.sockets.sockets.values()) {
+          if (socket.rooms.has(`user:${member.id}`)) {
+            try {
+              await socket.join(`conversation:${channelId}`);
+            } catch (err: unknown) {
+              console.error("[Socket.io] failed to join room for channel member", err);
+            }
+          }
+        }
+      }
+      io.to(`conversation:${channelId}`).emit(SOCKET_EVENTS.CHANNEL_MEMBER_ADDED, {
+        workspaceId,
+        channelId,
+        addedMembers: payload.addedMembers,
+      });
+    } else if (action === "REMOVED" && payload.removedUserId) {
+      io.to(`conversation:${channelId}`).emit(SOCKET_EVENTS.CHANNEL_MEMBER_REMOVED, {
+        workspaceId,
+        channelId,
+        removedUserId: payload.removedUserId,
+      });
+    }
+  } catch (err: unknown) {
+    console.error("[Socket.io] Failed to dispatch CHANNEL_MEMBER_UPDATE:", err);
+  }
+};
+
 export const dispatchMemberUpdate = (
   workspaceId: string,
   payload: { action: "ROLE_UPDATED" | "REMOVED"; member: any }
