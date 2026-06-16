@@ -3,10 +3,12 @@ import { createOrGetDM } from "../../conversations/conversations.service.js";
 
 export const userInviteResolver: InviteResolver = {
   async resolve(context: ResolveInviteContext) {
-    const { invite, actorId } = context;
+    const { tx, invite, actorId } = context;
     
     // For USER invites, entityId is the userId of the inviter
-    const result = await createOrGetDM(actorId, invite.entityId);
+    // Pass tx so DM creation participates in the outer transaction
+    // Cast needed because ResolveInviteContext.tx is Omit<TransactionClient> for safety
+    const result = await createOrGetDM(actorId, invite.entityId, tx as any);
 
     const events = [];
     if (result.created) {

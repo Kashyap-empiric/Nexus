@@ -5,6 +5,8 @@ import * as usersRepo from "../users/users.repository.js";
 import { dispatchConversationNew } from "@/socket/socket.dispatcher.js";
 import { createAndDispatch } from "../notifications/notifications.service.js";
 import { generateInviteService } from "../invites/invites.service.js";
+import { findChannelIdsByWorkspaceId } from "../conversations/conversations.repository.js";
+import { getIO } from "@/socket/socket.js";
 
 export const getUserWorkspaces = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -460,6 +462,21 @@ export const removeWorkspaceMember = async (req: AuthRequest, res: Response): Pr
     
     // Dispatch to workspace room (all members see updated list)
     dispatchMemberUpdate(workspaceId, { action: "REMOVED", member: { userId: memberUserId } });
+
+    // Leave the removed user's socket connections from all workspace channel rooms
+    // This prevents privilege escalation where a removed user continues receiving messages (C10)
+    try {
+      const io = getIO();
+      const channels = await findChannelIdsByWorkspaceId(workspaceId);
+      const removedUserSockets = await io.in(`user:${memberUserId}`).fetchSockets();
+      for (const socket of removedUserSockets) {
+        for (const channel of channels) {
+          socket.leave(`conversation:${channel.id}`);
+        }
+      }
+    } catch (socketErr) {
+      console.error("[Socket.io] Failed to leave rooms on workspace member removal:", socketErr);
+    }
 
     // Create a MEMBER_REMOVED notification for the removed user
     try {

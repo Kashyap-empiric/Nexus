@@ -338,7 +338,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                             </DropdownMenu>
                           </div>
                         )}
-                        {/* Mobile dropdown: Reply for everyone; Edit/Delete/More for own messages */}
+                        {/* Mobile dropdown: Reply, Copy, Pin, Edit/Delete for own messages */}
                         {!isDeleted && !msg.pending && !msg.optimistic && (
                            <div className="md:hidden">
                              <DropdownMenu open={openMenuId === msg.id} onOpenChange={(open) => setOpenMenuId(open ? msg.id : null)}>
@@ -352,6 +352,10 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                  </DropdownMenuItem>
                                  <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(stripMarkdown(msg.content))}>
                                    <Text className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy as plain text</span>
+                                 </DropdownMenuItem>
+                                 <DropdownMenuSeparator />
+                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => isPinned ? unpinMutation.mutate(msg.id) : pinMutation.mutate(msg.id)}>
+                                   <Pin className={`h-4 w-4 mr-2 ${isPinned ? "text-amber-500" : ""}`} /> <span className="pt-[1px]">{isPinned ? "Unpin message" : "Pin message"}</span>
                                  </DropdownMenuItem>
                                  {isMyMessage && (
                                    <>

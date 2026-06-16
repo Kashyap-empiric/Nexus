@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { registerSchema, type RegisterFormData } from "../schemas/auth";
@@ -8,15 +9,40 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Loader2, Check, X } from "lucide-react";
 import Link from "next/link";
-import { APP_ROUTES } from "@/config/url";
+import { APP_ROUTES, API_ROUTES } from "@/config/url";
+import { api } from "@/shared/lib/api";
 
 export const RegisterForm = () => {
   const { register: registerUser, loginWithGithub, isLoading, error } = useAuth();
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<RegisterFormData>({
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
   });
+
+  const watchedUsername = watch("username");
+
+  useEffect(() => {
+    if (!watchedUsername || watchedUsername.length < 3) {
+      setUsernameAvailable(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setCheckingUsername(true);
+      try {
+        const { data } = await api.get<{ available: boolean }>(API_ROUTES.USERS.CHECK_USERNAME(watchedUsername));
+        setUsernameAvailable(data.available);
+      } catch {
+        setUsernameAvailable(null);
+      } finally {
+        setCheckingUsername(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [watchedUsername]);
 
   const onSubmit = (data: RegisterFormData) => {
     registerUser(data);
@@ -81,14 +107,28 @@ export const RegisterForm = () => {
               <Label htmlFor="username" className={errors.username ? "text-destructive" : "text-foreground/80 font-medium"}>
                 Username <span className="text-destructive">*</span>
               </Label>
-              <Input
-                id="username"
-                placeholder="johndoe"
-                className="h-11 bg-background/50 focus:bg-background transition-colors"
-                {...register("username")}
-                aria-invalid={!!errors.username}
-              />
+              <div className="relative">
+                <Input
+                  id="username"
+                  placeholder="johndoe"
+                  className="h-11 bg-background/50 focus:bg-background transition-colors pr-9"
+                  {...register("username")}
+                  aria-invalid={!!errors.username}
+                />
+                {checkingUsername && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
+                )}
+                {!checkingUsername && usernameAvailable === true && watchedUsername?.length >= 3 && (
+                  <Check className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+                )}
+                {!checkingUsername && usernameAvailable === false && (
+                  <X className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-destructive" />
+                )}
+              </div>
               {errors.username && <p className="text-xs font-medium text-destructive mt-1">{errors.username.message}</p>}
+              {!errors.username && usernameAvailable === false && (
+                <p className="text-xs font-medium text-destructive mt-1">Username is already taken.</p>
+              )}
             </div>
 
             <div className="space-y-1.5">

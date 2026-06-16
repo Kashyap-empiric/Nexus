@@ -15,6 +15,22 @@ type ClientHit = {
 const createRateLimiter = ({ windowMs, max, message }: RateLimitOptions) => {
   const hits = new Map<string, ClientHit>();
 
+  // Clean up expired entries every 60 seconds to prevent memory leak
+  const CLEANUP_INTERVAL_MS = 60_000;
+  const cleanupTimer = setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of hits.entries()) {
+      if (value.resetAt <= now) {
+        hits.delete(key);
+      }
+    }
+  }, CLEANUP_INTERVAL_MS);
+
+  // Don't prevent process exit
+  if (cleanupTimer.unref) {
+    cleanupTimer.unref();
+  }
+
   return (req: Request, res: Response, next: NextFunction): void => {
     const now = Date.now();
     const clientKey = req.ip ?? req.socket.remoteAddress ?? "unknown";

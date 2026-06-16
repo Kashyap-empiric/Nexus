@@ -154,7 +154,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
             {mounted && headerInfo && (
               <button
                 onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-                className="md:hidden relative p-2 -ml-1 text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                className="lg:hidden relative p-2 -ml-1 text-muted-foreground hover:text-foreground transition-colors shrink-0"
                 title="Toggle sidebar"
               >
                 <ArrowLeft className="h-5 w-5" />

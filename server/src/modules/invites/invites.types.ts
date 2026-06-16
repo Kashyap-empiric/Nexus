@@ -1,5 +1,6 @@
 import { InviteType } from "@prisma/client";
 import type { Invite } from "@prisma/client";
+import type { CreateNotificationInput } from "../notifications/notifications.types.js";
 
 export interface ResolveInviteParams {
   token: string;
@@ -19,6 +20,12 @@ export interface ResolveInviteResult {
   redirectUrl: string;
   consumed?: boolean;
   events?: DomainEvent[];
+  /**
+   * Notifications to dispatch after the invite transaction commits.
+   * These are collected during resolution but dispatched outside the transaction
+   * to prevent phantom notifications on rollback (C1).
+   */
+  pendingNotifications?: CreateNotificationInput[];
 }
 
 export interface GenerateInviteParams {

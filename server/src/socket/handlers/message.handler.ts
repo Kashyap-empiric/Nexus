@@ -1,11 +1,8 @@
 import type { Server, Socket } from "socket.io";
-import { createMessage } from "@/modules/messages/messages.service.js";
+import { createMessage, sendMessageNotifications } from "@/modules/messages/messages.service.js";
 import { SOCKET_EVENTS } from "@/shared/socket-events.js";
 import { dispatchMessageEvent } from "../socket.dispatcher.js";
 import { verifyConversationMembership } from "@/shared/permissions.js";
-import { findById } from "@/modules/conversations/conversations.repository.js";
-import { sendPushNotification } from "@/services/push.service.js";
-import { prisma } from "@/lib/db.js";
 
 export const registerMessageHandlers = (io: Server, socket: Socket) => {
   // Typing indicators — broadcast to conversation room, exclude sender
@@ -85,47 +82,18 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
 
         dispatchMessageEvent("NEW", payload.conversationId, message, conversationMetadata);
 
-        findById(payload.conversationId).then(async (conv) => {
-          if (!conv) return;
-
-          const pushPromises = conv.members.map(async (member) => {
-            if (member.userId === userId) return;
-
-            const memberUser = await prisma.user.findUnique({
-              where: { id: member.userId },
-              select: { pushNotificationsEnabled: true, dmNotifications: true, channelNotifications: true, mentionNotifications: true, username: true }
-            });
-
-            if (!memberUser || !memberUser.pushNotificationsEnabled) return;
-
-            const isMentioned = payload.content.includes(`@${memberUser.username}`);
-            let shouldSendPush = false;
-
-            if (conv.type === "DM" && memberUser.dmNotifications) {
-              shouldSendPush = true;
-            } else if (conv.type === "CHANNEL") {
-              if (memberUser.channelNotifications || (memberUser.mentionNotifications && isMentioned)) {
-                shouldSendPush = true;
-              }
-            }
-
-            if (shouldSendPush) {
-              let title = message.user.username;
-              if (conv.type === "CHANNEL" && conv.name) {
-                title = `${message.user.username} in #${conv.name}`;
-              }
-
-              return sendPushNotification(member.userId, {
-                title,
-                body: message.content,
-                url: `/conversations/${payload.conversationId}`,
-                tag: payload.conversationId,
-              });
-            }
-          });
-
-          Promise.all(pushPromises).catch(err => console.error("[Push] Error sending push for message", err));
-        }).catch(err => console.error("[Push] Failed to fetch conversation", err));
+        // Send push notifications reliably (awaited before callback — C13 fix)
+        // Errors are caught so the response is not blocked
+        try {
+          await sendMessageNotifications(
+            payload.conversationId,
+            userId,
+            message.user?.username || "Unknown",
+            payload.content
+          );
+        } catch (notifErr) {
+          console.error("[Message Push] Failed to send push notifications:", notifErr);
+        }
 
         return callback?.({
           success: true,

@@ -2,7 +2,72 @@ import { uuidv7 } from "uuidv7";
 import * as messagesRepo from "./messages.repository.js";
 import * as conversationsRepo from "../conversations/conversations.repository.js";
 import { createAndDispatch } from "../notifications/notifications.service.js";
+import { sendPushNotification } from "@/services/push.service.js";
 import { dispatchPinEvent } from "@/socket/socket.dispatcher.js";
+import { prisma } from "@/lib/db.js";
+
+/**
+ * Send push notifications to conversation members for a new message.
+ * Checks each member's notification preferences (DM, channel, mention).
+ * This is shared between the socket handler and HTTP endpoint.
+ */
+export const sendMessageNotifications = async (
+  conversationId: string,
+  senderId: string,
+  senderUsername: string,
+  content: string
+): Promise<void> => {
+  try {
+    const conv = await conversationsRepo.findById(conversationId);
+    if (!conv) return;
+
+    const pushPromises = conv.members.map(async (member) => {
+      if (member.userId === senderId) return;
+
+      const memberUser = await prisma.user.findUnique({
+        where: { id: member.userId },
+        select: {
+          pushNotificationsEnabled: true,
+          dmNotifications: true,
+          channelNotifications: true,
+          mentionNotifications: true,
+          username: true,
+        },
+      });
+
+      if (!memberUser || !memberUser.pushNotificationsEnabled) return;
+
+      const isMentioned = content.includes(`@${memberUser.username}`);
+      let shouldSendPush = false;
+
+      if (conv.type === "DM" && memberUser.dmNotifications) {
+        shouldSendPush = true;
+      } else if (conv.type === "CHANNEL") {
+        if (memberUser.channelNotifications || (memberUser.mentionNotifications && isMentioned)) {
+          shouldSendPush = true;
+        }
+      }
+
+      if (shouldSendPush) {
+        let title = senderUsername;
+        if (conv.type === "CHANNEL" && conv.name) {
+          title = `${senderUsername} in #${conv.name}`;
+        }
+
+        await sendPushNotification(member.userId, {
+          title,
+          body: content,
+          url: `/conversations/${conversationId}`,
+          tag: conversationId,
+        });
+      }
+    });
+
+    await Promise.all(pushPromises);
+  } catch (err) {
+    console.error("[Message Notifications] Failed to send push:", err);
+  }
+};
 
 export const getMessages = async (conversationId: string, cursor: string | undefined, limit: number) => {
   const messages = await messagesRepo.findMessages(conversationId, cursor, limit);
@@ -137,7 +202,7 @@ export const getMessageById = async (messageId: string) => {
   return messagesRepo.findById(messageId);
 };
 
-export const editMessage = async (messageId: string, userId: string, content: string) => {
+export const editMessage = async (messageId: string, conversationId: string, userId: string, content: string) => {
   const message = await getMessageById(messageId);
   if (!message) {
     throw new Error("Message not found.")
@@ -147,6 +212,9 @@ export const editMessage = async (messageId: string, userId: string, content: st
   }
   if (message.userId !== userId) {
     throw new Error("403 Forbidden")
+  }
+  if (message.conversationId !== conversationId) {
+    throw new Error("Message does not belong to this conversation.");
   }
 
   const updatedMessage = await messagesRepo.updateMessage(messageId, content);
@@ -174,7 +242,7 @@ export const editMessage = async (messageId: string, userId: string, content: st
   return { message: updatedMessage, conversationMetadata };
 }
 
-export const deleteMessage = async (messageId: string, userId: string) => {
+export const deleteMessage = async (messageId: string, conversationId: string, userId: string) => {
   const message = await getMessageById(messageId);
   if (!message) {
     throw new Error("Message not found.");
@@ -184,6 +252,9 @@ export const deleteMessage = async (messageId: string, userId: string) => {
   }
   if (message.userId !== userId) {
     throw new Error("403 Forbidden");
+  }
+  if (message.conversationId !== conversationId) {
+    throw new Error("Message does not belong to this conversation.");
   }
 
   const conversation = message.conversation;

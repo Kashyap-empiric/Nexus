@@ -8,6 +8,7 @@ import {
   markConversationAsRead
 } from "./conversations.controller.js";
 import { createConversationSchema, markReadSchema } from "./conversations.schema.js";
+import { pinsParamsSchema, pinsIdParamsSchema } from "@/modules/messages/messages.schema.js";
 import { requireConversationMember } from "@/middlewares/requireConversationMember.js";
 
 import messagesRoutes from "@/modules/messages/messages.routes.js";
@@ -20,6 +21,7 @@ router.use("/:conversationId/messages", messagesRoutes);
 router.post(
   "/:conversationId/pins/:messageId",
   authMiddleware,
+  validate({ params: pinsIdParamsSchema }),
   requireConversationMember({ paramName: "conversationId" }),
   pinMessage
 );
@@ -27,6 +29,7 @@ router.post(
 router.delete(
   "/:conversationId/pins/:messageId",
   authMiddleware,
+  validate({ params: pinsIdParamsSchema }),
   requireConversationMember({ paramName: "conversationId" }),
   unpinMessage
 );
@@ -34,6 +37,7 @@ router.delete(
 router.get(
   "/:conversationId/pins",
   authMiddleware,
+  validate({ params: pinsParamsSchema }),
   requireConversationMember({ paramName: "conversationId" }),
   getPinnedMessages
 );

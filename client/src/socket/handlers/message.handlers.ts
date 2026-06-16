@@ -1,6 +1,7 @@
-import type { QueryClient } from "@tanstack/react-query";
+import type { QueryClient, InfiniteData } from "@tanstack/react-query";
 import { queryKeys } from "@/shared/constants/queryKeys";
 import type { Message } from "@/modules/messages/types/message";
+import type { MessagesResponse } from "@/modules/messages/api/messages.api";
 import type { Conversation } from "@/modules/conversations/types/conversation";
 import type { Workspace } from "@/modules/workspaces/types/workspace";
 
@@ -87,16 +88,20 @@ export const handleMessageNew = (queryClient: QueryClient) => {
         };
         window.addEventListener("focus", onFocus);
 
-        // Show desktop notification
-        const senderName = message.user?.username || "Someone";
-        const conversationName = extractConversationName(queryClient, message.conversationId);
+        // Show desktop notification only when tab is visible.
+        // When tab is hidden, Web Push (via Service Worker) handles it.
+        // Showing both would cause duplicates (C8).
+        if (typeof document !== "undefined" && !document.hidden) {
+          const senderName = message.user?.username || "Someone";
+          const conversationName = extractConversationName(queryClient, message.conversationId);
 
-        showMessageNotification(
-          senderName,
-          message.content,
-          message.conversationId,
-          conversationName,
-        );
+          showMessageNotification(
+            senderName,
+            message.content,
+            message.conversationId,
+            conversationName,
+          );
+        }
       }
     } catch (err) {
       console.error("Failed to parse incoming message", err);
@@ -223,8 +228,30 @@ export const handleMessageDelete = (queryClient: QueryClient) => {
 };
 
 export const handlePinEvent = (queryClient: QueryClient) => {
-  return (payload: { messageId: string; conversationId: string }) => {
+  return (payload: { messageId: string; conversationId: string; action?: "pin" | "unpin" }) => {
     if (!payload || !payload.conversationId) return;
+
+    // Update the pinnedMessageIds in the cached infinite query pages so the pin icon updates in real-time
+    queryClient.setQueriesData<InfiniteData<MessagesResponse>>(
+      { queryKey: queryKeys.messages(payload.conversationId) },
+      (oldData) => {
+        if (!oldData?.pages) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page) => {
+            const updated = new Set(page.pinnedMessageIds);
+            if (payload.action === "pin") {
+              updated.add(payload.messageId);
+            } else if (payload.action === "unpin") {
+              updated.delete(payload.messageId);
+            }
+            return { ...page, pinnedMessageIds: Array.from(updated) };
+          }),
+        };
+      }
+    );
+
+    // Invalidate the PinnedMessagesPanel query so it refreshes
     queryClient.invalidateQueries({ queryKey: [...queryKeys.conversation(payload.conversationId), "pins"] });
   };
 };

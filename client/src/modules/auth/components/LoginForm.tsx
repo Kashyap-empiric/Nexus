@@ -93,18 +93,18 @@ export const LoginForm = () => {
             )}
 
             <div className="space-y-1.5">
-              <Label htmlFor="email" className={errors.email ? "text-destructive" : "text-foreground/80 font-medium"}>
-                Email <span className="text-destructive">*</span>
+              <Label htmlFor="identifier" className={errors.identifier ? "text-destructive" : "text-foreground/80 font-medium"}>
+                Email or username <span className="text-destructive">*</span>
               </Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="name@example.com"
+                id="identifier"
+                type="text"
+                placeholder="you@example.com or username"
                 className="h-11 bg-background/50 focus:bg-background transition-colors"
-                {...register("email")}
-                aria-invalid={!!errors.email}
+                {...register("identifier")}
+                aria-invalid={!!errors.identifier}
               />
-              {errors.email && <p className="text-xs font-medium text-destructive mt-1">{errors.email.message}</p>}
+              {errors.identifier && <p className="text-xs font-medium text-destructive mt-1">{errors.identifier.message}</p>}
             </div>
 
             <div className="space-y-1.5">

@@ -99,6 +99,18 @@ export const createMessage = async (req: AuthRequest, res: Response): Promise<vo
       console.error("[Socket.io] Failed to emit message:new from HTTP endpoint", err);
     }
 
+    // Send push notifications for this message (C3 fix — HTTP path had no notifications)
+    try {
+      await messagesService.sendMessageNotifications(
+        conversationId,
+        userId,
+        message.user?.username || "Unknown",
+        content
+      );
+    } catch (notifErr) {
+      console.error("[Message Push] Failed to send push notifications from HTTP endpoint:", notifErr);
+    }
+
     res.status(201).json({
       data: message,
     });
@@ -114,7 +126,7 @@ export const updateMessage = async (req: AuthRequest, res: Response): Promise<vo
     const { conversationId, messageId } = req.params as { conversationId: string; messageId: string };
     const { content } = req.body as UpdateMessageBody;
 
-    const { message, conversationMetadata } = await messagesService.editMessage(messageId, userId, content);
+    const { message, conversationMetadata } = await messagesService.editMessage(messageId, conversationId, userId, content);
 
     try {
       dispatchMessageEvent("UPDATE", conversationId, message, conversationMetadata);
@@ -131,7 +143,7 @@ export const updateMessage = async (req: AuthRequest, res: Response): Promise<vo
       res.status(403).json({ error: "Forbidden" });
       return;
     }
-    if (error.message === "Message not found." || error.message === "Cannot edit a deleted message.") {
+    if (error.message === "Message not found." || error.message === "Cannot edit a deleted message." || error.message === "Message does not belong to this conversation.") {
       res.status(400).json({ error: error.message });
       return;
     }
@@ -144,7 +156,7 @@ export const deleteMessage = async (req: AuthRequest, res: Response): Promise<vo
     const userId = req.user!.id;
     const { conversationId, messageId } = req.params as { conversationId: string; messageId: string };
 
-    const { message, conversationMetadata } = await messagesService.deleteMessage(messageId, userId);
+    const { message, conversationMetadata } = await messagesService.deleteMessage(messageId, conversationId, userId);
 
     try {
       dispatchMessageEvent("DELETE", conversationId, message, conversationMetadata);
@@ -161,7 +173,7 @@ export const deleteMessage = async (req: AuthRequest, res: Response): Promise<vo
       res.status(403).json({ error: "Forbidden" });
       return;
     }
-    if (error.message === "Message not found." || error.message === "Message is already deleted.") {
+    if (error.message === "Message not found." || error.message === "Message is already deleted." || error.message === "Message does not belong to this conversation.") {
       res.status(400).json({ error: error.message });
       return;
     }

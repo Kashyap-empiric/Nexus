@@ -61,6 +61,17 @@ export const findDMByPair = async (dmPair: string) => {
   });
 };
 
+export const findDMByPairInTransaction = async (tx: Prisma.TransactionClient, dmPair: string) => {
+  return tx.conversation.findUnique({
+    where: { dmPair },
+    include: {
+      members: {
+        include: { user: true },
+      },
+    },
+  });
+};
+
 export const findChannelIdsByWorkspaceId = async (workspaceId: string, userId?: string) => {
   const where: any = { workspaceId, type: "CHANNEL" };
 
@@ -235,6 +246,29 @@ export const createDM = async (data: {
   };
 }) => {
   return prisma.conversation.create({
+    data,
+    include: {
+      members: {
+        include: { user: true },
+      },
+    },
+  });
+};
+
+export const createDMInTransaction = async (
+  tx: Prisma.TransactionClient,
+  data: {
+    id: string;
+    type: "DM";
+    workspaceId: null;
+    isPrivate: true;
+    dmPair: string;
+    members: {
+      create: Array<{ userId: string }>;
+    };
+  }
+) => {
+  return tx.conversation.create({
     data,
     include: {
       members: {

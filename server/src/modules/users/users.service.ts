@@ -4,6 +4,10 @@ export const searchUsers = async (query: string, currentUserId: string) => {
   return usersRepo.searchUsers(query, currentUserId);
 };
 
+export const findByUsername = async (username: string) => {
+  return usersRepo.findUserByUsername(username);
+};
+
 export const getMyProfile = async (userId: string) => {
   const user = await usersRepo.findUserById(userId);
   if (!user) throw new Error("User not found");

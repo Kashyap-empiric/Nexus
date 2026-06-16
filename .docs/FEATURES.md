@@ -16,6 +16,8 @@
 | Read Receipts (DM) | ✅ Complete | messages, socket | conversations |
 | Read Receipts (Channels) | 🟡 Partial | messages | conversations, socket |
 | Message History (cursor pagination) | ✅ Complete | messages | conversations |
+| Inline Replies | ✅ Complete | messages | conversations, socket |
+| Pinned Messages | ✅ Complete | messages | conversations, socket |
 | Markdown Rendering | ✅ Complete | messages | react-markdown |
 
 ## Real-Time
@@ -88,7 +90,6 @@
 |---------|----------|-------|
 | Emoji Reactions | Medium | Schema exists, no endpoints or UI |
 | @Mentions | Medium | No detection or UI |
-| Pinned Messages | Low | No schema or UI |
 | File Uploads | Low | No infrastructure |
 | Global Search / Cmd+K | Low | No implementation |
 | Message Threads | Low | No implementation |
