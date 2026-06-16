@@ -7,6 +7,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
 import {
@@ -161,6 +162,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
                     </>
                   )}
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleDeleteClick} className="text-red-600 focus:text-red-600 cursor-pointer">
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete Channel

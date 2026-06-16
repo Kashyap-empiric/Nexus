@@ -160,7 +160,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
             ) : isChannel ? (
               <div className="flex items-center gap-2 min-w-0">
                 <Hash className="h-6 w-6 text-muted-foreground shrink-0" />
-                <div className="flex flex-col min-w-0">
+                <div className="flex flex-col gap-1 min-w-0">
                   <h2 className="text-base font-bold text-foreground leading-none truncate">{headerInfo.title}</h2>
                   {headerInfo.subtitle && (
                     <span className="text-[12px] text-muted-foreground leading-tight truncate">

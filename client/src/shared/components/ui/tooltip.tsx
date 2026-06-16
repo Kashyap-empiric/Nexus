@@ -5,6 +5,8 @@ import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip"
 
 import { cn } from "@/shared/lib/utils"
 
+import { OVERLAY_Z_INDEX } from "@/shared/constants/overlays"
+
 function TooltipProvider({ ...props }: TooltipPrimitive.Root.Props) {
   return <TooltipPrimitive.Root data-slot="tooltip" {...props} />
 }
@@ -25,12 +27,13 @@ function TooltipContent({
       <TooltipPrimitive.Positioner
         side={side}
         sideOffset={sideOffset}
-        className="isolate z-50"
+        className={cn("isolate", `z-[${OVERLAY_Z_INDEX.tooltip}]`)}
       >
         <TooltipPrimitive.Popup
           data-slot="tooltip-content"
           className={cn(
-            "z-50 rounded-md bg-primary px-2.5 py-1.5 text-xs text-primary-foreground shadow-md ring-1 ring-foreground/10 outline-hidden duration-100 data-[side=bottom]:slide-in-from-top-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            "rounded-md bg-primary px-2.5 py-1.5 text-xs text-primary-foreground shadow-md ring-1 ring-foreground/10 outline-hidden duration-100 data-[side=bottom]:slide-in-from-top-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            `z-[${OVERLAY_Z_INDEX.tooltip}]`,
             className
           )}
           {...props}
