@@ -44,6 +44,28 @@ export const findById = async (messageId: string) => {
   });
 };
 
+export const searchMessages = async (query: string, userId: string, limit: number) => {
+  return prisma.message.findMany({
+    where: {
+      content: { contains: query, mode: "insensitive" },
+      deletedAt: null,
+      conversation: {
+        members: { some: { userId } },
+      },
+    },
+    include: {
+      user: {
+        select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
+      },
+      conversation: {
+        select: { id: true, name: true, type: true, workspaceId: true },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+};
+
 // ====== Writes ======
 
 export const createMessageTransaction = async (

@@ -12,6 +12,7 @@ import invitesRoutes from "./modules/invites/invites.routes.js";
 import workspacesRoutes from "./modules/workspaces/workspaces.routes.js";
 import notificationsRoutes from "./modules/notifications/notifications.routes.js";
 import onboardingRoutes from "./modules/onboarding/onboarding.routes.js";
+import messagesSearchRoutes from "./modules/messages/messages.search.routes.js";
 
 import { ENV } from "./config/env.js";
 import * as usersRepo from "./modules/users/users.repository.js";
@@ -50,6 +51,7 @@ app.use("/api/invites", invitesRoutes);
 app.use("/api/workspaces", workspacesRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/onboarding", onboardingRoutes);
+app.use("/api/messages/search", messagesSearchRoutes);
 app.use(errorHandler);
 
 export default app;

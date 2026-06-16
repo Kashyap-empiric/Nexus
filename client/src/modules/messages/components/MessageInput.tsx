@@ -160,7 +160,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
     },
     editorProps: {
       attributes: {
-        class: 'w-full min-h-[24px] max-h-[140px] px-3 py-1 bg-transparent border-0 focus:ring-0 text-base outline-none prose-p:my-0 prose-p:whitespace-pre-wrap overflow-y-auto disabled:opacity-50 break-words',
+        class: 'w-full min-h-[24px] max-h-[140px] px-1 py-1 bg-transparent border-0 focus:ring-0 text-base outline-none prose-p:my-0 prose-p:whitespace-pre-wrap overflow-y-auto disabled:opacity-50 break-words',
       },
       handleKeyDown: (view, event) => {
         const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -255,7 +255,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
   const activeClass = "bg-primary/15 text-primary dark:bg-zinc-800 dark:text-zinc-100";
 
   return (
-    <form onSubmit={handleSubmit} className="px-[15px] md:px-6 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-2 bg-background shrink-0 w-full">
+    <form onSubmit={handleSubmit} className="px-4 md:px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:pb-6 pt-2 bg-background shrink-0 w-full">
       {/* Reply banner */}
       {replyingTo && (
         <div className="flex items-center gap-2 px-3 py-2 mb-1 bg-muted/50 border border-border rounded-t-lg text-sm">
@@ -279,7 +279,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
       <div className="w-full flex flex-col bg-card dark:bg-card border border-border/60 rounded-xl shadow-sm transition-colors focus-within:ring-1 focus-within:ring-brand/30 focus-within:border-brand/40 overflow-hidden">
         
         {/* Toolbar Row */}
-        <div className="flex items-center gap-1 px-2 pt-2 text-muted-foreground">
+        <div className="flex items-center gap-1 px-4 pt-3 pb-1 text-muted-foreground">
           <button type="button" onClick={toggleBold} className={`p-1.5 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.bold ? activeClass : ''}`} title="Bold">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 12a4 4 0 0 0 0-8H6v8"/><path d="M15 20a4 4 0 0 0 0-8H6v8Z"/></svg>
           </button>
@@ -338,7 +338,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
         </div>
 
         {/* TipTap Editor and Send Button */}
-        <div className="flex items-end w-full pl-[2px] pr-3 py-1.5 gap-2">
+        <div className="flex items-end w-full pl-4 pr-3 py-2 gap-2">
           <div className="flex-1 min-w-0 relative cursor-text" onClick={() => editor.commands.focus()}>
             <EditorContent editor={editor} className="w-full" />
           </div>

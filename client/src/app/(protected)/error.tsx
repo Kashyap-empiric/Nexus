@@ -33,21 +33,21 @@ export default function ProtectedError({
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <button
             onClick={reset}
-            className="inline-flex items-center justify-center h-9 px-5 rounded-md bg-brand text-brand-foreground hover:bg-brand/90 text-sm font-medium transition-colors gap-2"
+            className="inline-flex items-center justify-center h-9 px-5 rounded-md bg-brand text-brand-foreground hover:bg-brand/90 text-sm font-medium transition-colors gap-2 whitespace-nowrap"
           >
             <RefreshCw className="w-4 h-4" />
             Try Again
           </button>
           <Link
             href={APP_ROUTES.CONVERSATIONS.INDEX}
-            className="inline-flex items-center justify-center h-9 px-5 rounded-md border border-border hover:bg-muted text-sm font-medium transition-colors gap-2"
+            className="inline-flex items-center justify-center h-9 px-5 rounded-md border border-border hover:bg-muted text-sm font-medium transition-colors gap-2 whitespace-nowrap"
           >
             <Home className="w-4 h-4" />
             Go Home
           </Link>
           <button
             onClick={() => window.location.reload()}
-            className="inline-flex items-center justify-center h-9 px-5 rounded-md border border-border hover:bg-muted text-sm font-medium transition-colors gap-2"
+            className="inline-flex items-center justify-center h-9 px-5 rounded-md border border-border hover:bg-muted text-sm font-medium transition-colors gap-2 whitespace-nowrap"
           >
             <RotateCcw className="w-4 h-4" />
             Reload Page

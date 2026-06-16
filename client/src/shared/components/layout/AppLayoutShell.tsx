@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/modules/conversations/components/Sidebar";
 import { NavigationRail } from "@/modules/chat/components/NavigationRail";
 import { BellPopover } from "@/modules/notifications/components/BellPopover";
+import { MessageSearchPopover } from "@/modules/messages/components/MessageSearchPopover";
 import { useChatStore } from "@/modules/chat/store/chatStore";
 import { cn } from "@/shared/lib/utils";
 import { Menu, Hash, Users, X, ArrowLeft } from "lucide-react";
@@ -17,6 +18,12 @@ import { InviteModal } from "@/modules/invites/components/InviteModal";
 import { SharedSettingsModal, SettingsView } from "@/modules/settings/components/SharedSettingsModal";
 import { Info } from "lucide-react";
 import React, { createContext, useContext } from "react";
+import { useSocketStore } from "@/socket/socketStore";
+
+function HeaderPresenceText({ userId }: { userId: string }) {
+  const isOnline = useSocketStore((state) => state.onlineUsers.has(userId));
+  return <>{isOnline ? "Online" : "Offline"}</>;
+}
 
 export type InfoPanelView = 'about' | 'members' | 'pins';
 
@@ -168,6 +175,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
                   <UserAvatar
                     name={headerInfo.title}
                     src={headerInfo.otherMember?.avatarUrl}
+                    avatarPath={headerInfo.otherMember?.avatarPath}
                     className="h-9 w-9"
                     fallbackClassName="bg-primary/20 text-primary font-medium"
                   />
@@ -175,10 +183,12 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
                     <PresenceIndicator userId={headerInfo.otherMember.userId} className="-bottom-0.5 -right-0.5" />
                   )}
                 </div>
-                <div className="flex flex-col min-w-0">
+                <div className="flex flex-col gap-1 min-w-0">
                   <h2 className="text-base font-bold text-foreground leading-none truncate">{headerInfo.title}</h2>
                   <span className="text-[11px] text-muted-foreground/60 leading-tight truncate">
-                    {headerInfo.otherMember?.userId ? "Online" : "Offline"}
+                    {headerInfo.otherMember?.userId ? (
+                      <HeaderPresenceText userId={headerInfo.otherMember.userId} />
+                    ) : "Offline"}
                   </span>
                 </div>
               </div>
@@ -193,6 +203,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
                 <span className="text-xs font-medium text-muted-foreground">9</span>
               </div>
             )}
+            <MessageSearchPopover />
             <div className="relative">
               <BellPopover />
             </div>

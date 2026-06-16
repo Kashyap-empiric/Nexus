@@ -15,6 +15,43 @@ export function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
+export function formatNotificationTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+
+  const timeStr = date.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  if (isToday) {
+    return timeStr;
+  }
+
+  // Check if yesterday
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday =
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear();
+
+  if (isYesterday) {
+    return `Yesterday ${timeStr}`;
+  }
+
+  // For older dates, show "Mon DD at time"
+  const formattedDate = date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+  return `${formattedDate} ${timeStr}`;
+}
+
 export function NotificationIcon({ type }: { type: string }) {
   const iconMap: Record<string, React.ReactNode> = {
     INVITE_RECEIVED: <Mail className="h-4 w-4 text-amber-500" />,

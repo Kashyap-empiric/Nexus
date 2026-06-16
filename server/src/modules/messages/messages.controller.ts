@@ -1,8 +1,22 @@
 import type { Response } from "express";
 import type { AuthRequest } from "@/types/shared.js";
 import * as messagesService from "./messages.service.js";
-import { getMessagesQuerySchema, type CreateMessageBody, type GetMessagesQuery, type UpdateMessageBody } from "./messages.schema.js";
+import { getMessagesQuerySchema, type CreateMessageBody, type GetMessagesQuery, type UpdateMessageBody, type SearchMessagesQuery } from "./messages.schema.js";
 import { dispatchMessageEvent } from "@/socket/socket.dispatcher.js";
+
+export const searchMessages = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { q, limit } = req.query as unknown as SearchMessagesQuery;
+
+    const messages = await messagesService.searchMessages(q, userId, limit);
+
+    res.json({ data: messages });
+  } catch (error) {
+    console.error("Error searching messages:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 
 export const getMessages = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
