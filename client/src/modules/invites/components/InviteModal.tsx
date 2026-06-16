@@ -14,7 +14,9 @@ interface SelectedUser {
   id: string;
   email: string;
   username: string;
+  fullName?: string | null;
   avatarUrl: string | null;
+  avatarPath?: string | null;
 }
 
 interface InviteModalProps {
@@ -204,12 +206,12 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
                   >
                     <UserAvatar
                       name={user.username}
-                      src={user.avatarUrl}
+                      src={user.avatarPath || user.avatarUrl}
                       className="h-4 w-4 shrink-0"
                       fallbackClassName="text-[8px]"
                     />
                     <span className="text-xs font-medium max-w-[120px] truncate">
-                      {user.email}
+                      {user.fullName || `@${user.username}`}
                     </span>
                     <button
                       onClick={() => removeUser(user.id)}
@@ -257,24 +259,35 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
                               id: user.id,
                               email: user.email,
                               username: user.username,
+                              fullName: user.fullName,
                               avatarUrl: user.avatarUrl,
+                              avatarPath: user.avatarPath,
                             })
                           }
                           className="w-full flex items-center gap-3 px-3 py-2 hover:bg-muted transition-colors text-left"
                         >
                           <UserAvatar
                             name={user.username}
-                            src={user.avatarUrl}
+                            src={user.avatarPath || user.avatarUrl}
                             className="h-8 w-8 shrink-0"
                             fallbackClassName="text-xs"
                           />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">
-                              {user.username}
-                            </p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {user.email}
-                            </p>
+                          <div className="flex-1 min-w-0 flex flex-col justify-center">
+                            {user.fullName ? (
+                              <>
+                                <p className="text-sm font-medium truncate leading-none">{user.fullName}</p>
+                                <div className="flex items-center gap-1.5 mt-1">
+                                  <p className="text-xs text-muted-foreground truncate">@{user.username}</p>
+                                  <span className="text-xs text-muted-foreground/50">•</span>
+                                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-sm font-medium truncate leading-none">@{user.username}</p>
+                                <p className="text-xs text-muted-foreground truncate mt-1">{user.email}</p>
+                              </>
+                            )}
                           </div>
                           <UserPlus className="h-4 w-4 text-muted-foreground shrink-0" />
                         </button>

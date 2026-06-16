@@ -1,7 +1,8 @@
 import type { Server, Socket } from "socket.io";
 import { presenceStore } from "../presenceStore.js";
-import { SOCKET_EVENTS } from "../../shared/socket-events";
+import { SOCKET_EVENTS } from "../../shared/socket-events.js";
 import { dispatchUserPresence } from "../socket.dispatcher.js";
+import { prisma } from "../../lib/db.js";
 
 export const registerPresenceHandlers = async (io: Server, socket: Socket) => {
   const userId = socket.data.user?.id;
@@ -34,7 +35,20 @@ export const registerPresenceHandlers = async (io: Server, socket: Socket) => {
     }
 
     const onlineUsers = await presenceStore.getOnlineUsers();
-    dispatchUserPresence("INITIAL", onlineUsers, socket);
+    const onlineIds = Array.from(onlineUsers);
+    
+    // Fetch statuses for online users
+    const usersWithStatus = await prisma.user.findMany({
+      where: { id: { in: onlineIds } },
+      select: { id: true, status: true }
+    });
+    const statusesMap = new Map(usersWithStatus.map(u => [u.id, u.status]));
+    const payload = onlineIds.map(id => ({ 
+      userId: id, 
+      status: statusesMap.get(id) || "AVAILABLE" 
+    }));
+
+    dispatchUserPresence("INITIAL", payload as any, socket);
   } catch (error) {
     console.error("[Socket.io] Presence connect error:", error);
   }

@@ -15,6 +15,8 @@ export const SOCKET_EVENTS = {
   CHANNEL_UPDATE: "channel:update",
   MEMBER_UPDATE: "member:update",
   NOTIFICATION_NEW: "notification:new",
+  USER_STATUS_UPDATE: "user:status:update",
+  USER_UPDATE: "user:update",
 } as const;
 
 export interface MessageReadPayload {

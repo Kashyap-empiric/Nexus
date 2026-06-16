@@ -63,8 +63,8 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+  --border: oklch(0.87 0 0);
+  --input: oklch(0.87 0 0);
   --ring: oklch(0.708 0 0);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
@@ -78,7 +78,7 @@
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-border: oklch(0.87 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 }
 
@@ -137,6 +137,17 @@
   }
 }
 
+/* Message highlight flash — used when scrolling to a replied-to message */
+@keyframes message-highlight-flash {
+  0% { background-color: color-mix(in srgb, var(--primary) 20%, transparent); }
+  100% { background-color: transparent; }
+}
+
+.highlight-message {
+  animation: message-highlight-flash 1.5s ease-out forwards;
+  border-radius: var(--radius);
+}
+
 /* Tiptap Placeholder */
 .tiptap p.is-editor-empty:first-child::before {
   color: var(--color-muted-foreground);
@@ -144,4 +155,32 @@
   float: left;
   height: 0;
   pointer-events: none;
+}
+
+/* Custom Scrollbar Styles */
+@layer base {
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--muted) transparent;
+  }
+
+  /* WebKit (Chrome, Safari, Edge) */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--muted);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
 }

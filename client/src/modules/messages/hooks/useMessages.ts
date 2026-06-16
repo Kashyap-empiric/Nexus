@@ -25,9 +25,9 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ content, tempId }: MessageSendPayload) => {
+    mutationFn: ({ content, tempId, replyToId }: MessageSendPayload) => {
       return new Promise<Message>((resolve, reject) => {
-        socket.emit(SOCKET_EVENTS.MESSAGE_SEND, { conversationId, content, tempId }, (response: SocketResponse<Message>) => {
+        socket.emit(SOCKET_EVENTS.MESSAGE_SEND, { conversationId, content, tempId, replyToId }, (response: SocketResponse<Message>) => {
           if (response?.error) {
             // error can be a string (rate limiter) or a structured object { code, message, retryable }
             const errorMsg = typeof response.error === 'string'
@@ -57,7 +57,9 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
         conversationId,
         userId: userId,
         createdAt: new Date().toISOString(),
-        user: { id: userId, username: username, avatarUrl: avatarUrl },
+        user: { id: userId, username: username, avatarUrl: avatarUrl, fullName: currentUser?.fullName || null },
+        isEdited: false,
+        deletedAt: null,
         pending: true,
       };
 

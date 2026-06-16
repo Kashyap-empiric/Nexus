@@ -19,7 +19,10 @@ export const findMessages = async (
     orderBy: { id: "desc" },
     include: {
       user: {
-        select: { id: true, username: true, avatarUrl: true },
+        select: { id: true, username: true, fullName: true, avatarUrl: true },
+      },
+      replyTo: {
+        select: { id: true, content: true, deletedAt: true, user: { select: { username: true } } },
       },
     },
   });
@@ -47,14 +50,18 @@ export const createMessageTransaction = async (
   conversationId: string,
   userId: string,
   content: string,
-  messageId: string
+  messageId: string,
+  replyToId?: string | null
 ) => {
   return prisma.$transaction([
     prisma.message.create({
-      data: { id: messageId, conversationId, userId, content },
+      data: { id: messageId, conversationId, userId, content, replyToId: replyToId ?? undefined },
       include: {
         user: {
-          select: { id: true, username: true, avatarUrl: true },
+          select: { id: true, username: true, fullName: true, avatarUrl: true },
+        },
+        replyTo: {
+          select: { id: true, content: true, deletedAt: true, user: { select: { username: true } } },
         },
       },
     }),
@@ -93,7 +100,10 @@ export const updateMessage = async (
     },
     include: {
       user: {
-        select: { id: true, username: true, avatarUrl: true },
+        select: { id: true, username: true, fullName: true, avatarUrl: true },
+      },
+      replyTo: {
+        select: { id: true, content: true, deletedAt: true, user: { select: { username: true } } },
       },
     },
   });
@@ -125,7 +135,10 @@ export const softDeleteMessageInTransaction = async (
     data: { deletedAt: new Date() },
     include: {
       user: {
-        select: { id: true, username: true, avatarUrl: true },
+        select: { id: true, username: true, fullName: true, avatarUrl: true },
+      },
+      replyTo: {
+        select: { id: true, content: true, deletedAt: true, user: { select: { username: true } } },
       },
     },
   });
@@ -151,7 +164,7 @@ export const updateConversationLatestMessageInTransaction = async (
           content: true,
           deletedAt: true,
           createdAt: true,
-          user: { select: { username: true } },
+          user: { select: { username: true, fullName: true } },
         },
       },
     },

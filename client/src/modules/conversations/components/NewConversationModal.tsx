@@ -92,11 +92,20 @@ export function NewConversationModal({ isOpen, onClose }: NewConversationModalPr
                   <div className="flex items-center gap-3">
                     <UserAvatar 
                       name={user.username}
-                      src={user.avatarUrl}
+                      src={user.avatarPath || user.avatarUrl}
                       className="h-8 w-8 shrink-0"
                       fallbackClassName="text-xs"
                     />
-                    <span className="font-medium pt-[1px]">{user.username}</span>
+                    <div className="flex flex-col items-start justify-center">
+                      {user.fullName ? (
+                        <>
+                          <span className="font-medium text-sm leading-none">{user.fullName}</span>
+                          <span className="text-xs text-muted-foreground mt-1">@{user.username}</span>
+                        </>
+                      ) : (
+                        <span className="font-medium text-sm leading-none">@{user.username}</span>
+                      )}
+                    </div>
                   </div>
                   <Button
                     size="sm"

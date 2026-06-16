@@ -1,5 +1,6 @@
 import { getIO } from "./socket.js";
 import { SOCKET_EVENTS } from "../shared/socket-events.js";
+import { prisma } from "../lib/db.js";
 
 import type { Socket } from "socket.io";
 import type { Conversation, Message, ConversationMember } from "@prisma/client";
@@ -71,6 +72,62 @@ export const dispatchMessageRead = (
   }
 };
 
+export const dispatchNotification = (userId: string, notification: any) => {
+  try {
+    const io = getIO();
+    io.to(`user:${userId}`).emit(SOCKET_EVENTS.NOTIFICATION_NEW, notification);
+  } catch (error) {
+    console.error("Error dispatching notification:", error);
+  }
+};
+
+export const dispatchUserStatusUpdate = async (userId: string, status: string, statusText: string | null) => {
+  try {
+    const io = getIO();
+    
+    // Broadcast to the user's own sockets
+    io.to(`user:${userId}`).emit(SOCKET_EVENTS.USER_STATUS_UPDATE, { userId, status, statusText });
+
+    // Broadcast to all workspaces the user is a member of
+    const workspaces = await prisma.workspaceMember.findMany({
+      where: { userId },
+      select: { workspaceId: true }
+    });
+
+    for (const w of workspaces) {
+      io.to(`workspace:${w.workspaceId}`).emit(SOCKET_EVENTS.USER_STATUS_UPDATE, { userId, status, statusText });
+    }
+    
+    // Note: DMs are technically conversations. If we want we could emit to conversations as well,
+    // but for now workspace scoping covers 99% of chat scenarios in Nexus MVP.
+  } catch (error) {
+    console.error("Error dispatching status update:", error);
+  }
+};
+
+export const dispatchUserProfileUpdate = async (userId: string) => {
+  try {
+    const io = getIO();
+    
+    // Broadcast to the user's own sockets
+    io.to(`user:${userId}`).emit(SOCKET_EVENTS.USER_UPDATE, { userId });
+
+    // Broadcast to all workspaces the user is a member of
+    const workspaces = await prisma.workspaceMember.findMany({
+      where: { userId },
+      select: { workspaceId: true }
+    });
+
+    for (const w of workspaces) {
+      io.to(`workspace:${w.workspaceId}`).emit(SOCKET_EVENTS.USER_UPDATE, { userId });
+    }
+    
+    // Note: Can also emit to conversations if necessary, but this is consistent with status updates
+  } catch (error) {
+    console.error("Error dispatching profile update:", error);
+  }
+};
+
 export const dispatchUserPresence = (
   action: "ONLINE" | "OFFLINE" | "INITIAL",
   userIdOrIds: string | string[],
@@ -80,7 +137,7 @@ export const dispatchUserPresence = (
     const io = getIO();
 
     if (action === "INITIAL" && targetSocket) {
-      targetSocket.emit(SOCKET_EVENTS.INITIAL_PRESENCE, { userIds: userIdOrIds as string[] });
+      targetSocket.emit(SOCKET_EVENTS.INITIAL_PRESENCE, { users: userIdOrIds });
     } else if (action === "ONLINE") {
       if (targetSocket) {
         targetSocket.broadcast.emit(SOCKET_EVENTS.USER_ONLINE, { userId: userIdOrIds as string });

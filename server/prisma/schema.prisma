@@ -13,7 +13,11 @@ model User {
   createdAt                DateTime             @default(now())
   updatedAt                DateTime             @updatedAt
   username                 String
-  displayName              String?
+  fullName                 String?
+  bio                      String?
+  status                   UserStatus           @default(AVAILABLE)
+  statusText               String?
+  avatarPath               String?
   isOnboarded              Boolean              @default(false)
   pushNotificationsEnabled Boolean              @default(false)
   dmNotifications          Boolean              @default(true)
@@ -71,6 +75,9 @@ model Message {
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
   deletedAt      DateTime?
+  replyToId      String?
+  replyTo        Message?             @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies        Message[]            @relation("MessageReplies")
   latestIn       Conversation[]       @relation("ConversationLatestMessage")
   readByMembers  ConversationMember[] @relation("ConversationMemberLastRead")
   conversation   Conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -183,4 +190,11 @@ model PushSubscription {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+enum UserStatus {
+  AVAILABLE
+  AWAY
+  DND
+  INVISIBLE
 }

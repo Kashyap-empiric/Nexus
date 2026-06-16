@@ -10,15 +10,35 @@ export const getMyProfile = async (userId: string) => {
   return user;
 };
 
+export const getPublicProfile = async (id: string) => {
+  const profile = await usersRepo.findPublicProfileById(id);
+  if (!profile) throw new Error("Profile not found");
+  return profile;
+};
+
 export const updateProfile = async (
   userId: string,
   data: {
     username?: string;
-    displayName?: string | null;
-    avatarUrl?: string | null;
+    fullName?: string | null;
+    bio?: string | null;
     isOnboarded?: boolean;
   }
 ) => {
-  // if username is being updated, we could check for conflicts here, but Prisma will throw a unique constraint error
   return usersRepo.updateUser(userId, data);
+};
+
+export const updateAvatar = async (
+  userId: string,
+  avatarPath: string | null
+) => {
+  return usersRepo.updateUser(userId, { avatarPath });
+};
+
+export const updateStatus = async (
+  userId: string,
+  status: "AVAILABLE" | "AWAY" | "DND" | "INVISIBLE",
+  statusText?: string | null
+) => {
+  return usersRepo.updateUser(userId, { status, statusText });
 };

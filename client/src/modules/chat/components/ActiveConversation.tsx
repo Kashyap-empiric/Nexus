@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useConversationsQuery, useConversationDetailsQuery } from "@/modules/conversations/hooks/useConversations";
 import { useConversationSocket } from "../hooks/useConversationSocket";
 import { MessageList } from "@/modules/messages/components/MessageList";
@@ -23,8 +23,18 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
   const user = useUser();
   const currentUserId = user?.id || null;
   const setHeaderInfo = useChatStore((state) => state.setHeaderInfo);
+
+  // Reply state
+  const [replyingTo, setReplyingTo] = useState<{ id: string; username: string; content: string } | null>(null);
+  const handleReply = useCallback((messageId: string, username: string, content: string) => {
+    setReplyingTo({ id: messageId, username, content });
+  }, []);
+  const handleClearReply = useCallback(() => {
+    setReplyingTo(null);
+  }, []);
   const memberPanelOpen = useChatStore((state) => state.headerInfo?.memberPanelOpen ?? false);
   const isChannelFromStore = useChatStore((state) => state.headerInfo?.isChannel ?? false);
+  const { infoPanelOpen, infoPanelView, setInfoPanelView, closeInfoPanel } = useLayoutUI();
 
   const { data: conversation, isLoading } = useConversationDetailsQuery(conversationId);
   const { data: conversations } = useConversationsQuery();
@@ -97,8 +107,6 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
   const otherMember = isDM ? conversation.members.find((m) => m.userId !== currentUserId) : undefined;
   const myProfile = conversation.members.find((m) => m.userId === currentUserId)?.user;
 
-  const { infoPanelOpen, infoPanelView, setInfoPanelView, closeInfoPanel } = useLayoutUI();
-
   return (
     <div className="flex-1 flex h-full min-w-0">
       <div className="flex-1 flex flex-col h-full bg-background min-w-0">
@@ -109,18 +117,25 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
           partnerLastReadMessageId={otherMember?.lastReadMessageId}
           members={isChannel ? conversation.members : undefined}
           isChannel={isChannel || undefined}
+          onReply={handleReply}
         />
 
-        <MessageInput conversationId={conversationId} currentUser={myProfile} />
+        <MessageInput
+          conversationId={conversationId}
+          currentUser={myProfile}
+          replyingTo={replyingTo}
+          onClearReply={handleClearReply}
+        />
       </div>
 
       {/* Info Panel Sidebar */}
-      {isChannel && infoPanelOpen && (
+      {infoPanelOpen && (
         <>
           {/* Desktop version */}
           <div className="hidden md:block h-full border-l">
             <InfoPanel 
-              workspaceId={conversation.workspaceId || undefined} 
+              workspaceId={isChannel ? conversation.workspaceId || undefined : undefined}
+              userId={isDM ? otherMember?.userId : undefined}
               view={infoPanelView}
               setInfoPanelView={setInfoPanelView}
               onClose={closeInfoPanel}
@@ -130,7 +145,8 @@ export function ActiveConversation({ conversationId }: ActiveConversationProps) 
           {/* Mobile version */}
           <div className="md:hidden flex flex-col fixed inset-y-0 right-0 z-50 transform transition-transform duration-300 ease-in-out translate-x-0">
             <InfoPanel 
-              workspaceId={conversation.workspaceId || undefined} 
+              workspaceId={isChannel ? conversation.workspaceId || undefined : undefined}
+              userId={isDM ? otherMember?.userId : undefined}
               view={infoPanelView}
               setInfoPanelView={setInfoPanelView}
               onClose={closeInfoPanel}

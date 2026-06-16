@@ -19,13 +19,26 @@ export const getMessages = async (conversationId: string, cursor: string | undef
   };
 };
 
-export const createMessage = async (conversationId: string, userId: string, content: string) => {
+export const createMessage = async (conversationId: string, userId: string, content: string, replyToId?: string | null) => {
   const messageId = uuidv7();
+
+  // Validate replyToId belongs to the same conversation (prevent cross-conversation replies)
+  if (replyToId) {
+    const parentMessage = await messagesRepo.findById(replyToId);
+    if (!parentMessage) {
+      throw new Error("Reply target message not found.");
+    }
+    if (parentMessage.conversationId !== conversationId) {
+      throw new Error("Cannot reply to a message in a different conversation.");
+    }
+  }
+
   const [message, conversation] = await messagesRepo.createMessageTransaction(
     conversationId,
     userId,
     content,
-    messageId
+    messageId,
+    replyToId
   );
 
   const conversationMetadata = {

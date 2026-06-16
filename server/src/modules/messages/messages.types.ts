@@ -9,6 +9,13 @@ export interface MessageDTO {
   userId: string;
   isEdited: boolean;
   deletedAt: string | null;
+  replyToId: string | null;
+  replyTo: {
+    id: string;
+    content: string;
+    deletedAt: Date | null;
+    user: { username: string };
+  } | null;
   createdAt: Date;
   user: UserDTO;
 }
@@ -47,6 +54,7 @@ export interface CreateMessageInput {
   conversationId: string;
   userId: string;
   content: string;
+  replyToId?: string | null;
 }
 
 export interface EditMessageInput {

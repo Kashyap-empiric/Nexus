@@ -7,7 +7,11 @@ export interface WorkspaceMember {
   joinedAt: string;
   user?: {
     username: string;
+    fullName?: string | null;
     avatarUrl: string | null;
+    avatarPath?: string | null;
+    status?: string;
+    statusText?: string | null;
   };
 }
 

@@ -3,6 +3,7 @@ import type { Message } from "@/modules/messages/types/message";
 export interface User {
   id: string;
   username: string;
+  fullName: string | null;
   avatarUrl: string | null;
 }
 
@@ -31,6 +32,7 @@ export interface Conversation {
     createdAt: string;
     user: {
       username: string;
+      fullName: string | null;
     };
   } | null;
   updatedAt: string;

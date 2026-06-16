@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSendMessageMutation } from "@/modules/messages/hooks/useMessages";
-import { SendHorizontal, Smile } from "lucide-react";
+import { SendHorizontal, Smile, X, Reply } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/components/ui/popover";
 import EmojiPicker, { Theme } from 'emoji-picker-react';
@@ -18,9 +18,11 @@ interface MessageInputProps {
   conversationId: string;
   currentUser?: User;
   disabled?: boolean;
+  replyingTo?: { id: string; username: string; content: string } | null;
+  onClearReply?: () => void;
 }
 
-export function MessageInput({ conversationId, currentUser, disabled }: MessageInputProps) {
+export function MessageInput({ conversationId, currentUser, disabled, replyingTo, onClearReply }: MessageInputProps) {
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const { theme } = useTheme();
   const { mutate: sendMessage } = useSendMessageMutation(conversationId, currentUser);
@@ -35,9 +37,10 @@ export function MessageInput({ conversationId, currentUser, disabled }: MessageI
     if (!markdownContent.trim()) return;
 
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-    sendMessage({ conversationId, content: markdownContent.trim(), tempId });
+    sendMessage({ conversationId, content: markdownContent.trim(), tempId, replyToId: replyingTo?.id || null });
     
     editor.commands.clearContent(true);
+    onClearReply?.();
   };
 
   const [activeMarks, setActiveMarks] = useState({
@@ -186,6 +189,26 @@ export function MessageInput({ conversationId, currentUser, disabled }: MessageI
 
   return (
     <form onSubmit={handleSubmit} className="px-[15px] md:px-6 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-2 bg-background shrink-0 w-full">
+      {/* Reply banner */}
+      {replyingTo && (
+        <div className="flex items-center gap-2 px-3 py-2 mb-1 bg-muted/50 border border-border rounded-t-lg text-sm">
+          <Reply className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <span className="text-muted-foreground">
+            Replying to <span className="font-semibold text-foreground">@{replyingTo.username}</span>
+          </span>
+          <span className="truncate text-muted-foreground/70 flex-1 min-w-0">
+            {replyingTo.content}
+          </span>
+          <button
+            type="button"
+            onClick={onClearReply}
+            className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
       <div className="w-full flex flex-col bg-background dark:bg-zinc-950 border rounded-xl shadow-sm transition-colors focus-within:ring-1 focus-within:ring-primary focus-within:border-primary overflow-hidden">
         
         {/* Toolbar Row */}

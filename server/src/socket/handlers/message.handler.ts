@@ -11,7 +11,7 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
   socket.on(
     SOCKET_EVENTS.MESSAGE_SEND,
     async (
-      payload: { tempId: string; conversationId: string; content: string },
+      payload: { tempId: string; conversationId: string; content: string; replyToId?: string },
       callback
     ) => {
       try {
@@ -54,7 +54,8 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
         const { message, conversationMetadata } = await createMessage(
           payload.conversationId,
           userId,
-          payload.content
+          payload.content,
+          payload.replyToId
         );
 
         dispatchMessageEvent("NEW", payload.conversationId, message, conversationMetadata);
