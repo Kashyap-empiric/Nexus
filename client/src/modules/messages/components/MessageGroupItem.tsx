@@ -1,14 +1,16 @@
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import type { MessageGroup } from "@/modules/chat/utils/groupMessages";
 import type { ConversationMember } from "@/modules/conversations/types/conversation";
 import { MessageStatus } from "./MessageStatus";
-import { MoreHorizontal, Pencil, Trash, Ban, Copy } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash, Ban, Copy, Reply } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
 import {
@@ -30,9 +32,10 @@ interface MessageGroupItemProps {
   partnerLastReadMessageId?: string | null;
   members?: ConversationMember[];
   isChannel?: boolean;
+  onReply?: (messageId: string, username: string, content: string) => void;
 }
 
-export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageId, members, isChannel }: MessageGroupItemProps) {
+export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageId, members, isChannel, onReply }: MessageGroupItemProps) {
   const { user, messages } = group;
   const conversationId = messages[0]?.conversationId;
 
@@ -89,8 +92,22 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
 
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-  const handleContextMenu = (e: React.MouseEvent, msgId: string, isMyMsg: boolean, isDel: boolean) => {
-    if (isMyMsg && !isDel) {
+  /** Scroll to a message by ID and briefly highlight it */
+  const scrollToMessage = (targetId: string) => {
+    const el = document.getElementById(`msg-${targetId}`);
+    if (!el) return;
+
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    // Remove highlight from any previously highlighted message
+    document.querySelectorAll(".highlight-message").forEach((e) => e.classList.remove("highlight-message"));
+
+    // Add highlight that fades out over 1.5s
+    el.classList.add("highlight-message");
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, msgId: string, isDel: boolean) => {
+    if (!isDel) {
       e.preventDefault();
       setOpenMenuId(msgId);
     }
@@ -112,6 +129,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
           return (
             <div
               key={msg.id}
+              id={`msg-${msg.id}`}
               className={`group/row flex hover:bg-black/10 dark:hover:bg-white/10 px-[15px] md:px-4 animate-in fade-in slide-in-from-bottom-1 duration-300 ease-out ${isFirst ? "pt-2 pb-0.5" : "py-0.5"} ${msg.optimistic || msg.pending ? "opacity-70" : ""}`}
             >
               <div className="w-[36px] shrink-0 flex justify-center items-start relative select-none">
@@ -130,10 +148,31 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
               </div>
 
               <div className="flex-1 min-w-0 ml-2">
+                {/* Reply quote block — shown above the username for the first message */}
+                {isFirst && msg.replyTo && !isDeleted && (
+                  <button
+                    type="button"
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 hover:text-foreground transition-colors cursor-pointer w-fit group/reply"
+                    onClick={() => scrollToMessage(msg.replyTo!.id)}
+                  >
+                    <Reply className="h-3 w-3 shrink-0 rotate-180" />
+                    <span className="font-semibold truncate max-w-[120px]">
+                      {msg.replyTo.user?.username || "Unknown"}
+                    </span>
+                    <span className="truncate max-w-[200px] opacity-70">
+                      {msg.replyTo.deletedAt ? (
+                        <span className="italic">[Message deleted]</span>
+                      ) : (
+                        msg.replyTo.content
+                      )}
+                    </span>
+                  </button>
+                )}
+
                 {isFirst && (
                   <div className="flex items-baseline gap-2 mb-0.5">
                     <span className="font-bold text-foreground hover:underline cursor-pointer">
-                      {user?.username || "Deleted user"}
+                      <Link href={`/users/${user?.id}`}>{user?.username || "Deleted user"}</Link>
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {time}
@@ -163,38 +202,83 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                     <>
                       <div 
                         className="flex-1 relative" 
-                        onContextMenu={(e) => handleContextMenu(e, msg.id, isMyMessage, isDeleted)}
+                        onContextMenu={(e) => handleContextMenu(e, msg.id, isDeleted)}
                       >
                         <span className={isDeleted ? "italic text-muted-foreground flex items-center gap-1.5" : ""}>
                           {isDeleted && <Ban className="h-3.5 w-3.5 inline-block mr-1" />}
                           {isDeleted ? (
                             <span className="italic text-muted-foreground">This message was deleted.</span>
                           ) : (
-                            <MarkdownRenderer content={msg.content} />
+                            <>
+                              {/* Reply quote block — for non-first messages (no username header above) */}
+                              {!isFirst && msg.replyTo && !isDeleted && (
+                                <button
+                                  type="button"
+                                  className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 hover:text-foreground transition-colors cursor-pointer w-fit group/reply"
+                                  onClick={() => scrollToMessage(msg.replyTo!.id)}
+                                >
+                                  <Reply className="h-3 w-3 shrink-0 rotate-180" />
+                                  <span className="font-semibold truncate max-w-[120px]">
+                                    {msg.replyTo.user?.username || "Unknown"}
+                                  </span>
+                                  <span className="truncate max-w-[200px] opacity-70">
+                                    {msg.replyTo.deletedAt ? (
+                                      <span className="italic">[Message deleted]</span>
+                                    ) : (
+                                      msg.replyTo.content
+                                    )}
+                                  </span>
+                                </button>
+                              )}
+                              <MarkdownRenderer content={msg.content} />
+                            </>
                           )}
                           {msg.isEdited && !isDeleted && (
                             <span className="text-xs text-muted-foreground ml-2">(edited)</span>
                           )}
                         </span>
-                        
-                        {isMyMessage && !isDeleted && !msg.pending && !msg.optimistic && (
+
+                        {/* Desktop hover actions: Reply + Copy for everyone; Edit/Delete/More for own messages */}
+                        {!isDeleted && !msg.pending && !msg.optimistic && (
                           <div className="hidden md:inline-flex opacity-0 group-hover/row:opacity-100 transition-opacity absolute right-2 md:right-auto md:ml-2 -translate-y-1.5 bg-background border shadow-sm rounded-md z-10 items-center">
                             <Button
                               variant="ghost"
                               size="icon"
                               className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                              onClick={() => handleEditStart(msg.id, msg.content)}
+                              onClick={() => onReply?.(msg.id, user?.username || "Unknown", msg.content)}
+                              title="Reply"
                             >
-                              <Pencil className="h-3.5 w-3.5" />
+                              <Reply className="h-3.5 w-3.5" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
                               className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                              onClick={() => setMessageToDelete(msg.id)}
+                              onClick={() => navigator.clipboard.writeText(msg.content)}
+                              title="Copy"
                             >
-                              <Trash className="h-3.5 w-3.5" />
+                              <Copy className="h-3.5 w-3.5" />
                             </Button>
+                            {isMyMessage && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                  onClick={() => handleEditStart(msg.id, msg.content)}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                  onClick={() => setMessageToDelete(msg.id)}
+                                >
+                                  <Trash className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                            )}
                             <DropdownMenu>
                               <DropdownMenuTrigger
                                 render={<Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" />}
@@ -202,40 +286,58 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                 <MoreHorizontal className="h-4 w-4" />
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-40">
-                                <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => handleEditStart(msg.id, msg.content)}>
-                                  <Pencil className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Edit Message</span>
+                                <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => onReply?.(msg.id, user?.username || "Unknown", msg.content)}>
+                                  <Reply className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(msg.content)}>
                                   <Copy className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy Text</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive focus:text-destructive flex items-center cursor-pointer" onClick={() => setMessageToDelete(msg.id)}>
-                                  <Trash className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Delete Message</span>
-                                </DropdownMenuItem>
+                                {isMyMessage && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => handleEditStart(msg.id, msg.content)}>
+                                      <Pencil className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Edit Message</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="text-destructive focus:text-destructive flex items-center cursor-pointer" onClick={() => setMessageToDelete(msg.id)}>
+                                      <Trash className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Delete Message</span>
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
                         )}
-                        {/* Mobile dropdown menu (hidden trigger, triggered by state) */}
-                        {isMyMessage && !isDeleted && !msg.pending && !msg.optimistic && (
+                        {/* Mobile dropdown: Reply for everyone; Edit/Delete/More for own messages */}
+                        {!isDeleted && !msg.pending && !msg.optimistic && (
                            <div className="md:hidden">
                              <DropdownMenu open={openMenuId === msg.id} onOpenChange={(open) => setOpenMenuId(open ? msg.id : null)}>
                                <DropdownMenuTrigger className="absolute right-0 top-0 w-full h-full opacity-0 pointer-events-none" aria-hidden="true" tabIndex={-1} />
                                <DropdownMenuContent align="end" side="bottom" sideOffset={4} className="w-40">
-                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => handleEditStart(msg.id, msg.content)}>
-                                   <Pencil className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Edit Message</span>
+                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => onReply?.(msg.id, user?.username || "Unknown", msg.content)}>
+                                   <Reply className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply</span>
                                  </DropdownMenuItem>
                                  <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(msg.content)}>
                                    <Copy className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy Text</span>
                                  </DropdownMenuItem>
-                                 <DropdownMenuItem className="text-destructive focus:text-destructive flex items-center cursor-pointer" onClick={() => setMessageToDelete(msg.id)}>
-                                   <Trash className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Delete Message</span>
-                                 </DropdownMenuItem>
+                                 {isMyMessage && (
+                                   <>
+                                     <DropdownMenuSeparator />
+                                     <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => handleEditStart(msg.id, msg.content)}>
+                                       <Pencil className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Edit Message</span>
+                                     </DropdownMenuItem>
+                                     <DropdownMenuSeparator />
+                                     <DropdownMenuItem className="text-destructive focus:text-destructive flex items-center cursor-pointer" onClick={() => setMessageToDelete(msg.id)}>
+                                       <Trash className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Delete Message</span>
+                                     </DropdownMenuItem>
+                                   </>
+                                 )}
                                </DropdownMenuContent>
                              </DropdownMenu>
                            </div>
                         )}
                       </div>
-                      
+
                       <div className="flex items-center ml-2 shrink-0">
                         {isMyMessage && !isDeleted && (
                           <MessageStatus

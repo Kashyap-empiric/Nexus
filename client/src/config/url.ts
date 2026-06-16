@@ -13,6 +13,10 @@
 export const API_ROUTES = {
   USERS: {
     SEARCH: (query: string) => `/users/search?q=${encodeURIComponent(query)}`,
+    ME: '/users/me',
+    PROFILE: (id: string) => `/users/${id}`,
+    AVATAR: '/users/me/avatar',
+    STATUS: '/users/me/status',
   },
   CONVERSATIONS: {
     BASE: '/conversations',

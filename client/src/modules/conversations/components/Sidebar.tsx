@@ -27,12 +27,14 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
 import { MessageSquarePlus, UserPlus } from "lucide-react";
+import { useProfile } from "@/modules/users/hooks/useProfile";
 import { WorkspaceHeader } from "@/modules/workspaces/components/WorkspaceHeader";
 import { useWorkspaceDetails } from "@/modules/workspaces/hooks/useWorkspaces";
 
 const NewConversationModal = dynamic(() => import("./NewConversationModal").then((m) => m.NewConversationModal), { ssr: false });
 const CreateChannelModal = dynamic(() => import("@/modules/workspaces/components/CreateChannelModal").then((m) => m.CreateChannelModal), { ssr: false });
 import { WorkspaceChannelItem } from "@/modules/workspaces/components/WorkspaceChannelItem";
+import { StatusSelector } from "@/modules/users/components/StatusSelector";
 
 interface SidebarProps {
   onNavigate?: () => void;
@@ -93,10 +95,13 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   }, [mode, activeWorkspaceId, activeId, workspaceChannels, lastVisitedChannels, router]);
 
   // Try to find the actual database user profile from the conversation members
-  const myProfile = conversations?.[0]?.members.find((m) => m.userId === currentAuthUser?.id)?.user;
+  const { data: dbProfile } = useProfile();
 
   const socketStatus = useSocketStore((state) => state.socketStatus);
-  const statusLabel = socketStatus === "connected" ? "Online" : socketStatus === "connecting" ? "Connecting..." : "Offline";
+  const statusStr = dbProfile?.status;
+  const statusLabel = socketStatus === "connected" 
+    ? (dbProfile?.statusText || (statusStr === "AWAY" ? "Away" : statusStr === "DND" ? "Do Not Disturb" : statusStr === "INVISIBLE" ? "Offline" : "Online"))
+    : socketStatus === "connecting" ? "Connecting..." : "Offline";
 
   const displayList = mode === "DM" 
     ? [...(conversations || [])]
@@ -249,11 +254,12 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                         <UserAvatar
                           name={name}
                           src={avatarUrl}
+                          avatarPath={(otherMember?.user as any)?.avatarPath}
                           className="h-9 w-9 shrink-0"
                           fallbackClassName="text-xs bg-primary/20 text-primary font-medium"
                         />
                         {userId && (
-                          <PresenceIndicator userId={userId} className="-bottom-0.5 -right-0.5" />
+                          <PresenceIndicator userId={userId} status={(otherMember?.user as any)?.status} className="-bottom-0.5 -right-0.5" />
                         )}
                       </div>
 
@@ -340,23 +346,21 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         {/* Bottom: User Profile */}
         <div className="p-4 border-t bg-background shrink-0 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="relative shrink-0">
+            <div className="relative shrink-0 flex items-center">
               <UserAvatar
-                name={myProfile?.username || currentAuthUser?.user_metadata?.username || "ME"}
-                src={myProfile?.avatarUrl || currentAuthUser?.user_metadata?.avatar_url || currentAuthUser?.user_metadata?.avatarUrl}
+                name={dbProfile?.username || currentAuthUser?.user_metadata?.username || "ME"}
+                src={dbProfile?.avatarUrl || currentAuthUser?.user_metadata?.avatar_url || currentAuthUser?.user_metadata?.avatarUrl}
+                avatarPath={dbProfile?.avatarPath}
                 className="h-8 w-8 shrink-0"
                 fallbackClassName="text-xs"
               />
-              <span
-                className={cn(
-                  "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background",
-                  socketStatus === "connected" ? "bg-green-500" : socketStatus === "connecting" ? "bg-yellow-500" : "bg-muted-foreground"
-                )}
-              />
+              <div className="absolute -bottom-0.5 -right-0.5">
+                <StatusSelector />
+              </div>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate mb-1 leading-none">
-                {myProfile?.username || currentAuthUser?.user_metadata?.username || "My Account"}
+                {dbProfile?.username || currentAuthUser?.user_metadata?.username || "My Account"}
               </p>
               <p className="text-xs text-muted-foreground leading-none truncate">{statusLabel}</p>
             </div>

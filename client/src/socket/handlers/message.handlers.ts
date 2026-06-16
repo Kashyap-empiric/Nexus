@@ -104,6 +104,7 @@ export const handleMessageUpdate = (queryClient: QueryClient) => {
                 createdAt: message.createdAt,
                 user: {
                   username: message.user?.username || "Unknown",
+                  fullName: (message.user as any)?.fullName || null,
                 },
               },
             };
@@ -127,6 +128,7 @@ export const handleMessageUpdate = (queryClient: QueryClient) => {
               createdAt: message.createdAt,
               user: {
                 username: message.user?.username || "Unknown",
+                fullName: (message.user as any)?.fullName || null,
               },
             },
           };
@@ -161,6 +163,7 @@ export const handleMessageDelete = (queryClient: QueryClient) => {
                 createdAt: message.createdAt,
                 user: {
                   username: message.user?.username || "Unknown",
+                  fullName: (message.user as any)?.fullName || null,
                 },
               },
             };
@@ -184,6 +187,7 @@ export const handleMessageDelete = (queryClient: QueryClient) => {
               createdAt: message.createdAt,
               user: {
                 username: message.user?.username || "Unknown",
+                fullName: (message.user as any)?.fullName || null,
               },
             },
           };

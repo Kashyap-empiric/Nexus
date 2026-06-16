@@ -3,23 +3,21 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { useProfile, useUpdateProfile } from "@/modules/users/hooks/useProfile";
+import { useProfile, useUpdateProfile, useUpdateAvatar } from "@/modules/users/hooks/useProfile";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Button } from "@/shared/components/ui/button";
+import { Textarea } from "@/shared/components/ui/textarea";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
+import { uploadAvatar, deleteAvatar } from "@/shared/lib/upload";
+import { Camera, Trash, Loader2 } from "lucide-react";
 
 const profileSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters").max(30),
-  displayName: z.string().max(50).nullable().optional(),
-  avatarUrl: z
-    .string()
-    .url("Must be a valid URL")
-    .nullable()
-    .optional()
-    .or(z.literal("")),
+  fullName: z.string().max(80).nullable().optional(),
+  bio: z.string().max(160).nullable().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -27,6 +25,13 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 export const ProfileSettings = () => {
   const { data: profile, isLoading } = useProfile();
   const { mutateAsync: updateProfile, isPending } = useUpdateProfile();
+  const { mutateAsync: updateAvatar } = useUpdateAvatar();
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [isAvatarRemoved, setIsAvatarRemoved] = useState(false);
 
   const {
     register,
@@ -38,35 +43,86 @@ export const ProfileSettings = () => {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       username: "",
-      displayName: "",
-      avatarUrl: "",
+      fullName: "",
+      bio: "",
     },
   });
-
-  const avatarUrl = watch("avatarUrl");
 
   useEffect(() => {
     if (profile) {
       reset({
         username: profile.username || "",
-        displayName: profile.displayName || "",
-        avatarUrl: profile.avatarUrl || "",
+        fullName: profile.fullName || "",
+        bio: profile.bio || "",
       });
     }
   }, [profile, reset]);
 
   const onSubmit = async (data: ProfileFormValues) => {
     try {
+      setIsUploading(true);
+      
+      let newAvatarPath = profile!.avatarPath;
+      if (avatarFile) {
+        newAvatarPath = await uploadAvatar(profile!.id, avatarFile);
+      } else if (isAvatarRemoved) {
+        newAvatarPath = null;
+      }
+      
+      if (newAvatarPath !== profile!.avatarPath) {
+        await updateAvatar(newAvatarPath);
+        if (profile!.avatarPath) {
+          await deleteAvatar(profile!.avatarPath);
+        }
+      }
+
       await updateProfile({
         ...data,
-        avatarUrl: data.avatarUrl || null,
-        displayName: data.displayName || null,
+        fullName: data.fullName || null,
+        bio: data.bio || null,
       });
+      
       toast.success("Profile updated successfully");
+      
+      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+      setAvatarFile(null);
+      setAvatarPreview(null);
+      setIsAvatarRemoved(false);
       reset(data); // Reset form with new values to clear dirty state
-    } catch (error) {
-      toast.error("Failed to update profile");
+    } catch (error: any) {
+      if (error.status === 409) {
+        toast.error("Username is already taken. Please choose another one.");
+      } else {
+        toast.error(error.message || "Failed to update profile");
+      }
+    } finally {
+      setIsUploading(false);
     }
+  };
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File size must be less than 5MB");
+      return;
+    }
+
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+    setIsAvatarRemoved(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleRemoveAvatar = () => {
+    setAvatarFile(null);
+    setAvatarPreview(null);
+    setIsAvatarRemoved(true);
   };
 
   if (isLoading) {
@@ -91,28 +147,45 @@ export const ProfileSettings = () => {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div className="flex items-center gap-6">
-          <UserAvatar
-            name={profile?.displayName || profile?.username || "You"}
-            src={avatarUrl || profile?.avatarUrl || undefined}
-            className="h-20 w-20 text-xl"
+      <div className="flex items-center gap-6 pb-2">
+        <div className="relative group">
+          <UserAvatar 
+            name={profile?.username || "ME"}
+            src={isAvatarRemoved ? null : (avatarPreview || profile?.avatarUrl)}
+            avatarPath={isAvatarRemoved || avatarPreview ? null : profile?.avatarPath}
+            className="h-24 w-24 text-2xl" 
           />
-          <div className="space-y-1 flex-1">
-            <Label htmlFor="avatarUrl">Avatar URL</Label>
-            <Input
-              id="avatarUrl"
-              placeholder="https://example.com/avatar.png"
-              {...register("avatarUrl")}
-            />
-            {errors.avatarUrl && (
-              <p className="text-sm text-destructive">
-                {errors.avatarUrl.message}
-              </p>
-            )}
-          </div>
+          <button 
+            type="button"
+            onClick={handleAvatarClick}
+            disabled={isUploading}
+            className="absolute inset-0 flex items-center justify-center bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity rounded-full disabled:opacity-50"
+          >
+            {isUploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Camera className="h-6 w-6" />}
+          </button>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            className="hidden" 
+            accept="image/png, image/jpeg, image/webp" 
+            onChange={handleFileChange}
+          />
         </div>
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium">Profile Picture</h4>
+          <p className="text-xs text-muted-foreground max-w-[250px]">
+            JPG, GIF or PNG. 5MB max.
+          </p>
+          {(profile?.avatarPath || profile?.avatarUrl) && (
+            <Button variant="outline" size="sm" onClick={handleRemoveAvatar} disabled={isUploading} className="mt-2 text-destructive hover:text-destructive">
+              <Trash className="h-4 w-4 mr-2" />
+              Remove Picture
+            </Button>
+          )}
+        </div>
+      </div>
 
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -138,17 +211,35 @@ export const ProfileSettings = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="displayName">Display Name</Label>
+            <Label htmlFor="fullName">Full Name</Label>
             <Input
-              id="displayName"
-              placeholder="How should we call you?"
-              {...register("displayName")}
+              id="fullName"
+              placeholder="What is your full name?"
+              {...register("fullName")}
             />
-            {errors.displayName && (
+            {errors.fullName && (
               <p className="text-sm text-destructive">
-                {errors.displayName.message}
+                {errors.fullName.message}
               </p>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="bio">Bio</Label>
+            <Textarea
+              id="bio"
+              placeholder="Tell us a little bit about yourself"
+              className="resize-none"
+              {...register("bio")}
+            />
+            {errors.bio && (
+              <p className="text-sm text-destructive">
+                {errors.bio.message}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground text-right">
+              {watch("bio")?.length || 0} / 160
+            </p>
           </div>
 
           <div className="space-y-2 pt-2">
@@ -186,8 +277,8 @@ export const ProfileSettings = () => {
         </div>
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={!isDirty || isPending}>
-            {isPending ? "Saving..." : "Save Changes"}
+          <Button type="submit" disabled={(!isDirty && !avatarFile && !isAvatarRemoved) || isPending || isUploading}>
+            {isPending || isUploading ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </form>

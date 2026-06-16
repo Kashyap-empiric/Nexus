@@ -78,7 +78,7 @@ BEGIN
   -- Checks for exact match on `id` column (not workspaceId or userId)
   IF EXISTS (
     SELECT 1 FROM pg_constraint WHERE conname = 'WorkspaceMember_pkey'
-    AND conrelid = 'WorkspaceMember'::regclass
+    AND conrelid = '"WorkspaceMember"'::regclass
     AND contype = 'p'
     AND pg_get_constraintdef(pg_constraint.oid) = 'PRIMARY KEY ("id")'
   ) THEN
@@ -88,7 +88,7 @@ BEGIN
   -- Add composite PK if not already present
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint WHERE conname = 'WorkspaceMember_pkey'
-    AND conrelid = 'WorkspaceMember'::regclass
+    AND conrelid = '"WorkspaceMember"'::regclass
     AND contype = 'p'
   ) THEN
     ALTER TABLE "WorkspaceMember" ADD PRIMARY KEY ("workspaceId", "userId");

@@ -1,7 +1,7 @@
 # Nexus MVP — Settings, Profiles, Formatting & Replies Plan
 
 > **Goal:** Implement Shared Settings (Profiles + Appearance), Text Formatting, and Inline Replies.
-> **Status:** 🟡 Planning Phase
+> **Status:** 🟢 Blocks 1–3 Complete | ✅ Blocks 4–5 (Replies) Complete
 
 ---
 
@@ -15,7 +15,7 @@
 | **User Profiles (Settings)** | Users need to edit username/displayName/avatar inside settings. | Medium | **P0** |
 | **Appearance Settings** | Users want to explicitly toggle light/dark/system mode. | Low | **P1** |
 | **Text Formatting** | Messages lack rich text (bold, italic, lists). | Low | **P1** |
-| **Inline Replies** | Users cannot reply to specific messages with context. | High | **P0** |
+| **Inline Replies** | ✅ Users can reply to specific messages with context. | High | **P0** |
 | **Onboarding Flow** | New users have no guided setup experience. | Medium | **P1** |
 
 ---
@@ -27,8 +27,8 @@
 | **1** | DB + Backend: User profile fields + API | Schema must land before UI is built. |
 | **2** | Frontend: Shared Settings Modal + Profile + Appearance | UI can now talk to real endpoints. |
 | **3** | Text Formatting (Markdown) | Standalone frontend task, fast win. |
-| **4** | Inline Replies — Database & Backend | Requires Prisma migration and socket updates. |
-| **5** | Inline Replies — Frontend | Ties the backend reply logic to the UI. |
+| **4** | Inline Replies — Database & Backend | ✅ Complete — Prisma schema, types, service, repository, socket |
+| **5** | Inline Replies — Frontend | ✅ Complete — Reply button, banner, quote block, state management |
 | **6** | UI/UX Improvements + Onboarding + Fix Remaining Bugs | Production polish — runs last so no logic changes break it. Also squash low-severity bugs from bugs-found.md. |
 
 ---
@@ -285,7 +285,7 @@ System is considered complete when:
 - [ ] Settings modal opens via `?settings=<tab>` URL param and closes on back navigation
 - [ ] Profiles (username, displayName, avatar) are editable and persist to the database
 - [ ] Markdown renders bold, italic, lists, code correctly in messages
-- [ ] Replies store `replyToId` with `onDelete: SetNull` — deleting a parent doesn't break the reply
+- [x] Replies store `replyToId` with `onDelete: SetNull` — deleting a parent doesn't break the reply
 - [ ] Onboarding runs exactly once per user (gated by `isOnboarded` flag)
 - [ ] UI states cover: empty channel, loading, failed send, disconnected socket
 - [ ] No schema regression or data loss on `npx prisma db push`

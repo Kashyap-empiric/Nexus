@@ -18,9 +18,10 @@ interface MessageListProps {
   partnerLastReadMessageId?: string | null;
   members?: ConversationMember[];
   isChannel?: boolean;
+  onReply?: (messageId: string, username: string, content: string) => void;
 }
 
-export function MessageList({ conversationId, currentUserId, myLastReadMessageId, partnerLastReadMessageId, members, isChannel }: MessageListProps) {
+export function MessageList({ conversationId, currentUserId, myLastReadMessageId, partnerLastReadMessageId, members, isChannel, onReply }: MessageListProps) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, error } = useMessagesInfiniteQuery(conversationId);
   const { mutate: markRead } = useMarkConversationReadMutation();
 
@@ -101,6 +102,7 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
                 partnerLastReadMessageId={partnerLastReadMessageId}
                 members={members}
                 isChannel={isChannel}
+                onReply={onReply}
               />
             ))
           )}

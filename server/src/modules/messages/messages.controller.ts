@@ -25,9 +25,9 @@ export const createMessage = async (req: AuthRequest, res: Response): Promise<vo
   try {
     const userId = req.user!.id;
     const { conversationId } = req.params as { conversationId: string };
-    const { content } = req.body as CreateMessageBody;
+    const { content, replyToId } = req.body as CreateMessageBody & { replyToId?: string };
 
-    const { message, conversationMetadata } = await messagesService.createMessage(conversationId, userId, content);
+    const { message, conversationMetadata } = await messagesService.createMessage(conversationId, userId, content, replyToId);
 
     try {
       dispatchMessageEvent("NEW", conversationId, message, conversationMetadata);

@@ -1,5 +1,12 @@
 import type { User } from "@/modules/conversations/types/conversation";
 
+export interface ReplyTo {
+  id: string;
+  content: string;
+  deletedAt: string | null;
+  user: { username: string };
+}
+
 export interface Message {
   id: string;
   content: string;
@@ -7,10 +14,12 @@ export interface Message {
   userId: string;
   createdAt: string;
   user: User;
-  optimistic?: boolean;
+  isEdited: boolean;
+  deletedAt: string | null;
+  replyToId?: string | null;
+  replyTo?: ReplyTo | null;
   pending?: boolean;
-  isEdited?: boolean;
-  deletedAt?: string | null;
+  optimistic?: boolean;
 }
 
 export interface MessagePage {

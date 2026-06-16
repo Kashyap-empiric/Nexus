@@ -17,6 +17,7 @@ export interface MessageSendPayload {
   conversationId: string;
   content: string;
   tempId: string;
+  replyToId?: string | null;
 }
 
 export interface MessageNewPayload {
@@ -43,6 +44,7 @@ export interface ConversationUpdatePayload {
       createdAt: string;
       user: {
         username: string;
+        fullName: string | null;
       };
     } | null;
   };

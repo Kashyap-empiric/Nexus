@@ -7,9 +7,11 @@ import { useSocketEvents } from "@/socket/useSocketEvent";
 import { useSocketStore } from "@/socket/socketStore";
 import { toast } from "sonner";
 import { requestNotificationPermission } from "@/shared/lib/notifications";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function SocketProvider() {
   const setSocketStatus = useSocketStore((state) => state.setSocketStatus);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     requestNotificationPermission();
@@ -23,8 +25,30 @@ export function SocketProvider() {
       toast.error(`Connection lost: ${error.message}`);
     };
 
-    const handleInitialPresence = ({ userIds }: { userIds: string[] }) => {
-      useSocketStore.getState().setInitialOnlineUsers(userIds);
+    const handleInitialPresence = (payload: any) => {
+      if (payload.users) {
+        useSocketStore.getState().setInitialOnlineUsers(payload.users.map((u: any) => u.userId));
+        // We could manually update cache here, but invalidating ensures fresh data
+        queryClient.invalidateQueries({ queryKey: ["users"] });
+        queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+      } else if (payload.userIds) {
+        // Fallback for old payload
+        useSocketStore.getState().setInitialOnlineUsers(payload.userIds);
+      }
+    };
+
+    const handleUserStatusUpdate = () => {
+      // Invalidate relevant queries when someone's status changes
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    };
+
+    const handleUserUpdate = () => {
+      // Invalidate queries when someone's profile/avatar changes
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
     };
 
     const handleUserOnline = ({ userId }: { userId: string }) => {
@@ -42,6 +66,8 @@ export function SocketProvider() {
       [SOCKET_EVENTS.INITIAL_PRESENCE]: handleInitialPresence,
       [SOCKET_EVENTS.USER_ONLINE]: handleUserOnline,
       [SOCKET_EVENTS.USER_OFFLINE]: handleUserOffline,
+      [SOCKET_EVENTS.USER_STATUS_UPDATE as string]: handleUserStatusUpdate,
+      [SOCKET_EVENTS.USER_UPDATE as string]: handleUserUpdate,
     };
   }, [setSocketStatus]);
 

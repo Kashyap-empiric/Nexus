@@ -8,7 +8,7 @@ export const findWorkspaceById = async (workspaceId: string) => {
       members: {
         include: {
           user: {
-            select: { id: true, username: true, avatarUrl: true },
+            select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true, status: true, statusText: true },
           },
         },
       },
@@ -168,7 +168,7 @@ export const updateWorkspaceMemberRole = async (workspaceId: string, userId: str
     data: { role },
     include: {
       user: {
-        select: { id: true, username: true, avatarUrl: true },
+        select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true, status: true, statusText: true },
       },
     },
   });

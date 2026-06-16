@@ -143,11 +143,15 @@ export function MemberListPanel({ workspaceId }: MemberListPanelProps) {
           <div className="relative shrink-0">
             <UserAvatar
               name={member.user?.username || "User"}
-              src={member.user?.avatarUrl}
+              src={member.user?.avatarPath || member.user?.avatarUrl}
               className="h-8 w-8"
               fallbackClassName="text-[10px]"
             />
-            <PresenceIndicator userId={member.userId} className="-bottom-0.5 -right-0.5" />
+            <PresenceIndicator 
+              userId={member.userId} 
+              status={member.user?.status as any}
+              className="-bottom-0.5 -right-0.5" 
+            />
           </div>
           <div className="flex flex-col min-w-0">
             <span className="text-sm font-medium truncate flex items-center gap-1.5">

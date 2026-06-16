@@ -13,8 +13,8 @@ export const getMessages = async (conversationId: string, cursor?: string | null
   return response.data;
 };
 
-export const createMessage = async (conversationId: string, content: string) => {
-  const response = await api.post<{ data: Message }>(API_ROUTES.CONVERSATIONS.MESSAGES(conversationId), { content });
+export const createMessage = async (conversationId: string, content: string, replyToId?: string | null) => {
+  const response = await api.post<{ data: Message }>(API_ROUTES.CONVERSATIONS.MESSAGES(conversationId), { content, replyToId });
   return response.data.data;
 };
 
