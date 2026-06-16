@@ -22,8 +22,8 @@ export function EmptyState() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-8 text-center h-full">
       <div className="max-w-md w-full flex flex-col items-center space-y-6">
-        <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-          <MessageSquarePlus className="h-12 w-12 text-primary" />
+        <div className="w-24 h-24 rounded-full bg-brand/10 flex items-center justify-center mb-4">
+          <MessageSquarePlus className="h-12 w-12 text-brand" />
         </div>
 
         {conversations && conversations.length > 0 ? (
@@ -35,19 +35,20 @@ export function EmptyState() {
           </>
         ) : (
           <>
-            <h2 className="text-3xl font-bold tracking-tight">No conversations yet.</h2>
-            <p className="text-muted-foreground text-lg">
-              Search for someone to start chatting.
+            <h2 className="text-3xl font-bold tracking-tight">Welcome to Nexus</h2>
+            <p className="text-muted-foreground text-lg max-w-sm">
+              Start a conversation with a teammate or invite someone new to get going.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3 mt-4 w-full justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 mt-6 w-full justify-center">
               <button
                 onClick={() => setIsNewModalOpen(true)}
-                className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
+                className="inline-flex h-11 items-center justify-center rounded-lg bg-brand px-6 text-sm font-medium text-brand-foreground shadow-sm transition-colors hover:bg-brand/90"
               >
+                <MessageSquarePlus className="h-4 w-4 mr-2" />
                 Start a Conversation
               </button>
-              <Button onClick={() => inviteModal.open("USER")} size="lg" className="w-full sm:w-auto min-w-[200px] h-12 shadow-lg hover:shadow-xl transition-all">
+              <Button onClick={() => inviteModal.open("USER")} variant="outline" className="w-full sm:w-auto h-11 shadow-sm transition-all">
                 <UserPlus className="mr-2 h-4 w-4" />
                 Invite Someone
               </Button>

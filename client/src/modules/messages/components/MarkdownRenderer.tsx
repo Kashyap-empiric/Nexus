@@ -3,6 +3,7 @@
 import { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
 import { cn } from "@/shared/lib/utils";
 
 interface MarkdownRendererProps {
@@ -19,9 +20,10 @@ export const MarkdownRenderer = memo(({ content, className }: MarkdownRendererPr
   }
 
   return (
-    <div className={cn("markdown-prose text-sm break-words", className)}>
+    <span className={cn("markdown-prose text-sm break-words inline", className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeHighlight]}
         components={{
           // Links: open in new tab securely and style with primary color
           a: ({ node, ...props }) => (
@@ -34,7 +36,7 @@ export const MarkdownRenderer = memo(({ content, className }: MarkdownRendererPr
           ),
           // Paragraphs: ensure proper whitespace and avoid margin collapse in chat bubbles
           p: ({ node, ...props }) => (
-            <p {...props} className="whitespace-pre-wrap m-0 inline-block w-full" />
+            <p {...props} className="whitespace-pre-wrap m-0 inline-block w-full [&:not(:last-child)]:mb-1 last:inline" />
           ),
           // Inline code: distinct background
           code: ({ node, className, children, ...props }) => {
@@ -49,9 +51,9 @@ export const MarkdownRenderer = memo(({ content, className }: MarkdownRendererPr
                 </code>
               );
             }
-            // Code blocks handled below via pre, but code itself needs styling too
+            // Code blocks get hljs styling from CSS, just ensure font
             return (
-              <code {...props} className={cn("font-mono text-[13px]", className)}>
+              <code {...props} className={cn("hljs font-mono text-[13px]", className)}>
                 {children}
               </code>
             );
@@ -60,7 +62,7 @@ export const MarkdownRenderer = memo(({ content, className }: MarkdownRendererPr
           pre: ({ node, ...props }) => (
             <pre
               {...props}
-              className="bg-zinc-950 dark:bg-zinc-900/50 text-zinc-50 border border-border/50 rounded-md p-3 my-2 overflow-x-auto text-[13px]"
+              className="bg-zinc-950 dark:bg-zinc-900/50 text-zinc-50 border border-border/50 rounded-md p-3 my-2 overflow-x-auto text-[13px] leading-relaxed block"
             />
           ),
           // Explicitly define strong and em to ensure they bypass any CSS resets
@@ -77,15 +79,15 @@ export const MarkdownRenderer = memo(({ content, className }: MarkdownRendererPr
           blockquote: ({ node, ...props }) => (
             <blockquote
               {...props}
-              className="border-l-4 border-primary/50 pl-3 my-2 italic text-muted-foreground"
+              className="border-l-4 border-primary/50 pl-3 my-2 italic text-muted-foreground block"
             />
           ),
           // Lists
           ul: ({ node, ...props }) => (
-            <ul {...props} className="list-disc list-outside ml-4 my-1 space-y-1" />
+            <ul {...props} className="list-disc list-outside ml-4 my-1 space-y-1 block" />
           ),
           ol: ({ node, ...props }) => (
-            <ol {...props} className="list-decimal list-outside ml-4 my-1 space-y-1" />
+            <ol {...props} className="list-decimal list-outside ml-4 my-1 space-y-1 block" />
           ),
           li: ({ node, ...props }) => (
             <li {...props} className="pl-1" />
@@ -94,7 +96,7 @@ export const MarkdownRenderer = memo(({ content, className }: MarkdownRendererPr
       >
         {content}
       </ReactMarkdown>
-    </div>
+    </span>
   );
 });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { X, Search, Loader2 } from "lucide-react";
 import { useCreateConversationMutation } from "@/modules/conversations/hooks/useConversations";
@@ -20,6 +21,11 @@ export function NewConversationModal({ isOpen, onClose }: NewConversationModalPr
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const router = useRouter();
   const { mutate: createConversation, isPending: isCreating } = useCreateConversationMutation();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query), 300);
@@ -28,7 +34,7 @@ export function NewConversationModal({ isOpen, onClose }: NewConversationModalPr
 
   const { data: users, isLoading: isSearching } = useUsersSearchQuery(debouncedQuery, isOpen);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const handleSelectUser = (userId: string) => {
     createConversation(userId, {
@@ -45,8 +51,8 @@ export function NewConversationModal({ isOpen, onClose }: NewConversationModalPr
     });
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-background border shadow-lg rounded-xl w-full max-w-md overflow-hidden flex flex-col">
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">New Message</h2>
@@ -126,6 +132,7 @@ export function NewConversationModal({ isOpen, onClose }: NewConversationModalPr
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

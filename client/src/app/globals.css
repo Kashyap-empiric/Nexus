@@ -38,6 +38,14 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-muted: var(--brand-muted);
+  --color-brand-subtle: var(--brand-subtle);
+  --color-status-online: var(--status-online);
+  --color-status-away: var(--status-away);
+  --color-status-dnd: var(--status-dnd);
+  --color-status-offline: var(--status-offline);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -65,7 +73,7 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.87 0 0);
   --input: oklch(0.87 0 0);
-  --ring: oklch(0.708 0 0);
+  --ring: oklch(0.63 0.16 160);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -79,7 +87,17 @@
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.87 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-ring: oklch(0.63 0.16 160);
+  /* Nexus Brand — Emerald Accent */
+  --brand: oklch(0.63 0.16 160);
+  --brand-foreground: oklch(1 0 0);
+  --brand-muted: oklch(0.94 0.03 160);
+  --brand-subtle: oklch(0.97 0.015 160);
+  /* Status Colors */
+  --status-online: oklch(0.63 0.19 145);
+  --status-away: oklch(0.78 0.18 85);
+  --status-dnd: oklch(0.58 0.23 25);
+  --status-offline: oklch(0.56 0 0);
 }
 
 .dark {
@@ -100,7 +118,7 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --ring: oklch(0.72 0.15 160);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -113,7 +131,17 @@
   --sidebar-accent: oklch(0.320 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.72 0.15 160);
+  /* Nexus Brand — Emerald Accent */
+  --brand: oklch(0.72 0.15 160);
+  --brand-foreground: oklch(0.15 0 0);
+  --brand-muted: oklch(0.28 0.04 160);
+  --brand-subtle: oklch(0.24 0.02 160);
+  /* Status Colors */
+  --status-online: oklch(0.63 0.19 145);
+  --status-away: oklch(0.78 0.18 85);
+  --status-dnd: oklch(0.58 0.23 25);
+  --status-offline: oklch(0.56 0 0);
 }
 
 @layer base {
@@ -139,7 +167,7 @@
 
 /* Message highlight flash — used when scrolling to a replied-to message */
 @keyframes message-highlight-flash {
-  0% { background-color: color-mix(in srgb, var(--primary) 20%, transparent); }
+  0% { background-color: color-mix(in srgb, var(--brand) 20%, transparent); }
   100% { background-color: transparent; }
 }
 
@@ -156,6 +184,104 @@
   height: 0;
   pointer-events: none;
 }
+
+/* ========================================
+   Syntax Highlighting (rehype-highlight)
+   Uses highlight.js class names.
+   Based on One Dark Pro colors for dark mode,
+   and GitHub light colors for light mode.
+   ======================================== */
+
+/* Base code block container — already styled by markdown components,
+   but we ensure hljs blocks have proper font family */
+.hljs {
+  background: transparent !important;
+  color: inherit;
+  font-family: inherit;
+}
+
+/* Light mode syntax colors (GitHub-inspired) */
+:root {
+  --hljs-keyword: oklch(0.55 0.15 290);       /* purple — keywords like import, function */
+  --hljs-string: oklch(0.45 0.12 140);         /* green — strings */
+  --hljs-number: oklch(0.50 0.10 30);          /* orange — numbers */
+  --hljs-title: oklch(0.40 0.12 240);          /* blue — function names */
+  --hljs-params: oklch(0.35 0.08 260);         /* indigo — params */
+  --hljs-built-in: oklch(0.45 0.10 200);       /* teal — built-in */
+  --hljs-comment: oklch(0.60 0.02 0);          /* gray — comments */
+  --hljs-meta: oklch(0.50 0.08 30);            /* amber — meta/preprocessor */
+  --hljs-attr: oklch(0.40 0.10 200);           /* teal — attributes */
+  --hljs-attribute: oklch(0.40 0.10 200);
+  --hljs-literal: oklch(0.50 0.12 280);        /* purple — literals */
+  --hljs-variable: oklch(0.50 0.10 30);        /* orange — variables */
+  --hljs-selector-class: oklch(0.45 0.12 140); /* green — class selectors */
+  --hljs-selector-tag: oklch(0.45 0.12 240);   /* blue — tag selectors */
+  --hljs-regexp: oklch(0.45 0.10 10);          /* red — regex */
+  --hljs-deletion: oklch(0.50 0.12 10);        /* red — deletion */
+  --hljs-addition: oklch(0.45 0.12 140);       /* green — addition */
+  --hljs-section: oklch(0.40 0.12 240);        /* blue — headings */
+}
+
+/* Dark mode syntax colors (One Dark Pro-inspired) */
+.dark {
+  --hljs-keyword: oklch(0.70 0.12 290);       /* purple */
+  --hljs-string: oklch(0.72 0.12 140);         /* green */
+  --hljs-number: oklch(0.80 0.10 70);          /* yellow */
+  --hljs-title: oklch(0.68 0.12 240);          /* blue */
+  --hljs-params: oklch(0.75 0.08 260);         /* indigo */
+  --hljs-built-in: oklch(0.72 0.10 200);       /* teal */
+  --hljs-comment: oklch(0.65 0.02 0);          /* gray */
+  --hljs-meta: oklch(0.80 0.08 70);            /* yellow */
+  --hljs-attr: oklch(0.72 0.10 200);           /* teal */
+  --hljs-attribute: oklch(0.72 0.10 200);
+  --hljs-literal: oklch(0.75 0.12 280);        /* purple */
+  --hljs-variable: oklch(0.78 0.10 70);        /* yellow */
+  --hljs-selector-class: oklch(0.72 0.12 140); /* green */
+  --hljs-selector-tag: oklch(0.68 0.12 240);   /* blue */
+  --hljs-regexp: oklch(0.72 0.10 10);          /* red */
+  --hljs-deletion: oklch(0.72 0.12 10);        /* red */
+  --hljs-addition: oklch(0.72 0.12 140);       /* green */
+  --hljs-section: oklch(0.68 0.12 240);        /* blue */
+}
+
+/* highlight.js token color mappings */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-type,
+.hljs-section { color: var(--hljs-keyword); }
+
+.hljs-string,
+.hljs-selector-class,
+.hljs-addition,
+.hljs-attribute,
+.hljs-template-variable,
+.hljs-bullet { color: var(--hljs-string); }
+
+.hljs-number,
+.hljs-meta,
+.hljs-variable,
+.hljs-link { color: var(--hljs-number); }
+
+.hljs-title,
+.hljs-name,
+.hljs-selector-id { color: var(--hljs-title); }
+
+.hljs-comment,
+.hljs-quote,
+.hljs-doctag { color: var(--hljs-comment); font-style: italic; }
+
+.hljs-built_in { color: var(--hljs-built-in); }
+
+.hljs-attr { color: var(--hljs-attr); }
+
+.hljs-symbol,
+.hljs-regexp { color: var(--hljs-regexp); }
+
+.hljs-deletion { color: var(--hljs-deletion); }
+
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: bold; }
 
 /* Custom Scrollbar Styles */
 @layer base {

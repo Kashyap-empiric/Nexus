@@ -29,7 +29,7 @@ export function SettingsSidebar() {
               className={cn(
                 "whitespace-nowrap px-3 py-2 rounded-md text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-primary/10 text-primary"
+                  ? "bg-brand/10 text-brand"
                   : "text-foreground hover:bg-muted"
               )}
             >

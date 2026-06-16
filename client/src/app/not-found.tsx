@@ -7,8 +7,8 @@ export default function NotFound() {
     <div className="min-h-dvh bg-background flex flex-col items-center justify-center p-4">
       <div className="max-w-md w-full text-center space-y-8">
         <div className="relative mx-auto w-32 h-32 flex items-center justify-center">
-          <div className="absolute inset-0 bg-primary/20 rounded-full animate-pulse blur-xl" />
-          <Ghost className="w-20 h-20 text-primary relative z-10 animate-bounce" />
+          <div className="absolute inset-0 bg-brand/20 rounded-full animate-pulse blur-xl" />
+          <Ghost className="w-20 h-20 text-brand relative z-10 animate-bounce" />
         </div>
 
         <div className="space-y-3">
@@ -26,7 +26,7 @@ export default function NotFound() {
 
           <Link
             href="/"
-            className="w-full sm:w-auto inline-flex items-center justify-center h-10 px-6 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium shadow transition-colors"
+            className="w-full sm:w-auto inline-flex items-center justify-center h-10 px-6 rounded-md bg-brand text-brand-foreground hover:bg-brand/90 text-sm font-medium shadow transition-colors"
           >
             <Home className="w-4 h-4 mr-2" />
             Return Home

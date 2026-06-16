@@ -8,6 +8,31 @@ import { sendPushNotification } from "@/services/push.service.js";
 import { prisma } from "@/lib/db.js";
 
 export const registerMessageHandlers = (io: Server, socket: Socket) => {
+  // Typing indicators — broadcast to conversation room, exclude sender
+  socket.on(
+    SOCKET_EVENTS.TYPING_START,
+    (payload: { conversationId: string; username: string }) => {
+      if (!payload?.conversationId || !socket.data.user?.id) return;
+
+      socket.to(`conversation:${payload.conversationId}`).emit(SOCKET_EVENTS.TYPING_START, {
+        conversationId: payload.conversationId,
+        userId: socket.data.user.id,
+        username: payload.username || "Unknown",
+      });
+    }
+  );
+
+  socket.on(
+    SOCKET_EVENTS.TYPING_STOP,
+    (payload: { conversationId: string }) => {
+      if (!payload?.conversationId || !socket.data.user?.id) return;
+
+      socket.to(`conversation:${payload.conversationId}`).emit(SOCKET_EVENTS.TYPING_STOP, {
+        conversationId: payload.conversationId,
+        userId: socket.data.user.id,
+      });
+    }
+  );
   socket.on(
     SOCKET_EVENTS.MESSAGE_SEND,
     async (

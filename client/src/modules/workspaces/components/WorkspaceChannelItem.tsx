@@ -1,15 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
 import Link from "next/link";
-import { MoreVertical, Edit2, Trash2, Hash, Lock, Globe, X } from "lucide-react";
+import { MoreVertical, Edit2, Trash2, Hash, Lock, Globe } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+  DialogHeader,
+  DialogFooter,
+} from "@/shared/components/ui/dialog";
 import { useDeleteChannel, useUpdateChannel } from "../hooks/useWorkspaces";
 import { useWorkspaceChannelsQuery } from "../hooks/useWorkspaceChannels";
 import type { Conversation } from "@/modules/conversations/types/conversation";
@@ -37,11 +44,6 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
 
   const [modalType, setModalType] = useState<"rename" | "delete" | "visibility" | null>(null);
   const [renameValue, setRenameValue] = useState(channel.name || "");
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const closeModals = () => {
     setModalType(null);
@@ -102,91 +104,8 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
     });
   };
 
-  const renderModals = () => {
-    if (!mounted || !modalType) return null;
-
-    if (modalType === "rename") {
-      return createPortal(
-        <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-background border shadow-lg rounded-xl w-full max-w-md overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-lg font-semibold">Rename Channel</h2>
-              <button onClick={closeModals} className="p-1 hover:bg-muted rounded-full">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-4">
-              <form onSubmit={confirmRename} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="rename-channel">Channel Name</Label>
-                  <Input
-                    id="rename-channel"
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    autoFocus
-                    maxLength={30}
-                  />
-                </div>
-                <div className="flex justify-end gap-2 pt-4 mt-6">
-                  <Button type="button" variant="ghost" onClick={closeModals} disabled={isUpdating}>Cancel</Button>
-                  <Button type="submit" disabled={!renameValue.trim() || renameValue.trim() === channel.name || isUpdating}>
-                    {isUpdating ? "Saving..." : "Rename"}
-                  </Button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>,
-        document.body
-      );
-    }
-
-    if (modalType === "delete") {
-      return createPortal(
-        <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-background border shadow-lg rounded-xl w-full max-w-md overflow-hidden flex flex-col">
-            <div className="p-6">
-              <h2 className="text-lg font-semibold mb-2">Delete Channel</h2>
-              <p className="text-sm text-muted-foreground mb-6">
-                Are you sure you want to delete #{channel.name}? This action cannot be undone.
-              </p>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="ghost" onClick={closeModals} disabled={isDeleting}>Cancel</Button>
-                <Button type="button" variant="destructive" onClick={confirmDelete} disabled={isDeleting}>
-                  {isDeleting ? "Deleting..." : "Delete"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>,
-        document.body
-      );
-    }
-
-    if (modalType === "visibility") {
-      const newVisibility = channel.visibility === "PRIVATE" ? "PUBLIC" : "PRIVATE";
-      return createPortal(
-        <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-background border shadow-lg rounded-xl w-full max-w-md overflow-hidden flex flex-col">
-            <div className="p-6">
-              <h2 className="text-lg font-semibold mb-2">Change Visibility</h2>
-              <p className="text-sm text-muted-foreground mb-6">
-                Are you sure you want to make #{channel.name} {newVisibility.toLowerCase()}?
-              </p>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="ghost" onClick={closeModals} disabled={isUpdating}>Cancel</Button>
-                <Button type="button" onClick={confirmVisibility} disabled={isUpdating}>
-                  {isUpdating ? "Updating..." : "Confirm"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>,
-        document.body
-      );
-    }
-
-    return null;
+  const handleCloseModal = (open: boolean) => {
+    if (!open) closeModals();
   };
 
   return (
@@ -196,7 +115,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
         prefetch={false}
       onClick={() => onNavigate?.()}
       className={`group flex items-center justify-between px-2 py-2 rounded-md transition-colors ${isActive
-        ? "bg-primary/10 text-primary dark:bg-white/10 dark:text-foreground"
+        ? "bg-brand/10 text-brand dark:bg-brand/10 dark:text-brand"
         : "text-muted-foreground hover:bg-muted/80 hover:text-foreground dark:hover:bg-white/5"
         }`}
     >
@@ -206,7 +125,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
         ) : (
           <Hash className="h-4 w-4 shrink-0 opacity-70" />
         )}
-        <span className={`truncate text-sm leading-none ${isUnread && !isActive ? 'font-bold text-foreground' : 'font-medium'}`}>
+        <span className={`truncate text-sm leading-snug ${isUnread && !isActive ? 'font-bold text-foreground' : 'font-medium'}`}>
           {channel.name}
         </span>
       </div>
@@ -252,7 +171,69 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
         </DropdownMenu>
       </div>
       </Link>
-      {renderModals()}
+
+      {/* Rename Dialog */}
+      <Dialog open={modalType === "rename"} onOpenChange={handleCloseModal}>
+        <DialogContent showCloseButton={false} className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rename Channel</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={confirmRename} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="rename-channel">Channel Name</Label>
+              <Input
+                id="rename-channel"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                autoFocus
+                maxLength={30}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={closeModals} disabled={isUpdating}>Cancel</Button>
+              <Button type="submit" disabled={!renameValue.trim() || renameValue.trim() === channel.name || isUpdating}>
+                {isUpdating ? "Saving..." : "Rename"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog open={modalType === "delete"} onOpenChange={handleCloseModal}>
+        <DialogContent showCloseButton={false} className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Channel</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete #{channel.name}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={closeModals} disabled={isDeleting}>Cancel</Button>
+            <Button type="button" variant="destructive" onClick={confirmDelete} disabled={isDeleting}>
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Visibility Dialog */}
+      <Dialog open={modalType === "visibility"} onOpenChange={handleCloseModal}>
+        <DialogContent showCloseButton={false} className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Change Visibility</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to make #{channel.name} {channel.visibility === "PRIVATE" ? "public" : "private"}?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={closeModals} disabled={isUpdating}>Cancel</Button>
+            <Button type="button" onClick={confirmVisibility} disabled={isUpdating}>
+              {isUpdating ? "Updating..." : "Confirm"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
