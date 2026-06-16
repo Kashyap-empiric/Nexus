@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { ActiveConversation } from "@/modules/chat";
 import { useChatStore } from "@/modules/chat/store/chatStore";
 
@@ -9,6 +9,8 @@ export default function WorkspaceChannelPage() {
   const params = useParams();
   const slug = params?.slug as string;
   const channelId = params?.channelId as string;
+  const searchParams = useSearchParams();
+  const highlightMessageId = searchParams?.get("highlight") || undefined;
   
   const setMode = useChatStore((state) => state.setMode);
   const setActiveWorkspaceId = useChatStore((state) => state.setActiveWorkspaceId);
@@ -22,5 +24,5 @@ export default function WorkspaceChannelPage() {
   
   if (!channelId) return null;
 
-  return <ActiveConversation conversationId={channelId} />;
+  return <ActiveConversation conversationId={channelId} highlightMessageId={highlightMessageId} />;
 }

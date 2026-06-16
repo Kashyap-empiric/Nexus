@@ -52,6 +52,11 @@ export const handleMessageRead = (queryClient: QueryClient) => {
         (oldData) => updateCache(oldData)
       );
     });
+
+    // Recalculate workspace-level unread totals when the current user reads messages
+    if (isCurrentUser) {
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+    }
   };
 };
 

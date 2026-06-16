@@ -5,10 +5,10 @@ import { queryKeys } from "@/shared/constants/queryKeys";
 import * as notificationsApi from "../api/notifications.api";
 import type { NotificationPreference } from "../types/notification";
 
-export const useNotifications = () => {
+export const useNotifications = (type?: string) => {
   return useInfiniteQuery({
-    queryKey: queryKeys.notifications,
-    queryFn: ({ pageParam }) => notificationsApi.getNotifications(pageParam as string | undefined),
+    queryKey: [...queryKeys.notifications, type].filter(Boolean),
+    queryFn: ({ pageParam }) => notificationsApi.getNotifications(pageParam as string | undefined, type),
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialPageParam: undefined as string | undefined,
   });

@@ -13,8 +13,8 @@ export const getUserNotifications = async (
   userId: string,
   params: PaginationParams = {}
 ) => {
-  const { cursor, limit = 21 } = params;
-  return notificationsRepo.findByUserId(userId, cursor, limit);
+  const { cursor, limit = 21, type } = params;
+  return notificationsRepo.findByUserId(userId, cursor, limit, type);
 };
 
 /**

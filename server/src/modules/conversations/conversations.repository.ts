@@ -10,7 +10,7 @@ export const findById = async (id: string) => {
       members: {
         include: {
           user: {
-            select: { id: true, username: true, fullName: true, avatarUrl: true },
+            select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
           },
         },
       },
@@ -29,7 +29,7 @@ export const findDMsByUserId = async (userId: string) => {
       members: {
         include: {
           user: {
-            select: { id: true, username: true, fullName: true, avatarUrl: true },
+            select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
           },
         },
       },
@@ -127,7 +127,7 @@ export const findChannelByWorkspaceId = async (workspaceId: string, userId?: str
       members: {
         include: {
           user: {
-            select: { id: true, username: true, fullName: true, avatarUrl: true },
+            select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
           },
         },
       },

@@ -1,5 +1,7 @@
+import { Suspense } from 'react';
 import { SocketProvider } from "@/socket/socketProvider";
 import { AppLayoutShell } from "@/shared/components/layout/AppLayoutShell";
+import ProtectedLoading from './loading';
 
 export default function ProtectedLayout({
   children,
@@ -12,7 +14,9 @@ export default function ProtectedLayout({
     <>
       <SocketProvider />
       <AppLayoutShell>
-        {children}
+        <Suspense fallback={<ProtectedLoading />}>
+          {children}
+        </Suspense>
       </AppLayoutShell>
       {modal}
     </>

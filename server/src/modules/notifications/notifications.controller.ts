@@ -8,16 +8,17 @@ import { prisma } from "@/lib/db.js";
 /**
  * GET /notifications
  * Returns paginated notifications for the authenticated user.
- * Query params: cursor, limit
+ * Query params: cursor, limit, type (comma-separated NotificationType values)
  */
 export const getNotifications = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
-    const { cursor, limit } = req.query as { cursor?: string; limit?: string };
+    const { cursor, limit, type } = req.query as { cursor?: string; limit?: string; type?: string };
 
     const result = await notificationsService.getUserNotifications(userId, {
       cursor,
       limit: limit ? parseInt(limit, 10) : undefined,
+      type,
     });
 
     res.json(result);

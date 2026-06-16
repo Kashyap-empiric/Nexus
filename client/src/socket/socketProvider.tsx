@@ -79,6 +79,10 @@ export function SocketProvider() {
     } else {
       socket.connect();
     }
+    
+    return () => {
+      socket.disconnect();
+    };
   }, [setSocketStatus]);
 
   return null;

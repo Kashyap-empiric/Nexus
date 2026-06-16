@@ -2,8 +2,12 @@ import { api } from "@/shared/lib/api";
 import { API_ROUTES } from "@/config/url";
 import type { Notification, NotificationPreference } from "../types/notification";
 
-export const getNotifications = async (cursor?: string): Promise<{ data: Notification[]; nextCursor: string | null }> => {
-  const url = cursor ? `${API_ROUTES.NOTIFICATIONS.BASE}?cursor=${cursor}` : API_ROUTES.NOTIFICATIONS.BASE;
+export const getNotifications = async (cursor?: string, type?: string): Promise<{ data: Notification[]; nextCursor: string | null }> => {
+  const params = new URLSearchParams();
+  if (cursor) params.set("cursor", cursor);
+  if (type) params.set("type", type);
+  const query = params.toString();
+  const url = query ? `${API_ROUTES.NOTIFICATIONS.BASE}?${query}` : API_ROUTES.NOTIFICATIONS.BASE;
   const response = await api.get(url);
   return response.data;
 };

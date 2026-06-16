@@ -15,6 +15,7 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
         req.user = user;
         next();
     } catch (error) {
+        console.error("Token verification failed:", error);
         res.status(401).json({ error: "Invalid or expired token" });
     }
 };

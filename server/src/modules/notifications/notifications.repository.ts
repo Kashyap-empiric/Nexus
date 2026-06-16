@@ -6,9 +6,15 @@ import type { Prisma, NotificationType } from "@prisma/client";
 export const findByUserId = async (
   userId: string,
   cursor?: string,
-  limit: number = 21
+  limit: number = 21,
+  type?: string // comma-separated list of NotificationType values
 ): Promise<{ data: any[]; nextCursor: string | null }> => {
   const where: Prisma.NotificationWhereInput = { userId };
+
+  if (type) {
+    const types = type.split(",").filter(Boolean);
+    where.type = { in: types as NotificationType[] };
+  }
 
   const items = await prisma.notification.findMany({
     where,

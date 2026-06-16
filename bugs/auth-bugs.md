@@ -2,13 +2,78 @@
 
 Covers server (`server/src/modules/auth/`) and client (`client/src/modules/auth/`) auth & permission code.
 
+**Last updated:** 2026-06-16
+
+---
+
+## CRITICAL BUGS
+
+### 1. ~~No User Record Created in Prisma DB After Supabase Registration~~ ✅ RESOLVED
+
+**Files:**
+- `server/prisma/SUPABASE_QUERIES.sql:1-33` — database trigger `handle_new_user`
+
+**Status:** The Supabase database trigger `on_auth_user_created` is already deployed and creates the Prisma `User` record synchronously via `AFTER INSERT ON auth.users`. The trigger maps:
+- `auth.users.id` → `User.id`
+- `auth.users.email` → `User.email`
+- `raw_user_meta_data->>'username'` → `User.username` (falls back to email prefix)
+- `raw_user_meta_data->>'avatar_url'` → `User.avatarUrl`
+
+**Remaining concern:** The registration only passes `username` in metadata — `fullName` is not forwarded (see Bug 4). The trigger does not set `isOnboarded` (Prisma's `@default(false)` handles this), and does not check for `full_name` in metadata.
+
+### 2. 401 Interceptor Uses `getSession()` Instead of `refreshSession()`
+
+**File:** `client/src/shared/lib/api.ts:26`
+
+```typescript
+const { data, error: refreshError } = await supabase.auth.getSession();
+```
+
+On a 401 response, the interceptor calls `supabase.auth.getSession()` — which does **NOT** refresh the token. It only returns the current (possibly expired) session.
+
+**Mitigation:** The `_retry` flag at line 24-25 (`!originalRequest._retry`) prevents true infinite recursion — the retry fires at most once. But if the token is expired, the retry uses the same expired token → another 401 → the second request is rejected without retry.
+
+**Fix:** Call `supabase.auth.refreshSession()` instead of `getSession()`.
+
+### 3. AuthProvider + AuthGate Race on Post-Login Redirect
+
+**Files:**
+- `client/src/shared/providers/auth-provider.tsx:42-43` — `SIGNED_IN` only redirects if on auth routes
+- `client/src/shared/providers/AuthGate.tsx:23-26` — onboarding check + `handleInviteContinuation`
+
+**Mitigation:** The `SIGNED_IN` handler now checks `pathnameRef.current?.startsWith(APP_ROUTES.AUTH.INDEX)` before redirecting (auth-provider.tsx:42), reducing the window for races. However, React's `useEffect` ordering between `AuthProvider` and `AuthGate` is still non-deterministic. If the user is on an auth route when `SIGNED_IN` fires, `AuthProvider` pushes to conversations while `AuthGate` may immediately redirect to onboarding or handle invite continuation — causes a brief flash.
+
+### 4. Registration Doesn't Forward `fullName` to Supabase
+
+**File:** `client/src/modules/auth/hooks/useAuth.ts:42-46`
+
+```typescript
+options: {
+  data: {
+    username: data.username,
+  },
+},
+```
+
+Only `username` is passed in `options.data`. If the registration form collects `fullName`, it's silently dropped. The `user_metadata` in Supabase will be missing the user's display name. The onboarding form re-collects `fullName`, but if the user somehow skips onboarding or auto-provisioning is needed, the name is lost. The `SUPABASE_QUERIES.sql` trigger does not check for `full_name` in metadata.
+
+### 5. Email Confirmation Flow Has No User-Facing UI
+
+**File:** `client/src/modules/auth/hooks/useAuth.ts:52`
+
+```typescript
+router.replace(`${APP_ROUTES.AUTH.LOGIN}?registered=true&confirm=true`);
+```
+
+When email confirmation is required, the user is redirected to login with query params `?registered=true&confirm=true`. However, there is **no UI component** on the login page that reads these query params and shows a confirmation message. The user sees the normal login form with no indication that they need to check their email.
+
 ---
 
 ## MEDIUM BUGS
 
 ### 1. `checkConversationAccess` Doesn't Filter Soft-Deleted Conversations
 
-**File:** `server/src/modules/auth/auth.repository.ts:15-25`
+**File:** `server/src/modules/auth/auth.repository.ts:14-44`
 
 `checkConversationAccess` queries the conversation without checking `deletedAt`. If a conversation is soft-deleted, the function still returns access for existing members. The deleted conversation should be treated as non-existent.
 
@@ -85,4 +150,63 @@ No audit trail for authentication attempts (login, logout, failed permission che
 
 **File:** `server/src/modules/auth/auth.service.ts:1`
 
-Uses `.js` extension import (`./auth.repository.js`) while other server files use `.js` consistently — but some files omit extensions entirely. Mixed conventions make refactoring fragile.
+Uses `.js` extension import (`./auth.repository.js`). This is consistent with the rest of the server codebase (all server imports use `.js`), but mixed conventions may still appear elsewhere.
+
+### 13. `handleSignIn` Has No Error Handling for Socket Connect Failure
+
+**File:** `client/src/modules/auth/lib/auth-orchestrator.ts:5-9`
+
+```typescript
+export const handleSignIn = () => {
+  if (!socket.connected) {
+    socket.connect();
+  }
+};
+```
+
+`socket.connect()` is fire-and-forget. If the connection fails (auth error, network issue), `handleSignIn` has no way to know. The user appears authenticated (Supabase session exists) but the socket is disconnected. Real-time features silently don't work. The user sees stale data until they manually refresh.
+
+### 14. `handleSignIn` Called Twice on First Login
+
+**File:** `client/src/shared/providers/auth-provider.tsx:35-40`
+
+On first login/registration:
+1. `INITIAL_SESSION` fires with the session → calls `handleSignIn()` (line 35)
+2. `SIGNED_IN` immediately follows → calls `handleSignIn()` again (line 40)
+
+Both calls invoke `socket.connect()`, which is idempotent but triggers two `connect` events, two `presence:initial` responses, and two rounds of React Query cache invalidation. Redundant network traffic on every login.
+
+### 15. No Server-Side CSRF Protection on Auth Endpoints
+
+The Express app trusts `credentials: 'include'` via CORS but has no CSRF token mechanism. Since auth is handled by Supabase (not Express), this is partially mitigated — but the Express `/api/me` and other authenticated endpoints have no CSRF protection if accessed via cookie-based auth in the future.
+
+### 16. Login Form Shows Generic Error on Network Failure
+
+**File:** `client/src/modules/auth/hooks/useAuth.ts:28`
+
+```typescript
+const message = err instanceof Error ? err.message : "An error occurred during login.";
+```
+
+Supabase error messages can be technical (e.g., `"Invalid login credentials"`). These are shown verbatim to the user. There's no mapping to user-friendly messages (e.g., "Invalid email or password" vs. "Too many attempts. Please try again later.").
+
+### 17. `isOnboarded` Check Can Fail to Redirect on Profile Load Error
+
+**File:** `client/src/shared/providers/AuthGate.tsx:22`
+
+```typescript
+if (isInitialized && user && profile) {
+  if (!profile.isOnboarded && !isOnboardingRoute) {
+    router.push('/onboarding');
+  }
+```
+
+**Mitigation:** The guard `profile &&` prevents redirects before profile data loads. However, if `profile` is undefined after loading completes (e.g., `/api/me` returned 404 because no User record exists in Prisma), the condition is `false` and the user is never redirected to onboarding. They see a blank protected page (`null` at line 40-42) with no error feedback.
+
+### 18. `RegisterForm` Zod Schema Requires Confirm Password But `useAuth.register` Doesn't Use It
+
+**Files:**
+- `client/src/modules/auth/schemas/auth.ts:14-25` — schema includes `confirmPassword` with `refine`
+- `client/src/modules/auth/hooks/useAuth.ts:39-47` — register function ignores `confirmPassword`
+
+The registration form validates `confirmPassword` via Zod, but the `register` function in `useAuth` uses `RegisterFormData` which includes `confirmPassword` — yet it's never sent to Supabase. The field provides client-side UX validation only, but if the schema and handler fall out of sync, the field becomes confusing dead weight.

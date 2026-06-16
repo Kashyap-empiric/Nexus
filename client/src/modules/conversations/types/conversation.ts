@@ -5,6 +5,7 @@ export interface User {
   username: string;
   fullName: string | null;
   avatarUrl: string | null;
+  avatarPath?: string | null;
 }
 
 export interface ConversationMember {

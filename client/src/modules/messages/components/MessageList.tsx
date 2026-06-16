@@ -20,9 +20,10 @@ interface MessageListProps {
   members?: ConversationMember[];
   isChannel?: boolean;
   onReply?: (messageId: string, username: string, content: string) => void;
+  highlightMessageId?: string;
 }
 
-export function MessageList({ conversationId, currentUserId, myLastReadMessageId, partnerLastReadMessageId, members, isChannel, onReply }: MessageListProps) {
+export function MessageList({ conversationId, currentUserId, myLastReadMessageId, partnerLastReadMessageId, members, isChannel, onReply, highlightMessageId }: MessageListProps) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, error } = useMessagesInfiniteQuery(conversationId);
   const { mutate: markRead } = useMarkConversationReadMutation();
 
@@ -61,6 +62,27 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
   }, [conversationId, latestMessageId, markRead, myLastReadMessageId, isLatestMessageMine, latestMessage?.pending]);
 
 
+
+  // Scroll to and highlight a message when highlightMessageId is provided
+  useEffect(() => {
+    if (!highlightMessageId || isFetchingNextPage || isLoading) return;
+
+    // Wait a tick for the DOM to render
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`msg-${highlightMessageId}`);
+      if (!el) return;
+
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+
+      // Remove highlight from any previously highlighted message
+      document.querySelectorAll(".highlight-message").forEach((e) => e.classList.remove("highlight-message"));
+
+      // Add highlight that fades out over 1.5s
+      el.classList.add("highlight-message");
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [highlightMessageId, data, isFetchingNextPage, isLoading]);
 
   if (isLoading) {
     return <MessageListSkeleton />;

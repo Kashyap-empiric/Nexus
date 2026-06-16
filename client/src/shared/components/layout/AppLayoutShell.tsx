@@ -69,6 +69,11 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
+    
+    // Open info panel by default on desktop
+    if (window.innerWidth >= 768) {
+      setInfoPanelOpen(true);
+    }
 
     if ("serviceWorker" in navigator) {
       const handleMessage = (event: MessageEvent) => {
@@ -90,6 +95,10 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
     setSettingsView(view);
     setSettingsOpen(true);
   };
+
+  if (pathname?.startsWith('/onboarding')) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background">

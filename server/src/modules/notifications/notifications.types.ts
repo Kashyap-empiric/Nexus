@@ -39,4 +39,5 @@ export interface CreateNotificationInput {
 export interface PaginationParams {
   cursor?: string;
   limit?: number;
+  type?: string; // comma-separated list of NotificationType values to filter by
 }
