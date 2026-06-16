@@ -2,7 +2,7 @@
 
 Covers server (`server/src/modules/auth/`) and client (`client/src/modules/auth/`) auth & permission code.
 
-**Last updated:** 2026-06-16
+**Last updated:** 2026-06-16 (Bug 2 fixed, Bug 1 & 5 resolved, Bug 19 added)
 
 ---
 
@@ -21,19 +21,11 @@ Covers server (`server/src/modules/auth/`) and client (`client/src/modules/auth/
 
 **Remaining concern:** The registration only passes `username` in metadata — `fullName` is not forwarded (see Bug 4). The trigger does not set `isOnboarded` (Prisma's `@default(false)` handles this), and does not check for `full_name` in metadata.
 
-### 2. 401 Interceptor Uses `getSession()` Instead of `refreshSession()`
+### 2. ~~401 Interceptor Uses `getSession()` Instead of `refreshSession()`~~ ✅ FIXED 2026-06-16
 
 **File:** `client/src/shared/lib/api.ts:26`
 
-```typescript
-const { data, error: refreshError } = await supabase.auth.getSession();
-```
-
-On a 401 response, the interceptor calls `supabase.auth.getSession()` — which does **NOT** refresh the token. It only returns the current (possibly expired) session.
-
-**Mitigation:** The `_retry` flag at line 24-25 (`!originalRequest._retry`) prevents true infinite recursion — the retry fires at most once. But if the token is expired, the retry uses the same expired token → another 401 → the second request is rejected without retry.
-
-**Fix:** Call `supabase.auth.refreshSession()` instead of `getSession()`.
+**Status:** Changed from `supabase.auth.getSession()` to `supabase.auth.refreshSession()`. The `_retry` flag prevents infinite recursion. Tokens are now properly refreshed on 401 responses.
 
 ### 3. AuthProvider + AuthGate Race on Post-Login Redirect
 
@@ -204,6 +196,31 @@ if (isInitialized && user && profile) {
 **Mitigation:** The guard `profile &&` prevents redirects before profile data loads. However, if `profile` is undefined after loading completes (e.g., `/api/me` returned 404 because no User record exists in Prisma), the condition is `false` and the user is never redirected to onboarding. They see a blank protected page (`null` at line 40-42) with no error feedback.
 
 ### 18. `RegisterForm` Zod Schema Requires Confirm Password But `useAuth.register` Doesn't Use It
+
+**Files:**
+- `client/src/modules/auth/schemas/auth.ts:14-25` — schema includes `confirmPassword` with `refine`
+- `client/src/modules/auth/hooks/useAuth.ts:39-47` — register function ignores `confirmPassword`
+
+The registration form validates `confirmPassword` via Zod, but the `register` function in `useAuth` uses `RegisterFormData` which includes `confirmPassword` — yet it's never sent to Supabase. The field provides client-side UX validation only, but if the schema and handler fall out of sync, the field becomes confusing dead weight.
+
+### 19. `username` Not Unique in Prisma Schema
+
+**File:** `server/prisma/schema.prisma:15`
+
+```prisma
+username  String
+```
+
+No `@unique` constraint on `username`. Multiple users can register with the same username — there is no server-side or client-side uniqueness check anywhere in the codebase. This causes:
+
+- **Duplicate registrations** — User A and User B can both have `username: "john"`
+- **Broken mentions** — `@john` cannot resolve to a single user
+- **Broken invites** — invite-by-username may target the wrong user
+- **Broken search** — `GET /api/users/search?q=john` returns duplicates
+
+The Supabase trigger at `SUPABASE_QUERIES.sql:19` uses `COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1))` and does not check for existing usernames.
+
+**Fix:** Add `@unique` to `username`, generate a Prisma migration, add a server-side username availability endpoint (`GET /api/users/check-username?q=`), and add client-side debounced validation in the register form.
 
 **Files:**
 - `client/src/modules/auth/schemas/auth.ts:14-25` — schema includes `confirmPassword` with `refine`

@@ -2,7 +2,7 @@
 
 Covers server (`server/src/modules/onboarding/`) and the onboarding client flow (`client/src/modules/onboarding/`, `client/src/app/(protected)/onboarding/`).
 
-**Last updated:** 2026-06-16
+**Last updated:** 2026-06-16 (Bug 12 fixed, Bug 14 added and fixed, Bug 15 added)
 
 ---
 
@@ -115,26 +115,40 @@ The service imports `runTransaction` from `@/lib/transaction.js` and calls `pris
 
 ## MINOR BUGS
 
-### 12. Onboarding Has No "Skip" Option
+### 12. ~~Onboarding Has No "Skip" Option~~ ✅ FIXED 2026-06-16
 
-If the user wants to skip onboarding, there's no path forward. The `AuthGate.tsx:23` redirects:
-```typescript
-if (!profile.isOnboarded && !isOnboardingRoute) {
-  router.push('/onboarding');
-}
-```
+**Status:** "Skip for now" button added to `CreateWorkspaceStep.tsx:111-119`. Server-side skip logic added to `onboarding.service.ts:19-21` (sets `isOnboarded: true` and returns `{ skippedWorkspace: true }`). Client redirects to `/conversations` on skip.
 
-This creates a redirect loop: any page → `/onboarding` → cannot leave until form is submitted. If onboarding fails (due to Bug 3), the user is **stuck** in an infinite redirect loop with no way to use the app.
+### 14. Query Key Mismatch — Stale Profile Cache After Onboarding ✅ FIXED 2026-06-16
 
-### 13. Client-Side Avatar Upload Not Always Sent
-
-**File:** `client/src/modules/onboarding/components/OnboardingWizard.tsx:52-55`
+**File:** `client/src/modules/onboarding/components/OnboardingWizard.tsx:69`
 
 ```typescript
-if (profileData.avatarFile && user?.id) {
-  const { uploadAvatar } = await import("@/shared/lib/upload");
-  avatarPath = await uploadAvatar(user.id, profileData.avatarFile);
-}
+// BEFORE (broken):
+await queryClient.invalidateQueries({ queryKey: ["my-profile"] });
+// AFTER (fixed):
+await queryClient.invalidateQueries({ queryKey: ["users", "me"] });
 ```
 
-The avatar upload happens as a dynamic `import()` inside the submit handler. If `uploadAvatar` fails, the entire onboarding submission fails because the error is not caught independently — the error propagates to the parent catch block at line 72, preventing workspace creation even though the avatar is optional.
+The `OnboardingWizard` invalidated `["my-profile"]` but `useProfile` (`client/src/modules/users/hooks/useProfile.ts:25`) uses `["users", "me"]`. After onboarding completed, the profile cache was never invalidated → `AuthGate` read stale `isOnboarded: false` → redirected back to `/onboarding` → **infinite redirect loop**.
+
+**Impacted every single new user.** Fixed by correcting the query key.
+
+### 13. ~~Client-Side Avatar Upload Error Blocks Entire Onboarding~~ ✅ FIXED 2026-06-16
+
+**File:** `client/src/modules/onboarding/components/OnboardingWizard.tsx:52-61`
+
+**Status:** Avatar upload now wrapped in its own try-catch. On failure, a toast is shown and onboarding continues without the avatar.
+
+### 15. `isPrivate` Default Contradicts `visibility` Default on Conversation Model
+
+**File:** `server/prisma/schema.prisma:46-47`
+
+```prisma
+visibility ChannelVisibility @default(PUBLIC)
+isPrivate  Boolean            @default(true)
+```
+
+Every new `Conversation` is created with `visibility: PUBLIC` but `isPrivate: true` by default — contradictory defaults. The onboarding service (`onboarding.service.ts:59`) hardcodes `isPrivate: false` for the `#general` channel, but any code path that doesn't explicitly set both fields creates inconsistent records.
+
+**Impact:** Channel visibility checks that rely on `isPrivate` vs `visibility` may disagree on whether a channel is public or private, causing incorrect access decisions.

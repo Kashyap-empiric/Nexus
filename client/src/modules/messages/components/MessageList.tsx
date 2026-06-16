@@ -10,7 +10,9 @@ import { MessageListSkeleton } from "./MessageListSkeleton";
 import { TypingIndicator } from "./TypingIndicator";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
-import type { ConversationMember } from "@/modules/conversations/types/conversation";
+import { UserAvatar } from "@/shared/components/ui/user-avatar";
+import React from "react";
+import type { ConversationMember, User } from "@/modules/conversations/types/conversation";
 
 interface MessageListProps {
   conversationId: string;
@@ -19,11 +21,12 @@ interface MessageListProps {
   partnerLastReadMessageId?: string | null;
   members?: ConversationMember[];
   isChannel?: boolean;
+  otherMember?: User;
   onReply?: (messageId: string, username: string, content: string) => void;
   highlightMessageId?: string;
 }
 
-export function MessageList({ conversationId, currentUserId, myLastReadMessageId, partnerLastReadMessageId, members, isChannel, onReply, highlightMessageId }: MessageListProps) {
+export function MessageList({ conversationId, currentUserId, myLastReadMessageId, partnerLastReadMessageId, members, isChannel, otherMember, onReply, highlightMessageId }: MessageListProps) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, error } = useMessagesInfiniteQuery(conversationId);
   const { mutate: markRead } = useMarkConversationReadMutation();
 
@@ -105,29 +108,59 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto pb-4 pt-2"
+        className="flex-1 overflow-y-auto pb-4"
       >
-        <div className="w-full md:px-6">
-          <div ref={observerTarget} className="h-4 w-full flex justify-center">
+        <div className="w-full">
+          <div ref={observerTarget} className="h-1 mt-1 w-full flex justify-center">
             {isFetchingNextPage && <span className="text-xs text-muted-foreground">Loading older messages...</span>}
           </div>
 
-          {messageGroups.length === 0 ? (
+          {messageGroups.length === 0 && hasNextPage === false ? (
             <div className="text-center text-muted-foreground pt-10 text-sm">
               <p>No messages yet. Send a message to start the conversation!</p>
             </div>
           ) : (
-            messageGroups.map((group) => (
-              <MessageGroupItem
-                key={group.id}
-                group={group}
-                currentUserId={currentUserId}
-                partnerLastReadMessageId={partnerLastReadMessageId}
-                members={members}
-                isChannel={isChannel}
-                onReply={onReply}
-              />
-            ))
+            <>
+              {!hasNextPage && !isChannel && otherMember && (
+                <div className="flex flex-col items-start px-4 md:px-6 py-8 md:py-12 mt-auto">
+                  <UserAvatar name={otherMember.username} src={otherMember.avatarUrl} avatarPath={otherMember.avatarPath} className="h-20 w-20 md:h-24 md:w-24 mb-4 text-3xl" />
+                  <h1 className="text-2xl md:text-3xl font-extrabold text-foreground mb-1">{otherMember.username}</h1>
+                  {otherMember.fullName && (
+                    <p className="text-lg text-muted-foreground mb-4">{otherMember.fullName}</p>
+                  )}
+                  <p className="text-muted-foreground text-base">
+                    This is the beginning of your direct message history with <span className="font-semibold text-foreground">@{otherMember.username}</span>.
+                  </p>
+                </div>
+              )}
+              {messageGroups.map((group, index) => {
+                const currentGroupDate = new Date(group.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
+                const prevGroupDate = index > 0 ? new Date(messageGroups[index - 1].createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }) : null;
+                const showDateSeparator = currentGroupDate !== prevGroupDate;
+
+                return (
+                  <React.Fragment key={group.id}>
+                    {showDateSeparator && (
+                      <div className="flex items-center justify-center my-6">
+                        <div className="h-px bg-border flex-1 mx-4" />
+                        <span className="text-xs text-muted-foreground font-medium shrink-0">
+                          {currentGroupDate}
+                        </span>
+                        <div className="h-px bg-border flex-1 mx-4" />
+                      </div>
+                    )}
+                    <MessageGroupItem
+                      group={group}
+                      currentUserId={currentUserId}
+                      partnerLastReadMessageId={partnerLastReadMessageId}
+                      members={members}
+                      isChannel={isChannel}
+                      onReply={onReply}
+                    />
+                  </React.Fragment>
+                );
+              })}
+            </>
           )}
 
           {/* Typing indicator */}

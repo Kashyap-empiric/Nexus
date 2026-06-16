@@ -68,6 +68,7 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
         userId: otherMember.userId,
         username: otherMember.user.username,
         avatarUrl: otherMember.user.avatarUrl,
+        avatarPath: otherMember.user.avatarPath,
       } : null,
       totalUnreadCount,
       memberPanelOpen: false,
@@ -117,6 +118,7 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
           myLastReadMessageId={conversation.members.find(m => m.userId === currentUserId)?.lastReadMessageId}
           partnerLastReadMessageId={otherMember?.lastReadMessageId}
           members={isChannel ? conversation.members : undefined}
+          otherMember={!isChannel && otherMember ? otherMember.user : undefined}
           isChannel={isChannel || undefined}
           onReply={handleReply}
           highlightMessageId={highlightMessageId}

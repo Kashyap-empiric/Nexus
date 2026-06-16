@@ -57,7 +57,7 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
         conversationId,
         userId: userId,
         createdAt: new Date().toISOString(),
-        user: { id: userId, username: username, avatarUrl: avatarUrl, fullName: currentUser?.fullName || null },
+        user: { id: userId, username: username, avatarUrl: avatarUrl, avatarPath: currentUser?.avatarPath || null, fullName: currentUser?.fullName || null },
         isEdited: false,
         deletedAt: null,
         pending: true,

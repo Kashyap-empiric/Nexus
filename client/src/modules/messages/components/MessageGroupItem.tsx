@@ -131,7 +131,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
             <div
               key={msg.id}
               id={`msg-${msg.id}`}
-              className={`group/row flex hover:bg-black/[0.06] dark:hover:bg-white/[0.06] mx-2 rounded-lg px-[15px] md:px-4 animate-in fade-in slide-in-from-bottom-1 duration-300 ease-out ${isFirst ? "pt-2.5 pb-0.5" : "py-0.5"} ${msg.optimistic || msg.pending ? "opacity-70" : ""}`}
+              className={`group/row flex hover:bg-black/[0.06] dark:hover:bg-white/[0.06] px-4 md:px-6 animate-in fade-in slide-in-from-bottom-1 duration-300 ease-out ${isFirst ? "pt-2.5 pb-0.5" : "py-0.5"} ${msg.optimistic || msg.pending ? "opacity-70" : ""}`}
             >
               <div className="w-[36px] shrink-0 flex justify-center items-start relative select-none">
                 {isFirst ? (

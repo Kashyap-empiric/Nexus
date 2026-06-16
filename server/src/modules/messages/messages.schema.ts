@@ -23,6 +23,12 @@ export const updateMessageBodySchema = z.object({
   content: z.string().trim().min(1, "Message cannot be empty").max(2000, "Message is too long"),
 });
 
+export const searchMessagesQuerySchema = z.object({
+  q: z.string().trim().min(1).max(200),
+  limit: z.coerce.number().int().min(1).max(50).default(10),
+});
+
 export type GetMessagesQuery = z.infer<typeof getMessagesQuerySchema>;
 export type CreateMessageBody = z.infer<typeof createMessageBodySchema>;
 export type UpdateMessageBody = z.infer<typeof updateMessageBodySchema>;
+export type SearchMessagesQuery = z.infer<typeof searchMessagesQuerySchema>;

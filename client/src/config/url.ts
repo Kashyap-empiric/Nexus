@@ -44,6 +44,9 @@ export const API_ROUTES = {
   ONBOARDING: {
     COMPLETE: '/onboarding/complete',
   },
+  MESSAGES: {
+    SEARCH: (query: string) => `/messages/search?q=${encodeURIComponent(query)}`,
+  },
 } as const;
 
 

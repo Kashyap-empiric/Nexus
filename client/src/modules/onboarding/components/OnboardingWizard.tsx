@@ -48,10 +48,15 @@ export function OnboardingWizard() {
     try {
       let avatarPath: string | undefined = undefined;
       
-      // Upload avatar first if provided
+      // Upload avatar first if provided (non-blocking — toast on failure)
       if (profileData.avatarFile && user?.id) {
-        const { uploadAvatar } = await import("@/shared/lib/upload");
-        avatarPath = await uploadAvatar(user.id, profileData.avatarFile);
+        try {
+          const { uploadAvatar } = await import("@/shared/lib/upload");
+          avatarPath = await uploadAvatar(user.id, profileData.avatarFile);
+        } catch (err) {
+          console.warn("Avatar upload failed, continuing without it:", err);
+          toast.error("Avatar upload failed. You can set one later.");
+        }
       }
 
       const response = await completeOnboarding({
@@ -66,7 +71,7 @@ export function OnboardingWizard() {
       setCompletionData(response);
       
       // Invalidate queries to reflect new user state and workspaces
-      await queryClient.invalidateQueries({ queryKey: ["my-profile"] });
+      await queryClient.invalidateQueries({ queryKey: ["users", "me"] });
       await queryClient.invalidateQueries({ queryKey: ["workspaces"] });
       
       if (response.skippedWorkspace || data.skipWorkspace) {

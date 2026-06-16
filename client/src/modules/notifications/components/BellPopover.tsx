@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { APP_ROUTES } from "@/config/url";
 import { useNotifications, useUnreadCount, useMarkAllAsRead, useMarkAsRead } from "../hooks/useNotifications";
-import { timeAgo, NotificationIcon } from "../utils/notifications-ui";
+import { timeAgo, formatNotificationTime, NotificationIcon } from "../utils/notifications-ui";
 import { cn } from "@/shared/lib/utils";
 import type { Notification } from "../types/notification";
 
@@ -53,6 +53,8 @@ function NotificationItem({
         )}
         <p className="text-[10px] text-muted-foreground/60 mt-1">
           {timeAgo(notification.createdAt)}
+          <span className="mx-1">·</span>
+          {formatNotificationTime(notification.createdAt)}
         </p>
       </div>
       {!notification.read && (
@@ -98,7 +100,7 @@ function TabButton({
 
 export function BellPopover() {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>("replies");
+  const [activeTab, setActiveTab] = useState<Tab>("invites");
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const INVITE_TYPES = "INVITE_RECEIVED,INVITE_ACCEPTED,MEMBER_JOINED,CHANNEL_CREATED,MEMBER_REMOVED";
@@ -217,18 +219,18 @@ export function BellPopover() {
           {/* Tabs */}
           <div className="flex items-center gap-1 px-3 pt-2.5 pb-2 border-b">
             <TabButton
-              active={activeTab === "replies"}
-              label="Replies"
-              icon={<Reply className="h-3.5 w-3.5" />}
-              count={repliesUnread}
-              onClick={() => setActiveTab("replies")}
-            />
-            <TabButton
               active={activeTab === "invites"}
               label="Invites"
               icon={<Mail className="h-3.5 w-3.5" />}
               count={invitesUnread}
               onClick={() => setActiveTab("invites")}
+            />
+            <TabButton
+              active={activeTab === "replies"}
+              label="Replies"
+              icon={<Reply className="h-3.5 w-3.5" />}
+              count={repliesUnread}
+              onClick={() => setActiveTab("replies")}
             />
           </div>
 

@@ -87,6 +87,10 @@ export const createMessage = async (conversationId: string, userId: string, cont
   return { message, conversationMetadata };
 };
 
+export const searchMessages = async (query: string, userId: string, limit: number) => {
+  return messagesRepo.searchMessages(query, userId, limit);
+};
+
 export const getMessageById = async (messageId: string) => {
   return messagesRepo.findById(messageId);
 };
