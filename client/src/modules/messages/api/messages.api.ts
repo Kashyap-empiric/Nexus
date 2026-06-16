@@ -1,10 +1,11 @@
 import { api } from "@/shared/lib/api";
 import { API_ROUTES } from "@/config/url";
-import type { Message } from "../types/message";
+import type { Message, PinnedMessage } from "../types/message";
 
 export interface MessagesResponse {
   data: Message[];
   nextCursor: string | null;
+  pinnedMessageIds: string[];
 }
 
 export interface MessageSearchResult {
@@ -50,5 +51,20 @@ export const editMessage = async (conversationId: string, messageId: string, con
 
 export const deleteMessage = async (conversationId: string, messageId: string) => {
   const response = await api.delete<{ data: Message }>(API_ROUTES.CONVERSATIONS.MESSAGE_DETAIL(conversationId, messageId));
+  return response.data.data;
+};
+
+export const pinMessage = async (conversationId: string, messageId: string) => {
+  const response = await api.post<{ data: PinnedMessage }>(API_ROUTES.CONVERSATIONS.PIN_DETAIL(conversationId, messageId));
+  return response.data.data;
+};
+
+export const unpinMessage = async (conversationId: string, messageId: string) => {
+  const response = await api.delete<{ data: { messageId: string } }>(API_ROUTES.CONVERSATIONS.PIN_DETAIL(conversationId, messageId));
+  return response.data.data;
+};
+
+export const getPinnedMessages = async (conversationId: string) => {
+  const response = await api.get<{ data: PinnedMessage[] }>(API_ROUTES.CONVERSATIONS.PINS(conversationId));
   return response.data.data;
 };

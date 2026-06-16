@@ -153,15 +153,16 @@ export const updateChannel = async (slugOrId: string, channelId: string, data: {
   const member = workspace.members.find(m => m.userId === userId);
   if (!member) throw new Error("Forbidden: Not a member of this workspace");
 
-  // Any workspace member can update a channel name
+  const channel = workspace.channels.find(c => c.id === channelId);
+  if (!channel) throw new Error("Channel not found in this workspace");
 
+  if (data.name && !canManageChannel(member.role, channel, userId)) {
+    throw new Error("Forbidden: Only owners, admins, and the channel creator can rename channels");
+  }
 
   if (data.visibility && member.role !== WorkspaceRole.OWNER && member.role !== WorkspaceRole.ADMIN) {
     throw new Error("Forbidden: Only owners and admins can change channel visibility");
   }
-
-  const channel = workspace.channels.find(c => c.id === channelId);
-  if (!channel) throw new Error("Channel not found in this workspace");
 
   const updateData: any = {};
   if (data.name) updateData.name = data.name;
@@ -221,6 +222,113 @@ export const updateMemberRole = async (slugOrId: string, memberUserId: string, r
   if (!targetMember) throw new Error("Member not found in this workspace");
 
   return workspacesRepo.updateWorkspaceMemberRole(workspace.id, memberUserId, role);
+};
+
+function canManageChannel(workspaceRole: WorkspaceRole | undefined, channel: { createdBy: string | null }, callerUserId: string): boolean {
+  if (workspaceRole === WorkspaceRole.OWNER || workspaceRole === WorkspaceRole.ADMIN) return true;
+  if (channel.createdBy === callerUserId) return true;
+  return false;
+}
+
+export const getChannelMembers = async (workspaceId: string, channelId: string, callerUserId: string) => {
+  const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(workspaceId);
+  if (!workspace) throw new Error("Workspace not found");
+
+  const isMember = workspace.members.some(m => m.userId === callerUserId);
+  if (!isMember) throw new Error("Forbidden: Not a member of this workspace");
+
+  const channel = workspace.channels.find(c => c.id === channelId);
+  if (!channel) throw new Error("Channel not found in this workspace");
+  if (channel.type !== "CHANNEL") throw new Error("Bad Request: Not a channel");
+
+  const channelMember = await workspacesRepo.getChannelMembers(channelId);
+  return channelMember;
+};
+
+export const addMembersToChannel = async (workspaceId: string, channelId: string, callerUserId: string, targetUserIds: string[]) => {
+  const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(workspaceId);
+  if (!workspace) throw new Error("Workspace not found");
+
+  const callerMember = workspace.members.find(m => m.userId === callerUserId);
+  if (!callerMember) throw new Error("Forbidden: Not a member of this workspace");
+
+  const channel = workspace.channels.find(c => c.id === channelId);
+  if (!channel) throw new Error("Channel not found in this workspace");
+  if (channel.type !== "CHANNEL") throw new Error("Bad Request: Not a channel");
+
+  if (!canManageChannel(callerMember.role, channel, callerUserId)) {
+    throw new Error("Forbidden: You don't have permission to manage channel members");
+  }
+
+  const existingMembers = await workspacesRepo.getChannelMembers(channelId);
+  const existingUserIds = new Set(existingMembers.map(m => m.userId));
+
+  const workspaceMemberIds = new Set(workspace.members.map(m => m.userId));
+
+  const validNewUserIds = targetUserIds.filter(
+    uid => workspaceMemberIds.has(uid) && !existingUserIds.has(uid)
+  );
+
+  if (validNewUserIds.length === 0) {
+    throw new Error("No valid users to add (all are already members or not workspace members)");
+  }
+
+  const added = await workspacesRepo.addChannelMembers(channelId, validNewUserIds);
+
+  const addedUsers = workspace.members
+    .filter(m => validNewUserIds.includes(m.userId))
+    .map(m => ({
+      id: m.userId,
+      username: (m.user as any)?.username || "unknown",
+      fullName: (m.user as any)?.fullName || null,
+      avatarUrl: (m.user as any)?.avatarUrl || null,
+    }));
+
+  return { added, addedUsers };
+};
+
+export const removeMemberFromChannel = async (workspaceId: string, channelId: string, callerUserId: string, targetUserId: string) => {
+  const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(workspaceId);
+  if (!workspace) throw new Error("Workspace not found");
+
+  const callerMember = workspace.members.find(m => m.userId === callerUserId);
+  if (!callerMember) throw new Error("Forbidden: Not a member of this workspace");
+
+  const channel = workspace.channels.find(c => c.id === channelId);
+  if (!channel) throw new Error("Channel not found in this workspace");
+  if (channel.type !== "CHANNEL") throw new Error("Bad Request: Not a channel");
+
+  const isSelfRemoval = callerUserId === targetUserId;
+  if (!isSelfRemoval && !canManageChannel(callerMember.role, channel, callerUserId)) {
+    throw new Error("Forbidden: You don't have permission to manage channel members");
+  }
+
+  const channelMembers = await workspacesRepo.getChannelMembers(channelId);
+  const targetChannelMember = channelMembers.find(m => m.userId === targetUserId);
+  if (!targetChannelMember) throw new Error("Member not found in this channel");
+
+  const managers = channelMembers.filter(m => {
+    const wsMember = workspace.members.find(wm => wm.userId === m.userId);
+    return wsMember && (wsMember.role === WorkspaceRole.OWNER || wsMember.role === WorkspaceRole.ADMIN || (channel.createdBy === m.userId));
+  });
+
+  const isTargetManager = managers.some(m => m.userId === targetUserId);
+
+  if (isSelfRemoval && isTargetManager && managers.length <= 1) {
+    throw new Error("Forbidden: Cannot remove yourself as the last manager in the channel");
+  }
+
+  if (isSelfRemoval && !isTargetManager && managers.length === 0) {
+    throw new Error("Forbidden: Cannot remove yourself as there are no managers left in this channel");
+  }
+
+  if (!isSelfRemoval && isTargetManager && managers.length <= 1) {
+    throw new Error("Forbidden: Cannot remove the last member with manage permission from the channel");
+  }
+
+  await workspacesRepo.removeChannelMember(channelId, targetUserId);
+
+  return { removedUserId: targetUserId };
 };
 
 export const removeMember = async (slugOrId: string, memberUserId: string, userId: string) => {

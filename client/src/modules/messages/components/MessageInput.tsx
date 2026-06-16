@@ -255,7 +255,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
   const activeClass = "bg-primary/15 text-primary dark:bg-zinc-800 dark:text-zinc-100";
 
   return (
-    <form onSubmit={handleSubmit} className="px-4 md:px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:pb-6 pt-2 bg-background shrink-0 w-full">
+    <form onSubmit={handleSubmit} className="px-4 md:px-6 xl:px-8 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:pb-6 pt-2 bg-background shrink-0 w-full">
       {/* Reply banner */}
       {replyingTo && (
         <div className="flex items-center gap-2 px-3 py-2 mb-1 bg-muted/50 border border-border rounded-t-lg text-sm">

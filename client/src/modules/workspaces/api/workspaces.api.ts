@@ -69,6 +69,30 @@ export const inviteMembers = async (workspaceId: string, userIds: string[]): Pro
   return data;
 };
 
+import type { ConversationMember } from "@/modules/conversations/types/conversation";
+
+export const getChannelMembers = async (workspaceId: string, channelId: string): Promise<ConversationMember[]> => {
+  const { data } = await api.get<{ data: ConversationMember[] }>(
+    `/workspaces/${workspaceId}/channels/${channelId}/members`
+  );
+  return data.data;
+};
+
+export const addChannelMembers = async (workspaceId: string, channelId: string, userIds: string[]): Promise<{ count: number }> => {
+  const { data } = await api.post<{ data: { added: { count: number } } }>(
+    `/workspaces/${workspaceId}/channels/${channelId}/members`,
+    { userIds }
+  );
+  return data.data.added;
+};
+
+export const removeChannelMember = async (workspaceId: string, channelId: string, userId: string): Promise<{ removedUserId: string }> => {
+  const { data } = await api.delete<{ data: { removedUserId: string } }>(
+    `/workspaces/${workspaceId}/channels/${channelId}/members/${userId}`
+  );
+  return data.data;
+};
+
 export const removeMember = async (workspaceId: string, userId: string): Promise<{ workspaceId: string; userId: string }> => {
   const { data } = await api.delete<{ data: { workspaceId: string; userId: string } }>(
     `/workspaces/${workspaceId}/members/${userId}`

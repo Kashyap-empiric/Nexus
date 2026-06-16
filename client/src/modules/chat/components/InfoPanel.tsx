@@ -1,17 +1,21 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { X, CalendarDays } from "lucide-react";
+import { X, CalendarDays, Pin } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { InfoPanelView } from "@/shared/components/layout/AppLayoutShell";
 import { MemberListPanel } from "@/modules/workspaces/components/MemberListPanel";
+import { PinnedMessagesPanel } from "@/modules/messages/components/PinnedMessagesPanel";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { PresenceIndicator } from "@/modules/chat/components/PresenceIndicator";
 import { getPublicProfile } from "@/modules/users/api/users.api";
 import Link from "next/link";
+import { useUser } from "@/modules/auth/store/useAuthStore";
 
 interface InfoPanelProps {
+  conversationId: string;
   workspaceId?: string;
+  channelId?: string;
   userId?: string;
   view: InfoPanelView;
   setInfoPanelView: (view: InfoPanelView) => void;
@@ -25,7 +29,9 @@ const STATUS_LABELS: Record<string, { label: string; dotClass: string }> = {
   INVISIBLE: { label: "Offline", dotClass: "bg-status-offline" },
 };
 
-export function InfoPanel({ workspaceId, userId, view, setInfoPanelView, onClose }: InfoPanelProps) {
+export function InfoPanel({ conversationId, workspaceId, channelId, userId, view, setInfoPanelView, onClose }: InfoPanelProps) {
+  const user = useUser();
+  const currentUserId = user?.id || null;
   const isChannel = !!workspaceId;
   const isDM = !!userId;
 
@@ -74,6 +80,15 @@ export function InfoPanel({ workspaceId, userId, view, setInfoPanelView, onClose
             Members
           </button>
         )}
+        <button
+          onClick={() => setInfoPanelView('pins')}
+          className={cn(
+            "flex-1 pb-2 pt-3 text-sm font-medium text-center border-b-2 transition-colors",
+            view === 'pins' ? "border-brand text-brand" : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Pins
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto min-h-0">
@@ -140,7 +155,11 @@ export function InfoPanel({ workspaceId, userId, view, setInfoPanelView, onClose
         )}
 
         {view === 'members' && workspaceId && (
-          <MemberListPanel workspaceId={workspaceId} />
+          <MemberListPanel workspaceId={workspaceId} channelId={channelId} />
+        )}
+
+        {view === 'pins' && (
+          <PinnedMessagesPanel conversationId={conversationId} currentUserId={currentUserId} />
         )}
       </div>
     </div>

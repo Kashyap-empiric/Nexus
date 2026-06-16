@@ -7,6 +7,7 @@ import { NavigationRail } from "@/modules/chat/components/NavigationRail";
 import { BellPopover } from "@/modules/notifications/components/BellPopover";
 import { MessageSearchPopover } from "@/modules/messages/components/MessageSearchPopover";
 import { useChatStore } from "@/modules/chat/store/chatStore";
+import { useWorkspaceMembersQuery } from "@/modules/workspaces/hooks/useWorkspaces";
 import { cn } from "@/shared/lib/utils";
 import { Menu, Hash, Users, X, ArrowLeft } from "lucide-react";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
@@ -23,6 +24,17 @@ import { useSocketStore } from "@/socket/socketStore";
 function HeaderPresenceText({ userId }: { userId: string }) {
   const isOnline = useSocketStore((state) => state.onlineUsers.has(userId));
   return <>{isOnline ? "Online" : "Offline"}</>;
+}
+
+function MemberCountBadge({ workspaceId }: { workspaceId: string }) {
+  const { data: members } = useWorkspaceMembersQuery(workspaceId);
+  const count = members?.length ?? 0;
+  return (
+    <div className="flex items-center gap-1.5 px-2 py-1 bg-muted/30 rounded-md border border-border/50 select-none">
+      <Users className="h-3.5 w-3.5 text-muted-foreground" />
+      <span className="text-xs font-medium text-muted-foreground">{count}</span>
+    </div>
+  );
 }
 
 export type InfoPanelView = 'about' | 'members' | 'pins';
@@ -112,7 +124,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
       {/* Mobile sidebar overlay */}
       {mobileSidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-transparent md:hidden"
+          className="fixed inset-0 z-40 bg-transparent lg:hidden"
           onClick={closeMobileSidebar}
         />
       )}
@@ -121,22 +133,22 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
       <div className={cn(
         "shrink-0 flex transition-transform duration-300 ease-in-out",
         isContentActive
-          ? "fixed inset-y-0 left-0 z-50 w-screen bg-background md:w-auto md:relative md:z-auto" +
-          (mobileSidebarOpen ? " translate-x-0" : " -translate-x-full md:translate-x-0")
-          : "relative w-full md:w-auto"
+          ? "fixed inset-y-0 left-0 z-50 w-screen bg-background lg:w-auto lg:relative lg:z-auto" +
+          (mobileSidebarOpen ? " translate-x-0" : " -translate-x-full lg:translate-x-0")
+          : "relative w-full lg:w-auto"
       )}>
         <NavigationRail openSettings={openSettings} />
         <div className={cn(
-          "flex-1 md:flex-initial",
-          isContentActive ? "flex" : "flex flex-1 min-w-0 md:w-auto"
+          "flex-1 lg:flex-initial",
+          isContentActive ? "flex" : "flex flex-1 min-w-0 lg:w-auto"
         )}>
           <Sidebar onNavigate={closeMobileSidebar} />
         </div>
       </div>
 
-      <main className={cn("flex-1 flex-col min-w-0 bg-background h-full", !isContentActive ? "hidden md:flex" : "flex")}>
+      <main className={cn("flex-1 flex-col min-w-0 bg-background h-full", !isContentActive ? "hidden lg:flex" : "flex")}>
         {/* Global header bar */}
-        <div className="h-14 border-b flex items-center justify-between px-[15px] md:px-4 shrink-0 bg-background shadow-sm">
+        <div className="h-14 border-b flex items-center justify-between px-[15px] md:px-4 xl:px-6 shrink-0 bg-background shadow-sm">
           <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
             {/* Back/Sidebar toggle (mobile only) */}
             {mounted && headerInfo && (
@@ -197,11 +209,8 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
 
           {/* Right side actions */}
           <div className="flex items-center gap-2 shrink-0">
-            {mounted && isChannel && (
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-muted/30 rounded-md border border-border/50 select-none">
-                <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs font-medium text-muted-foreground">9</span>
-              </div>
+            {mounted && isChannel && headerInfo?.workspaceId && (
+              <MemberCountBadge workspaceId={headerInfo.workspaceId} />
             )}
             <MessageSearchPopover />
             <div className="relative">
@@ -217,10 +226,9 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
               </button>
             )}
           </div>
-        </div>
-
+        </div>        
         {/* Content area */}
-        <div className="flex-1 min-h-0 flex">
+        <div className="flex-1 min-h-0 flex justify-center">
           <LayoutUIContext.Provider value={{
             infoPanelOpen,
             infoPanelView,

@@ -118,8 +118,9 @@ export const createChannel = async (req: AuthRequest, res: Response): Promise<vo
   }
 };
 
-import { dispatchChannelUpdate, dispatchMemberUpdate } from "@/socket/socket.dispatcher.js";
+import { dispatchChannelUpdate, dispatchMemberUpdate, dispatchChannelMemberUpdate } from "@/socket/socket.dispatcher.js";
 import { WorkspaceRole } from "@prisma/client";
+import { addChannelMembersSchema } from "./workspaces.schema.js";
 
 export const updateChannel = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -329,6 +330,82 @@ export const inviteMembers = async (req: AuthRequest, res: Response): Promise<vo
     console.error("Error inviting members:", error);
     if (error?.message?.startsWith("Forbidden")) {
       res.status(403).json({ error: error.message });
+      return;
+    }
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getChannelMembers = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { id: workspaceId, channelId } = req.params as { id: string; channelId: string };
+
+    const members = await workspacesService.getChannelMembers(workspaceId, channelId, userId);
+
+    res.json({ data: members });
+  } catch (error: any) {
+    console.error("Error fetching channel members:", error);
+    if (error?.message?.startsWith("Forbidden")) {
+      res.status(403).json({ error: error.message });
+      return;
+    }
+    if (error?.message?.startsWith("Bad Request")) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const addChannelMembers = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { id: workspaceId, channelId } = req.params as { id: string; channelId: string };
+
+    const parsed = addChannelMembersSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Validation error", details: parsed.error.flatten() });
+      return;
+    }
+
+    const result = await workspacesService.addMembersToChannel(workspaceId, channelId, userId, parsed.data.userIds);
+
+    dispatchChannelMemberUpdate(workspaceId, channelId, "ADDED", { addedMembers: result.addedUsers });
+
+    res.status(201).json({ data: { added: result.added } });
+  } catch (error: any) {
+    console.error("Error adding channel members:", error);
+    if (error?.message?.startsWith("Forbidden")) {
+      res.status(403).json({ error: error.message });
+      return;
+    }
+    if (error?.message?.startsWith("Bad Request")) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const removeChannelMember = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { id: workspaceId, channelId, userId: targetUserId } = req.params as { id: string; channelId: string; userId: string };
+
+    const result = await workspacesService.removeMemberFromChannel(workspaceId, channelId, userId, targetUserId);
+
+    dispatchChannelMemberUpdate(workspaceId, channelId, "REMOVED", { removedUserId: targetUserId });
+
+    res.json({ data: result });
+  } catch (error: any) {
+    console.error("Error removing channel member:", error);
+    if (error?.message?.startsWith("Forbidden")) {
+      res.status(403).json({ error: error.message });
+      return;
+    }
+    if (error?.message?.startsWith("Bad Request")) {
+      res.status(400).json({ error: error.message });
       return;
     }
     res.status(500).json({ error: "Internal server error" });

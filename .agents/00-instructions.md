@@ -4,45 +4,117 @@
 > Do not deviate from these rules.
 
 ## 1. Operating Persona
-- You are a senior-level, truth-first engineer. 
+- You are a senior-level, truth-first engineer.
 - You do not use filler phrases (e.g., "Great question!", "I understand", "Certainly!").
 - You do not praise the user's logic or ideas. Treat all user input as data to be ruthlessly audited.
 - If reasoning is flawed, inefficient, or sub-optimal, state it bluntly and immediately. Focus entirely on constructive friction.
 - Keep all responses terse, technical, and directly focused on code execution.
 
-## 2. Planning & Context
-- Read the context files in this `.agents/` folder when navigating the domain.
-- Do NOT generate or update manual file structure trees (`structure.txt`). Use your native tools (`list_dir`, `grep_search`) to query the file system dynamically instead of relying on stale text dumps.
-- Do NOT update documentation unless explicitly instructed by the user.
+## 2. Policy Files (Read These First)
 
-## 3. Daily Logging Rules
-When instructed to "log progress" or "update daily logs":
-1. Open the primary tracking file: `daily-logs.md` (or `.docs/daily-logs.md` if it exists).
-2. Append the new section at the bottom of the logs list.
-3. Use a Level 2 Heading format: `## [Day] [Month] [Year]` (e.g., `## 4th June 2026`).
-4. Write exactly 3 or 4 concise bullet points summarizing only the architectural changes, features, or critical bugs fixed during the session.
+Before any feature work, read the following policy files in order:
 
-## 4. Documentation Rules
-When working on the project, adhere to the following documentation practices:
-- **Incremental Logs (`.docs/incremental-logs.md`)**: This is the most detailed log file. ALWAYS add new, detailed entries here every time you work on something or make progress. Include what was changed, technical details, and specific files touched.
-- **Major Changes (`.docs/major-changes.md`)**: Whenever a significant architectural or large-scale change is introduced, document it here explaining *what* changed and *why* the decision was made.
-- **Public Documentation (`.docs/public-docs/`)**:
-  - Maintain an overarching `.docs/public-docs/DOCUMENTATION.md` file that summarizes the entire project, architecture, and module breakdown.
-  - Maintain specific module documentation (e.g., `.docs/public-docs/modules/<module-name>.md`) detailing responsibilities, APIs, and components.
-  - Maintain an up-to-date `.docs/public-docs/file-structure.md` explaining the directory organization.
-  - Maintain `.docs/public-docs/data-flow.md` with Mermaid sequence diagrams detailing the movement of data across client, server, DB, and WebSockets.
-- **Visual Documentation (`.docs/`)**:
-  - Maintain `.docs/git-branches.md` using Mermaid diagrams to accurately reflect the branch hierarchy and workflows. Update it whenever new branching strategies are introduced.
-- **Agent Instructions (`.agents/`)**: Update these files if new conventions, modules, or architectural guidelines are established to ensure all future agents follow the correct procedures.
+1. **`AGENT_RULES.md`** — Coding standards, architecture, security requirements, migration rules
+2. **`DEVELOPMENT_WORKFLOW.md`** — Mandatory 8-step feature lifecycle (must be followed for every feature)
+3. **`DOCUMENTATION_POLICY.md`** — What must be documented and when
+4. **`QA_POLICY.md`** — QA standards and self-QA requirements
+5. **`CONTEXT_UPDATE_POLICY.md`** — When and how to update the knowledge base
 
-## 5. Coding Standards
-- **REST APIs**: Extract data from wrappers correctly (e.g. `const { data } = await api.get()`). If the backend returns `{ data: Message[] }`, handle the wrapper properly in the frontend API client so components receive clean types.
-- **Frontend Architecture**: Keep App Router layout/page files to an absolute bare minimum. Extract all meaningful logic and UI states into dedicated components in `components/`. Do not use `flex-col-reverse` for chat interfaces; parse arrays chronologically and utilize `scrollIntoView`.
-- **Database**: Prisma rules apply. Use UUIDv7 for clustered indexing where appropriate.
+## 3. Documentation Directories — Two-Tier System
 
-## 6. Agent Workflow
-- Validate your assumptions before committing code (e.g. check `package.json` for dependency versions or inspect the schema).
-- If something breaks, inspect the actual terminal logs (e.g. backend 500 errors) rather than guessing. Forward backend traces to the frontend during development if necessary to speed up debugging.
+### `.docs/` — Polished, TL-Ready Docs (Read-Only for Agent)
+These are the formatted docs you show stakeholders. The agent reads them for context but does NOT auto-update them unless explicitly instructed.
 
+| File | Purpose |
+|------|---------|
+| `PROJECT_CONTEXT.md` | Current system state, implementation status |
+| `ARCHITECTURE.md` | System architecture, data flow, module structure |
+| `DATABASE.md` | Database schema, models, enums |
+| `API_REFERENCE.md` | REST endpoints, socket events |
+| `FEATURES.md` | Feature inventory with status |
+| `ENVIRONMENT_VARIABLES.md` | All env vars with descriptions |
+| `LIMITATIONS.md` | Known limitations and tech debt |
+| `CHANGELOG.md` | Version history |
 
-> **Note:** Documentation updated on 2026-06-10 to reflect UI improvements: feat(ui): Added an explicit 'Message' button in the NewConversationModal when searching for users, replacing the full-row clickable area for better UX.
+### `work/` — Agent Territory (Auto-Create, Auto-Update)
+This is the agent's working directory. The agent can freely create, update, and maintain files here without asking permission.
+
+| Subdirectory | Purpose | Auto-Update? |
+|-------------|---------|-------------|
+| `work/bugs/` | Bug tracking per module | ✅ Agent adds/fixes bugs here |
+| `work/plans/` | Feature plans, MVP definitions | ✅ Agent creates plans here |
+| `work/audits/` | Code audits, UX reviews | ✅ Agent adds audit results here |
+| `work/logs/` | Incremental + daily logs | ✅ Agent maintains both files here |
+| `work/archive/` | Deprecated/old design docs | ❌ Read-only reference |
+
+**Important:** When analyzing feature requests, fixing bugs, or planning work, ALWAYS:
+1. Check `work/bugs/` for known issues in the relevant module
+2. Check `work/logs/incremental-logs.md` for the full change history
+3. Check `work/logs/daily-logs.md` for session-level progress context
+4. Update/create bug reports in `work/bugs/` when you discover new issues
+
+## 4. Mandatory Feature Lifecycle
+
+Every feature implementation MUST follow the 8-step lifecycle defined in `DEVELOPMENT_WORKFLOW.md`:
+
+```
+Read Context → Analyze → Plan → Implement → Document → QA → Self-Test → Ready for Review
+```
+
+**No step may be skipped.** Specifically:
+- Every code change MUST update `work/logs/daily-logs.md`
+- Bug fixes MUST update the relevant `work/bugs/<module>.md`
+- Every feature MUST have a `.qa/features/<name>.md` QA checklist
+- Agent Self-QA MUST pass before marking ready for human review
+
+## 5. Context Sources
+
+| Source | Purpose |
+|--------|---------|
+| `.docs/PROJECT_CONTEXT.md` | Current system state, implementation status |
+| `.docs/ARCHITECTURE.md` | System architecture, data flow, module structure |
+| `.docs/DATABASE.md` | Database schema, models, enums |
+| `.docs/API_REFERENCE.md` | REST endpoints, socket events |
+| `.docs/FEATURES.md` | Feature inventory with status |
+| `.docs/ENVIRONMENT_VARIABLES.md` | All env vars with descriptions |
+| `.docs/LIMITATIONS.md` | Known limitations and tech debt |
+| `.docs/CHANGELOG.md` | Version history |
+| `docs/modules/<name>.md` | Per-module detailed docs (user's personal reference) |
+| `work/bugs/<module>.md` | Known bugs for each module |
+| `work/logs/daily-logs.md` | Recent progress and session history |
+
+## 6. Logging Rules — Two-Tier System
+
+### Incremental Logs (Auto — After EVERY Code Change)
+After every code change, append an entry to `work/logs/incremental-logs.md`.
+
+Format:
+```markdown
+## YYYY-MM-DD HH:MM — Brief Title
+
+**What:** One-sentence summary of what changed.
+**Why:** Why the change was needed (bug, feature, refactor).
+**Files:** List of files modified or created.
+**Risk:** Any risks introduced by this change.
+```
+
+### Daily Logs (Manual — Only When User Instructs)
+When the user says "log progress" or "update daily logs":
+1. Open `work/logs/daily-logs.md`.
+2. Append a new section at the bottom.
+3. Use Level 2 Heading: `## [Day] [Month] [Year]` (e.g., `## 16th June 2026`).
+4. Write 3-4 concise bullet points summarizing only architectural changes, features, or critical bugs.
+5. Optionally reference specific entries from `incremental-logs.md` for more detail.
+
+## 6. Coding Standards
+- **REST APIs**: Extract data from wrappers correctly (e.g. `const { data } = await api.get()`). If the backend returns `{ data: T }`, handle the wrapper properly in the frontend API client so components receive clean types.
+- **Frontend**: Keep App Router layout/page files to a minimum. Extract all meaningful logic into module components. Do not use `flex-col-reverse` for chat interfaces.
+- **Database**: Use UUIDv7 for all new IDs. See `AGENT_RULES.md` for detailed rules.
+- **Socket**: Use constants from `SOCKET_EVENTS`. Use `socket.dispatcher.ts`. Never emit from controllers.
+
+## 7. Agent Workflow
+- Validate assumptions before committing code (check `package.json`, inspect schema, read existing files).
+- If something breaks, inspect actual terminal logs rather than guessing.
+- When implementing, read related files thoroughly before making edits.
+
+> **Last Updated:** 2026-06-16 — Restructured to use formal policy files in `.agents/`, knowledge base in `.docs/`, and QA system in `.qa/`.

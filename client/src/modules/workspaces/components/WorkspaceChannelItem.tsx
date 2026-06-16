@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MoreVertical, Edit2, Trash2, Hash, Lock, Globe } from "lucide-react";
+import { MoreVertical, Edit2, Trash2, Hash, Lock, Globe, Users } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +25,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import { ManageChannelMembersModal } from "./ManageChannelMembersModal";
 
 interface WorkspaceChannelItemProps {
   channel: Conversation;
@@ -43,7 +44,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
   const { mutate: updateChannel, isPending: isUpdating } = useUpdateChannel();
   const router = useRouter();
 
-  const [modalType, setModalType] = useState<"rename" | "delete" | "visibility" | null>(null);
+  const [modalType, setModalType] = useState<"rename" | "delete" | "visibility" | "members" | null>(null);
   const [renameValue, setRenameValue] = useState(channel.name || "");
 
   const closeModals = () => {
@@ -68,6 +69,12 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
     e.preventDefault();
     e.stopPropagation();
     setModalType("visibility");
+  };
+
+  const handleManageMembersClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setModalType("members");
   };
 
   const confirmDelete = () => {
@@ -147,6 +154,12 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
               <Edit2 className="h-4 w-4 mr-2" />
               Rename Channel
             </DropdownMenuItem>
+            {canManage && (
+              <DropdownMenuItem onClick={handleManageMembersClick} className="cursor-pointer">
+                <Users className="h-4 w-4 mr-2" />
+                Manage Members
+              </DropdownMenuItem>
+            )}
             {!isGeneral && canManage && (
               <>
                 <DropdownMenuItem onClick={handleVisibilityClick} className="cursor-pointer">
@@ -218,6 +231,14 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Manage Members Modal */}
+      <ManageChannelMembersModal
+        workspaceId={workspaceId}
+        channelId={channel.id}
+        open={modalType === "members"}
+        onOpenChange={handleCloseModal}
+      />
 
       {/* Visibility Dialog */}
       <Dialog open={modalType === "visibility"} onOpenChange={handleCloseModal}>

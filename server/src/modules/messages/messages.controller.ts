@@ -4,6 +4,55 @@ import * as messagesService from "./messages.service.js";
 import { getMessagesQuerySchema, type CreateMessageBody, type GetMessagesQuery, type UpdateMessageBody, type SearchMessagesQuery } from "./messages.schema.js";
 import { dispatchMessageEvent } from "@/socket/socket.dispatcher.js";
 
+export const pinMessage = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { conversationId, messageId } = req.params as { conversationId: string; messageId: string };
+
+    const pin = await messagesService.pinMessage(messageId, conversationId, userId);
+
+    res.status(201).json({ data: pin });
+  } catch (error: any) {
+    console.error("Error pinning message:", error);
+    if (error.message === "Message not found." || error.message === "Message is already pinned." || error.message === "Message does not belong to this conversation.") {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const unpinMessage = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { conversationId, messageId } = req.params as { conversationId: string; messageId: string };
+
+    const result = await messagesService.unpinMessage(messageId, conversationId, userId);
+
+    res.json({ data: result });
+  } catch (error: any) {
+    console.error("Error unpinning message:", error);
+    if (error.message === "Message is not pinned.") {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getPinnedMessages = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { conversationId } = req.params as { conversationId: string };
+
+    const pins = await messagesService.getPinnedMessages(conversationId);
+
+    res.json({ data: pins });
+  } catch (error) {
+    console.error("Error fetching pinned messages:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export const searchMessages = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
@@ -23,11 +72,12 @@ export const getMessages = async (req: AuthRequest, res: Response): Promise<void
     const { conversationId } = req.params as { conversationId: string };
     const { cursor, limit } = req.query as unknown as GetMessagesQuery;
 
-    const { messages, nextCursor } = await messagesService.getMessages(conversationId, cursor, limit);
+    const { messages, nextCursor, pinnedMessageIds } = await messagesService.getMessages(conversationId, cursor, limit);
 
     res.json({
       data: messages,
       nextCursor,
+      pinnedMessageIds,
     });
   } catch (error) {
     console.error("Error fetching messages:", error);

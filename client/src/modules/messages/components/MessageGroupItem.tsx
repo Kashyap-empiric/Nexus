@@ -5,7 +5,7 @@ import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import type { MessageGroup } from "@/modules/chat/utils/groupMessages";
 import type { ConversationMember } from "@/modules/conversations/types/conversation";
 import { MessageStatus } from "./MessageStatus";
-import { MoreHorizontal, Pencil, Trash, Ban, Copy, Reply, Text } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash, Ban, Copy, Reply, Text, Pin } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,8 +24,10 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import { useEditMessageMutation, useDeleteMessageMutation } from "@/modules/messages/hooks/useMessages";
+import { usePinMessage, useUnpinMessage } from "@/modules/messages/hooks/usePinnedMessages";
 import { Button } from "@/shared/components/ui/button";
 import { stripMarkdown } from "@/shared/lib/utils";
+import { PinButton } from "./PinButton";
 
 interface MessageGroupItemProps {
   group: MessageGroup;
@@ -34,14 +36,17 @@ interface MessageGroupItemProps {
   members?: ConversationMember[];
   isChannel?: boolean;
   onReply?: (messageId: string, username: string, content: string) => void;
+  pinnedMessageIds?: Set<string>;
 }
 
-export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageId, members, isChannel, onReply }: MessageGroupItemProps) {
+export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageId, members, isChannel, onReply, pinnedMessageIds }: MessageGroupItemProps) {
   const { user, messages } = group;
   const conversationId = messages[0]?.conversationId;
 
   const editMutation = useEditMessageMutation(conversationId);
   const deleteMutation = useDeleteMessageMutation(conversationId);
+  const pinMutation = usePinMessage(conversationId);
+  const unpinMutation = useUnpinMessage(conversationId);
 
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
@@ -121,6 +126,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
           const isFirst = index === 0;
           const isMyMessage = msg.userId === currentUserId;
           const isDeleted = !!msg.deletedAt;
+          const isPinned = pinnedMessageIds?.has(msg.id) ?? false;
 
           const time = new Intl.DateTimeFormat("en-US", {
             hour: "numeric",
@@ -175,6 +181,9 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                     <span className="text-[11px] text-muted-foreground/60 font-medium">
                       {time}
                     </span>
+                    {isPinned && (
+                      <Pin className="h-3 w-3 text-amber-500 fill-amber-500 ml-1" />
+                    )}
                   </div>
                 )}
 
@@ -259,6 +268,11 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                             >
                               <Reply className="h-3.5 w-3.5" />
                             </Button>
+                            <PinButton
+                              conversationId={conversationId}
+                              messageId={msg.id}
+                              isPinned={isPinned}
+                            />
                             <Button
                               variant="ghost"
                               size="icon"
@@ -301,12 +315,16 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(msg.content)}>
                                   <Copy className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(stripMarkdown(msg.content))}>
-                                  <Text className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy as plain text</span>
-                                </DropdownMenuItem>
-                                {isMyMessage && (
-                                  <>
-                                    <DropdownMenuSeparator />
+                                  <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(stripMarkdown(msg.content))}>
+                                    <Text className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy as plain text</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => isPinned ? unpinMutation.mutate(msg.id) : pinMutation.mutate(msg.id)}>
+                                    <Pin className={`h-4 w-4 mr-2 ${isPinned ? "text-amber-500" : ""}`} /> <span className="pt-[1px]">{isPinned ? "Unpin message" : "Pin message"}</span>
+                                  </DropdownMenuItem>
+                                  {isMyMessage && (
+                                    <>
+                                      <DropdownMenuSeparator />
                                     <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => handleEditStart(msg.id, msg.content)}>
                                       <Pencil className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Edit Message</span>
                                     </DropdownMenuItem>
