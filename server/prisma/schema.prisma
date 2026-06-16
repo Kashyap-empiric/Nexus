@@ -44,7 +44,7 @@ model Conversation {
   latestMessageId String?
   createdBy       String?
   visibility      ChannelVisibility    @default(PUBLIC)
-  isPrivate       Boolean              @default(true)
+  isPrivate       Boolean              @default(false)
   creator         User?                @relation("ConversationCreator", fields: [createdBy], references: [id])
   latestMessage   Message?             @relation("ConversationLatestMessage", fields: [latestMessageId], references: [id])
   workspace       Workspace?           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)

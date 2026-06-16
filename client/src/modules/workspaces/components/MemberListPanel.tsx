@@ -10,6 +10,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
 import {
@@ -122,6 +123,7 @@ export function MemberListPanel({ workspaceId }: MemberListPanelProps) {
               </DropdownMenuItem>
             </>
           )}
+          <DropdownMenuSeparator />
           <DropdownMenuItem 
             onClick={() => setMemberToRemove(member)}
             className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30"
