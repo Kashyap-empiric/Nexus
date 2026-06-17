@@ -5,13 +5,15 @@ import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { Button } from "@/shared/components/ui/button";
 import { Pin, Trash, Loader2 } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import Link from "next/link";
 
 interface PinnedMessagesPanelProps {
   conversationId: string;
   currentUserId?: string | null;
+  workspaceId?: string | null;
 }
 
-export function PinnedMessagesPanel({ conversationId, currentUserId }: PinnedMessagesPanelProps) {
+export function PinnedMessagesPanel({ conversationId, currentUserId, workspaceId }: PinnedMessagesPanelProps) {
   const { data: pins, isLoading, isError } = usePinnedMessages(conversationId);
   const unpinMutation = useUnpinMessage(conversationId);
 
@@ -43,11 +45,16 @@ export function PinnedMessagesPanel({ conversationId, currentUserId }: PinnedMes
     );
   }
 
+  const href = workspaceId
+    ? `/workspaces/${workspaceId}/channels/${conversationId}`
+    : `/conversations/${conversationId}`;
+
   return (
     <div className="flex flex-col gap-2 p-3">
       {pins.map((pin) => (
-        <div
+        <Link
           key={pin.id}
+          href={href}
           className="group flex items-start gap-3 p-3 rounded-lg bg-muted/20 hover:bg-muted/30 border border-border/50 transition-colors"
         >
           <UserAvatar
@@ -81,14 +88,18 @@ export function PinnedMessagesPanel({ conversationId, currentUserId }: PinnedMes
               variant="ghost"
               size="icon"
               className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-              onClick={() => unpinMutation.mutate(pin.messageId)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                unpinMutation.mutate(pin.messageId);
+              }}
               title="Unpin"
               disabled={unpinMutation.isPending}
             >
               <Trash className="h-3.5 w-3.5" />
             </Button>
           )}
-        </div>
+        </Link>
       ))}
     </div>
   );

@@ -6,6 +6,5 @@ export function useWorkspaceChannelsQuery(workspaceId: string | null) {
     queryKey: ["workspace-channels", workspaceId],
     queryFn: () => fetchWorkspaceChannels(workspaceId!),
     enabled: !!workspaceId,
-    refetchInterval: 5000,
   });
 }

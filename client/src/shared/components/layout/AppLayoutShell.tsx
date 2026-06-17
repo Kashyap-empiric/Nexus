@@ -17,6 +17,7 @@ import { APP_ROUTES } from "@/config/url";
 import { InviteModalProvider, useInviteModalContext } from "@/modules/invites/context/InviteModalContext";
 import { InviteModal } from "@/modules/invites/components/InviteModal";
 import { SharedSettingsModal, SettingsView } from "@/modules/settings/components/SharedSettingsModal";
+import { WorkspaceSettingsModal } from "@/modules/workspaces/components/WorkspaceSettingsModal";
 import { Info } from "lucide-react";
 import React, { createContext, useContext } from "react";
 import { useSocketStore } from "@/socket/socketStore";
@@ -72,6 +73,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const headerInfo = useChatStore((state) => state.headerInfo);
+  const activeWorkspaceId = useChatStore((state) => state.activeWorkspaceId);
 
   // Local UI State (Single Source of Truth)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -79,6 +81,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
   const [infoPanelView, setInfoPanelView] = useState<InfoPanelView>('about');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsView, setSettingsView] = useState<SettingsView>('profile');
+  const [workspaceSettingsOpen, setWorkspaceSettingsOpen] = useState(false);
 
   const isContentActive =
     pathname?.includes(APP_ROUTES.CONVERSATIONS.INDEX + "/") ||
@@ -142,7 +145,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
           "flex-1 lg:flex-initial",
           isContentActive ? "flex" : "flex flex-1 min-w-0 lg:w-auto"
         )}>
-          <Sidebar onNavigate={closeMobileSidebar} />
+          <Sidebar onNavigate={closeMobileSidebar} onOpenWorkspaceSettings={() => setWorkspaceSettingsOpen(true)} />
         </div>
       </div>
 
@@ -247,6 +250,11 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
         currentTab={settingsView}
         setTab={setSettingsView}
         closeSettings={() => setSettingsOpen(false)}
+      />
+      <WorkspaceSettingsModal
+        isOpen={workspaceSettingsOpen}
+        workspaceId={activeWorkspaceId}
+        onClose={() => setWorkspaceSettingsOpen(false)}
       />
     </div>
   );

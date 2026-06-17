@@ -12,7 +12,8 @@ import { Button } from "@/shared/components/ui/button";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { uploadAvatarAndGetUrl, deleteAvatar } from "@/shared/lib/upload";
-import { Camera, Trash, Loader2 } from "lucide-react";
+import { Camera, Trash, Loader2, Copy, Check, RefreshCw } from "lucide-react";
+import { useInviteLink } from "@/modules/invites/hooks/useInviteLink";
 
 const profileSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters").max(30),
@@ -26,6 +27,8 @@ export const ProfileSettings = () => {
   const { data: profile, isLoading } = useProfile();
   const { mutateAsync: updateProfile, isPending } = useUpdateProfile();
   const { mutateAsync: updateAvatar } = useUpdateAvatar();
+  const { inviteUrl, isLoading: isInviteLoading, generate } = useInviteLink();
+  const [isInviteCopied, setIsInviteCopied] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -243,31 +246,60 @@ export const ProfileSettings = () => {
 
           <div className="space-y-2 pt-2">
             <Label>Direct Message Invite Link</Label>
-            <div className="flex gap-2">
-              <Input
-                readOnly
-                value={
-                  typeof window !== "undefined"
-                    ? `${window.location.origin}/dm/${profile?.username}`
-                    : ""
-                }
-                className="bg-muted/50 font-mono text-xs"
-              />
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  if (typeof window !== "undefined" && profile?.username) {
-                    navigator.clipboard.writeText(
-                      `${window.location.origin}/dm/${profile.username}`,
-                    );
-                    toast.success("Invite link copied to clipboard");
-                  }
-                }}
-              >
-                Copy
-              </Button>
-            </div>
+            {inviteUrl ? (
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  value={inviteUrl}
+                  className="bg-muted/50 font-mono text-xs"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(inviteUrl);
+                      setIsInviteCopied(true);
+                      toast.success("Invite link copied to clipboard");
+                      setTimeout(() => setIsInviteCopied(false), 2000);
+                    } catch {
+                      toast.error("Failed to copy link");
+                    }
+                  }}
+                >
+                  {isInviteCopied ? (
+                    <><Check className="h-4 w-4 mr-2 text-green-500" />Copied</>
+                  ) : (
+                    <><Copy className="h-4 w-4 mr-2" />Copy</>
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => generate("USER")}
+                  disabled={isInviteLoading}
+                  title="Generate new link"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isInviteLoading ? "animate-spin" : ""}`} />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => generate("USER")}
+                  disabled={isInviteLoading}
+                >
+                  {isInviteLoading ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</>
+                  ) : (
+                    <><Copy className="h-4 w-4 mr-2" />Generate Invite Link</>
+                  )}
+                </Button>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
               Share this link with others so they can easily start a direct
               message with you.

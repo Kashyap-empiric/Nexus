@@ -6,7 +6,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import { cn } from "@/shared/lib/utils"
 import { Button } from "@/shared/components/ui/button"
 import { XIcon } from "lucide-react"
-import { OVERLAY_Z_INDEX, OVERLAY_ANIMATIONS } from "@/shared/constants/overlays"
+import { OVERLAY_ANIMATIONS } from "@/shared/constants/overlays"
 
 /* ============================================================
    DIALOG / MODAL — Design System Component
@@ -58,7 +58,6 @@ function DialogOverlay({
         "backdrop-blur-[var(--overlay-blur,4px)]",
         "data-open:animate-in data-open:fade-in-0",
         "data-closed:animate-out data-closed:fade-out-0",
-        `z-[${OVERLAY_Z_INDEX.dialog}]`,
         className
       )}
       {...props}
@@ -91,46 +90,47 @@ function DialogContent({
 }: DialogContentProps) {
   return (
     <DialogPortal>
-      <DialogOverlay />
-      <DialogPrimitive.Popup
-        data-slot="dialog-content"
-        className={cn(
-          /* Positioning — centre of viewport */
-          "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
-          /* Layout — flex column so header/body/footer stack */
-          "flex flex-col w-full",
-          "max-w-[calc(100%-2rem)] max-h-[85vh]",
-          /* Surface */
-          "rounded-xl bg-popover text-sm text-popover-foreground",
-          "ring-1 ring-border shadow-lg",
-          /* Bring to front */
-          `z-[${OVERLAY_Z_INDEX.dialog}]`,
-          /* Entrance / exit */
-          OVERLAY_ANIMATIONS.dialog,
-          /* Size variants */
-          SIZE_MAP[size],
-          className
-        )}
-        {...props}
-      >
-        {children}
+      {/* Portal container — single stacking context for overlay + popup */}
+      <div className="relative z-[var(--z-dialog)]">
+        <DialogOverlay />
+        <DialogPrimitive.Popup
+          data-slot="dialog-content"
+          className={cn(
+            /* Positioning — centre of viewport */
+            "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
+            /* Layout — flex column so header/body/footer stack */
+            "flex flex-col w-full",
+            "max-w-[calc(100%-2rem)] max-h-[85vh]",
+            /* Surface */
+            "rounded-xl bg-popover text-sm text-popover-foreground",
+            "ring-1 ring-border shadow-lg",
+            /* Entrance / exit */
+            OVERLAY_ANIMATIONS.dialog,
+            /* Size variants */
+            SIZE_MAP[size],
+            className
+          )}
+          {...props}
+        >
+          {children}
 
-        {showCloseButton && (
-          <DialogPrimitive.Close
-            data-slot="dialog-close"
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="absolute top-4 right-4 rounded-full"
-              />
-            }
-          >
-            <XIcon />
-            <span className="sr-only">Close</span>
-          </DialogPrimitive.Close>
-        )}
-      </DialogPrimitive.Popup>
+          {showCloseButton && (
+            <DialogPrimitive.Close
+              data-slot="dialog-close"
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="absolute top-4 right-4 rounded-full"
+                />
+              }
+            >
+              <XIcon />
+              <span className="sr-only">Close</span>
+            </DialogPrimitive.Close>
+          )}
+        </DialogPrimitive.Popup>
+      </div>
     </DialogPortal>
   )
 }

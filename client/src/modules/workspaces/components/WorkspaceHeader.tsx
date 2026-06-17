@@ -15,10 +15,14 @@ export function WorkspaceHeader({ workspace, onInviteClick, onSettingsClick, rig
   const [isOpen, setIsOpen] = useState(false);
 
   const handleTriggerClick = () => {
+    console.log("TRIGGER CLICK");
+
     setIsOpen((prev) => !prev);
   };
 
   const handleBackdropClick = () => {
+    console.log("BACKDROP CLICK");
+
     setIsOpen(false);
   };
 
@@ -47,7 +51,11 @@ export function WorkspaceHeader({ workspace, onInviteClick, onSettingsClick, rig
             <button
               type="button"
               onClick={() => {
+                console.log("SETTINGS CLICK");
+
                 setIsOpen(false);
+                console.log("CALLING onSettingsClick");
+
                 onSettingsClick?.();
               }}
               className="flex w-full items-center gap-1.5 rounded-md px-2 h-9 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"

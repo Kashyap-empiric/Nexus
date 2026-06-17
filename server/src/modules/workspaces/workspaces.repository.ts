@@ -214,6 +214,19 @@ export const removeChannelMember = async (channelId: string, userId: string) => 
   });
 };
 
+export const findUserRolesInWorkspaces = async (userId: string, workspaceIds: string[]) => {
+  return prisma.workspaceMember.findMany({
+    where: {
+      userId,
+      workspaceId: { in: workspaceIds },
+    },
+    select: {
+      workspaceId: true,
+      role: true,
+    },
+  });
+};
+
 export const removeWorkspaceMember = async (workspaceId: string, userId: string) => {
   // Remove from all workspace channels first
   const workspaceChannels = await prisma.conversation.findMany({

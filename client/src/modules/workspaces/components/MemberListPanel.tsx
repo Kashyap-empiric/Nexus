@@ -23,7 +23,7 @@ import {
   DialogTitle,
 } from "@/shared/components/ui/dialog";
 import { Button } from "@/shared/components/ui/button";
-import { MoreVertical, Shield, ShieldAlert, UserIcon, UserX, UserPlus } from "lucide-react";
+import { MoreVertical, Shield, ShieldAlert, ShieldCheck, UserIcon, UserX, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import type { WorkspaceMember, WorkspaceRole } from "../types/workspace";
 import type { ConversationMember } from "@/modules/conversations/types/conversation";
@@ -44,6 +44,7 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
 
   const [memberToRemove, setMemberToRemove] = useState<WorkspaceMember | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
+  const [memberToPromote, setMemberToPromote] = useState<WorkspaceMember | null>(null);
 
   const isChannelView = !!channelId;
   const members = isChannelView ? chMembers : wsMembers;
@@ -115,12 +116,12 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
           {isOwner && (
             <>
               <DropdownMenuItem 
-                onClick={() => handleRoleChange(member.userId, "MEMBER")}
-                disabled={member.role === "MEMBER"}
+                onClick={() => setMemberToPromote(member)}
+                disabled={member.role === "OWNER"}
                 className="cursor-pointer"
               >
-                <UserIcon className="h-4 w-4 mr-2" />
-                Make Member
+                <ShieldCheck className="h-4 w-4 mr-2" />
+                Make Owner
               </DropdownMenuItem>
               <DropdownMenuItem 
                 onClick={() => handleRoleChange(member.userId, "ADMIN")}
@@ -129,6 +130,14 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
               >
                 <Shield className="h-4 w-4 mr-2" />
                 Make Admin
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleRoleChange(member.userId, "MEMBER")}
+                disabled={member.role === "MEMBER"}
+                className="cursor-pointer"
+              >
+                <UserIcon className="h-4 w-4 mr-2" />
+                Make Member
               </DropdownMenuItem>
             </>
           )}
@@ -199,6 +208,35 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
             {offlineMembers.map(renderMember)}
           </div>
         </div>
+      )}
+
+      {/* Promote to owner confirmation dialog */}
+      {!isChannelView && (
+        <Dialog open={!!memberToPromote} onOpenChange={(open) => { if (!open) setMemberToPromote(null); }}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Promote to Owner</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to make <strong>{memberToPromote?.user?.username || "this user"}</strong> an owner?
+                They will have full control over the workspace, including the ability to manage members, channels, and settings.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setMemberToPromote(null)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => {
+                  if (!memberToPromote) return;
+                  handleRoleChange(memberToPromote.userId, "OWNER");
+                  setMemberToPromote(null);
+                }}
+              >
+                Promote to Owner
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Remove member confirmation dialog (workspace view only) */}

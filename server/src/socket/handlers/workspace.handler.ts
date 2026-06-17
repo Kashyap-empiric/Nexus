@@ -1,5 +1,6 @@
 import type { Server, Socket } from "socket.io";
 import { isWorkspaceMember } from "@/shared/permissions.js";
+import * as workspacesRepo from "@/modules/workspaces/workspaces.repository.js";
 import * as conversationsRepo from "@/modules/conversations/conversations.repository.js";
 
 export const registerWorkspaceHandlers = (io: Server, socket: Socket) => {
@@ -34,7 +35,11 @@ export const registerWorkspaceHandlers = (io: Server, socket: Socket) => {
         socket.data.activeWorkspaceId = payload.workspaceId;
 
         // Join new workspace channels (filters private channels to only those user can access)
-        const channels = await conversationsRepo.findChannelIdsByWorkspaceId(payload.workspaceId, userId);
+        // Owners bypass the filter — they have access to all channels
+        const wsMember = await workspacesRepo.findUserRolesInWorkspaces(userId, [payload.workspaceId]);
+        const isOwner = wsMember.some(m => m.role === "OWNER");
+        const ownerWorkspaceIds = isOwner ? new Set([payload.workspaceId]) : undefined;
+        const channels = await conversationsRepo.findChannelIdsByWorkspaceId(payload.workspaceId, userId, ownerWorkspaceIds);
 
         const newRooms = channels.map(c => `conversation:${c.id}`);
         if (newRooms.length > 0) {

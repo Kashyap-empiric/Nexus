@@ -147,10 +147,15 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
       await leaveWorkspace({ workspaceId });
       toast.success("Left workspace");
       onClose();
+      setActiveWorkspaceId(null);
+      useChatStore.getState().setMode("DM");
+      router.push("/conversations");
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Failed to leave workspace"));
     }
   };
+
+  const [pendingOwnerPromotion, setPendingOwnerPromotion] = useState<{ userId: string; username: string } | null>(null);
 
   const handleRoleChange = async (userId: string, role: WorkspaceRole) => {
     if (!workspaceId) return;
@@ -222,7 +227,7 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="w-full max-w-full h-[100dvh] p-0 rounded-none sm:rounded-xl sm:max-w-2xl sm:h-[80vh] flex flex-col bg-background">
+      <DialogContent className="w-full max-w-full h-[100dvh] max-h-full p-0 rounded-none top-0 left-0 translate-x-0 translate-y-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:max-w-2xl sm:h-[80vh] sm:max-h-[85vh] flex flex-col bg-background">
         <DialogHeader className="sr-only">
           <DialogTitle>Workspace Settings</DialogTitle>
           <DialogDescription>Manage workspace settings</DialogDescription>
@@ -472,13 +477,19 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                                 <ChevronDown className="h-3 w-3" />
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                {ROLE_OPTIONS.filter(r => r !== role && r !== "OWNER").map((r) => {
+                                {ROLE_OPTIONS.filter(r => r !== role && (r !== "OWNER" || currentUser?.role === "OWNER")).map((r) => {
                                   const Icon = ROLE_ICONS[r];
                                   return (
-                                    <DropdownMenuItem key={r} onClick={() => handleRoleChange(member.userId, r)}>
-                                      <Icon className="h-4 w-4 mr-2" />
-                                      {r}
-                                    </DropdownMenuItem>
+                                    <DropdownMenuItem key={r} onClick={() => {
+                                  if (r === "OWNER") {
+                                    setPendingOwnerPromotion({ userId: member.userId, username: member.user?.username || "this user" });
+                                  } else {
+                                    handleRoleChange(member.userId, r);
+                                  }
+                                }}>
+                                <Icon className="h-4 w-4 mr-2" />
+                                {r}
+                              </DropdownMenuItem>
                                   );
                                 })}
                                 <DropdownMenuItem onClick={() => handleRemoveMember(member.userId)} className="text-destructive">
@@ -498,6 +509,28 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                     })}
                   </div>
                 )}
+
+                {/* Promote to owner confirmation */}
+                <AlertDialog open={!!pendingOwnerPromotion} onOpenChange={(open) => { if (!open) setPendingOwnerPromotion(null); }}>
+                  <AlertDialogContent>
+                    <AlertDialogTitle>Promote to Owner</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to make <strong>{pendingOwnerPromotion?.username}</strong> an owner?
+                      They will have full control over the workspace, including the ability to manage members, channels, and settings.
+                    </AlertDialogDescription>
+                    <div className="flex justify-end gap-2">
+                      <AlertDialogCancel onClick={() => setPendingOwnerPromotion(null)}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => {
+                        if (pendingOwnerPromotion) {
+                          handleRoleChange(pendingOwnerPromotion.userId, "OWNER");
+                        }
+                        setPendingOwnerPromotion(null);
+                      }}>
+                        Promote to Owner
+                      </AlertDialogAction>
+                    </div>
+                  </AlertDialogContent>
+                </AlertDialog>
 
                 <div className="pt-4">
                   <Button variant="outline" onClick={handleLeave} disabled={isLeaving} className="text-destructive hover:text-destructive">
