@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import type { AuthRequest } from "@/types/shared.js";
 import * as usersService from "./users.service.js";
 import type { SearchUsersQuery } from "./users.schema.js";
+import { ENV } from "@/config/env.js";
 
 export const checkUsername = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -92,15 +93,16 @@ export const getPublicProfile = async (req: AuthRequest, res: Response): Promise
 export const updateAvatar = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
-    const { avatarPath } = req.body;
+    const { avatarUrl } = req.body;
     
-    // Security: avatarPath must start with userId/ or be null
-    if (avatarPath && !avatarPath.startsWith(`${userId}/`)) {
-      res.status(403).json({ error: "Forbidden avatar path" });
+    // Security: avatarUrl must point to the user's avatars folder or be null
+    const avatarPrefix = `${ENV.SUPABASE_URL}/storage/v1/object/public/avatars/${userId}/`;
+    if (avatarUrl && !avatarUrl.startsWith(avatarPrefix)) {
+      res.status(403).json({ error: "Forbidden avatar URL" });
       return;
     }
 
-    const updatedProfile = await usersService.updateAvatar(userId, avatarPath);
+    const updatedProfile = await usersService.updateAvatar(userId, avatarUrl);
     
     // Emit socket event so other users see the new avatar
     dispatchUserProfileUpdate(userId);

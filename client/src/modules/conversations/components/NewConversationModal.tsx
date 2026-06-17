@@ -98,7 +98,7 @@ export function NewConversationModal({ isOpen, onClose }: NewConversationModalPr
                   <div className="flex items-center gap-3">
                     <UserAvatar 
                       name={user.username}
-                      src={user.avatarPath || user.avatarUrl}
+                      src={user.avatarUrl}
                       className="h-8 w-8 shrink-0"
                       fallbackClassName="text-xs"
                     />

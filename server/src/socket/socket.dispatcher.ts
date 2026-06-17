@@ -158,11 +158,20 @@ export function dispatchUserPresence(
 
 export const dispatchWorkspaceUpdate = (
   workspaceId: string,
-  payload: { action: "UPDATED"; workspace: Partial<Conversation> }
+  payload: { action: "UPDATED"; workspace: Partial<Conversation> } | { action: "DELETED"; workspace: { id: string; name: string }; memberUserIds?: string[] }
 ): void => {
   try {
     const io = getIO();
     io.to(`workspace:${workspaceId}`).emit(SOCKET_EVENTS.WORKSPACE_UPDATE, payload);
+
+    // For DELETED, also notify each member directly to handle redirect
+    // Note: memberUserIds must be passed from the caller since workspace members
+    // are cascade-deleted before this point
+    if (payload.action === "DELETED" && payload.memberUserIds) {
+      for (const userId of payload.memberUserIds) {
+        io.to(`user:${userId}`).emit(SOCKET_EVENTS.WORKSPACE_UPDATE, payload);
+      }
+    }
   } catch (err: unknown) {
     console.error("[Socket.io] Failed to dispatch WORKSPACE_UPDATE:", err);
   }

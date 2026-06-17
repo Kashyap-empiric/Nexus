@@ -7,7 +7,6 @@ export interface UserResult {
   fullName: string | null;
   email: string;
   avatarUrl: string | null;
-  avatarPath: string | null;
   bio?: string | null;
   status?: "AVAILABLE" | "AWAY" | "DND" | "INVISIBLE";
   statusText?: string | null;
@@ -24,8 +23,8 @@ export const getPublicProfile = async (id: string) => {
   return response.data.data;
 };
 
-export const updateAvatarPath = async (avatarPath: string | null) => {
-  const response = await api.patch<{ data: UserResult }>(API_ROUTES.USERS.AVATAR, { avatarPath });
+export const updateAvatarUrl = async (avatarUrl: string | null) => {
+  const response = await api.patch<{ data: UserResult }>(API_ROUTES.USERS.AVATAR, { avatarUrl });
   return response.data.data;
 };
 

@@ -1,6 +1,7 @@
 import type { Response } from "express";
 import type { AuthRequest } from "@/types/shared.js";
 import * as workspacesService from "./workspaces.service.js";
+import * as workspacesRepo from "./workspaces.repository.js";
 import * as usersRepo from "../users/users.repository.js";
 import { dispatchConversationNew } from "@/socket/socket.dispatcher.js";
 import { createAndDispatch } from "../notifications/notifications.service.js";
@@ -88,7 +89,60 @@ export const deleteWorkspace = async (req: AuthRequest, res: Response): Promise<
     const userId = req.user!.id;
     const { id: workspaceId } = req.params as { id: string };
 
+    // Fetch workspace info before deletion (for notifications)
+    const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(workspaceId);
+    if (!workspace) throw new Error("Workspace not found");
+
+    const memberUserIds = workspace.members.map(m => m.userId);
+    const workspaceName = workspace.name;
+
     await workspacesService.deleteWorkspace(workspaceId, userId);
+
+    // Dispatch WORKSPACE_UPDATE with DELETED action (to workspace room + each member)
+    dispatchWorkspaceUpdate(workspace.id, {
+      action: "DELETED",
+      workspace: { id: workspace.id, name: workspaceName },
+      memberUserIds,
+    });
+
+    // Kick all members out of channel rooms
+    try {
+      const io = getIO();
+      const channels = workspace.channels || [];
+      for (const memberUserId of memberUserIds) {
+        const memberSockets = await io.in(`user:${memberUserId}`).fetchSockets();
+        for (const socket of memberSockets) {
+          for (const channel of channels) {
+            socket.leave(`conversation:${channel.id}`);
+          }
+        }
+      }
+    } catch (socketErr) {
+      console.error("[Socket.io] Failed to leave rooms on workspace deletion:", socketErr);
+    }
+
+    // Create WORKSPACE_DELETED notifications for all members except the deleter
+    try {
+      const currentUser = await usersRepo.findUserById(userId);
+      for (const memberUserId of memberUserIds) {
+        if (memberUserId === userId) continue; // Skip the person who deleted
+        await createAndDispatch({
+          userId: memberUserId,
+          type: "WORKSPACE_DELETED",
+          title: "Workspace deleted",
+          body: `${workspaceName} was deleted by ${currentUser?.username || "the workspace owner"}`,
+          link: "/",
+          metadata: {
+            workspaceId: workspace.id,
+            workspaceName,
+            deletedBy: userId,
+            deletedByUsername: currentUser?.username,
+          },
+        });
+      }
+    } catch (notifError) {
+      console.error("[Notifications] Failed to create WORKSPACE_DELETED notifications:", notifError);
+    }
 
     res.json({ data: { id: workspaceId } });
   } catch (error: any) {
@@ -126,8 +180,17 @@ export const createWorkspace = async (req: AuthRequest, res: Response): Promise<
 
     const workspace = await workspacesService.createWorkspace(userId, name, slug, imageUrl, description, iconPath);
     res.status(201).json({ data: workspace });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error creating workspace:", error);
+    if (error instanceof Error && error.message === "Slug already taken") {
+      res.status(409).json({ error: "Slug already taken. Please choose a different slug." });
+      return;
+    }
+    // Fallback for Prisma unique constraint race condition
+    if ((error as any)?.code === "P2002") {
+      res.status(409).json({ error: "Slug already taken. Please choose a different slug." });
+      return;
+    }
     res.status(500).json({ error: "Internal server error" });
   }
 };

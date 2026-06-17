@@ -181,7 +181,7 @@ export function ManageChannelMembersModal({ workspaceId, channelId, open, onOpen
                       <div key={member.userId} className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-muted/50">
                         <UserAvatar
                           name={member.user?.username || "User"}
-                          src={member.user?.avatarPath || member.user?.avatarUrl}
+                          src={member.user?.avatarUrl}
                           className="h-7 w-7"
                           fallbackClassName="text-[9px]"
                         />

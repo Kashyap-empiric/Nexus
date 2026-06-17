@@ -5,7 +5,7 @@ import type { OnboardingData, OnboardingCompleteResponse } from "../types/onboar
 export interface CompleteOnboardingPayload {
   fullName: string;
   bio?: string;
-  avatarPath?: string;
+  avatarUrl?: string;
   workspaceName?: string;
   workspaceSlug?: string;
   workspaceDescription?: string;

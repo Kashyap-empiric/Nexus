@@ -16,12 +16,7 @@ export const updateProfileSchema = z.object({
 export type UpdateProfileBody = z.infer<typeof updateProfileSchema>;
 
 export const updateAvatarSchema = z.object({
-  avatarPath: z.string().nullable().refine((path) => {
-    if (!path) return true;
-    if (path.includes('..')) return false;
-    if (/^https?:\/\//.test(path)) return false;
-    return true;
-  }, { message: "Invalid avatar path" })
+  avatarUrl: z.string().url().nullable(),
 });
 
 export type UpdateAvatarBody = z.infer<typeof updateAvatarSchema>;

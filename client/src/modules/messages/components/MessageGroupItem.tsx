@@ -144,7 +144,6 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                   <UserAvatar 
                     name={user?.username}
                     src={user?.avatarUrl}
-                    avatarPath={user?.avatarPath}
                     className="h-9 w-9 mt-0.5 absolute left-0"
                     fallbackClassName="bg-primary/20 text-primary font-medium"
                   />

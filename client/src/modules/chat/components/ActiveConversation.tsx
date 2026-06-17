@@ -68,7 +68,6 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
         userId: otherMember.userId,
         username: otherMember.user.username,
         avatarUrl: otherMember.user.avatarUrl,
-        avatarPath: otherMember.user.avatarPath,
       } : null,
       totalUnreadCount,
       memberPanelOpen: false,

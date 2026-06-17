@@ -46,14 +46,14 @@ export function OnboardingWizard() {
   const handleWorkspaceCreate = async (data: { workspaceName?: string; workspaceSlug?: string; workspaceDescription?: string; workspaceIconFile?: File | null; skipWorkspace?: boolean }) => {
     setIsSubmitting(true);
     try {
-      let avatarPath: string | undefined = undefined;
+      let avatarUrl: string | undefined = undefined;
       let workspaceIconPath: string | undefined = undefined;
       
       // Upload avatar first if provided (non-blocking — toast on failure)
       if (profileData.avatarFile && user?.id) {
         try {
-          const { uploadAvatar } = await import("@/shared/lib/upload");
-          avatarPath = await uploadAvatar(user.id, profileData.avatarFile);
+          const { uploadAvatarAndGetUrl } = await import("@/shared/lib/upload");
+          avatarUrl = await uploadAvatarAndGetUrl(user.id, profileData.avatarFile);
         } catch (err) {
           console.warn("Avatar upload failed, continuing without it:", err);
           toast.error("Avatar upload failed. You can set one later.");
@@ -74,7 +74,7 @@ export function OnboardingWizard() {
       const response = await completeOnboarding({
         fullName: profileData.fullName,
         bio: profileData.bio,
-        avatarPath,
+        avatarUrl,
         workspaceName: data.workspaceName,
         workspaceSlug: data.workspaceSlug,
         workspaceDescription: data.workspaceDescription,

@@ -257,7 +257,6 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                         <UserAvatar
                           name={name}
                           src={avatarUrl}
-                          avatarPath={(otherMember?.user as any)?.avatarPath}
                           className="h-9 w-9 shrink-0"
                           fallbackClassName="text-xs bg-primary/20 text-primary font-medium"
                         />
@@ -353,7 +352,6 @@ export function Sidebar({ onNavigate }: SidebarProps) {
               <UserAvatar
                 name={dbProfile?.username || currentAuthUser?.user_metadata?.username || "ME"}
                 src={dbProfile?.avatarUrl || currentAuthUser?.user_metadata?.avatar_url || currentAuthUser?.user_metadata?.avatarUrl}
-                avatarPath={dbProfile?.avatarPath}
                 className="h-8 w-8 shrink-0"
                 fallbackClassName="text-xs"
               />

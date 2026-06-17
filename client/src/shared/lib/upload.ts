@@ -70,7 +70,10 @@ export async function deleteFile(bucket: string, path: string): Promise<void> {
   }
 }
 
-export async function deleteAvatar(path: string): Promise<void> {
+export async function deleteAvatar(pathOrUrl: string): Promise<void> {
+  const path = pathOrUrl.startsWith("http")
+    ? pathOrUrl.split("/public/avatars/").pop() || pathOrUrl
+    : pathOrUrl;
   return deleteFile("avatars", path);
 }
 
@@ -82,4 +85,13 @@ export function getPublicUrl(bucket: string, path: string | null): string | null
 
 export function getAvatarPublicUrl(path: string | null): string | null {
   return getPublicUrl("avatars", path);
+}
+
+export function uploadAvatarAndGetUrl(userId: string, file: File): Promise<string> {
+  return uploadImage({
+    bucket: "avatars",
+    folder: userId,
+    prefix: "avatar",
+    file,
+  }).then(getAvatarPublicUrl) as Promise<string>;
 }

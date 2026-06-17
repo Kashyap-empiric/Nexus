@@ -1,16 +1,20 @@
 import type { CompleteOnboardingInput } from "./onboarding.schema.js";
 import { uuidv7 } from "uuidv7";
 import { runTransaction } from "@/lib/transaction.js";
+import { extractAvatarPath } from "@/utils/upload.js";
 
 export const completeOnboarding = async (userId: string, data: CompleteOnboardingInput) => {
   return await runTransaction(async (tx) => {
     // 1. Update user profile
+    const avatarUrl = data.avatarUrl || null;
+    const avatarPath = extractAvatarPath(avatarUrl);
     const updatedUser = await tx.user.update({
       where: { id: userId },
       data: {
         fullName: data.fullName,
         bio: data.bio || null,
-        avatarPath: data.avatarPath || null,
+        avatarPath,
+        avatarUrl,
         isOnboarded: true,
       },
     });

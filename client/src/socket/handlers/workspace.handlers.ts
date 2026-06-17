@@ -10,7 +10,24 @@ import { toast } from "sonner";
 let isRedirectingFromRemoval = false;
 
 export const handleWorkspaceUpdate = (queryClient: QueryClient) => {
-  return () => {
+  return (payload?: { action?: string; workspace?: { id?: string; name?: string } }) => {
+    if (payload?.action === "DELETED") {
+      // Workspace was deleted — redirect to conversations
+      queryClient.removeQueries({ queryKey: ["workspaces"] });
+      queryClient.removeQueries({ queryKey: ["workspace-members"] });
+      queryClient.removeQueries({ queryKey: ["workspace-channels"] });
+
+      toast.error(`"${payload.workspace?.name || "Workspace"}" was deleted`, {
+        duration: 5000,
+      });
+
+      // Redirect to conversations after a short delay
+      setTimeout(() => {
+        window.location.href = APP_ROUTES.CONVERSATIONS.INDEX;
+      }, 1500);
+      return;
+    }
+
     // Workspace metadata changes are infrequent; invalidation is fine
     queryClient.invalidateQueries({ queryKey: ["workspaces"] });
   };

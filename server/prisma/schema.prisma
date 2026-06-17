@@ -166,6 +166,7 @@ enum NotificationType {
   CHANNEL_CREATED
   MEMBER_REMOVED
   MESSAGE_REPLIED
+  WORKSPACE_DELETED
 }
 
 model PinnedMessage {
