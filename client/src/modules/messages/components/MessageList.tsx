@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useMessagesInfiniteQuery } from "@/modules/messages/hooks/useMessages";
 import { useMarkConversationReadMutation } from "@/modules/conversations/hooks/useConversations";
 import { useMessageScroll } from "@/modules/chat/hooks/useMessageScroll";
@@ -66,9 +66,16 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
 
 
 
+  // Track whether we've already scrolled to the current highlightMessageId
+  // Without this, re-renders caused by new messages (data changes) would re-trigger the scroll
+  const highlightHandledRef = useRef<string | null>(null);
+
   // Scroll to and highlight a message when highlightMessageId is provided
   useEffect(() => {
     if (!highlightMessageId || isFetchingNextPage || isLoading) return;
+
+    // Only scroll once per highlightMessageId — don't re-scroll on subsequent data changes
+    if (highlightHandledRef.current === highlightMessageId) return;
 
     // Wait a tick for the DOM to render
     const timer = setTimeout(() => {
@@ -82,6 +89,16 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
 
       // Add highlight that fades out over 1.5s
       el.classList.add("highlight-message");
+
+      // Mark as handled so future data changes won't re-scroll
+      highlightHandledRef.current = highlightMessageId;
+
+      // Remove the highlight param from the URL so a page refresh doesn't re-highlight
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("highlight")) {
+        url.searchParams.delete("highlight");
+        window.history.replaceState({}, "", url.toString());
+      }
     }, 100);
 
     return () => clearTimeout(timer);

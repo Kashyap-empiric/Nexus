@@ -27,6 +27,7 @@ import { useEditMessageMutation, useDeleteMessageMutation } from "@/modules/mess
 import { usePinMessage, useUnpinMessage } from "@/modules/messages/hooks/usePinnedMessages";
 import { Button } from "@/shared/components/ui/button";
 import { stripMarkdown } from "@/shared/lib/utils";
+import { scrollToMessage } from "@/shared/lib/dom";
 import { PinButton } from "./PinButton";
 
 interface MessageGroupItemProps {
@@ -97,20 +98,6 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
   };
 
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-
-  /** Scroll to a message by ID and briefly highlight it */
-  const scrollToMessage = (targetId: string) => {
-    const el = document.getElementById(`msg-${targetId}`);
-    if (!el) return;
-
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-
-    // Remove highlight from any previously highlighted message
-    document.querySelectorAll(".highlight-message").forEach((e) => e.classList.remove("highlight-message"));
-
-    // Add highlight that fades out over 1.5s
-    el.classList.add("highlight-message");
-  };
 
   const handleContextMenu = (e: React.MouseEvent, msgId: string, isDel: boolean) => {
     if (!isDel) {
