@@ -43,12 +43,12 @@ export function UserProfilePage({ userId }: { userId: string }) {
     <div className="max-w-2xl mx-auto p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-start gap-6">
         <div className="relative">
-          <UserAvatar 
-            name={profile.username}
-            src={profile.avatarUrl}
-            avatarPath={profile.avatarPath}
-            className="w-32 h-32 text-4xl shadow-md border"
-          />
+<UserAvatar
+              name={profile.fullName || profile.username}
+              src={profile.avatarUrl}
+              className="h-24 w-24 md:h-28 md:w-28 mb-4 text-4xl"
+              fallbackClassName="bg-primary/20 text-primary font-medium"
+            />
           <PresenceIndicator userId={profile.id} status={profile.status} className="w-5 h-5 border-4" />
         </div>
         

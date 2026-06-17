@@ -18,7 +18,6 @@ export interface MessageSearchResult {
     username: string;
     fullName: string | null;
     avatarUrl: string | null;
-    avatarPath: string | null;
   };
   conversation: {
     id: string;

@@ -11,6 +11,7 @@ import { useCreateWorkspace } from "../hooks/useWorkspaces";
 import { useChatStore } from "@/modules/chat/store/chatStore";
 import { uploadWorkspaceIcon } from "@/shared/lib/upload";
 import { toast } from "sonner";
+import type { AxiosError } from "axios";
 
 interface CreateWorkspaceModalProps {
   isOpen: boolean;
@@ -65,7 +66,10 @@ export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalPr
       setMode("WORKSPACE");
       setActiveWorkspaceId(workspace.slug);
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to create workspace");
+      // Extract meaningful error message from API response
+      const axiosError = error as AxiosError<{ error?: string }>;
+      const message = axiosError?.response?.data?.error || (error instanceof Error ? error.message : "Failed to create workspace");
+      toast.error(message);
     }
   };
 

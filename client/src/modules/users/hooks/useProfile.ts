@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/shared/lib/api";
-import { updateAvatarPath, updateStatus } from "../api/users.api";
+import { updateAvatarUrl, updateStatus } from "../api/users.api";
 
 type ProfileResponse = {
   data: {
@@ -9,7 +9,6 @@ type ProfileResponse = {
     username: string;
     fullName: string | null;
     avatarUrl: string | null;
-    avatarPath: string | null;
     bio: string | null;
     status: "AVAILABLE" | "AWAY" | "DND" | "INVISIBLE";
     statusText: string | null;
@@ -59,8 +58,8 @@ export const useUpdateAvatar = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (avatarPath: string | null) => {
-      return updateAvatarPath(avatarPath);
+    mutationFn: async (avatarUrl: string | null) => {
+      return updateAvatarUrl(avatarUrl);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });

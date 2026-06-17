@@ -53,7 +53,7 @@ export function PinnedMessagesPanel({ conversationId, currentUserId }: PinnedMes
           <UserAvatar
             name={pin.message.user?.username}
             src={pin.message.user?.avatarUrl}
-            avatarPath={pin.message.user?.avatarPath}
+            
             className="h-8 w-8 shrink-0 mt-0.5"
             fallbackClassName="bg-primary/20 text-primary font-medium"
           />

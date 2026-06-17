@@ -82,6 +82,12 @@ export const createWorkspace = async (userId: string, name: string, slug: string
     throw new Error("Invalid slug format");
   }
 
+  // Check for duplicate slug before creating
+  const existing = await workspacesRepo.findWorkspaceByIdOrSlug(slug);
+  if (existing) {
+    throw new Error("Slug already taken");
+  }
+
   return runTransaction(async (tx) => {
     const workspaceId = uuidv7();
     const generalChannelId = uuidv7();

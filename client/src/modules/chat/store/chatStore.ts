@@ -9,7 +9,6 @@ interface HeaderInfo {
     userId: string;
     username: string;
     avatarUrl: string | null;
-    avatarPath?: string | null;
   } | null;
   totalUnreadCount: number;
   memberPanelOpen: boolean;

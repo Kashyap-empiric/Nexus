@@ -154,7 +154,7 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
           <div className="relative shrink-0">
             <UserAvatar
               name={member.user?.username || "User"}
-              src={member.user?.avatarPath || member.user?.avatarUrl}
+              src={member.user?.avatarUrl}
               className="h-8 w-8"
               fallbackClassName="text-[10px]"
             />

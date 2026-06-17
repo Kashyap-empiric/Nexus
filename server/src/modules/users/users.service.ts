@@ -1,4 +1,5 @@
 import * as usersRepo from "./users.repository.js";
+import { extractAvatarPath } from "@/utils/upload.js";
 
 export const searchUsers = async (query: string, currentUserId: string) => {
   return usersRepo.searchUsers(query, currentUserId);
@@ -34,9 +35,10 @@ export const updateProfile = async (
 
 export const updateAvatar = async (
   userId: string,
-  avatarPath: string | null
+  avatarUrl: string | null
 ) => {
-  return usersRepo.updateUser(userId, { avatarPath });
+  const avatarPath = extractAvatarPath(avatarUrl);
+  return usersRepo.updateUser(userId, { avatarUrl, avatarPath });
 };
 
 export const updateStatus = async (

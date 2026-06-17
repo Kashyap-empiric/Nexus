@@ -187,7 +187,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
                   <UserAvatar
                     name={headerInfo.title}
                     src={headerInfo.otherMember?.avatarUrl}
-                    avatarPath={headerInfo.otherMember?.avatarPath}
+
                     className="h-9 w-9"
                     fallbackClassName="bg-primary/20 text-primary font-medium"
                   />

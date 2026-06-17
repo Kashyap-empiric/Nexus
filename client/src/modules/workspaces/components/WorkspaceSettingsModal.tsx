@@ -15,9 +15,11 @@ import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogTitle, 
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/shared/components/ui/dropdown-menu";
 import { useWorkspaceDetails, useWorkspaceMembersQuery, useUpdateWorkspaceMutation, useDeleteWorkspaceMutation, useLeaveWorkspaceMutation, useUpdateMemberRole, useRemoveMember } from "../hooks/useWorkspaces";
 import { useUser } from "@/modules/auth/store/useAuthStore";
+import { useParams, useRouter } from "next/navigation";
 import { Camera, Loader2, ChevronDown, AlertTriangle, ArrowLeftFromLine, Trash, Shield, ShieldCheck, User as UserIcon } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import type { WorkspaceRole, WorkspaceMember } from "../types/workspace";
+import { useChatStore } from "@/modules/chat/store/chatStore";
 import { uploadWorkspaceIcon, getPublicUrl, deleteFile } from "@/shared/lib/upload";
 
 const workspaceSchema = z.object({
@@ -101,6 +103,20 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
       setIconFile(null);
       setIconPreview(null);
 
+      // Reset form state so isDirty becomes false
+      reset(data);
+
+      // If slug changed, update the store and redirect the URL
+      if (data.slug && data.slug !== workspace?.slug) {
+        setActiveWorkspaceId(data.slug);
+        const channelId = params?.channelId as string | undefined;
+        if (channelId) {
+          router.push(`/workspaces/${data.slug}/channels/${channelId}`);
+        } else {
+          router.push(`/workspaces/${data.slug}`);
+        }
+      }
+
       toast.success("Workspace updated");
     } catch (error: unknown) {
       if (getErrorMessage(error, "").includes("Slug already taken")) {
@@ -158,6 +174,9 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
 
   const authUser = useUser();
   const currentUser = (members || []).find((m: WorkspaceMember) => m.userId === authUser?.id);
+  const setActiveWorkspaceId = useChatStore((state) => state.setActiveWorkspaceId);
+  const params = useParams();
+  const router = useRouter();
   const isSlugManuallyEdited = useRef(false);
   const iconInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -175,24 +194,8 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
     setIconPreview(URL.createObjectURL(file));
   };
 
-  const nameValue = watch("name");
-  const isInitialMount = useRef(true);
-
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-    if (!isSlugManuallyEdited.current && nameValue) {
-      const derived = nameValue
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "");
-      setValue("slug", derived, { shouldDirty: true });
-    }
-  }, [nameValue, setValue]);
+  // No auto-derivation of slug from name — this is an edit form, not a create form
+  // Changing the workspace name should NOT change the slug automatically.
 
   const handleOpenChange = (open: boolean) => {
     if (!open && isDirty) {
@@ -324,9 +327,6 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                       <Input
                         id="ws-name"
                         {...register("name")}
-                        onKeyDown={() => {
-                          isSlugManuallyEdited.current = false;
-                        }}
                       />
                       {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
                     </div>
@@ -340,7 +340,7 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                             isSlugManuallyEdited.current = true;
                           },
                         })}
-                        className={cn("font-mono text-sm", !isSlugManuallyEdited.current && "opacity-60")}
+                        className="font-mono text-sm"
                       />
                       {errors.slug && <p className="text-sm text-destructive">{errors.slug.message}</p>}
                       {watch("slug") && (

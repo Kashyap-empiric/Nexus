@@ -11,7 +11,7 @@ import { Label } from "@/shared/components/ui/label";
 import { Button } from "@/shared/components/ui/button";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
-import { uploadAvatar, deleteAvatar } from "@/shared/lib/upload";
+import { uploadAvatarAndGetUrl, deleteAvatar } from "@/shared/lib/upload";
 import { Camera, Trash, Loader2 } from "lucide-react";
 
 const profileSchema = z.object({
@@ -62,17 +62,17 @@ export const ProfileSettings = () => {
     try {
       setIsUploading(true);
       
-      let newAvatarPath = profile!.avatarPath;
+      let newAvatarUrl: string | null = profile!.avatarUrl;
       if (avatarFile) {
-        newAvatarPath = await uploadAvatar(profile!.id, avatarFile);
+        newAvatarUrl = await uploadAvatarAndGetUrl(profile!.id, avatarFile);
       } else if (isAvatarRemoved) {
-        newAvatarPath = null;
+        newAvatarUrl = null;
       }
       
-      if (newAvatarPath !== profile!.avatarPath) {
-        await updateAvatar(newAvatarPath);
-        if (profile!.avatarPath) {
-          await deleteAvatar(profile!.avatarPath);
+      if (newAvatarUrl !== profile!.avatarUrl) {
+        await updateAvatar(newAvatarUrl);
+        if (profile!.avatarUrl) {
+          await deleteAvatar(profile!.avatarUrl);
         }
       }
 
@@ -152,7 +152,6 @@ export const ProfileSettings = () => {
           <UserAvatar 
             name={profile?.username || "ME"}
             src={isAvatarRemoved ? null : (avatarPreview || profile?.avatarUrl)}
-            avatarPath={isAvatarRemoved || avatarPreview ? null : profile?.avatarPath}
             className="h-24 w-24 text-2xl" 
           />
           <button 
@@ -176,7 +175,7 @@ export const ProfileSettings = () => {
           <p className="text-xs text-muted-foreground max-w-[250px]">
             JPG, GIF or PNG. 5MB max.
           </p>
-          {(profile?.avatarPath || profile?.avatarUrl) && (
+          {profile?.avatarUrl && (
             <Button variant="outline" size="sm" onClick={handleRemoveAvatar} disabled={isUploading} className="mt-2 text-destructive hover:text-destructive">
               <Trash className="h-4 w-4 mr-2" />
               Remove Picture

@@ -123,7 +123,7 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
           ) : (
             <>
               {!hasNextPage && !isChannel && otherMember && (                  <div className="flex flex-col items-start px-4 md:px-6 xl:px-8 py-8 md:py-12 mt-auto">
-                  <UserAvatar name={otherMember.username} src={otherMember.avatarUrl} avatarPath={otherMember.avatarPath} className="h-20 w-20 md:h-24 md:w-24 mb-4 text-3xl" />
+                  <UserAvatar name={otherMember.username} src={otherMember.avatarUrl} className="h-20 w-20 md:h-24 md:w-24 mb-4 text-3xl" />
                   <h1 className="text-2xl md:text-3xl font-extrabold text-foreground mb-1">{otherMember.username}</h1>
                   {otherMember.fullName && (
                     <p className="text-lg text-muted-foreground mb-4">{otherMember.fullName}</p>

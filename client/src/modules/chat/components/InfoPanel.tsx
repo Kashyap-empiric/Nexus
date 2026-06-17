@@ -101,12 +101,12 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
             {/* Avatar + Name */}
             <Link href={`/users/${userProfile.id}`} className="flex flex-col items-center gap-3 group">
               <div className="relative">
-                <UserAvatar
-                  name={userProfile.username}
-                  src={userProfile.avatarUrl}
-                  avatarPath={userProfile.avatarPath}
-                  className="w-20 h-20 text-2xl shadow-md border"
-                />
+<UserAvatar
+                    name={userProfile.fullName || userProfile.username}
+                    src={userProfile.avatarUrl}
+                    className="h-20 w-20 mb-3"
+                    fallbackClassName="bg-primary/20 text-primary font-medium text-3xl"
+                  />
                 <PresenceIndicator userId={userProfile.id} status={userProfile.status} className="w-4 h-4 border-[3px]" />
               </div>
               <div className="text-center">
