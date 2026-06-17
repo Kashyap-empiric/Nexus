@@ -5,7 +5,9 @@ import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { Button } from "@/shared/components/ui/button";
 import { Pin, Trash, Loader2 } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
-import Link from "next/link";
+import { useLayoutUI } from "@/shared/components/layout/AppLayoutShell";
+import { scrollToMessage } from "@/shared/lib/dom";
+import { useMediaQuery } from "@/shared/hooks/use-media-query";
 
 interface PinnedMessagesPanelProps {
   conversationId: string;
@@ -13,9 +15,11 @@ interface PinnedMessagesPanelProps {
   workspaceId?: string | null;
 }
 
-export function PinnedMessagesPanel({ conversationId, currentUserId, workspaceId }: PinnedMessagesPanelProps) {
+export function PinnedMessagesPanel({ conversationId, currentUserId }: PinnedMessagesPanelProps) {
   const { data: pins, isLoading, isError } = usePinnedMessages(conversationId);
   const unpinMutation = useUnpinMessage(conversationId);
+  const { closeInfoPanel } = useLayoutUI();
+  const isMobile = useMediaQuery("(max-width: 767px)")
 
   if (isLoading) {
     return (
@@ -45,17 +49,23 @@ export function PinnedMessagesPanel({ conversationId, currentUserId, workspaceId
     );
   }
 
-  const href = workspaceId
-    ? `/workspaces/${workspaceId}/channels/${conversationId}`
-    : `/conversations/${conversationId}`;
-
   return (
     <div className="flex flex-col gap-2 p-3">
       {pins.map((pin) => (
-        <Link
+        <button
           key={pin.id}
-          href={href}
-          className="group flex items-start gap-3 p-3 rounded-lg bg-muted/20 hover:bg-muted/30 border border-border/50 transition-colors"
+          type="button"
+          onClick={() => {
+            // Only close the info panel on mobile/tablet (less space)
+            if (isMobile) {
+              closeInfoPanel();
+              // Small delay to let the info panel close animation start
+              setTimeout(() => scrollToMessage(pin.messageId), 50);
+            } else {
+              scrollToMessage(pin.messageId);
+            }
+          }}
+          className="group flex items-start gap-3 p-3 rounded-lg bg-muted/20 hover:bg-muted/30 border border-border/50 transition-colors text-left w-full"
         >
           <UserAvatar
             name={pin.message.user?.username}
@@ -99,7 +109,7 @@ export function PinnedMessagesPanel({ conversationId, currentUserId, workspaceId
               <Trash className="h-3.5 w-3.5" />
             </Button>
           )}
-        </Link>
+        </button>
       ))}
     </div>
   );
