@@ -78,6 +78,17 @@
 - [ ] No controller-level socket emissions (use dispatcher)
 - [ ] Environment variables centralized in `config/env.ts`
 
+### Performance Review Requirements
+- [ ] Heavy components (emoji picker, markdown, modals) use `dynamic(() => import(...))` — not eagerly imported
+- [ ] React.memo applied to list items that render frequently (MessageGroupItem, sidebar items, channel items)
+- [ ] Socket event handlers use targeted `setQueryData` instead of broad `invalidateQueries` for status/presence updates
+- [ ] `staleTime` configured appropriately for infrequently changing data (workspaces: 60s, user profiles: 30s)
+- [ ] No blocking `await` on best-effort operations (push notifications, non-critical side-effects)
+- [ ] Queries use `select` (not `include`) to fetch only needed fields from Prisma
+- [ ] N+1 query patterns avoided — batch DB queries with `in` clauses where possible
+- [ ] Typing indicators debounced on client (not every keystroke)
+- [ ] Console.log statements removed from production request paths (keep meaningful error logging)
+
 ---
 
 ## 4. File Organization Rules

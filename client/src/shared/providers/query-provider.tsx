@@ -18,6 +18,10 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
               if (status && status >= 400 && status < 500) return false;
               return failureCount < 2;
             },
+            // Keep data fresh for 30 seconds before refetching on navigation.
+            // This provides fast navigation between conversations/workspaces
+            // while still staying reasonably up-to-date.
+            staleTime: 30_000,
           },
         },
       })

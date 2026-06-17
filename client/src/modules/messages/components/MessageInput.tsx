@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useSendMessageMutation } from "@/modules/messages/hooks/useMessages";
 import { SendHorizontal, Smile, X, Reply, List, ListOrdered } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/components/ui/popover";
-import EmojiPicker, { Theme } from 'emoji-picker-react';
 import { useTheme } from "next-themes";
+import { Theme as EmojiPickerTheme } from 'emoji-picker-react';
+
+const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 import type { User } from "@/modules/conversations/types/conversation";
 import { SOCKET_EVENTS } from "@/socket/socket-events";
 import { socket } from "@/socket/socketClient";
@@ -32,6 +35,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
   // Typing indicator state
   const isTypingRef = useRef(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const TYPING_STOP_TIMEOUT_MS = 1500;
 
   const emitTypingStart = useCallback(() => {
     if (!socket.connected || isTypingRef.current) return;
@@ -49,18 +53,21 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
   }, [conversationId]);
 
   const handleTypingActivity = useCallback(() => {
-    // Emit typing:start on first keystroke after inactivity
+    // Only emit typing:start on the first keystroke after inactivity.
+    // Subsequent keystrokes within the same typing session are debounced —
+    // emitTypingStart already guards against duplicate emissions via isTypingRef.
     if (!isTypingRef.current) {
       emitTypingStart();
     }
 
-    // Debounce typing:stop — reset timer on every keystroke
+    // Debounce typing:stop — reset timer on every keystroke.
+    // The stop event only fires after the user stops typing for 1.5s.
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
     typingTimeoutRef.current = setTimeout(() => {
       emitTypingStop();
-    }, 1500);
+    }, TYPING_STOP_TIMEOUT_MS);
   }, [emitTypingStart, emitTypingStop]);
 
   // Clean up typing state on unmount
@@ -320,7 +327,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
             >
               <EmojiPicker
                 onEmojiClick={onEmojiClick}
-                theme={theme === 'dark' ? Theme.DARK : Theme.LIGHT}
+                theme={theme === 'dark' ? EmojiPickerTheme.DARK : EmojiPickerTheme.LIGHT}
                 lazyLoadEmojis={true}
                 searchPlaceHolder="Search emojis..."
                 width={300}

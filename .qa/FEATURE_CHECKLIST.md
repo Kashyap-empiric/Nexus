@@ -39,6 +39,16 @@
 - [ ] Error state
 - [ ] Dark mode
 
+## Performance Verification
+- [ ] Bundle size: Check for any new heavy imports (emoji picker, markdown, etc.) — use dynamic imports if needed
+- [ ] Rendering: Verify list items don't re-render unnecessarily (check React.memo usage)
+- [ ] Network: Verify socket events use targeted cache updates, not broad invalidations
+- [ ] Database: Verify Prisma queries use `select` (not `include`) and have proper indexes
+- [ ] N+1: Verify no N+1 query patterns in service/repository layer
+- [ ] Stale time: Verify appropriate `staleTime` configured for infrequently changing data
+- [ ] Console: Verify no debug console.log in production request paths
+- [ ] Bundle analyzer: Run `ANALYZE=true npm run build` for client to verify bundle impact
+
 ## Agent Self QA
 Status: PASS | FAIL
 
