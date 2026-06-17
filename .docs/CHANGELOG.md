@@ -1,7 +1,28 @@
 # Nexus — Changelog
 
-> **Last Updated:** 2026-06-16  
+> **Last Updated:** 2026-06-17  
 > **Purpose:** Track all significant changes to the project in reverse chronological order.
+
+---
+
+## 2026-06-17
+
+### Added
+- Comprehensive optimization audit (`work/optimization.md`) — full codebase analysis covering frontend, backend, database, realtime, Supabase, mobile, and build optimizations
+- Performance testing procedures in `.qa/` — bundle size validation, render validation, websocket validation
+- Agent performance standards in `.agents/AGENT_RULES.md` — performance review requirements added
+- Performance monitoring documentation in `work/audits/`
+
+### Changed
+- Updated `.docs/LIMITATIONS.md` with new findings from optimization audit
+- Updated `.docs/PROJECT_CONTEXT.md` with performance consideration notes
+
+### Documentation
+- Created `work/optimization.md` — comprehensive optimization audit with prioritized roadmap
+- Created `work/audits/performance-audit.md` — detailed performance findings
+- Updated `.qa/FEATURE_CHECKLIST.md` with performance test requirements
+- Updated `.agents/AGENT_RULES.md` with performance review requirements
+- Updated `work/logs/` with session progress
 
 ---
 

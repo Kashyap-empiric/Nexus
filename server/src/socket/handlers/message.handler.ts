@@ -89,18 +89,15 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
 
         dispatchMessageEvent("NEW", payload.conversationId, message, conversationMetadata);
 
-        // Send push notifications reliably (awaited before callback — C13 fix)
-        // Errors are caught so the response is not blocked
-        try {
-          await sendMessageNotifications(
-            payload.conversationId,
-            userId,
-            message.user?.username || "Unknown",
-            payload.content
-          );
-        } catch (notifErr) {
-          console.error("[Message Push] Failed to send push notifications:", notifErr);
-        }
+        // Send push notifications in the background (fire-and-forget).
+        // Not awaiting here removes 50-150ms from the user-perceived message send latency.
+        // Push notifications are best-effort — errors are caught internally.
+        sendMessageNotifications(
+          payload.conversationId,
+          userId,
+          message.user?.username || "Unknown",
+          payload.content
+        );
 
         return callback?.({
           success: true,

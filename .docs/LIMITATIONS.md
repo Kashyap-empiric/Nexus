@@ -1,6 +1,6 @@
 # Nexus — Known Limitations
 
-> **Last Updated:** 2026-06-16  
+> **Last Updated:** 2026-06-17  
 > **Purpose:** Track known limitations, technical debt, and constraints.
 
 ---
@@ -21,6 +21,7 @@
 | Push subscription lifecycle | No proactive re-subscription on SW `pushsubscriptionchange` events | 🟡 Open |
 | Optimistic channel creation | Currently poll-based (5s interval) — should use socket events | 🟡 Open |
 | No `lg:`/`xl:` breakpoints | Layout jumps from mobile to a single desktop view at 768px. Wide screens may feel stretched. | 🟡 Acknowledged |
+| N+1 user queries in push notifications | `sendMessageNotifications` queries each member individually instead of batching | 🟡 Open |
 
 ## Minor
 
@@ -29,6 +30,11 @@
 | Fixed-width panels | InfoPanel (w-80), MemberListPanel (w-72), Sidebar (md:w-72) consume significant space on tablets | 🟡 Acknowledged |
 | Emoji picker width | Hardcoded 300px — doesn't adapt to wider screens | 🟡 Acknowledged |
 | Service worker scope | SW only handles push events. No caching strategies implemented. | 🟡 Acknowledged |
+| No React.memo usage | Message list items re-render on every parent state change | 🟡 Acknowledged |
+| Cache invalidation over-invalidation | Status updates trigger full query cache invalidation instead of targeted updates | 🟡 Acknowledged |
+| No staleTime in QueryClient | All queries are considered stale immediately, causing refetches on every navigation | 🟡 Acknowledged |
+| Excessive console.log in production | Push and notification services log extensively, consuming Render log quota | 🟡 Acknowledged |
+| Message search uses `contains` | No full-text search index — will slow at 50K+ messages | 🟡 Acknowledged |
 
 ## Resolved
 
@@ -47,3 +53,5 @@
 - **Server scaling**: Presence system requires Redis Pub/Sub for Socket.io to scale horizontally
 - **Database connection pooling**: Prisma in serverless environments requires connection pooling via Supabase Pooler or PgBouncer
 - **File storage**: No S3/cloud storage integration — avatar uploads use local paths
+- **Bundle size**: No dynamic imports currently implemented for heavy components (emoji-picker-react ~200KB, react-markdown ~50KB)
+- **No performance budget**: No automated performance testing or bundle size checks in CI/CD

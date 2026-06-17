@@ -1,6 +1,6 @@
 # Nexus — Project Context
 
-> **Last Updated:** 2026-06-16  
+> **Last Updated:** 2026-06-17  
 > **Purpose:** Single source of truth for the current system state. Agents must read this before any feature work.
 
 ---
@@ -59,6 +59,28 @@ Nexus is a real-time messaging platform built as a full-stack TypeScript monorep
 | File Uploads | Low |
 | Global Search / Cmd+K | Low |
 | Message Threads / Replies UI | Low |
+
+---
+
+## 5. Performance Considerations
+
+A comprehensive optimization audit was conducted on 2026-06-17. Key findings:
+
+**Bundle Size:** Heavy components (emoji-picker-react ~200KB, react-markdown ~50KB) are eagerly imported. Dynamic imports recommended.
+
+**Rendering:** No React.memo usage — `MessageGroupItem` and sidebar items re-render on every parent state change.
+
+**Cache Strategy:** Socket handlers invalidate broad query caches ("users", "workspaces", "conversations") on every status/presence change. Targeted `setQueryData` recommended.
+
+**Stale Time:** QueryClient has no `staleTime` configured (defaults to 0), causing refetches on every navigation.
+
+**Push Notifications:** `sendMessageNotifications` is awaited in the message handler, blocking the callback by 50-150ms.
+
+**Server Logging:** Extensive `console.log` in production paths (push.service.ts, notifications.service.ts).
+
+**Target Scale:** 10–100 users. Current architecture handles this without changes.
+
+Full report: `work/optimization.md`
 
 ---
 
