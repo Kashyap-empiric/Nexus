@@ -2,7 +2,7 @@ import type { QueryClient, InfiniteData } from "@tanstack/react-query";
 import { queryKeys } from "@/shared/constants/queryKeys";
 import type { Message } from "@/modules/messages/types/message";
 import type { MessagesResponse } from "@/modules/messages/api/messages.api";
-import type { Conversation } from "@/modules/conversations/types/conversation";
+import type { Conversation, ConversationMember } from "@/modules/conversations/types/conversation";
 import type { Workspace } from "@/modules/workspaces/types/workspace";
 
 import { getAuthUser } from "@/modules/auth/store/useAuthStore";
@@ -132,7 +132,7 @@ export const handleMessageUpdate = (queryClient: QueryClient) => {
                 createdAt: message.createdAt,
                 user: {
                   username: message.user?.username || "Unknown",
-                  fullName: (message.user as any)?.fullName || null,
+                  fullName: message.user?.fullName || null,
                 },
               },
             };
@@ -156,7 +156,7 @@ export const handleMessageUpdate = (queryClient: QueryClient) => {
               createdAt: message.createdAt,
               user: {
                 username: message.user?.username || "Unknown",
-                fullName: (message.user as any)?.fullName || null,
+                fullName: message.user?.fullName || null,
               },
             },
           };
@@ -191,7 +191,7 @@ export const handleMessageDelete = (queryClient: QueryClient) => {
                 createdAt: message.createdAt,
                 user: {
                   username: message.user?.username || "Unknown",
-                  fullName: (message.user as any)?.fullName || null,
+                  fullName: message.user?.fullName || null,
                 },
               },
             };
@@ -215,7 +215,7 @@ export const handleMessageDelete = (queryClient: QueryClient) => {
               createdAt: message.createdAt,
               user: {
                 username: message.user?.username || "Unknown",
-                fullName: (message.user as any)?.fullName || null,
+                fullName: message.user?.fullName || null,
               },
             },
           };
@@ -282,6 +282,6 @@ function extractConversationName(queryClient: QueryClient, conversationId: strin
 
   // For DMs, return the other person's name as context
   const currentUser = getAuthUser();
-  const otherMember = conversation.members?.find((m: any) => m.userId !== currentUser?.id);
+  const otherMember = conversation.members?.find((m: ConversationMember) => m.userId !== currentUser?.id);
   return otherMember?.user?.username || null;
 }

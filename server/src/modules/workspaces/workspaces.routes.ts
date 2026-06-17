@@ -6,6 +6,9 @@ import {
   getWorkspaceDetails,
   getWorkspaceChannels,
   createWorkspace,
+  updateWorkspace,
+  deleteWorkspace,
+  leaveWorkspace,
   createChannel,
   updateChannel,
   deleteChannel,
@@ -24,6 +27,7 @@ import {
   channelMemberIdParamsSchema,
   memberIdParamsSchema,
   createWorkspaceBodySchema,
+  updateWorkspaceBodySchema,
   createChannelBodySchema,
   updateChannelBodySchema,
   inviteByUsernameBodySchema,
@@ -39,6 +43,9 @@ router.use(authMiddleware);
 router.get("/", getUserWorkspaces);
 router.post("/", validate({ body: createWorkspaceBodySchema }), createWorkspace);
 router.get("/:id", validate({ params: workspaceIdParamsSchema }), getWorkspaceDetails);
+router.patch("/:id", validate({ params: workspaceIdParamsSchema, body: updateWorkspaceBodySchema }), updateWorkspace);
+router.delete("/:id", validate({ params: workspaceIdParamsSchema }), deleteWorkspace);
+router.post("/:id/leave", validate({ params: workspaceIdParamsSchema }), leaveWorkspace);
 router.get("/:id/channels", validate({ params: workspaceIdParamsSchema }), getWorkspaceChannels);
 router.post("/:id/channels", validate({ params: workspaceIdParamsSchema, body: createChannelBodySchema }), createChannel);
 router.patch("/:id/channels/:channelId", validate({ params: channelIdParamsSchema, body: updateChannelBodySchema }), updateChannel);

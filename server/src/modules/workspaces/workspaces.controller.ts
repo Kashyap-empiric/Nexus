@@ -56,12 +56,75 @@ export const getWorkspaceChannels = async (req: AuthRequest, res: Response): Pro
   }
 };
 
+export const updateWorkspace = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { id: workspaceId } = req.params as { id: string };
+    const { name, slug, imageUrl, iconPath, description } = req.body as { name?: string; slug?: string; imageUrl?: string; iconPath?: string; description?: string };
+
+    const workspace = await workspacesService.updateWorkspace(workspaceId, { name, slug, imageUrl, iconPath, description }, userId);
+    
+    dispatchWorkspaceUpdate(workspaceId, { action: "UPDATED", workspace });
+
+    res.json({ data: workspace });
+  } catch (error: unknown) {
+    console.error("Error updating workspace:", error);
+    if (error instanceof Error) {
+      if (error.message.startsWith("Forbidden")) {
+        res.status(403).json({ error: error.message });
+        return;
+      }
+      if (error.message === "Slug already taken") {
+        res.status(409).json({ error: "Slug already taken" });
+        return;
+      }
+    }
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const deleteWorkspace = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { id: workspaceId } = req.params as { id: string };
+
+    await workspacesService.deleteWorkspace(workspaceId, userId);
+
+    res.json({ data: { id: workspaceId } });
+  } catch (error: any) {
+    console.error("Error deleting workspace:", error);
+    if (error?.message?.startsWith("Forbidden")) {
+      res.status(403).json({ error: error.message });
+      return;
+    }
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const leaveWorkspace = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { id: workspaceId } = req.params as { id: string };
+
+    const result = await workspacesService.leaveWorkspace(workspaceId, userId);
+
+    res.json({ data: result });
+  } catch (error: any) {
+    console.error("Error leaving workspace:", error);
+    if (error?.message?.startsWith("Forbidden")) {
+      res.status(403).json({ error: error.message });
+      return;
+    }
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export const createWorkspace = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
-    const { name, slug, imageUrl } = req.body as { name: string; slug: string; imageUrl?: string };
+    const { name, slug, imageUrl, description, iconPath } = req.body as { name: string; slug: string; imageUrl?: string; description?: string; iconPath?: string };
 
-    const workspace = await workspacesService.createWorkspace(userId, name, slug, imageUrl);
+    const workspace = await workspacesService.createWorkspace(userId, name, slug, imageUrl, description, iconPath);
     res.status(201).json({ data: workspace });
   } catch (error) {
     console.error("Error creating workspace:", error);
@@ -120,7 +183,7 @@ export const createChannel = async (req: AuthRequest, res: Response): Promise<vo
   }
 };
 
-import { dispatchChannelUpdate, dispatchMemberUpdate, dispatchChannelMemberUpdate } from "@/socket/socket.dispatcher.js";
+import { dispatchChannelUpdate, dispatchMemberUpdate, dispatchChannelMemberUpdate, dispatchWorkspaceUpdate } from "@/socket/socket.dispatcher.js";
 import { WorkspaceRole } from "@prisma/client";
 import { addChannelMembersSchema } from "./workspaces.schema.js";
 
@@ -128,9 +191,9 @@ export const updateChannel = async (req: AuthRequest, res: Response): Promise<vo
   try {
     const userId = req.user!.id;
     const { id: workspaceId, channelId } = req.params as { id: string; channelId: string };
-    const { name, visibility } = req.body as { name?: string; visibility?: "PUBLIC" | "PRIVATE" };
+    const { name, description, visibility } = req.body as { name?: string; description?: string; visibility?: "PUBLIC" | "PRIVATE" };
 
-    const channel = await workspacesService.updateChannel(workspaceId, channelId, { name, visibility }, userId);
+    const channel = await workspacesService.updateChannel(workspaceId, channelId, { name, description, visibility }, userId);
     
     dispatchChannelUpdate(workspaceId, { action: "UPDATED", channel });
 

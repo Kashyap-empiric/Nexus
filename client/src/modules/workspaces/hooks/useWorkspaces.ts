@@ -19,7 +19,7 @@ export const useWorkspaceDetails = (workspaceId: string | null) => {
 export const useCreateWorkspace = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ name, slug, imageUrl }: { name: string; slug: string; imageUrl?: string }) => createWorkspace(name, slug, imageUrl),
+    mutationFn: ({ name, slug, imageUrl, description, iconPath }: { name: string; slug: string; imageUrl?: string; description?: string; iconPath?: string }) => createWorkspace(name, slug, imageUrl, description, iconPath),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
     },
@@ -37,12 +37,12 @@ export const useCreateChannel = () => {
   });
 };
 
-import { updateChannel, deleteChannel, fetchWorkspaceMembers, updateMemberRole, removeMember } from "../api/workspaces.api";
+import { updateChannel, deleteChannel, fetchWorkspaceMembers, updateMemberRole, removeMember, updateWorkspace, deleteWorkspace, leaveWorkspace } from "../api/workspaces.api";
 
 export const useUpdateChannel = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ workspaceId, channelId, data }: { workspaceId: string; channelId: string; data: { name?: string; visibility?: "PUBLIC" | "PRIVATE" } }) => updateChannel(workspaceId, channelId, data),
+    mutationFn: ({ workspaceId, channelId, data }: { workspaceId: string; channelId: string; data: { name?: string; description?: string; visibility?: "PUBLIC" | "PRIVATE" } }) => updateChannel(workspaceId, channelId, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["workspaces", variables.workspaceId] });
       queryClient.invalidateQueries({ queryKey: ["workspace-channels", variables.workspaceId] });
@@ -87,6 +87,37 @@ export const useRemoveMember = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
       queryClient.invalidateQueries({ queryKey: ["workspace-members", data.workspaceId] });
+    },
+  });
+};
+
+export const useUpdateWorkspaceMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ workspaceId, ...payload }: { workspaceId: string; name?: string; slug?: string; imageUrl?: string; iconPath?: string; description?: string }) => updateWorkspace(workspaceId, payload),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+      queryClient.invalidateQueries({ queryKey: ["workspaces", variables.workspaceId] });
+    },
+  });
+};
+
+export const useDeleteWorkspaceMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ workspaceId }: { workspaceId: string }) => deleteWorkspace(workspaceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+    },
+  });
+};
+
+export const useLeaveWorkspaceMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ workspaceId }: { workspaceId: string }) => leaveWorkspace(workspaceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
     },
   });
 };

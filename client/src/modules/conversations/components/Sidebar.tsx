@@ -34,6 +34,7 @@ import { useWorkspaceDetails } from "@/modules/workspaces/hooks/useWorkspaces";
 const NewConversationModal = dynamic(() => import("./NewConversationModal").then((m) => m.NewConversationModal), { ssr: false });
 const CreateChannelModal = dynamic(() => import("@/modules/workspaces/components/CreateChannelModal").then((m) => m.CreateChannelModal), { ssr: false });
 import { WorkspaceChannelItem } from "@/modules/workspaces/components/WorkspaceChannelItem";
+import { WorkspaceSettingsModal } from "@/modules/workspaces/components/WorkspaceSettingsModal";
 import { StatusSelector } from "@/modules/users/components/StatusSelector";
 
 interface SidebarProps {
@@ -51,6 +52,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   const { data: workspaceDetails } = useWorkspaceDetails(mode === "WORKSPACE" ? activeWorkspaceId : null);
   const currentAuthUser = useUser();
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const [workspaceSettingsOpen, setWorkspaceSettingsOpen] = useState(false);
   const inviteModal = useInviteModal();
   const [searchQuery, setSearchQuery] = useState("");
   const params = useParams();
@@ -140,6 +142,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           <WorkspaceHeader
             workspace={workspaceDetails.workspace}
             onInviteClick={() => inviteModal.open("WORKSPACE", workspaceDetails.workspace.id)}
+            onSettingsClick={() => setWorkspaceSettingsOpen(true)}
             rightElement={
               <button
                 type="button"
@@ -377,6 +380,11 @@ export function Sidebar({ onNavigate }: SidebarProps) {
 
       <NewConversationModal isOpen={mode === "DM" && isNewModalOpen} onClose={() => setIsNewModalOpen(false)} />
       {mode === "WORKSPACE" && <CreateChannelModal isOpen={isNewModalOpen} onClose={() => setIsNewModalOpen(false)} workspaceId={activeWorkspaceId!} />}
+      <WorkspaceSettingsModal
+        isOpen={workspaceSettingsOpen}
+        workspaceId={activeWorkspaceId}
+        onClose={() => setWorkspaceSettingsOpen(false)}
+      />
     </>
   );
 }

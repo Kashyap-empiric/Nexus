@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import { socket } from "@/socket/socketClient";
-import { SOCKET_EVENTS } from "@/socket/socket-events";
+import { SOCKET_EVENTS, type InitialPresencePayload } from "@/socket/socket-events";
 import { useSocketEvents } from "@/socket/useSocketEvent";
 import { useSocketStore } from "@/socket/socketStore";
 import { toast } from "sonner";
@@ -25,16 +25,11 @@ export function SocketProvider() {
       toast.error(`Connection lost: ${error.message}`);
     };
 
-    const handleInitialPresence = (payload: any) => {
-      if (payload.users) {
-        useSocketStore.getState().setInitialOnlineUsers(payload.users.map((u: any) => u.userId));
-        // We could manually update cache here, but invalidating ensures fresh data
-        queryClient.invalidateQueries({ queryKey: ["users"] });
-        queryClient.invalidateQueries({ queryKey: ["workspaces"] });
-      } else if (payload.userIds) {
-        // Fallback for old payload
-        useSocketStore.getState().setInitialOnlineUsers(payload.userIds);
-      }
+    const handleInitialPresence = (payload: InitialPresencePayload) => {
+      useSocketStore.getState().setInitialOnlineUsers(payload.users.map((u: { userId: string }) => u.userId));
+      // We could manually update cache here, but invalidating ensures fresh data
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
     };
 
     const handleUserStatusUpdate = () => {

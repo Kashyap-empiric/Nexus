@@ -27,6 +27,8 @@ export const useRemoveChannelMemberMutation = () => {
       removeChannelMember(workspaceId, channelId, userId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["workspaces", variables.workspaceId, "channels", variables.channelId, "members"] });
+      queryClient.invalidateQueries({ queryKey: ["workspace-channels", variables.workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
     },
   });
 };

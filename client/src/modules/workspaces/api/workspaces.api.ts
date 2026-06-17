@@ -2,6 +2,27 @@ import { api } from "@/shared/lib/api";
 import type { Conversation } from "@/modules/conversations/types/conversation";
 import type { Workspace } from "../types/workspace";
 
+export const updateWorkspace = async (workspaceId: string, payload: {
+  name?: string;
+  slug?: string;
+  imageUrl?: string;
+  iconPath?: string;
+  description?: string;
+}): Promise<Workspace> => {
+  const { data } = await api.patch<{ data: Workspace }>(`/workspaces/${workspaceId}`, payload);
+  return data.data;
+};
+
+export const deleteWorkspace = async (workspaceId: string): Promise<{ id: string }> => {
+  const { data } = await api.delete<{ data: { id: string } }>(`/workspaces/${workspaceId}`);
+  return data.data;
+};
+
+export const leaveWorkspace = async (workspaceId: string): Promise<{ workspaceId: string }> => {
+  const { data } = await api.post<{ data: { workspaceId: string } }>(`/workspaces/${workspaceId}/leave`);
+  return data.data;
+};
+
 export const fetchWorkspaceChannels = async (workspaceId: string): Promise<Conversation[]> => {
   const { data } = await api.get<{ data: Conversation[] }>(
     `/workspaces/${workspaceId}/channels`
@@ -19,8 +40,8 @@ export const fetchWorkspaceDetails = async (workspaceId: string): Promise<{ work
   return data.data;
 };
 
-export const createWorkspace = async (name: string, slug: string, imageUrl?: string): Promise<Workspace> => {
-  const { data } = await api.post<{ data: Workspace }>("/workspaces", { name, slug, imageUrl });
+export const createWorkspace = async (name: string, slug: string, imageUrl?: string, description?: string, iconPath?: string): Promise<Workspace> => {
+  const { data } = await api.post<{ data: Workspace }>("/workspaces", { name, slug, imageUrl, description, iconPath });
   return data.data;
 };
 
@@ -29,7 +50,7 @@ export const createChannel = async (workspaceId: string, name: string, visibilit
   return data.data;
 };
 
-export const updateChannel = async (workspaceId: string, channelId: string, data: { name?: string; visibility?: "PUBLIC" | "PRIVATE" }): Promise<Conversation> => {
+export const updateChannel = async (workspaceId: string, channelId: string, data: { name?: string; description?: string; visibility?: "PUBLIC" | "PRIVATE" }): Promise<Conversation> => {
   const response = await api.patch<{ data: Conversation }>(`/workspaces/${workspaceId}/channels/${channelId}`, data);
   return response.data.data;
 };

@@ -5,27 +5,27 @@ import * as z from "zod";
 // =====================
 
 export const workspaceIdParamsSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
 });
 
 export type WorkspaceIdParams = z.infer<typeof workspaceIdParamsSchema>;
 
 export const channelIdParamsSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
   channelId: z.string().uuid(),
 });
 
 export type ChannelIdParams = z.infer<typeof channelIdParamsSchema>;
 
 export const memberIdParamsSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
   userId: z.string().uuid(),
 });
 
 export type MemberIdParams = z.infer<typeof memberIdParamsSchema>;
 
 export const channelMemberIdParamsSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
   channelId: z.string().uuid(),
   userId: z.string().uuid(),
 });
@@ -47,6 +47,8 @@ export const createWorkspaceBodySchema = z.object({
       "Slug must contain only lowercase letters, numbers, and hyphens"
     ),
   imageUrl: z.string().url().optional(),
+  iconPath: z.string().optional(),
+  description: z.string().max(500).optional(),
 });
 
 export type CreateWorkspaceBody = z.infer<typeof createWorkspaceBodySchema>;
@@ -58,11 +60,22 @@ export const createChannelBodySchema = z.object({
 
 export type CreateChannelBody = z.infer<typeof createChannelBodySchema>;
 
+export const updateWorkspaceBodySchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase letters, numbers, and hyphens").optional(),
+  imageUrl: z.string().url().optional(),
+  iconPath: z.string().optional(),
+  description: z.string().max(500).optional(),
+});
+
+export type UpdateWorkspaceBody = z.infer<typeof updateWorkspaceBodySchema>;
+
 export const updateChannelBodySchema = z.object({
   name: z.string().min(1).max(80).optional(),
+  description: z.string().max(500).optional(),
   visibility: z.enum(["PUBLIC", "PRIVATE"]).optional(),
-}).refine((data) => data.name || data.visibility, {
-  message: "At least one of name or visibility must be provided",
+}).refine((data) => data.name || data.description || data.visibility, {
+  message: "At least one of name, description, or visibility must be provided",
 });
 
 export type UpdateChannelBody = z.infer<typeof updateChannelBodySchema>;

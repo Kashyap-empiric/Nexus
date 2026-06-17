@@ -3,20 +3,21 @@ import type { Conversation } from "@/modules/conversations/types/conversation";
 import type { WorkspaceMember } from "@/modules/workspaces/types/workspace";
 import { getAuthUser } from "@/modules/auth/store/useAuthStore";
 import { APP_ROUTES } from "@/config/url";
+import type { ChannelUpdatePayload, MemberUpdatePayload, ChannelMemberAddedPayload, ChannelMemberRemovedPayload } from "@/socket/socket-events";
 import { toast } from "sonner";
 
 // Guard against duplicate REMOVED events (emitted to both workspace and user rooms)
 let isRedirectingFromRemoval = false;
 
 export const handleWorkspaceUpdate = (queryClient: QueryClient) => {
-  return (payload: any) => {
+  return () => {
     // Workspace metadata changes are infrequent; invalidation is fine
     queryClient.invalidateQueries({ queryKey: ["workspaces"] });
   };
 };
 
 export const handleChannelUpdate = (queryClient: QueryClient) => {
-  return (payload: { action: "UPDATED" | "DELETED"; channel: any }) => {
+  return (payload: ChannelUpdatePayload) => {
     if (!payload?.channel?.id) return;
 
     const { id, name, visibility } = payload.channel;
@@ -43,7 +44,7 @@ export const handleChannelUpdate = (queryClient: QueryClient) => {
 };
 
 export const handleMemberUpdate = (queryClient: QueryClient) => {
-  return (payload: { action: "ROLE_UPDATED" | "REMOVED"; member: any }) => {
+  return (payload: MemberUpdatePayload) => {
     if (!payload?.member) return;
 
     const { userId, role } = payload.member;
@@ -92,7 +93,7 @@ export const handleMemberUpdate = (queryClient: QueryClient) => {
 };
 
 export const handleChannelMemberAdded = (queryClient: QueryClient) => {
-  return (payload: { workspaceId: string; channelId: string; addedMembers: any[] }) => {
+  return (payload: ChannelMemberAddedPayload) => {
     if (!payload?.workspaceId || !payload?.channelId) return;
     queryClient.invalidateQueries({
       queryKey: ["workspaces", payload.workspaceId, "channels", payload.channelId, "members"],
@@ -101,7 +102,7 @@ export const handleChannelMemberAdded = (queryClient: QueryClient) => {
 };
 
 export const handleChannelMemberRemoved = (queryClient: QueryClient) => {
-  return (payload: { workspaceId: string; channelId: string; removedUserId: string }) => {
+  return (payload: ChannelMemberRemovedPayload) => {
     if (!payload?.workspaceId || !payload?.channelId || !payload?.removedUserId) return;
 
     queryClient.invalidateQueries({

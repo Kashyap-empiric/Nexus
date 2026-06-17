@@ -43,10 +43,11 @@ export function OnboardingWizard() {
     router.push("/onboarding?step=2");
   };
 
-  const handleWorkspaceCreate = async (data: { workspaceName?: string; workspaceSlug?: string; skipWorkspace?: boolean }) => {
+  const handleWorkspaceCreate = async (data: { workspaceName?: string; workspaceSlug?: string; workspaceDescription?: string; workspaceIconFile?: File | null; skipWorkspace?: boolean }) => {
     setIsSubmitting(true);
     try {
       let avatarPath: string | undefined = undefined;
+      let workspaceIconPath: string | undefined = undefined;
       
       // Upload avatar first if provided (non-blocking — toast on failure)
       if (profileData.avatarFile && user?.id) {
@@ -59,12 +60,25 @@ export function OnboardingWizard() {
         }
       }
 
+      // Upload workspace icon if provided
+      if (data.workspaceIconFile && data.workspaceSlug) {
+        try {
+          const { uploadWorkspaceIcon } = await import("@/shared/lib/upload");
+          workspaceIconPath = await uploadWorkspaceIcon(data.workspaceSlug, data.workspaceIconFile);
+        } catch (err) {
+          console.warn("Workspace icon upload failed, continuing without it:", err);
+          toast.error("Icon upload failed. You can set one later.");
+        }
+      }
+
       const response = await completeOnboarding({
         fullName: profileData.fullName,
         bio: profileData.bio,
         avatarPath,
         workspaceName: data.workspaceName,
         workspaceSlug: data.workspaceSlug,
+        workspaceDescription: data.workspaceDescription,
+        workspaceIconPath,
         skipWorkspace: data.skipWorkspace,
       });
       

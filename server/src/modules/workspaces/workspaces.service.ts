@@ -77,7 +77,7 @@ export const getWorkspaceChannels = async (userId: string, slugOrId: string) => 
   }));
 };
 
-export const createWorkspace = async (userId: string, name: string, slug: string, imageUrl?: string) => {
+export const createWorkspace = async (userId: string, name: string, slug: string, imageUrl?: string, description?: string, iconPath?: string) => {
   if (!/^[a-z0-9-]+$/.test(slug)) {
     throw new Error("Invalid slug format");
   }
@@ -91,6 +91,8 @@ export const createWorkspace = async (userId: string, name: string, slug: string
       name,
       slug,
       imageUrl,
+      description,
+      iconPath,
       ownerId: userId,
       members: {
         create: { userId, role: WorkspaceRole.OWNER },
@@ -146,7 +148,65 @@ export const createChannel = async (slugOrId: string, name: string, visibility: 
   });
 };
 
-export const updateChannel = async (slugOrId: string, channelId: string, data: { name?: string; visibility?: "PUBLIC" | "PRIVATE" }, userId: string) => {
+export const updateWorkspace = async (slugOrId: string, data: { name?: string; slug?: string; imageUrl?: string; iconPath?: string; description?: string }, userId: string) => {
+  const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(slugOrId);
+  if (!workspace) throw new Error("Workspace not found");
+
+  const member = workspace.members.find(m => m.userId === userId);
+  if (!member) throw new Error("Forbidden: Not a member of this workspace");
+  if (member.role !== WorkspaceRole.OWNER && member.role !== WorkspaceRole.ADMIN) {
+    throw new Error("Forbidden: Only owners and admins can update workspace settings");
+  }
+
+  if (data.slug && data.slug !== workspace.slug) {
+    const existing = await workspacesRepo.findWorkspaceByIdOrSlug(data.slug);
+    if (existing && existing.id !== workspace.id) {
+      throw new Error("Slug already taken");
+    }
+  }
+
+  const updateData: Record<string, unknown> = {};
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.slug !== undefined) updateData.slug = data.slug;
+  if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
+  if (data.iconPath !== undefined) updateData.iconPath = data.iconPath;
+  if (data.description !== undefined) updateData.description = data.description;
+
+  return workspacesRepo.updateWorkspace(workspace.id, updateData);
+};
+
+export const deleteWorkspace = async (slugOrId: string, userId: string) => {
+  const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(slugOrId);
+  if (!workspace) throw new Error("Workspace not found");
+
+  const member = workspace.members.find(m => m.userId === userId);
+  if (!member) throw new Error("Forbidden: Not a member of this workspace");
+  if (member.role !== WorkspaceRole.OWNER) {
+    throw new Error("Forbidden: Only the workspace owner can delete the workspace");
+  }
+
+  return workspacesRepo.deleteWorkspace(workspace.id);
+};
+
+export const leaveWorkspace = async (slugOrId: string, userId: string) => {
+  const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(slugOrId);
+  if (!workspace) throw new Error("Workspace not found");
+
+  const member = workspace.members.find(m => m.userId === userId);
+  if (!member) throw new Error("Forbidden: Not a member of this workspace");
+
+  if (member.role === WorkspaceRole.OWNER) {
+    const ownerCount = await workspacesRepo.countWorkspaceOwners(workspace.id);
+    if (ownerCount <= 1) {
+      throw new Error("Forbidden: Cannot leave workspace as the last owner. Transfer ownership or delete the workspace.");
+    }
+  }
+
+  await workspacesRepo.removeWorkspaceMember(workspace.id, userId);
+  return { workspaceId: workspace.id };
+};
+
+export const updateChannel = async (slugOrId: string, channelId: string, data: { name?: string; description?: string; visibility?: "PUBLIC" | "PRIVATE" }, userId: string) => {
   const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(slugOrId);
   if (!workspace) throw new Error("Workspace not found");
 
@@ -164,9 +224,10 @@ export const updateChannel = async (slugOrId: string, channelId: string, data: {
     throw new Error("Forbidden: Only owners and admins can change channel visibility");
   }
 
-  const updateData: any = {};
-  if (data.name) updateData.name = data.name;
-  if (data.visibility) {
+  const updateData: Record<string, unknown> = {};
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.description !== undefined) updateData.description = data.description;
+  if (data.visibility !== undefined) {
     updateData.visibility = data.visibility;
     updateData.isPrivate = data.visibility === "PRIVATE";
   }

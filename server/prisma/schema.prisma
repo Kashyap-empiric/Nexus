@@ -38,6 +38,7 @@ model Conversation {
   id              String               @id
   type            ConversationType     @default(DM)
   name            String?
+  description     String?
   workspaceId     String?
   dmPair          String?              @unique
   createdAt       DateTime             @default(now())
@@ -108,9 +109,11 @@ model Invite {
 }
 
 model Workspace {
-  id        String            @id
-  name      String
-  imageUrl  String?
+  id          String            @id
+  name        String
+  description String?
+  imageUrl    String?
+  iconPath    String?
   ownerId   String
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt

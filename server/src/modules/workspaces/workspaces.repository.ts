@@ -46,6 +46,8 @@ export const createWorkspaceInTransaction = async (
     name: string;
     slug: string;
     imageUrl?: string;
+    iconPath?: string;
+    description?: string;
     ownerId: string;
     members: {
       create: { userId: string; role: WorkspaceRole };
@@ -159,6 +161,20 @@ export const updateChannel = async (channelId: string, data: { name?: string; vi
 export const deleteConversation = async (channelId: string) => {
   return prisma.conversation.delete({
     where: { id: channelId },
+  });
+};
+
+export const updateWorkspace = async (id: string, data: { name?: string; slug?: string; imageUrl?: string; iconPath?: string; description?: string }) => {
+  return prisma.workspace.update({ where: { id }, data });
+};
+
+export const deleteWorkspace = async (id: string) => {
+  return prisma.workspace.delete({ where: { id } });
+};
+
+export const countWorkspaceOwners = async (workspaceId: string) => {
+  return prisma.workspaceMember.count({
+    where: { workspaceId, role: "OWNER" },
   });
 };
 

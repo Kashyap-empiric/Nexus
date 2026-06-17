@@ -10,6 +10,7 @@ import type { Message, MessagePage } from "@/modules/messages/types/message";
 import type { Conversation } from "@/modules/conversations/types/conversation";
 import type { MessageReadPayload } from "../types/socket";
 import { InfiniteData } from "@tanstack/react-query";
+import { getAuthUser } from "@/modules/auth/store/useAuthStore";
 
 export const useConversationSocket = (conversationId: string) => {
   const queryClient = useQueryClient();
@@ -34,6 +35,10 @@ export const useConversationSocket = (conversationId: string) => {
       try {
         if (!message || !message.id) throw new Error("Invalid payload");
         if (message.conversationId !== conversationId) return;
+
+        // Skip own messages — the mutation's onSuccess handles replacing the optimistic message
+        const currentUser = getAuthUser();
+        if (currentUser && message.userId === currentUser.id) return;
 
         queryClient.setQueryData<InfiniteData<MessagePage>>(
           queryKeys.messages(conversationId),

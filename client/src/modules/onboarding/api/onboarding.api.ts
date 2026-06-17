@@ -8,6 +8,8 @@ export interface CompleteOnboardingPayload {
   avatarPath?: string;
   workspaceName?: string;
   workspaceSlug?: string;
+  workspaceDescription?: string;
+  workspaceIconPath?: string;
   skipWorkspace?: boolean;
 }
 

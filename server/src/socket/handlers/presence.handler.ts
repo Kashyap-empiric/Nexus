@@ -1,6 +1,7 @@
 import type { Server, Socket } from "socket.io";
 import { presenceStore } from "../presenceStore.js";
 import { SOCKET_EVENTS } from "../../shared/socket-events.js";
+import type { InitialPresencePayload } from "../../shared/socket-events.js";
 import { dispatchUserPresence } from "../socket.dispatcher.js";
 import { prisma } from "../../lib/db.js";
 
@@ -48,7 +49,8 @@ export const registerPresenceHandlers = async (io: Server, socket: Socket) => {
       status: statusesMap.get(id) || "AVAILABLE" 
     }));
 
-    dispatchUserPresence("INITIAL", payload as any, socket);
+    const initialPresence: InitialPresencePayload = { users: payload };
+    dispatchUserPresence("INITIAL", initialPresence, socket);
   } catch (error) {
     console.error("[Socket.io] Presence connect error:", error);
   }

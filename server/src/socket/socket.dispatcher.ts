@@ -4,6 +4,7 @@ import { prisma } from "../lib/db.js";
 
 import type { Socket } from "socket.io";
 import type { Conversation, Message, ConversationMember } from "@prisma/client";
+import type { InitialPresencePayload, MemberUpdatePayload, ChannelMember } from "../shared/socket-events.js";
 
 export type ConversationWithMembers = Conversation & {
   members: ConversationMember[];
@@ -71,15 +72,6 @@ export const dispatchMessageRead = (
   }
 };
 
-export const dispatchNotification = (userId: string, notification: any) => {
-  try {
-    const io = getIO();
-    io.to(`user:${userId}`).emit(SOCKET_EVENTS.NOTIFICATION_NEW, notification);
-  } catch (error) {
-    console.error("Error dispatching notification:", error);
-  }
-};
-
 export const dispatchUserStatusUpdate = async (userId: string, status: string, statusText: string | null) => {
   try {
     const io = getIO();
@@ -127,27 +119,52 @@ export const dispatchUserProfileUpdate = async (userId: string) => {
   }
 };
 
-export const dispatchUserPresence = (
-  action: "ONLINE" | "OFFLINE" | "INITIAL",
-  userIdOrIds: string | string[],
+export function dispatchUserPresence(
+  action: "ONLINE" | "OFFLINE",
+  userId: string,
   targetSocket?: Socket
-): void => {
+): void;
+export function dispatchUserPresence(
+  action: "INITIAL",
+  payload: InitialPresencePayload,
+  targetSocket: Socket
+): void;
+export function dispatchUserPresence(
+  action: "ONLINE" | "OFFLINE" | "INITIAL",
+  userIdOrPayload: string | InitialPresencePayload,
+  targetSocket?: Socket
+): void {
   try {
     const io = getIO();
 
     if (action === "INITIAL" && targetSocket) {
-      targetSocket.emit(SOCKET_EVENTS.INITIAL_PRESENCE, { users: userIdOrIds });
+      const payload = userIdOrPayload as InitialPresencePayload;
+      targetSocket.emit(SOCKET_EVENTS.INITIAL_PRESENCE, payload);
     } else if (action === "ONLINE") {
+      const userId = userIdOrPayload as string;
       if (targetSocket) {
-        targetSocket.broadcast.emit(SOCKET_EVENTS.USER_ONLINE, { userId: userIdOrIds as string });
+        targetSocket.broadcast.emit(SOCKET_EVENTS.USER_ONLINE, { userId });
       } else {
-        io.emit(SOCKET_EVENTS.USER_ONLINE, { userId: userIdOrIds as string });
+        io.emit(SOCKET_EVENTS.USER_ONLINE, { userId });
       }
     } else if (action === "OFFLINE") {
-      io.emit(SOCKET_EVENTS.USER_OFFLINE, { userId: userIdOrIds as string });
+      const userId = userIdOrPayload as string;
+      io.emit(SOCKET_EVENTS.USER_OFFLINE, { userId });
     }
   } catch (err: unknown) {
     console.error(`[Socket.io] Failed to dispatch USER_${action}:`, err);
+  }
+};
+
+export const dispatchWorkspaceUpdate = (
+  workspaceId: string,
+  payload: { action: "UPDATED"; workspace: Partial<Conversation> }
+): void => {
+  try {
+    const io = getIO();
+    io.to(`workspace:${workspaceId}`).emit(SOCKET_EVENTS.WORKSPACE_UPDATE, payload);
+  } catch (err: unknown) {
+    console.error("[Socket.io] Failed to dispatch WORKSPACE_UPDATE:", err);
   }
 };
 
@@ -216,7 +233,7 @@ export const dispatchChannelMemberUpdate = async (
 
 export const dispatchMemberUpdate = (
   workspaceId: string,
-  payload: { action: "ROLE_UPDATED" | "REMOVED"; member: any }
+  payload: MemberUpdatePayload
 ): void => {
   try {
     const io = getIO();

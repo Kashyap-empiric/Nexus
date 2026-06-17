@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { X, CalendarDays, Pin } from "lucide-react";
+import { X, CalendarDays, Pin, Hash, Globe, Lock } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { InfoPanelView } from "@/shared/components/layout/AppLayoutShell";
 import { MemberListPanel } from "@/modules/workspaces/components/MemberListPanel";
@@ -17,6 +17,10 @@ interface InfoPanelProps {
   workspaceId?: string;
   channelId?: string;
   userId?: string;
+  channelName?: string | null;
+  description?: string | null;
+  visibility?: "PUBLIC" | "PRIVATE" | null;
+  createdAt?: string;
   view: InfoPanelView;
   setInfoPanelView: (view: InfoPanelView) => void;
   onClose: () => void;
@@ -29,7 +33,7 @@ const STATUS_LABELS: Record<string, { label: string; dotClass: string }> = {
   INVISIBLE: { label: "Offline", dotClass: "bg-status-offline" },
 };
 
-export function InfoPanel({ conversationId, workspaceId, channelId, userId, view, setInfoPanelView, onClose }: InfoPanelProps) {
+export function InfoPanel({ conversationId, workspaceId, channelId, userId, channelName, description, visibility, createdAt, view, setInfoPanelView, onClose }: InfoPanelProps) {
   const user = useUser();
   const currentUserId = user?.id || null;
   const isChannel = !!workspaceId;
@@ -149,8 +153,50 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, view
         )}
 
         {view === 'about' && !isDM && (
-          <div className="p-4 text-sm text-muted-foreground">
-            No description available.
+          <div className="p-6 space-y-6">
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-16 w-16 rounded-2xl bg-brand/10 flex items-center justify-center">
+                <Hash className="h-8 w-8 text-brand" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground text-center">
+                {channelName || "Untitled"}
+              </h3>
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border",
+                  visibility === "PRIVATE"
+                    ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                    : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                )}
+              >
+                {visibility === "PRIVATE" ? (
+                  <Lock className="h-3 w-3" />
+                ) : (
+                  <Globe className="h-3 w-3" />
+                )}
+                {visibility === "PRIVATE" ? "Private" : "Public"}
+              </span>
+            </div>
+
+            {description ? (
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                  Description
+                </h4>
+                <p className="text-sm text-foreground whitespace-pre-wrap">{description}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center italic">
+                No description
+              </p>
+            )}
+
+            {createdAt && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CalendarDays className="h-4 w-4 shrink-0" />
+                <span>Created {formatJoinDate(createdAt)}</span>
+              </div>
+            )}
           </div>
         )}
 

@@ -37,6 +37,8 @@ export const completeOnboarding = async (userId: string, data: CompleteOnboardin
         id: workspaceId,
         name: data.workspaceName,
         slug: finalSlug,
+        description: data.workspaceDescription || null,
+        iconPath: data.workspaceIconPath || null,
         ownerId: userId,
         members: {
           create: {

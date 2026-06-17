@@ -1,8 +1,15 @@
 import type { Server, Socket } from "socket.io";
+import type { Message } from "@prisma/client";
 import { createMessage, sendMessageNotifications } from "@/modules/messages/messages.service.js";
 import { SOCKET_EVENTS } from "@/shared/socket-events.js";
 import { dispatchMessageEvent } from "../socket.dispatcher.js";
 import { verifyConversationMembership } from "@/shared/permissions.js";
+
+type MessageSendCallback = (response: {
+  success: boolean;
+  data?: Message;
+  error?: { code: string; message: string; retryable: boolean };
+}) => void;
 
 export const registerMessageHandlers = (io: Server, socket: Socket) => {
   // Typing indicators — broadcast to conversation room, exclude sender
@@ -34,7 +41,7 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
     SOCKET_EVENTS.MESSAGE_SEND,
     async (
       payload: { tempId: string; conversationId: string; content: string; replyToId?: string },
-      callback
+      callback: MessageSendCallback
     ) => {
       try {
         const userId = socket.data.user?.id;
