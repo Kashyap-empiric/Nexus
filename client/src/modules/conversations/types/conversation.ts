@@ -21,6 +21,7 @@ export interface Conversation {
   isPrivate: boolean;
   visibility?: "PUBLIC" | "PRIVATE";
   name: string | null;
+  description: string | null;
   dmPair: string | null;
   workspaceId?: string | null;
   members: ConversationMember[];
@@ -37,5 +38,6 @@ export interface Conversation {
     };
   } | null;
   updatedAt: string;
+  createdAt: string;
   unreadCount?: number;
 }

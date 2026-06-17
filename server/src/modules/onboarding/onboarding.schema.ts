@@ -10,6 +10,8 @@ export const completeOnboardingSchema = z.object({
     .max(50)
     .regex(/^[a-z0-9-]*$/, "Slug can only contain lowercase letters, numbers, and hyphens")
     .optional(),
+  workspaceDescription: z.string().max(500).optional(),
+  workspaceIconPath: z.string().optional(),
 });
 
 export type CompleteOnboardingInput = z.infer<typeof completeOnboardingSchema>;

@@ -1,5 +1,19 @@
 // ──── DTOs ────
 
+export interface UpdateWorkspacePayload {
+  name?: string;
+  slug?: string;
+  imageUrl?: string;
+  iconPath?: string;
+  description?: string;
+}
+
+export interface UpdateChannelPayload {
+  name?: string;
+  description?: string;
+  visibility?: "PUBLIC" | "PRIVATE";
+}
+
 export interface WorkspaceMemberDTO {
   id: string;
   workspaceId: string;

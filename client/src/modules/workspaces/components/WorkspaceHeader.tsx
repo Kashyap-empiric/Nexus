@@ -6,16 +6,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
-import { ChevronDown, UserPlus } from "lucide-react";
-import { useInviteModal } from "@/modules/invites/hooks/useInviteModal";
+import { ChevronDown, UserPlus, Settings } from "lucide-react";
 
 interface WorkspaceHeaderProps {
   workspace: Workspace;
   onInviteClick?: () => void;
+  onSettingsClick?: () => void;
   rightElement?: React.ReactNode;
 }
 
-export function WorkspaceHeader({ workspace, onInviteClick, rightElement }: WorkspaceHeaderProps) {
+export function WorkspaceHeader({ workspace, onInviteClick, onSettingsClick, rightElement }: WorkspaceHeaderProps) {
   return (
     <div className="flex items-center h-14 border-b shadow-sm bg-background z-10 sticky top-0 shrink-0 w-full">
       <DropdownMenu>
@@ -26,13 +26,17 @@ export function WorkspaceHeader({ workspace, onInviteClick, rightElement }: Work
           </div>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56" align="start">
-        <DropdownMenuItem
-          onClick={onInviteClick}
-          className="text-brand focus:text-brand focus:bg-brand/10 cursor-pointer"
-        >
-          <UserPlus className="h-4 w-4 mr-2" />
-          Invite People
-        </DropdownMenuItem>
+          <DropdownMenuItem onClick={onSettingsClick} className="cursor-pointer">
+            <Settings className="h-4 w-4 mr-2" />
+            Workspace Settings
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={onInviteClick}
+            className="text-brand focus:text-brand focus:bg-brand/10 cursor-pointer"
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            Invite People
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       {rightElement && (

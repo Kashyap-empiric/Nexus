@@ -1,11 +1,13 @@
-import { useState, useEffect } from "react";
-import { Loader2, Hash } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Loader2, Hash, Camera } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import { Textarea } from "@/shared/components/ui/textarea";
+import { toast } from "sonner";
 
 interface CreateWorkspaceStepProps {
-  onCreate: (data: { workspaceName?: string; workspaceSlug?: string; skipWorkspace?: boolean }) => void;
+  onCreate: (data: { workspaceName?: string; workspaceSlug?: string; workspaceDescription?: string; workspaceIconFile?: File | null; skipWorkspace?: boolean }) => void;
   isLoading: boolean;
   initialName?: string;
   defaultFullName: string;
@@ -14,9 +16,12 @@ interface CreateWorkspaceStepProps {
 export function CreateWorkspaceStep({ onCreate, isLoading, initialName, defaultFullName }: CreateWorkspaceStepProps) {
   const [workspaceName, setWorkspaceName] = useState(initialName || (defaultFullName ? `${defaultFullName}'s Workspace` : ""));
   const [workspaceSlug, setWorkspaceSlug] = useState("");
+  const [description, setDescription] = useState("");
+  const [iconFile, setIconFile] = useState<File | null>(null);
+  const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [slugEdited, setSlugEdited] = useState(false);
+  const iconInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-generate slug from name if not manually edited
   useEffect(() => {
     if (!slugEdited) {
       const generatedSlug = workspaceName
@@ -27,12 +32,24 @@ export function CreateWorkspaceStep({ onCreate, isLoading, initialName, defaultF
     }
   }, [workspaceName, slugEdited]);
 
+  const handleIconSelect = (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File size must be less than 5MB");
+      return;
+    }
+    if (iconPreview) URL.revokeObjectURL(iconPreview);
+    setIconFile(file);
+    setIconPreview(URL.createObjectURL(file));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (workspaceName.trim() && workspaceSlug.trim()) {
       onCreate({ 
         workspaceName: workspaceName.trim(), 
-        workspaceSlug: workspaceSlug.trim().toLowerCase() 
+        workspaceSlug: workspaceSlug.trim().toLowerCase(),
+        workspaceDescription: description.trim() || undefined,
+        workspaceIconFile: iconFile,
       });
     }
   };
@@ -79,6 +96,59 @@ export function CreateWorkspaceStep({ onCreate, isLoading, initialName, defaultF
               />
             </div>
             <p className="text-xs text-muted-foreground">This will be your workspace's unique address.</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="workspaceDescription">Description <span className="text-muted-foreground">(optional)</span></Label>
+            <Textarea
+              id="workspaceDescription"
+              placeholder="What is this workspace about?"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="resize-none bg-background"
+              rows={2}
+              disabled={isLoading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Icon <span className="text-muted-foreground">(optional)</span></Label>
+            <div className="flex items-center gap-3">
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => iconInputRef.current?.click()}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") iconInputRef.current?.click(); }}
+                className="relative h-14 w-14 rounded-xl border-2 border-dashed flex items-center justify-center cursor-pointer hover:border-muted-foreground/50 transition-colors border-muted-foreground/25 bg-background"
+              >
+                {iconPreview ? (
+                  <img src={iconPreview} alt="" className="h-full w-full rounded-xl object-cover" />
+                ) : (
+                  <Camera className="h-5 w-5 text-muted-foreground/50" />
+                )}
+              </div>
+              <input
+                ref={iconInputRef}
+                type="file"
+                accept="image/png, image/jpeg, image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleIconSelect(file);
+                }}
+                disabled={isLoading}
+              />
+              <p className="text-xs text-muted-foreground">Square image, max 5MB</p>
+            </div>
+            {iconFile && (
+              <Button type="button" variant="outline" size="sm" onClick={() => {
+                if (iconPreview) URL.revokeObjectURL(iconPreview);
+                setIconFile(null);
+                setIconPreview(null);
+              }} disabled={isLoading}>
+                Remove
+              </Button>
+            )}
           </div>
         </div>
         

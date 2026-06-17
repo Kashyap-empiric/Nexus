@@ -1,3 +1,5 @@
+import type { Notification } from "@/modules/notifications/types/notification";
+
 export const SOCKET_EVENTS = {
   MESSAGE_NEW: "message:new",
   MESSAGE_READ: "message:read",
@@ -23,6 +25,25 @@ export const SOCKET_EVENTS = {
   MESSAGE_UNPIN: "message:unpin",
 } as const;
 
+export type Visibility = "PUBLIC" | "PRIVATE";
+export type WorkspaceRole = "OWNER" | "ADMIN" | "MEMBER";
+
+export interface MessageSendPayload {
+  tempId: string;
+  conversationId: string;
+  content: string;
+  replyToId?: string;
+}
+
+export interface TypingStartClientPayload {
+  conversationId: string;
+  username: string;
+}
+
+export interface TypingStopClientPayload {
+  conversationId: string;
+}
+
 export interface MessageReadPayload {
   conversationId: string;
   userId: string;
@@ -30,5 +51,93 @@ export interface MessageReadPayload {
 }
 
 export interface InitialPresencePayload {
-  userIds: string[];
+  users: { userId: string; status: string }[];
 }
+
+export interface UserPresencePayload {
+  userId: string;
+}
+
+export interface UserStatusUpdatePayload {
+  userId: string;
+  status: string;
+  statusText: string | null;
+}
+
+export interface UserUpdatePayload {
+  userId: string;
+}
+
+export interface ConversationUpdatePayload {
+  conversation: {
+    id: string;
+    name?: string | null;
+    updatedAt?: string;
+    latestMessageId?: string | null;
+    latestMessage?: {
+      id: string;
+      userId: string;
+      content: string;
+      deletedAt: string | null;
+      createdAt: string;
+      user: {
+        username: string;
+        fullName: string | null;
+      };
+    } | null;
+  };
+}
+
+export interface ChannelUpdateChannel {
+  id: string;
+  name?: string;
+  visibility?: Visibility;
+}
+
+export interface ChannelUpdatePayload {
+  action: "UPDATED" | "DELETED";
+  channel: {
+    id: string;
+    name?: string;
+    visibility?: string;
+  };
+}
+
+export interface ChannelMember {
+  id: string;
+  username: string;
+  fullName: string | null;
+  avatarUrl: string | null;
+}
+
+export interface ChannelMemberAddedPayload {
+  workspaceId: string;
+  channelId: string;
+  addedMembers: ChannelMember[];
+}
+
+export interface ChannelMemberRemovedPayload {
+  workspaceId: string;
+  channelId: string;
+  removedUserId: string;
+}
+
+export interface MemberUpdateMember {
+  userId: string;
+  role?: WorkspaceRole;
+}
+
+export interface MemberUpdatePayload {
+  action: "ROLE_UPDATED" | "REMOVED";
+  member: MemberUpdateMember;
+}
+
+export interface MessagePinPayload {
+  messageId: string;
+  conversationId: string;
+  action: "pin" | "unpin";
+  pinnedBy?: string;
+  pinnedByUsername?: string;
+}
+
+export type NotificationNewPayload = Notification;

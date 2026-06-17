@@ -6,6 +6,7 @@ import { useWorkspaces } from "@/modules/workspaces/hooks/useWorkspaces";
 import { CreateWorkspaceModal } from "@/modules/workspaces/components/CreateWorkspaceModal";
 import { useState } from "react";
 import { cn } from "@/shared/lib/utils";
+import { getPublicUrl } from "@/shared/lib/upload";
 
 interface NavigationRailProps {
   openSettings: (view: 'profile' | 'appearance') => void;
@@ -56,7 +57,9 @@ export function NavigationRail({ openSettings }: NavigationRailProps) {
                     : "text-foreground"
                 )}
               >
-                {workspace.imageUrl ? (
+                {workspace.iconPath ? (
+                  <img src={getPublicUrl("avatars", workspace.iconPath) || ""} alt={workspace.name} className="w-full h-full object-cover rounded-[inherit]" />
+                ) : workspace.imageUrl ? (
                   <img src={workspace.imageUrl} alt={workspace.name} className="w-full h-full object-cover rounded-[inherit]" />
                 ) : (
                   workspace.name.substring(0, 2).toUpperCase()

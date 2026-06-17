@@ -142,6 +142,10 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
               workspaceId={isChannel ? conversation.workspaceId || undefined : undefined}
               channelId={isChannel ? conversationId : undefined}
               userId={isDM ? otherMember?.userId : undefined}
+              channelName={isChannel ? conversation.name : undefined}
+              description={isChannel ? conversation.description : undefined}
+              visibility={isChannel ? conversation.visibility ?? null : undefined}
+              createdAt={isChannel ? conversation.createdAt : undefined}
               view={infoPanelView}
               setInfoPanelView={setInfoPanelView}
               onClose={closeInfoPanel}
@@ -155,6 +159,10 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
               workspaceId={isChannel ? conversation.workspaceId || undefined : undefined}
               channelId={isChannel ? conversationId : undefined}
               userId={isDM ? otherMember?.userId : undefined}
+              channelName={isChannel ? conversation.name : undefined}
+              description={isChannel ? conversation.description : undefined}
+              visibility={isChannel ? conversation.visibility ?? null : undefined}
+              createdAt={isChannel ? conversation.createdAt : undefined}
               view={infoPanelView}
               setInfoPanelView={setInfoPanelView}
               onClose={closeInfoPanel}

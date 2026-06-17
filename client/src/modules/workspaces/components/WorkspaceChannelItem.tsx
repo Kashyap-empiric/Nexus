@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MoreVertical, Edit2, Trash2, Hash, Lock, Globe, Users } from "lucide-react";
+import { MoreVertical, Edit2, Trash2, Hash, Lock, Globe, Users, Settings, LogOut } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +19,8 @@ import {
   DialogFooter,
 } from "@/shared/components/ui/dialog";
 import { useDeleteChannel, useUpdateChannel } from "../hooks/useWorkspaces";
+import { useRemoveChannelMemberMutation } from "../hooks/useChannelMembers";
+import { useUser } from "@/modules/auth/store/useAuthStore";
 import { useWorkspaceChannelsQuery } from "../hooks/useWorkspaceChannels";
 import type { Conversation } from "@/modules/conversations/types/conversation";
 import { useRouter } from "next/navigation";
@@ -26,6 +28,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { ManageChannelMembersModal } from "./ManageChannelMembersModal";
+import { ChannelSettingsModal } from "@/modules/conversations/components/ChannelSettingsModal";
 
 interface WorkspaceChannelItemProps {
   channel: Conversation;
@@ -42,9 +45,11 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
   const { data: channels } = useWorkspaceChannelsQuery(workspaceId);
   const { mutate: deleteChannel, isPending: isDeleting } = useDeleteChannel();
   const { mutate: updateChannel, isPending: isUpdating } = useUpdateChannel();
+  const { mutate: leaveChannel, isPending: isLeaving } = useRemoveChannelMemberMutation();
+  const currentUser = useUser();
   const router = useRouter();
 
-  const [modalType, setModalType] = useState<"rename" | "delete" | "visibility" | "members" | null>(null);
+  const [modalType, setModalType] = useState<"rename" | "delete" | "visibility" | "members" | "settings" | "leave" | null>(null);
   const [renameValue, setRenameValue] = useState(channel.name || "");
 
   const closeModals = () => {
@@ -75,6 +80,18 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
     e.preventDefault();
     e.stopPropagation();
     setModalType("members");
+  };
+
+  const handleSettingsClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setModalType("settings");
+  };
+
+  const handleLeaveClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setModalType("leave");
   };
 
   const confirmDelete = () => {
@@ -110,6 +127,26 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
     updateChannel({ workspaceId, channelId: channel.id, data: { visibility: newVisibility } }, {
       onSuccess: () => closeModals()
     });
+  };
+
+  const confirmLeave = () => {
+    if (!currentUser?.id) return;
+    leaveChannel(
+      { workspaceId, channelId: channel.id, userId: currentUser.id },
+      {
+        onSuccess: () => {
+          closeModals();
+          if (isActive) {
+            const generalChannel = channels?.find(c => c.name === "general");
+            if (generalChannel) {
+              router.push(`/workspaces/${workspaceId}/channels/${generalChannel.id}`);
+            } else {
+              router.push(`/workspaces/${workspaceId}`);
+            }
+          }
+        },
+      }
+    );
   };
 
   const handleCloseModal = (open: boolean) => {
@@ -150,6 +187,10 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
             <MoreVertical className="h-3.5 w-3.5" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48 border shadow-md">
+            <DropdownMenuItem onClick={handleSettingsClick} className="cursor-pointer">
+              <Settings className="h-4 w-4 mr-2" />
+              Channel Settings
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={handleRenameClick} className="cursor-pointer">
               <Edit2 className="h-4 w-4 mr-2" />
               Rename Channel
@@ -182,6 +223,15 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
                 </DropdownMenuItem>
               </>
             )}
+            {!isGeneral && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLeaveClick} className="text-red-600 focus:text-red-600 cursor-pointer">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Leave Channel
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -189,7 +239,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
 
       {/* Rename Dialog */}
       <Dialog open={modalType === "rename"} onOpenChange={handleCloseModal}>
-        <DialogContent showCloseButton={false} className="sm:max-w-md">
+        <DialogContent showCloseButton={false} size="sm">
           <DialogHeader>
             <DialogTitle>Rename Channel</DialogTitle>
           </DialogHeader>
@@ -216,13 +266,15 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
 
       {/* Delete Dialog */}
       <Dialog open={modalType === "delete"} onOpenChange={handleCloseModal}>
-        <DialogContent showCloseButton={false} className="sm:max-w-md">
+        <DialogContent showCloseButton={false} size="sm">
           <DialogHeader>
             <DialogTitle>Delete Channel</DialogTitle>
+          </DialogHeader>
+          <div className="px-6 py-4">
             <DialogDescription>
               Are you sure you want to delete #{channel.name}? This action cannot be undone.
             </DialogDescription>
-          </DialogHeader>
+          </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={closeModals} disabled={isDeleting}>Cancel</Button>
             <Button type="button" variant="destructive" onClick={confirmDelete} disabled={isDeleting}>
@@ -242,17 +294,46 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
 
       {/* Visibility Dialog */}
       <Dialog open={modalType === "visibility"} onOpenChange={handleCloseModal}>
-        <DialogContent showCloseButton={false} className="sm:max-w-md">
+        <DialogContent showCloseButton={false} size="sm">
           <DialogHeader>
             <DialogTitle>Change Visibility</DialogTitle>
+          </DialogHeader>
+          <div className="px-6 py-4">
             <DialogDescription>
               Are you sure you want to make #{channel.name} {channel.visibility === "PRIVATE" ? "public" : "private"}?
             </DialogDescription>
-          </DialogHeader>
+          </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={closeModals} disabled={isUpdating}>Cancel</Button>
             <Button type="button" onClick={confirmVisibility} disabled={isUpdating}>
               {isUpdating ? "Updating..." : "Confirm"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ChannelSettingsModal
+        isOpen={modalType === "settings"}
+        workspaceId={workspaceId}
+        channel={channel}
+        onClose={closeModals}
+      />
+
+      {/* Leave Channel Dialog */}
+      <Dialog open={modalType === "leave"} onOpenChange={handleCloseModal}>
+        <DialogContent showCloseButton={false} size="sm">
+          <DialogHeader>
+            <DialogTitle>Leave Channel</DialogTitle>
+          </DialogHeader>
+          <div className="px-6 py-4">
+            <DialogDescription>
+              Are you sure you want to leave #{channel.name}? You will need to be re-invited to rejoin.
+            </DialogDescription>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={closeModals} disabled={isLeaving}>Cancel</Button>
+            <Button type="button" variant="destructive" onClick={confirmLeave} disabled={isLeaving}>
+              {isLeaving ? "Leaving..." : "Leave"}
             </Button>
           </DialogFooter>
         </DialogContent>
