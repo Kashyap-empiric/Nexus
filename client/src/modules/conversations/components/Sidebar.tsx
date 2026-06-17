@@ -34,14 +34,14 @@ import { useWorkspaceDetails } from "@/modules/workspaces/hooks/useWorkspaces";
 const NewConversationModal = dynamic(() => import("./NewConversationModal").then((m) => m.NewConversationModal), { ssr: false });
 const CreateChannelModal = dynamic(() => import("@/modules/workspaces/components/CreateChannelModal").then((m) => m.CreateChannelModal), { ssr: false });
 import { WorkspaceChannelItem } from "@/modules/workspaces/components/WorkspaceChannelItem";
-import { WorkspaceSettingsModal } from "@/modules/workspaces/components/WorkspaceSettingsModal";
 import { StatusSelector } from "@/modules/users/components/StatusSelector";
 
 interface SidebarProps {
   onNavigate?: () => void;
+  onOpenWorkspaceSettings?: () => void;
 }
 
-export function Sidebar({ onNavigate }: SidebarProps) {
+export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
   useGlobalSocket();
   const { logout } = useAuth();
   const { data: conversations, isLoading } = useConversationsQuery();
@@ -52,7 +52,6 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   const { data: workspaceDetails } = useWorkspaceDetails(mode === "WORKSPACE" ? activeWorkspaceId : null);
   const currentAuthUser = useUser();
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
-  const [workspaceSettingsOpen, setWorkspaceSettingsOpen] = useState(false);
   const inviteModal = useInviteModal();
   const [searchQuery, setSearchQuery] = useState("");
   const params = useParams();
@@ -142,7 +141,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           <WorkspaceHeader
             workspace={workspaceDetails.workspace}
             onInviteClick={() => inviteModal.open("WORKSPACE", workspaceDetails.workspace.id)}
-            onSettingsClick={() => setWorkspaceSettingsOpen(true)}
+            onSettingsClick={() => onOpenWorkspaceSettings?.()}
             rightElement={
               <button
                 type="button"
@@ -188,7 +187,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         <div className="flex-1 overflow-y-auto px-2 py-3 space-y-6">
           <div>
             <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2 mt-2">
-              <span>{mode === "DM" ? "Direct Messages" : "Channels"}</span>
+              <span>{mode === "DM" ? "Direct Messages" : "Public Channels"}</span>
               {mode === "DM" ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger className="flex items-center gap-1 transition-colors py-1 px-2.5 -mr-1 rounded-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-brand/10 text-brand hover:bg-brand/20 normal-case tracking-normal font-medium leading-none">
@@ -378,11 +377,6 @@ export function Sidebar({ onNavigate }: SidebarProps) {
 
       <NewConversationModal isOpen={mode === "DM" && isNewModalOpen} onClose={() => setIsNewModalOpen(false)} />
       {mode === "WORKSPACE" && <CreateChannelModal isOpen={isNewModalOpen} onClose={() => setIsNewModalOpen(false)} workspaceId={activeWorkspaceId!} />}
-      <WorkspaceSettingsModal
-        isOpen={workspaceSettingsOpen}
-        workspaceId={activeWorkspaceId}
-        onClose={() => setWorkspaceSettingsOpen(false)}
-      />
     </>
   );
 }

@@ -72,10 +72,10 @@ export const findDMByPairInTransaction = async (tx: Prisma.TransactionClient, dm
   });
 };
 
-export const findChannelIdsByWorkspaceId = async (workspaceId: string, userId?: string) => {
+export const findChannelIdsByWorkspaceId = async (workspaceId: string, userId?: string, ownerWorkspaceIds?: Set<string>) => {
   const where: any = { workspaceId, type: "CHANNEL" };
 
-  if (userId) {
+  if (userId && !ownerWorkspaceIds?.has(workspaceId)) {
     where.OR = [
       { visibility: "PUBLIC" },
       {
@@ -93,21 +93,46 @@ export const findChannelIdsByWorkspaceId = async (workspaceId: string, userId?: 
 
 export const findChannelIdsByWorkspaceIds = async (
   workspaceIds: string[],
-  userId?: string
+  userId?: string,
+  ownerWorkspaceIds?: Set<string>
 ) => {
+  if (workspaceIds.length === 0) return [];
+
   const where: any = {
-    workspaceId: { in: workspaceIds },
     type: "CHANNEL",
   };
 
   if (userId) {
-    where.OR = [
-      { visibility: "PUBLIC" },
-      {
-        visibility: "PRIVATE",
-        members: { some: { userId } },
-      },
-    ];
+    const conditions: any[] = [];
+
+    // In owned workspaces, owners see ALL channels (no visibility filter)
+    const ownedIds = ownerWorkspaceIds?.size
+      ? workspaceIds.filter(id => ownerWorkspaceIds.has(id))
+      : [];
+    if (ownedIds.length > 0) {
+      conditions.push({ workspaceId: { in: ownedIds } });
+    }
+
+    // In non-owned workspaces, only public or channels the user is a member of
+    const nonOwnedIds = workspaceIds.filter(id => !ownedIds.includes(id));
+    if (nonOwnedIds.length > 0) {
+      conditions.push({
+        workspaceId: { in: nonOwnedIds },
+        OR: [
+          { visibility: "PUBLIC" },
+          {
+            visibility: "PRIVATE",
+            members: { some: { userId } },
+          },
+        ],
+      });
+    }
+
+    if (conditions.length > 0) {
+      where.OR = conditions;
+    }
+  } else {
+    where.workspaceId = { in: workspaceIds };
   }
 
   return prisma.conversation.findMany({
@@ -116,13 +141,13 @@ export const findChannelIdsByWorkspaceIds = async (
   });
 };
 
-export const findChannelByWorkspaceId = async (workspaceId: string, userId?: string) => {
+export const findChannelByWorkspaceId = async (workspaceId: string, userId?: string, ownerWorkspaceIds?: Set<string>) => {
   const where: any = {
     workspaceId,
     type: "CHANNEL",
   };
 
-  if (userId) {
+  if (userId && !ownerWorkspaceIds?.has(workspaceId)) {
     where.OR = [
       { visibility: "PUBLIC" },
       {

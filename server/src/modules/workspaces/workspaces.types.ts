@@ -18,7 +18,7 @@ export interface WorkspaceMemberDTO {
   id: string;
   workspaceId: string;
   userId: string;
-  role: "ADMIN" | "MEMBER";
+  role: "OWNER" | "ADMIN" | "MEMBER";
   joinedAt: Date;
   user: {
     id: string;

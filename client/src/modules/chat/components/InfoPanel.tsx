@@ -205,7 +205,7 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
         )}
 
         {view === 'pins' && (
-          <PinnedMessagesPanel conversationId={conversationId} currentUserId={currentUserId} />
+          <PinnedMessagesPanel conversationId={conversationId} currentUserId={currentUserId} workspaceId={workspaceId} />
         )}
       </div>
     </div>

@@ -64,6 +64,7 @@ export const handleConversationNew = (queryClient: QueryClient) => {
   return (conversation: Conversation) => {
     if (!conversation?.id) return;
 
+    // Update DM conversations sidebar
     queryClient.setQueryData<Conversation[]>(
       queryKeys.conversations,
       (oldData) => {
@@ -76,6 +77,21 @@ export const handleConversationNew = (queryClient: QueryClient) => {
         return [conversation, ...oldData];
       }
     );
+
+    // If this is a workspace channel, also add it to the workspace-channels cache
+    if (conversation.workspaceId) {
+      queryClient.setQueryData<Conversation[]>(
+        ["workspace-channels", conversation.workspaceId],
+        (oldData) => {
+          if (!Array.isArray(oldData)) return oldData;
+
+          const exists = oldData.some((ch) => ch.id === conversation.id);
+          if (exists) return oldData;
+
+          return [...oldData, conversation];
+        }
+      );
+    }
   };
 };
 

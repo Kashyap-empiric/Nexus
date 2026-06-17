@@ -12,10 +12,17 @@ export const getUserWorkspaces = async (userId: string) => {
 
   const workspaceIds = workspaces.map((w) => w.id);
 
+  // Determine which workspaces the user owns — owners see all channels (including private)
+  const memberRoles = await workspacesRepo.findUserRolesInWorkspaces(userId, workspaceIds);
+  const ownedWorkspaceIds = new Set(
+    memberRoles.filter(m => m.role === "OWNER").map(m => m.workspaceId)
+  );
+
   // Get all accessible channels across all user workspaces (includes workspaceId)
   const accessibleChannels = await conversationsRepo.findChannelIdsByWorkspaceIds(
     workspaceIds,
-    userId
+    userId,
+    ownedWorkspaceIds
   );
 
   if (accessibleChannels.length === 0) {
@@ -63,7 +70,13 @@ export const getWorkspaceChannels = async (userId: string, slugOrId: string) => 
   const isMember = await isWorkspaceMember(userId, workspace.id);
   if (!isMember) throw new Error("Forbidden: Not a member of this workspace");
 
-  const channels = await conversationsRepo.findChannelByWorkspaceId(workspace.id, userId);
+  // Owners see all channels (including private)
+  const member = workspace.members.find(m => m.userId === userId);
+  const ownedWorkspaceIds = member?.role === WorkspaceRole.OWNER
+    ? new Set([workspace.id])
+    : new Set<string>();
+
+  const channels = await conversationsRepo.findChannelByWorkspaceId(workspace.id, userId, ownedWorkspaceIds);
 
   // Count unread messages for all channels in a single query
   const unreadCountsMap = await conversationsRepo.countUnreadByConversations(
