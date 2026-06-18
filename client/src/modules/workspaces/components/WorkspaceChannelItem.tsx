@@ -161,7 +161,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
       onClick={() => onNavigate?.()}
       className={`group flex items-center justify-between px-2 py-2 rounded-md transition-colors ${isActive
         ? "bg-brand/10 text-brand dark:bg-brand/10 dark:text-brand"
-        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground dark:hover:bg-white/5"
+        : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
         }`}
     >
       <div className="flex items-center gap-2 min-w-0">
@@ -177,7 +177,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
 
       <div className="flex items-center gap-1 shrink-0">
         {isUnread && !isActive && (
-          <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[12px] font-bold leading-none">
+          <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[12px] font-bold leading-none">
             {unreadCount > 99 ? '99+' : unreadCount}
           </div>
         )}
@@ -217,7 +217,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleDeleteClick} className="text-red-600 focus:text-red-600 cursor-pointer">
+                <DropdownMenuItem onClick={handleDeleteClick} className="text-destructive focus:text-destructive cursor-pointer">
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete Channel
                 </DropdownMenuItem>
@@ -226,7 +226,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
             {!isGeneral && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLeaveClick} className="text-red-600 focus:text-red-600 cursor-pointer">
+                <DropdownMenuItem onClick={handleLeaveClick} className="text-destructive focus:text-destructive cursor-pointer">
                   <LogOut className="h-4 w-4 mr-2" />
                   Leave Channel
                 </DropdownMenuItem>
@@ -269,12 +269,10 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
         <DialogContent showCloseButton={false} size="sm">
           <DialogHeader>
             <DialogTitle>Delete Channel</DialogTitle>
-          </DialogHeader>
-          <div className="px-6 py-4">
             <DialogDescription>
               Are you sure you want to delete #{channel.name}? This action cannot be undone.
             </DialogDescription>
-          </div>
+          </DialogHeader>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={closeModals} disabled={isDeleting}>Cancel</Button>
             <Button type="button" variant="destructive" onClick={confirmDelete} disabled={isDeleting}>
@@ -297,12 +295,10 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
         <DialogContent showCloseButton={false} size="sm">
           <DialogHeader>
             <DialogTitle>Change Visibility</DialogTitle>
-          </DialogHeader>
-          <div className="px-6 py-4">
             <DialogDescription>
               Are you sure you want to make #{channel.name} {channel.visibility === "PRIVATE" ? "public" : "private"}?
             </DialogDescription>
-          </div>
+          </DialogHeader>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={closeModals} disabled={isUpdating}>Cancel</Button>
             <Button type="button" onClick={confirmVisibility} disabled={isUpdating}>
@@ -324,12 +320,10 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
         <DialogContent showCloseButton={false} size="sm">
           <DialogHeader>
             <DialogTitle>Leave Channel</DialogTitle>
-          </DialogHeader>
-          <div className="px-6 py-4">
             <DialogDescription>
               Are you sure you want to leave #{channel.name}? You will need to be re-invited to rejoin.
             </DialogDescription>
-          </div>
+          </DialogHeader>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={closeModals} disabled={isLeaving}>Cancel</Button>
             <Button type="button" variant="destructive" onClick={confirmLeave} disabled={isLeaving}>

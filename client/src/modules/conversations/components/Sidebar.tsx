@@ -136,7 +136,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
 
   return (
     <>
-      <aside className="w-full md:w-72 lg:w-80 border-r bg-background md:bg-muted/30 md:dark:bg-muted/10 flex flex-col shrink-0">
+      <aside className="w-full md:w-72 lg:w-80 border-r bg-sidebar flex flex-col shrink-0">
         {mode === "WORKSPACE" && workspaceDetails ? (
           <WorkspaceHeader
             workspace={workspaceDetails.workspace}
@@ -150,7 +150,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
                   e.stopPropagation();
                   onNavigate?.();
                 }}
-                className="md:hidden p-1.5 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 text-muted-foreground transition-colors cursor-pointer"
+                className="md:hidden p-1.5 rounded-full hover:bg-accent text-muted-foreground transition-colors cursor-pointer"
                 title="Close sidebar"
               >
                 <X className="h-5 w-5 pointer-events-none" />
@@ -247,9 +247,10 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
                       href={`/conversations/${chat.id}`}
                       prefetch={false}
                       onClick={() => onNavigate?.()}
-                      className={`flex items-center gap-3 px-2 py-2 rounded-md transition-colors ${isActive
-                        ? "bg-brand/10 text-brand dark:bg-brand/10 dark:text-brand"
-                        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground dark:hover:bg-white/5"
+                      className={`flex items-center gap-3 px-2 py-2 rounded-md transition-colors ${
+                        isActive
+                          ? "bg-brand/10 text-brand dark:bg-brand/10 dark:text-brand"
+                          : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                         }`}
                     >
                       <div className="relative shrink-0">
@@ -279,10 +280,10 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
                       </div>
 
                       {isUnread && !isActive && (
-                        <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[12px] font-bold shrink-0 leading-none">
-                          {unreadCount > 99 ? '99+' : unreadCount}
-                        </div>
-                      )}
+                          <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[12px] font-bold shrink-0 leading-none">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                          </div>
+                        )}
                     </Link>
                   );
                 })}
@@ -345,7 +346,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
         </div>
 
         {/* Bottom: User Profile */}
-        <div className="p-4 border-t bg-background shrink-0 flex items-center justify-between">
+        <div className="p-4 border-t bg-sidebar shrink-0 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative shrink-0 flex items-center">
               <UserAvatar

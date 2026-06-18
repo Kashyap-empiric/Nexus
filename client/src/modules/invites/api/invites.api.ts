@@ -6,3 +6,7 @@ export const generateInvite = async (params: { type: InviteType; entityId?: stri
   const response = await api.post(API_ROUTES.INVITES.GENERATE, params);
   return response.data;
 };
+
+export const declineInvite = async (token: string): Promise<void> => {
+  await api.post(API_ROUTES.INVITES.DECLINE, { token });
+};

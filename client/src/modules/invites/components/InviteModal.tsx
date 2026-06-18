@@ -1,13 +1,20 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Copy, Check, Loader2, Link as LinkIcon, Search, UserPlus } from "lucide-react";
+import { Copy, Check, Loader2, Link as LinkIcon, UserPlus, Mail } from "lucide-react";
 import type { InviteType } from "../types/invites";
 import { useInviteLink } from "../hooks/useInviteLink";
 import { useUsersSearchQuery } from "@/modules/users";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+} from "@/shared/components/ui/dialog";
 import { toast } from "sonner";
 
 interface SelectedUser {
@@ -33,7 +40,10 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
   const [selectedUsers, setSelectedUsers] = useState<SelectedUser[]>([]);
   const [isInviting, setIsInviting] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [emailInviteInput, setEmailInviteInput] = useState("");
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const emailInviteRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Debounce email input for search
@@ -106,6 +116,34 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
     }
   };
 
+  const handleEmailInvite = async () => {
+    const email = emailInviteInput.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    setIsSendingEmail(true);
+    try {
+      const { inviteByEmail } = await import("../../workspaces/api/workspaces.api");
+      const result = await inviteByEmail(entityId!, email);
+
+      if (!result.emailSent) {
+        toast.warning(`Invite sent but email could not be delivered to ${email}`);
+      } else {
+        toast.success(`Invitation sent to ${email}`);
+      }
+
+      setEmailInviteInput("");
+      onClose();
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.error || "Failed to send invitation";
+      toast.error(errorMsg);
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   // Generate invite link on open
   useEffect(() => {
     if (isOpen && type && !inviteUrl && !isLoading && !error) {
@@ -122,6 +160,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
         setIsCopied(false);
         setSelectedUsers([]);
         setEmailInput("");
+        setEmailInviteInput("");
         setDebouncedQuery("");
       }, 300);
     }
@@ -181,19 +220,20 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-background border shadow-lg rounded-xl w-full max-w-md overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Invite Someone</h2>
-          <button onClick={onClose} className="p-1 hover:bg-muted rounded-full">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+  const handleOpenChange = (open: boolean) => {
+    if (!open) onClose();
+  };
 
-        <div className="p-6">
+  return (
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent size="sm" elevation="md" style={{ maxWidth: '1200px' }}>
+        <DialogHeader>
+          <DialogTitle>Invite Someone</DialogTitle>
+        </DialogHeader>
+
+        <DialogBody>
           {type === "WORKSPACE" && (
-            <div className="mb-6">
+            <div className="mb-4">
               <h3 className="font-medium text-sm mb-2">Invite by email</h3>
 
               {/* Chip input area */}
@@ -216,7 +256,9 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
                       onClick={() => removeUser(user.id)}
                       className="p-0.5 rounded-full hover:bg-primary/20 transition-colors"
                     >
-                      <X className="h-3 w-3" />
+                      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                      </svg>
                     </button>
                   </span>
                 ))}
@@ -242,7 +284,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
               {showDropdown && debouncedQuery.length > 0 && (
                 <div
                   ref={dropdownRef}
-                  className="border rounded-lg bg-background shadow-lg max-h-48 overflow-y-auto mb-3"
+                  className="border rounded-lg bg-popover shadow-lg max-h-48 overflow-y-auto mb-3"
                 >
                   {isSearching ? (
                     <div className="flex items-center justify-center py-6 text-muted-foreground">
@@ -299,7 +341,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
                 </div>
               )}
 
-              {/* Invite button */}
+              {/* Invite button for selected users */}
               <Button
                 onClick={handleSubmit}
                 disabled={selectedUsers.length === 0 || isInviting}
@@ -320,12 +362,48 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
                 )}
               </Button>
 
+              {/* Email-only invite section */}
+              <div className="mb-4">
+                <div className="flex gap-2">
+                  <Input
+                    ref={emailInviteRef}
+                    type="email"
+                    placeholder="Enter email address..."
+                    value={emailInviteInput}
+                    onChange={(e) => setEmailInviteInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleEmailInvite();
+                      }
+                    }}
+                    className="flex-1"
+                    disabled={isSendingEmail}
+                  />
+                  <Button
+                    onClick={handleEmailInvite}
+                    disabled={!emailInviteInput.trim() || isSendingEmail}
+                    variant="outline"
+                    className="shrink-0"
+                  >
+                    {isSendingEmail ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Mail className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Invite someone who doesn&apos;t have an account yet. They&apos;ll receive an email with the invite link.
+                </p>
+              </div>
+
               <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-border"></div>
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">
+                  <span className="bg-popover px-2 text-muted-foreground">
                     Or share link
                   </span>
                 </div>
@@ -403,8 +481,8 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
               </p>
             </div>
           )}
-        </div>
-      </div>
-    </div>
+        </DialogBody>
+      </DialogContent>
+    </Dialog>
   );
 }

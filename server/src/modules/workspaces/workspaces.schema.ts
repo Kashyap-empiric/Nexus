@@ -106,6 +106,12 @@ export const getWorkspaceChannelsParamsSchema = workspaceIdParamsSchema;
 
 export type GetWorkspaceChannelsParams = z.infer<typeof getWorkspaceChannelsParamsSchema>;
 
+export const inviteByEmailBodySchema = z.object({
+  email: z.string().email("Invalid email address"),
+});
+
+export type InviteByEmailBody = z.infer<typeof inviteByEmailBodySchema>;
+
 export const addChannelMembersSchema = z.object({
   userIds: z.array(z.string().uuid()).min(1).max(50),
 });

@@ -273,6 +273,8 @@ export const deleteMessage = async (messageId: string, conversationId: string, u
 
     const updatedMessage = await messagesRepo.softDeleteMessageInTransaction(tx, messageId);
 
+    await messagesRepo.deletePinInTransaction(tx, messageId);
+
     let conversationMetadata = null;
 
     if (conversation?.latestMessageId === messageId) {

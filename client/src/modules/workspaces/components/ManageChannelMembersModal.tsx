@@ -82,7 +82,7 @@ export function ManageChannelMembersModal({ workspaceId, channelId, open, onOpen
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent size="sm" style={{ maxWidth: '1200px' }}>
         <DialogHeader>
           <DialogTitle>Manage Members</DialogTitle>
           <DialogDescription>

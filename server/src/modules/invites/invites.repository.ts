@@ -4,6 +4,10 @@ import { InviteType } from "@prisma/client";
 
 // ====== Reads ======
 
+export const findInviteByToken = async (token: string) => {
+  return prisma.invite.findUnique({ where: { token } });
+};
+
 export const findInviteByTokenInTransaction = async (
   tx: Prisma.TransactionClient,
   token: string

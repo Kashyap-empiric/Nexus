@@ -12,6 +12,14 @@ const PORT = ENV.PORT;
 connectRedis();
 initPushService();
 
+if (ENV.SENDGRID_API_KEY) {
+  console.log(
+    `[email] ✓ SendGrid ready  from=${ENV.SENDGRID_FROM_EMAIL || "noreply@nexus.app"}`,
+  );
+} else {
+  console.warn("[email] ✗ SENDGRID_API_KEY not set — email invites will fail");
+}
+
 const httpServer = http.createServer(app);
 
 httpServer.listen(PORT, () => {

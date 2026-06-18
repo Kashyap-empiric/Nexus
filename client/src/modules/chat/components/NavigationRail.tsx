@@ -19,13 +19,13 @@ export function NavigationRail({ openSettings }: NavigationRailProps) {
 
   return (
     <>
-      <aside className="w-[60px] border-r flex flex-col items-center justify-between shrink-0 bg-background dark:bg-zinc-950 py-3 gap-3 overflow-y-auto hide-scrollbar">
+      <aside className="w-[60px] border-r flex flex-col items-center justify-between shrink-0 bg-sidebar py-3 gap-3 overflow-y-auto hide-scrollbar">
         <div className="flex flex-col items-center gap-3 w-full">
           <Link
             href={APP_ROUTES.CONVERSATIONS.INDEX}
             className={cn(
-              "w-[40px] h-[40px] rounded-2xl bg-primary/10 text-primary flex items-center justify-center transition-all duration-200 hover:rounded-xl",
-              mode === "DM" ? "bg-brand text-brand-foreground rounded-xl" : ""
+              "w-[40px] h-[40px] rounded-2xl bg-muted text-muted-foreground flex items-center justify-center transition-all duration-200 hover:rounded-xl hover:bg-accent hover:text-accent-foreground",
+              mode === "DM" ? "bg-brand text-brand-foreground rounded-xl shadow-sm" : ""
             )}
             title="Direct Messages"
             onClick={() => {
@@ -51,10 +51,10 @@ export function NavigationRail({ openSettings }: NavigationRailProps) {
                 }}
                 title={workspace.name}
                 className={cn(
-                  "w-[40px] h-[40px] rounded-2xl bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center transition-all duration-200 hover:rounded-xl font-semibold text-lg relative",
+                  "w-[40px] h-[40px] rounded-2xl bg-muted text-muted-foreground flex items-center justify-center transition-all duration-200 hover:rounded-xl hover:bg-accent hover:text-accent-foreground font-semibold text-lg relative",
                   isActive
-                    ? "bg-brand text-brand-foreground rounded-xl"
-                    : "text-foreground"
+                    ? "bg-brand text-brand-foreground rounded-xl shadow-sm"
+                    : ""
                 )}
               >
                 {workspace.iconPath ? (
@@ -70,7 +70,7 @@ export function NavigationRail({ openSettings }: NavigationRailProps) {
                 )}
 
                 {unreadCount > 0 && !isActive && (
-                  <div className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none border-2 border-background shadow-sm z-10">
+                  <div className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none border-2 border-sidebar shadow-sm z-10">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </div>
                 )}
@@ -80,7 +80,7 @@ export function NavigationRail({ openSettings }: NavigationRailProps) {
 
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="w-[40px] h-[40px] rounded-2xl border border-dashed border-border text-muted-foreground flex items-center justify-center transition-all duration-200 hover:rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            className="w-[40px] h-[40px] rounded-2xl border border-dashed border-border text-muted-foreground flex items-center justify-center transition-all duration-200 hover:rounded-xl hover:bg-accent hover:text-accent-foreground hover:border-transparent"
             title="Create Workspace"
           >
             <Plus size={20} />
@@ -90,7 +90,7 @@ export function NavigationRail({ openSettings }: NavigationRailProps) {
         <div className="mt-auto">
           <button
             onClick={() => openSettings('profile')}
-            className="w-[40px] h-[40px] rounded-2xl text-muted-foreground flex items-center justify-center transition-all duration-200 hover:rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            className="w-[40px] h-[40px] rounded-2xl text-muted-foreground flex items-center justify-center transition-all duration-200 hover:rounded-xl hover:bg-accent hover:text-accent-foreground"
             title="Settings"
           >
             <Settings size={20} />

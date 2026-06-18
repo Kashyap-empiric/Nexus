@@ -1,6 +1,7 @@
 import { type Response } from "express";
+import { type Request } from "express";
 import { type AuthRequest } from "../../types/shared.js";
-import { resolveInviteService, generateInviteService } from "./invites.service.js";
+import { resolveInviteService, generateInviteService, getInviteInfoService, revokeInviteByToken } from "./invites.service.js";
 import { dispatchConversationNew } from "../../socket/socket.dispatcher.js";
 import { getIO } from "../../socket/socket.js";
 import { SOCKET_EVENTS } from "../../shared/socket-events.js";
@@ -14,7 +15,7 @@ export const resolveInvite = async (req: AuthRequest, res: Response): Promise<an
   }
 
   try {
-    const { redirectUrl, events } = await resolveInviteService({ token, userId });
+    const { redirectUrl, events, alreadyMember } = await resolveInviteService({ token, userId });
     if (events && events.length > 0) {
       try {
         events.forEach((event) => {
@@ -29,7 +30,7 @@ export const resolveInvite = async (req: AuthRequest, res: Response): Promise<an
       }
     }
 
-    res.json({ redirectUrl });
+    res.json({ redirectUrl, alreadyMember: alreadyMember || undefined });
   } catch (error: any) {
     if (error.message === "INVALID_OR_EXPIRED_INVITE") {
       return res.status(400).json({ error: "INVALID_OR_EXPIRED_INVITE" });
@@ -54,6 +55,48 @@ function dispatchConversationUpdate(conversationId: string, userId: string) {
     console.error("[resolveInvite] Failed to emit conversation:update:", err);
   }
 }
+
+export const declineInvite = async (req: AuthRequest, res: Response): Promise<any> => {
+  const { token } = req.body;
+  const userId = req.user?.id;
+
+  if (!token) {
+    return res.status(400).json({ error: "Missing token" });
+  }
+
+  try {
+    const result = await revokeInviteByToken(token);
+
+    if (!result) {
+      return res.status(404).json({ error: "INVITE_NOT_FOUND" });
+    }
+
+    console.log(`[declineInvite] ✓ Invite declined  token=${token.substring(0, 8)}...  userId=${userId}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error("[declineInvite] error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getInviteInfo = async (req: Request, res: Response): Promise<any> => {
+  const token = req.query.token as string;
+
+  if (!token) {
+    return res.status(400).json({ error: "Missing token" });
+  }
+
+  try {
+    const info = await getInviteInfoService(token);
+    if (!info) {
+      return res.status(404).json({ error: "INVITE_NOT_FOUND" });
+    }
+    return res.json({ data: info });
+  } catch (error) {
+    console.error("[getInviteInfo] error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
 
 export const generateInvite = async (req: AuthRequest, res: Response): Promise<any> => {
   const { type, entityId } = req.body;

@@ -17,6 +17,7 @@ import {
   removeWorkspaceMember,
   inviteMemberByUsername,
   inviteMembers,
+  inviteByEmail,
   getChannelMembers,
   addChannelMembers,
   removeChannelMember,
@@ -32,6 +33,7 @@ import {
   updateChannelBodySchema,
   inviteByUsernameBodySchema,
   inviteMultipleBodySchema,
+  inviteByEmailBodySchema,
   updateMemberRoleBodySchema,
   addChannelMembersSchema,
 } from "./workspaces.schema.js";
@@ -53,6 +55,7 @@ router.delete("/:id/channels/:channelId", validate({ params: channelIdParamsSche
 router.get("/:id/members", validate({ params: workspaceIdParamsSchema }), getWorkspaceMembers);
 router.post("/:id/invite", validate({ params: workspaceIdParamsSchema, body: inviteByUsernameBodySchema }), inviteMemberByUsername);
 router.post("/:id/invite-multiple", validate({ params: workspaceIdParamsSchema, body: inviteMultipleBodySchema }), inviteMembers);
+router.post("/:id/invite-email", validate({ params: workspaceIdParamsSchema, body: inviteByEmailBodySchema }), inviteByEmail);
 router.get("/:id/channels/:channelId/members", validate({ params: channelIdParamsSchema }), getChannelMembers);
 router.post("/:id/channels/:channelId/members", validate({ params: channelIdParamsSchema, body: addChannelMembersSchema }), addChannelMembers);
 router.delete("/:id/channels/:channelId/members/:userId", validate({ params: channelMemberIdParamsSchema }), removeChannelMember);

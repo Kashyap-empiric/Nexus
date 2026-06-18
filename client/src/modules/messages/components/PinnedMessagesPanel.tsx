@@ -3,11 +3,12 @@
 import { usePinnedMessages, useUnpinMessage } from "@/modules/messages/hooks/usePinnedMessages";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { Button } from "@/shared/components/ui/button";
-import { Pin, Trash, Loader2 } from "lucide-react";
+import { Pin, PinOff, Loader2, FileX } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { useLayoutUI } from "@/shared/components/layout/AppLayoutShell";
 import { scrollToMessage } from "@/shared/lib/dom";
 import { useMediaQuery } from "@/shared/hooks/use-media-query";
+import { cn } from "@/shared/lib/utils";
 
 interface PinnedMessagesPanelProps {
   conversationId: string;
@@ -15,7 +16,7 @@ interface PinnedMessagesPanelProps {
   workspaceId?: string | null;
 }
 
-export function PinnedMessagesPanel({ conversationId, currentUserId }: PinnedMessagesPanelProps) {
+export function PinnedMessagesPanel({ conversationId }: PinnedMessagesPanelProps) {
   const { data: pins, isLoading, isError } = usePinnedMessages(conversationId);
   const unpinMutation = useUnpinMessage(conversationId);
   const { closeInfoPanel } = useLayoutUI();
@@ -31,7 +32,7 @@ export function PinnedMessagesPanel({ conversationId, currentUserId }: PinnedMes
 
   if (isError) {
     return (
-      <div className="text-sm text-red-500 p-4 text-center">
+      <div className="text-sm text-destructive p-4 text-center">
         Failed to load pinned messages.
       </div>
     );
@@ -57,6 +58,7 @@ export function PinnedMessagesPanel({ conversationId, currentUserId }: PinnedMes
           role="button"
           tabIndex={0}
           onClick={() => {
+            if (pin.message.deletedAt) return;
             if (isMobile) {
               closeInfoPanel();
               setTimeout(() => scrollToMessage(pin.messageId), 50);
@@ -67,6 +69,7 @@ export function PinnedMessagesPanel({ conversationId, currentUserId }: PinnedMes
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
+              if (pin.message.deletedAt) return;
               if (isMobile) {
                 closeInfoPanel();
                 setTimeout(() => scrollToMessage(pin.messageId), 50);
@@ -75,15 +78,23 @@ export function PinnedMessagesPanel({ conversationId, currentUserId }: PinnedMes
               }
             }
           }}
-          className="group flex items-start gap-3 p-3 rounded-lg bg-muted/20 hover:bg-muted/30 border border-border/50 transition-colors text-left w-full cursor-pointer"
+          className={cn(
+            "group flex items-start gap-3 p-3 rounded-lg bg-muted/20 hover:bg-muted/30 border border-border/50 transition-colors text-left w-full",
+            pin.message.deletedAt ? "cursor-default opacity-60" : "cursor-pointer"
+          )}
         >
-          <UserAvatar
-            name={pin.message.user?.username}
-            src={pin.message.user?.avatarUrl}
-            
-            className="h-8 w-8 shrink-0 mt-0.5"
-            fallbackClassName="bg-primary/20 text-primary font-medium"
-          />
+          {pin.message.deletedAt ? (
+            <div className="h-8 w-8 shrink-0 mt-0.5 rounded-full bg-muted flex items-center justify-center">
+              <FileX className="h-4 w-4 text-muted-foreground" />
+            </div>
+          ) : (
+            <UserAvatar
+              name={pin.message.user?.username}
+              src={pin.message.user?.avatarUrl}
+              className="h-8 w-8 shrink-0 mt-0.5"
+              fallbackClassName="bg-primary/20 text-primary font-medium"
+            />
+          )}
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-2">
               <span className="text-sm font-semibold text-foreground">
@@ -100,25 +111,27 @@ export function PinnedMessagesPanel({ conversationId, currentUserId }: PinnedMes
               </span>
             </div>
             <div className="text-sm text-foreground mt-0.5 line-clamp-3">
-              <MarkdownRenderer content={pin.message.content} />
+              {pin.message.deletedAt ? (
+                <span className="italic text-muted-foreground">Message deleted</span>
+              ) : (
+                <MarkdownRenderer content={pin.message.content} />
+              )}
             </div>
           </div>
-          {currentUserId === pin.pinnedBy && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                unpinMutation.mutate(pin.messageId);
-              }}
-              title="Unpin"
-              disabled={unpinMutation.isPending}
-            >
-              <Trash className="h-3.5 w-3.5" />
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              unpinMutation.mutate(pin.messageId);
+            }}
+            title="Unpin"
+            disabled={unpinMutation.isPending}
+          >
+            <PinOff className="h-3.5 w-3.5" />
+          </Button>
         </div>
       ))}
     </div>

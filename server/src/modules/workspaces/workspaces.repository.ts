@@ -124,28 +124,27 @@ export const onboardUserToWorkspaceInTransaction = async (
     throw new Error("GENERAL_CHANNEL_NOT_FOUND");
   }
 
-  try {
-    await tx.workspaceMember.create({
-      data: {
-        workspaceId,
-        userId,
-        role: "MEMBER",
-      },
-    });
+  // Check membership upfront instead of catching P2002 — a caught
+  // Prisma error inside a transaction still aborts the underlying
+  // PostgreSQL transaction, causing all subsequent queries to fail (25P02).
+  const existingMember = await tx.workspaceMember.findUnique({
+    where: { workspaceId_userId: { workspaceId, userId } },
+  });
 
-    await tx.conversationMember.create({
-      data: {
-        conversationId: generalChannel.id,
-        userId,
-      },
+  if (!existingMember) {
+    await tx.workspaceMember.create({
+      data: { workspaceId, userId, role: "MEMBER" },
     });
-  } catch (error: any) {
-    if (error.code === "P2002") {
-      // Unique constraint failed -> User is already a member
-      // Gracefully ignore
-    } else {
-      throw error;
-    }
+  }
+
+  const existingChannelMember = await tx.conversationMember.findUnique({
+    where: { conversationId_userId: { conversationId: generalChannel.id, userId } },
+  });
+
+  if (!existingChannelMember) {
+    await tx.conversationMember.create({
+      data: { conversationId: generalChannel.id, userId },
+    });
   }
 
   return { generalChannelId: generalChannel.id };

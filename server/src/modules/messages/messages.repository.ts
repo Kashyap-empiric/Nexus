@@ -70,7 +70,7 @@ export const searchMessages = async (query: string, userId: string, limit: numbe
 
 export const getPinnedMessages = async (conversationId: string) => {
   return prisma.pinnedMessage.findMany({
-    where: { conversationId },
+    where: { conversationId, message: { deletedAt: null } },
     include: {
       message: {
         include: {
@@ -107,6 +107,12 @@ export const createPin = async (messageId: string, conversationId: string, pinne
 
 export const deletePin = async (messageId: string) => {
   return prisma.pinnedMessage.delete({
+    where: { messageId },
+  });
+};
+
+export const deletePinInTransaction = async (tx: Prisma.TransactionClient, messageId: string) => {
+  return tx.pinnedMessage.deleteMany({
     where: { messageId },
   });
 };

@@ -110,9 +110,9 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
 
   if (isError) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-red-500 p-4">
+      <div className="flex-1 flex flex-col items-center justify-center text-destructive p-4">
         <p className="font-bold">Error fetching messages:</p>
-        <pre className="text-sm bg-red-50/10 p-2 mt-2 rounded">{(error as Error)?.message || "Unknown error"}</pre>
+        <pre className="text-sm bg-destructive/10 p-2 mt-2 rounded">{(error as Error)?.message || "Unknown error"}</pre>
       </div>
     );
   }
@@ -196,7 +196,7 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
         <div className="absolute bottom-2 right-4 md:right-8 z-10 animate-in fade-in zoom-in-95 duration-200">
           <Button
             size="icon"
-            className="h-10 w-10 rounded-full shadow-lg bg-background border border-solid border-zinc-300 dark:border-zinc-700 text-foreground hover:bg-muted relative"
+            className="h-10 w-10 rounded-full shadow-lg bg-card border border-border text-foreground hover:bg-muted relative"
             onClick={() => scrollToBottom("smooth")}
           >
             <ChevronDown className="h-5 w-5" />

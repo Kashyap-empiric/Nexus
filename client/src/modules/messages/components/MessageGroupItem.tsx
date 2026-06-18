@@ -21,6 +21,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogMedia,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import { useEditMessageMutation, useDeleteMessageMutation } from "@/modules/messages/hooks/useMessages";
@@ -61,6 +62,15 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
     }
   }, [editingMessageId]);
 
+  // Cleanup long press timer on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleEditStart = (msgId: string, content: string) => {
     setEditingMessageId(msgId);
     setEditContent(content);
@@ -98,10 +108,59 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
   };
 
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [contextMenuTarget, setContextMenuTarget] = useState<{
+    msgId: string;
+    isMyMessage: boolean;
+    isPinned: boolean;
+    content: string;
+    username: string;
+  } | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+
+  const clearLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    touchStartPosRef.current = null;
+  };
+
+  const handleTouchStart = (e: React.TouchEvent, msgId: string, isDel: boolean, isMyMsg: boolean, isPinned: boolean, content: string, username: string) => {
+    if (isDel) return;
+    const touch = e.touches[0];
+    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+    longPressTimerRef.current = setTimeout(() => {
+      if (touchStartPosRef.current) {
+        setContextMenuPos({ x: touchStartPosRef.current.x, y: touchStartPosRef.current.y });
+        setContextMenuTarget({ msgId, isMyMessage: isMyMsg, isPinned, content, username });
+        setOpenMenuId(msgId);
+      }
+      longPressTimerRef.current = null;
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    clearLongPress();
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartPosRef.current && longPressTimerRef.current) {
+      const touch = e.touches[0];
+      const dx = Math.abs(touch.clientX - touchStartPosRef.current.x);
+      const dy = Math.abs(touch.clientY - touchStartPosRef.current.y);
+      // Cancel long press if finger moved more than 10px (scrolling)
+      if (dx > 10 || dy > 10) {
+        clearLongPress();
+      }
+    }
+  };
 
   const handleContextMenu = (e: React.MouseEvent, msgId: string, isDel: boolean) => {
     if (!isDel) {
       e.preventDefault();
+      setContextMenuPos({ x: e.clientX, y: e.clientY });
       setOpenMenuId(msgId);
     }
   };
@@ -125,6 +184,10 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
               key={msg.id}
               id={`msg-${msg.id}`}
               className={`group/row flex hover:bg-black/[0.06] dark:hover:bg-white/[0.06] px-4 md:px-6 animate-in fade-in slide-in-from-bottom-1 duration-300 ease-out ${isFirst ? "pt-2.5 pb-0.5" : "py-0.5"} ${msg.optimistic || msg.pending ? "opacity-70" : ""}`}
+              style={!isDeleted ? { WebkitTouchCallout: "none" } : undefined}
+              onTouchStart={(e) => handleTouchStart(e, msg.id, isDeleted, isMyMessage, isPinned, msg.content, user?.username || "Unknown")}
+              onTouchEnd={handleTouchEnd}
+              onTouchMove={handleTouchMove}
             >
               <div className="w-[36px] shrink-0 flex justify-center items-start relative select-none">
                 {isFirst ? (
@@ -173,7 +236,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                   </div>
                 )}
 
-                <div className="text-[15px] text-foreground whitespace-pre-wrap break-words leading-relaxed group/msg relative min-h-[22px] max-w-[min(100%,700px)]">
+                <div className="text-[15px] text-foreground whitespace-pre-wrap break-words leading-relaxed group/msg relative min-h-[22px]">
                   {/* !isDeleted prevents stuck edit states during concurrent multi-device deletions or rapid click race conditions */}
                   {editingMessageId === msg.id && !isDeleted ? (
                     <div className="flex flex-col gap-2 w-full mt-1 mb-2">
@@ -195,7 +258,18 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                     <>
                       <div 
                         className="flex-1 relative inline" 
-                        onContextMenu={(e) => handleContextMenu(e, msg.id, isDeleted)}
+                        onContextMenu={(e) => {
+                          handleContextMenu(e, msg.id, isDeleted);
+                          if (!isDeleted) {
+                            setContextMenuTarget({
+                              msgId: msg.id,
+                              isMyMessage,
+                              isPinned,
+                              content: msg.content,
+                              username: user?.username || "Unknown",
+                            });
+                          }
+                        }}
                       >
                         <span className={isDeleted ? "italic text-muted-foreground flex items-center gap-1.5" : "inline"}>
                           {isDeleted && <Ban className="h-3.5 w-3.5 inline-block mr-1" />}
@@ -244,11 +318,11 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
 
                         {/* Desktop hover actions: Reply + Copy for everyone; Edit/Delete/More for own messages */}
                         {!isDeleted && !msg.pending && !msg.optimistic && (
-                          <div className="hidden md:inline-flex opacity-0 group-hover/row:opacity-100 transition-opacity absolute right-2 md:right-auto md:ml-2 -translate-y-1.5 bg-background border shadow-sm rounded-md z-10 items-center">
+                          <div className="hidden md:inline-flex opacity-0 scale-95 group-hover/row:opacity-100 group-hover/row:scale-100 transition-all duration-150 absolute top-0 right-2 md:right-auto md:ml-2 bg-card border border-border/60 shadow-md rounded-lg z-10 items-center overflow-hidden">
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              className="h-8 w-8 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60"
                               onClick={() => onReply?.(msg.id, user?.username || "Unknown", msg.content)}
                               title="Reply"
                             >
@@ -262,7 +336,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              className="h-8 w-8 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60"
                               onClick={() => navigator.clipboard.writeText(msg.content)}
                               title="Copy"
                             >
@@ -273,7 +347,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                  className="h-8 w-8 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60"
                                   onClick={() => handleEditStart(msg.id, msg.content)}
                                 >
                                   <Pencil className="h-3.5 w-3.5" />
@@ -281,7 +355,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                  className="h-8 w-8 rounded-none text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                   onClick={() => setMessageToDelete(msg.id)}
                                 >
                                   <Trash className="h-3.5 w-3.5" />
@@ -323,11 +397,10 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
-                        )}
-                        {/* Mobile dropdown: Reply, Copy, Pin, Edit/Delete for own messages */}
+                        )}                        {/* Mobile dropdown: Reply, Copy, Pin, Edit/Delete for own messages */}
                         {!isDeleted && !msg.pending && !msg.optimistic && (
                            <div className="md:hidden">
-                             <DropdownMenu open={openMenuId === msg.id} onOpenChange={(open) => setOpenMenuId(open ? msg.id : null)}>
+                             <DropdownMenu>
                                <DropdownMenuTrigger className="absolute right-0 top-0 w-full h-full opacity-0 pointer-events-none" aria-hidden="true" tabIndex={-1} />
                                <DropdownMenuContent align="end" side="bottom" sideOffset={4} className="w-48">
                                  <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => onReply?.(msg.id, user?.username || "Unknown", msg.content)}>
@@ -346,15 +419,15 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                  {isMyMessage && (
                                    <>
                                      <DropdownMenuSeparator />
-                                     <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => handleEditStart(msg.id, msg.content)}>
-                                       <Pencil className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Edit Message</span>
-                                     </DropdownMenuItem>
-                                     <DropdownMenuSeparator />
-                                     <DropdownMenuItem className="text-destructive focus:text-destructive flex items-center cursor-pointer" onClick={() => setMessageToDelete(msg.id)}>
-                                       <Trash className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Delete Message</span>
-                                     </DropdownMenuItem>
-                                   </>
-                                 )}
+                                   <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => handleEditStart(msg.id, msg.content)}>
+                                     <Pencil className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Edit Message</span>
+                                   </DropdownMenuItem>
+                                   <DropdownMenuSeparator />
+                                   <DropdownMenuItem className="text-destructive focus:text-destructive flex items-center cursor-pointer" onClick={() => setMessageToDelete(msg.id)}>
+                                     <Trash className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Delete Message</span>
+                                   </DropdownMenuItem>
+                                 </>
+                                )}
                                </DropdownMenuContent>
                              </DropdownMenu>
                            </div>
@@ -372,22 +445,103 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
       <AlertDialog open={!!messageToDelete} onOpenChange={(open) => !open && setMessageToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
+            <AlertDialogMedia>
+              <Trash className="size-5 text-destructive" />
+            </AlertDialogMedia>
             <AlertDialogTitle>Delete Message</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete this message? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex-row gap-2 sm:justify-end">
-            <AlertDialogCancel variant="ghost" className="flex-1 sm:flex-none mt-0 hover:bg-white/5">
-              <span className="pt-[1px]">Cancel</span>
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="flex-1 sm:flex-none bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-2">
-              <Trash className="h-3.5 w-3.5" />
-              <span className="pt-[1px]">Delete</span>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={confirmDelete}>
+              <Trash className="h-4 w-4" />
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Shared cursor-positioned context menu (right-click) */}
+      {openMenuId && contextMenuTarget && (
+        <DropdownMenu
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) {
+              setOpenMenuId(null);
+              setContextMenuTarget(null);
+            }
+          }}
+        >
+          <DropdownMenuTrigger
+            render={
+              <button
+                className="fixed z-50 opacity-0 pointer-events-none"
+                style={{ left: contextMenuPos.x, top: contextMenuPos.y, width: 0, height: 0 }}
+                tabIndex={-1}
+                aria-hidden="true"
+              />
+            }
+          />
+          <DropdownMenuContent align="start" side="right" sideOffset={0} className="w-48">
+            <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => {
+              onReply?.(contextMenuTarget.msgId, contextMenuTarget.username, contextMenuTarget.content);
+              setOpenMenuId(null);
+              setContextMenuTarget(null);
+            }}>
+              <Reply className="h-4 w-4 mr-2" /> Reply
+            </DropdownMenuItem>
+            <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => {
+              navigator.clipboard.writeText(contextMenuTarget.content);
+              setOpenMenuId(null);
+              setContextMenuTarget(null);
+            }}>
+              <Copy className="h-4 w-4 mr-2" /> Copy
+            </DropdownMenuItem>
+            <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => {
+              navigator.clipboard.writeText(stripMarkdown(contextMenuTarget.content));
+              setOpenMenuId(null);
+              setContextMenuTarget(null);
+            }}>
+              <Text className="h-4 w-4 mr-2" /> Copy as plain text
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => {
+              if (contextMenuTarget.isPinned) {
+                unpinMutation.mutate(contextMenuTarget.msgId);
+              } else {
+                pinMutation.mutate(contextMenuTarget.msgId);
+              }
+              setOpenMenuId(null);
+              setContextMenuTarget(null);
+            }}>
+              <Pin className={`h-4 w-4 mr-2 ${contextMenuTarget.isPinned ? "text-amber-500" : ""}`} />
+              {contextMenuTarget.isPinned ? "Unpin message" : "Pin message"}
+            </DropdownMenuItem>
+            {contextMenuTarget.isMyMessage && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => {
+                  handleEditStart(contextMenuTarget.msgId, contextMenuTarget.content);
+                  setOpenMenuId(null);
+                  setContextMenuTarget(null);
+                }}>
+                  <Pencil className="h-4 w-4 mr-2" /> Edit Message
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-destructive focus:text-destructive flex items-center cursor-pointer" onClick={() => {
+                  setMessageToDelete(contextMenuTarget.msgId);
+                  setOpenMenuId(null);
+                  setContextMenuTarget(null);
+                }}>
+                  <Trash className="h-4 w-4 mr-2" /> Delete Message
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </>
   );
 }

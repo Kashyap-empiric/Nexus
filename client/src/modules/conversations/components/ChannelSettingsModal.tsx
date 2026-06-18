@@ -10,7 +10,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Button } from "@/shared/components/ui/button";
 import { Textarea } from "@/shared/components/ui/textarea";
-import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction } from "@/shared/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction, AlertDialogHeader, AlertDialogFooter, AlertDialogMedia } from "@/shared/components/ui/alert-dialog";
 import { useUpdateChannel, useDeleteChannel } from "@/modules/workspaces/hooks/useWorkspaces";
 import { ChevronDown, AlertTriangle, Trash, Info } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
@@ -103,7 +103,7 @@ export function ChannelSettingsModal({ isOpen, workspaceId, channel, onClose }: 
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="w-full max-w-full h-[100dvh] p-0 rounded-none sm:rounded-xl sm:max-w-lg sm:h-auto bg-background">
+      <DialogContent fullscreenMobile size="sm" style={{ maxWidth: '1200px' }} className="p-0 bg-background">
         <DialogHeader className="sr-only">
           <DialogTitle>Channel Settings</DialogTitle>
           <DialogDescription>Manage channel settings</DialogDescription>
@@ -195,26 +195,32 @@ export function ChannelSettingsModal({ isOpen, workspaceId, channel, onClose }: 
                     }
                   />
                   <AlertDialogContent>
-                    <AlertDialogTitle>Delete Channel</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action is irreversible. Type <strong>{channel?.name}</strong> to confirm.
-                    </AlertDialogDescription>
-                    <div className="space-y-4">
+                    <AlertDialogHeader>
+                      <AlertDialogMedia>
+                        <Trash className="size-5 text-destructive" />
+                      </AlertDialogMedia>
+                      <AlertDialogTitle>Delete Channel</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action is irreversible. Type <strong>{channel?.name}</strong> to confirm.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="px-5 pb-2">
                       <Input
                         value={deleteConfirmName}
                         onChange={(e) => setDeleteConfirmName(e.target.value)}
                         placeholder={channel?.name ?? ""}
                       />
-                      <div className="flex justify-end gap-2">
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          disabled={deleteConfirmName !== channel?.name || isDeleting}
-                          onClick={handleDelete}
-                        >
-                          {isDeleting ? "Deleting..." : "Delete Channel"}
-                        </AlertDialogAction>
-                      </div>
                     </div>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        variant="destructive"
+                        disabled={deleteConfirmName !== channel?.name || isDeleting}
+                        onClick={handleDelete}
+                      >
+                        {isDeleting ? "Deleting..." : "Delete Channel"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
               </div>

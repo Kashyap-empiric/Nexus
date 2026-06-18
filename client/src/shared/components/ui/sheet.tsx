@@ -7,6 +7,14 @@ import { cn } from "@/shared/lib/utils"
 import { Button } from "@/shared/components/ui/button"
 import { XIcon } from "lucide-react"
 
+/* ============================================================
+   SHEET / DRAWER — Slide-over Panel
+
+   Sides: top | right | bottom | left
+   Designed for mobile-first drawer patterns and
+   slide-over panels on desktop.
+   ============================================================ */
+
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
 }
@@ -23,18 +31,26 @@ function SheetPortal({ ...props }: SheetPrimitive.Portal.Props) {
   return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />
 }
 
+/* ─── Overlay ───────────────────────────────────────────── */
+
 function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
   return (
     <SheetPrimitive.Backdrop
       data-slot="sheet-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-black/10 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-xs md:hidden",
-        className
+        "fixed inset-0 z-50",
+        "bg-[var(--overlay-bg,oklch(0_0_0/0.55))] backdrop-blur-[var(--overlay-blur,4px)]",
+        "transition-opacity duration-200 ease-out",
+        "data-ending-style:opacity-0 data-starting-style:opacity-0",
+        "md:hidden",
+        className,
       )}
       {...props}
     />
   )
 }
+
+/* ─── Content ───────────────────────────────────────────── */
 
 function SheetContent({
   className,
@@ -53,8 +69,37 @@ function SheetContent({
         data-slot="sheet-content"
         data-side={side}
         className={cn(
-          "fixed z-50 flex flex-col gap-4 bg-popover bg-clip-padding text-sm text-popover-foreground shadow-lg transition duration-200 ease-in-out data-ending-style:opacity-0 data-starting-style:opacity-0 data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:h-auto data-[side=bottom]:border-t data-[side=bottom]:data-ending-style:translate-y-[2.5rem] data-[side=bottom]:data-starting-style:translate-y-[2.5rem] data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:w-3/4 data-[side=left]:border-r data-[side=left]:data-ending-style:translate-x-[-2.5rem] data-[side=left]:data-starting-style:translate-x-[-2.5rem] data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:w-3/4 data-[side=right]:border-l data-[side=right]:data-ending-style:translate-x-[2.5rem] data-[side=right]:data-starting-style:translate-x-[2.5rem] data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:h-auto data-[side=top]:border-b data-[side=top]:data-ending-style:translate-y-[-2.5rem] data-[side=top]:data-starting-style:translate-y-[-2.5rem] data-[side=left]:sm:max-w-sm data-[side=right]:sm:max-w-sm",
-          className
+          /* Base */
+          "fixed z-50 flex flex-col bg-popover text-sm text-popover-foreground",
+          "shadow-xl ring-1 ring-border/50",
+          /* Animation */
+          "transition-all duration-200 ease-out",
+          "data-ending-style:opacity-0 data-starting-style:opacity-0",
+          /* ── Side-specific positioning & transforms ── */
+          // Bottom (mobile drawer)
+          "data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0",
+          "data-[side=bottom]:h-auto data-[side=bottom]:max-h-[85dvh]",
+          "data-[side=bottom]:border-t data-[side=bottom]:rounded-t-xl",
+          "data-[side=bottom]:data-ending-style:translate-y-[2.5rem]",
+          "data-[side=bottom]:data-starting-style:translate-y-[2.5rem]",
+          // Top
+          "data-[side=top]:inset-x-0 data-[side=top]:top-0",
+          "data-[side=top]:h-auto data-[side=top]:border-b data-[side=top]:rounded-b-xl",
+          "data-[side=top]:data-ending-style:translate-y-[-2.5rem]",
+          "data-[side=top]:data-starting-style:translate-y-[-2.5rem]",
+          // Left
+          "data-[side=left]:inset-y-0 data-[side=left]:left-0",
+          "data-[side=left]:h-full data-[side=left]:w-3/4 data-[side=left]:sm:max-w-sm",
+          "data-[side=left]:border-r data-[side=left]:rounded-r-xl",
+          "data-[side=left]:data-ending-style:translate-x-[-2.5rem]",
+          "data-[side=left]:data-starting-style:translate-x-[-2.5rem]",
+          // Right
+          "data-[side=right]:inset-y-0 data-[side=right]:right-0",
+          "data-[side=right]:h-full data-[side=right]:w-3/4 data-[side=right]:sm:max-w-sm",
+          "data-[side=right]:border-l data-[side=right]:rounded-l-xl",
+          "data-[side=right]:data-ending-style:translate-x-[2.5rem]",
+          "data-[side=right]:data-starting-style:translate-x-[2.5rem]",
+          className,
         )}
         {...props}
       >
@@ -65,13 +110,12 @@ function SheetContent({
             render={
               <Button
                 variant="ghost"
-                className="absolute top-3 right-3"
                 size="icon-sm"
+                className="absolute top-4 right-4 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
               />
             }
           >
-            <XIcon
-            />
+            <XIcon className="size-4" />
             <span className="sr-only">Close</span>
           </SheetPrimitive.Close>
         )}
@@ -80,38 +124,55 @@ function SheetContent({
   )
 }
 
+/* ─── Header ────────────────────────────────────────────── */
+
 function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sheet-header"
-      className={cn("flex flex-col gap-0.5 p-4", className)}
+      className={cn(
+        "flex flex-col gap-1.5 shrink-0",
+        "px-5 pt-5 pb-3",
+        className,
+      )}
       {...props}
     />
   )
 }
 
+/* ─── Footer ────────────────────────────────────────────── */
+
 function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sheet-footer"
-      className={cn("mt-auto flex flex-col gap-2 p-4", className)}
+      className={cn(
+        "flex flex-col-reverse gap-3 shrink-0",
+        "sm:flex-row sm:justify-end",
+        "border-t px-5 py-4",
+        className,
+      )}
       {...props}
     />
   )
 }
+
+/* ─── Title ─────────────────────────────────────────────── */
 
 function SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {
   return (
     <SheetPrimitive.Title
       data-slot="sheet-title"
       className={cn(
-        "text-base font-medium text-foreground",
-        className
+        "text-base font-semibold text-foreground",
+        className,
       )}
       {...props}
     />
   )
 }
+
+/* ─── Description ───────────────────────────────────────── */
 
 function SheetDescription({
   className,
@@ -120,19 +181,26 @@ function SheetDescription({
   return (
     <SheetPrimitive.Description
       data-slot="sheet-description"
-      className={cn("text-sm text-muted-foreground", className)}
+      className={cn(
+        "text-sm text-muted-foreground",
+        className,
+      )}
       {...props}
     />
   )
 }
 
+/* ─── Exports ───────────────────────────────────────────── */
+
 export {
   Sheet,
-  SheetTrigger,
   SheetClose,
   SheetContent,
-  SheetHeader,
-  SheetFooter,
-  SheetTitle,
   SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetOverlay,
+  SheetPortal,
+  SheetTitle,
+  SheetTrigger,
 }

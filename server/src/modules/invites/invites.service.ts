@@ -15,6 +15,7 @@ export const resolveInviteService = async ({ token, userId }: ResolveInviteParam
   let redirectUrl = "";
   let domainEvents: DomainEvent[] = [];
   let pendingNotifications: CreateNotificationInput[] = [];
+  let alreadyMember = false;
 
   try {
     await prismaTransaction(async (tx) => {
@@ -36,6 +37,7 @@ export const resolveInviteService = async ({ token, userId }: ResolveInviteParam
       redirectUrl = result.redirectUrl;
       domainEvents = result.events || [];
       pendingNotifications = result.pendingNotifications || [];
+      alreadyMember = result.alreadyMember || false;
 
       // 4. Consume Invite Atomically via Raw SQL (Guards against concurrency)
       if (result.consumed !== false) {
@@ -62,11 +64,12 @@ export const resolveInviteService = async ({ token, userId }: ResolveInviteParam
   } catch (error: any) {
     if (error.message === "INVALID_OR_EXPIRED_INVITE") throw error;
     if (error.message === "NOT_IMPLEMENTED") throw error;
+    if (error.message === "ALREADY_MEMBER") throw error;
     console.error("[resolveInviteService] error:", error);
     throw new Error("INTERNAL_SERVER_ERROR");
   }
 
-  return { redirectUrl, events: domainEvents };
+  return { redirectUrl, events: domainEvents, alreadyMember };
 };
 
 export const generateInviteService = async ({ type, entityId, userId, forceNew }: GenerateInviteParams): Promise<GenerateInviteResult> => {
@@ -149,6 +152,12 @@ export const revokeInvite = async (inviteId: string) => {
   return invitesRepo.revokeInvite(inviteId);
 };
 
+export const revokeInviteByToken = async (token: string) => {
+  const invite = await invitesRepo.findInviteByToken(token);
+  if (!invite) return null;
+  return invitesRepo.revokeInvite(invite.id);
+};
+
 export const revokeAllInvitesForEntity = async (type: InviteType, entityId: string) => {
   return invitesRepo.revokeAllInvitesForEntity(type, entityId);
 };
@@ -163,5 +172,26 @@ export const deleteInvitesForEntity = async (tx: Prisma.TransactionClient, type:
 
 import { createAndDispatch } from "../notifications/notifications.service.js";
 import { runTransaction as prismaTransaction } from "@/lib/transaction.js";
+import * as workspacesRepo from "../workspaces/workspaces.repository.js";
+import * as usersRepo from "../users/users.repository.js";
+
+export const getInviteInfoService = async (token: string) => {
+  const invite = await invitesRepo.findInviteByToken(token);
+  if (!invite) return null;
+
+  const workspace = await workspacesRepo.findWorkspaceById(invite.entityId);
+  const inviter = await usersRepo.findUserById(invite.createdBy);
+
+  return {
+    token: invite.token,
+    workspaceName: workspace?.name || "Unknown Workspace",
+    inviterName: inviter?.username || "A workspace member",
+    inviterAvatar: inviter?.avatarUrl || null,
+    expiresAt: invite.expiresAt?.toISOString() || null,
+    isRevoked: invite.revoked,
+    isExpired: invite.expiresAt ? invite.expiresAt < new Date() : false,
+    isValid: !invite.revoked && (invite.expiresAt ? invite.expiresAt >= new Date() : true),
+  };
+};
 
 export type { GenerateInviteParams, GenerateInviteResult } from "./invites.types.js";

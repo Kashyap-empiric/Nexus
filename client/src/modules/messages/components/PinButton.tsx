@@ -24,7 +24,7 @@ export function PinButton({ conversationId, messageId, isPinned }: PinButtonProp
     <Button
       variant="ghost"
       size="icon"
-      className={`h-7 w-7 text-muted-foreground hover:text-foreground ${isPinned ? "text-amber-500 hover:text-amber-600" : ""}`}
+      className={`h-8 w-8 rounded-none text-muted-foreground hover:bg-accent/60 hover:text-foreground ${isPinned ? "text-amber-500 hover:text-amber-600" : ""}`}
       onClick={handleClick}
       title={isPinned ? "Unpin message" : "Pin message"}
       disabled={pinMutation.isPending || unpinMutation.isPending}

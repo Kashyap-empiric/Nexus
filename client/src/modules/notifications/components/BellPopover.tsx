@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Bell, ExternalLink, Settings, Reply, Mail } from "lucide-react";
+import { Bell, ExternalLink, Settings, Reply, Mail, Check, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { APP_ROUTES } from "@/config/url";
+import { api } from "@/shared/lib/api";
+import { API_ROUTES, APP_ROUTES } from "@/config/url";
 import { useNotifications, useUnreadCount, useMarkAllAsRead, useMarkAsRead } from "../hooks/useNotifications";
 import { timeAgo, formatNotificationTime, NotificationIcon } from "../utils/notifications-ui";
 import { cn } from "@/shared/lib/utils";
+import { toast } from "sonner";
 import type { Notification } from "../types/notification";
 
 type Tab = "replies" | "invites";
@@ -20,6 +22,12 @@ function NotificationItem({
   onMarkRead: (id: string) => void;
 }) {
   const router = useRouter();
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const isInvite = notification.type === "INVITE_RECEIVED";
+  const inviteToken = isInvite
+    ? (notification.metadata as Record<string, unknown> | null)?.token as string | undefined
+    : undefined;
 
   const handleClick = () => {
     if (!notification.read) {
@@ -30,37 +38,106 @@ function NotificationItem({
     }
   };
 
+  const handleAccept = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!inviteToken) return;
+
+    setActionLoading("accept");
+    try {
+      const res = await api.post(API_ROUTES.INVITES.RESOLVE, { token: inviteToken });
+      if (!notification.read) onMarkRead(notification.id);
+      if (res.data.alreadyMember) {
+        toast.info("You're already a member of this workspace");
+      }
+      if (res.data.redirectUrl) {
+        router.push(res.data.redirectUrl);
+      }
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.error || "Failed to accept invite";
+      toast.error(errorMsg);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDecline = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!inviteToken) return;
+
+    setActionLoading("decline");
+    try {
+      await api.post(API_ROUTES.INVITES.DECLINE, { token: inviteToken });
+      if (!notification.read) onMarkRead(notification.id);
+      toast.success("Invite declined");
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.error || "Failed to decline invite";
+      toast.error(errorMsg);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const isReply = notification.type === "MESSAGE_REPLIED";
 
   return (
-    <button
-      onClick={handleClick}
+    <div
       className={cn(
-        "w-full text-left px-3 py-2.5 flex items-start gap-2 transition-colors hover:bg-muted/50",
+        "w-full text-left px-3 py-2.5 transition-colors hover:bg-muted/50",
         !notification.read && (isReply ? "bg-brand/10" : "bg-brand/5"),
         isReply && !notification.read && "border-l-2 border-brand"
       )}
     >
-      <NotificationIcon type={notification.type} />
-      <div className="flex-1 min-w-0">
-        <p className={cn("text-sm truncate", !notification.read && "font-semibold")}>
-          {notification.title}
-        </p>
-        {notification.body && (
-          <p className="text-xs text-muted-foreground truncate mt-0.5">
-            {notification.body}
+      <button onClick={handleClick} className="w-full text-left flex items-start gap-2">
+        <NotificationIcon type={notification.type} />
+        <div className="flex-1 min-w-0">
+          <p className={cn("text-sm truncate", !notification.read && "font-semibold")}>
+            {notification.title}
           </p>
+          {notification.body && (
+            <p className="text-xs text-muted-foreground truncate mt-0.5">
+              {notification.body}
+            </p>
+          )}
+          <p className="text-[10px] text-muted-foreground/60 mt-1">
+            {timeAgo(notification.createdAt)}
+            <span className="mx-1">·</span>
+            {formatNotificationTime(notification.createdAt)}
+          </p>
+        </div>
+        {!notification.read && (
+          <span className="w-2 h-2 rounded-full bg-brand shrink-0 mt-1.5" />
         )}
-        <p className="text-[10px] text-muted-foreground/60 mt-1">
-          {timeAgo(notification.createdAt)}
-          <span className="mx-1">·</span>
-          {formatNotificationTime(notification.createdAt)}
-        </p>
-      </div>
-      {!notification.read && (
-        <span className="w-2 h-2 rounded-full bg-brand shrink-0 mt-1.5" />
+      </button>
+
+      {isInvite && inviteToken && (
+        <div className="flex items-center gap-2 mt-2 ml-8">
+          <button
+            onClick={handleAccept}
+            disabled={actionLoading !== null}
+            className="flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md bg-brand text-brand-foreground hover:bg-brand/90 transition-colors disabled:opacity-50"
+          >
+            {actionLoading === "accept" ? (
+              <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Check className="h-3 w-3" />
+            )}
+            Accept
+          </button>
+          <button
+            onClick={handleDecline}
+            disabled={actionLoading !== null}
+            className="flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md bg-muted hover:bg-muted/80 text-muted-foreground transition-colors disabled:opacity-50"
+          >
+            {actionLoading === "decline" ? (
+              <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <X className="h-3 w-3" />
+            )}
+            Decline
+          </button>
+        </div>
       )}
-    </button>
+    </div>
   );
 }
 

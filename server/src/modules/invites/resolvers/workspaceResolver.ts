@@ -17,6 +17,26 @@ export const workspaceInviteResolver: InviteResolver = {
       throw new Error("WORKSPACE_NOT_FOUND");
     }
 
+    // Check if already a member — if so, don't consume the invite, redirect instead
+    const existingMember = await tx.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId: actorId } },
+    });
+
+    if (existingMember) {
+      const generalChannel = await tx.conversation.findFirst({
+        where: { workspaceId, name: "general", type: "CHANNEL" },
+        select: { id: true },
+      });
+
+      return {
+        redirectUrl: generalChannel
+          ? `/workspaces/${workspaceId}/channels/${generalChannel.id}`
+          : `/workspaces/${workspaceId}`,
+        consumed: false,
+        alreadyMember: true,
+      };
+    }
+
     // Call the onboarding service to securely handle joining the workspace & default channels
     const { generalChannelId } = await workspacesRepo.onboardUserToWorkspaceInTransaction(tx as any, workspaceId, actorId);
 

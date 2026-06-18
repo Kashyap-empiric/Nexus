@@ -1,11 +1,13 @@
 import type { Response } from "express";
 import type { AuthRequest } from "@/types/shared.js";
+import { ENV } from "@/config/env.js";
 import * as workspacesService from "./workspaces.service.js";
 import * as workspacesRepo from "./workspaces.repository.js";
 import * as usersRepo from "../users/users.repository.js";
 import { dispatchConversationNew } from "@/socket/socket.dispatcher.js";
 import { createAndDispatch } from "../notifications/notifications.service.js";
-import { generateInviteService } from "../invites/invites.service.js";
+import { generateInviteService, revokeInviteByToken } from "../invites/invites.service.js";
+import { sendWorkspaceInviteEmail } from "../../lib/email.js";
 import { findChannelIdsByWorkspaceId } from "../conversations/conversations.repository.js";
 import { getIO } from "@/socket/socket.js";
 
@@ -325,8 +327,29 @@ async function sendWorkspaceInvite(
       workspaceName,
       inviterId,
       inviterName,
+      token: invite.token,
     },
   });
+
+  // Also send email if we have the user's email address
+  try {
+    const targetUser = await usersRepo.findUserById(targetUserId);
+    if (targetUser?.email) {
+      const baseUrl = ENV.CLIENT_URL || "http://localhost:3000";
+      const inviteUrl = `${baseUrl}/invite?token=${invite.token}`;
+
+      await sendWorkspaceInviteEmail({
+        to: targetUser.email,
+        workspaceName,
+        inviterName,
+        inviteUrl,
+        expiresAt: invite.expiresAt ? new Date(invite.expiresAt) : null,
+      });
+    }
+  } catch (emailErr) {
+    // Email is best-effort — the in-app notification is the primary channel
+    console.error(`[sendWorkspaceInvite] Email failed for ${targetUserId}:`, emailErr);
+  }
 }
 
 /**
@@ -456,6 +479,139 @@ export const inviteMembers = async (req: AuthRequest, res: Response): Promise<vo
     });
   } catch (error: any) {
     console.error("Error inviting members:", error);
+    if (error?.message?.startsWith("Forbidden")) {
+      res.status(403).json({ error: error.message });
+      return;
+    }
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+/**
+ * POST /workspaces/:id/invite-email
+ * Invite someone to a workspace by email address.
+ *
+ * Two modes:
+ *   - Recipient has an account:  invite + in-app notification + email (optional, best-effort)
+ *   - Recipient has NO account:  invite + email (MANDATORY — if email fails, invite is revoked)
+ */
+export const inviteByEmail = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { id: workspaceId } = req.params as { id: string };
+    const { email } = req.body as { email: string };
+
+    const workspace = await workspacesService.getWorkspaceDetails(userId, workspaceId);
+
+    const currentUser = await usersRepo.findUserById(userId);
+    const inviterName = currentUser?.username || "A workspace member";
+
+    // Check if recipient exists and isn't already a member
+    let existingUser = null;
+    try {
+      existingUser = await usersRepo.findUserByEmail(email);
+    } catch {
+      // email not found in DB — continue as external user
+    }
+    if (existingUser) {
+      const isAlreadyMember = workspace.members.some((m: any) => m.userId === existingUser.id);
+      if (isAlreadyMember) {
+        res.status(400).json({ error: "User is already a member of this workspace" });
+        return;
+      }
+    }
+
+    // Create the invite
+    const invite = await generateInviteService({
+      type: "WORKSPACE",
+      entityId: workspaceId,
+      userId,
+      forceNew: true,
+    });
+
+    const baseUrl = ENV.CLIENT_URL || "http://localhost:3000";
+    const inviteUrl = `${baseUrl}${invite.invitePath}`;
+
+    // Send email
+    let emailSent = false;
+    try {
+      await sendWorkspaceInviteEmail({
+        to: email,
+        workspaceName: workspace.name,
+        inviterName,
+        inviteUrl,
+        expiresAt: invite.expiresAt ? new Date(invite.expiresAt) : null,
+      });
+      emailSent = true;
+    } catch (emailErr) {
+      const message =
+        emailErr instanceof Error ? emailErr.message : "EMAIL_SEND_FAILED";
+
+      if (!existingUser) {
+        // External user — email is the only delivery channel. Revoke invite and fail.
+        console.error(
+          `[inviteByEmail] ✗ Revoking invite  to=${email}  reason=${message}`,
+        );
+
+        await revokeInviteByToken(invite.token).catch((revokeErr) =>
+          console.error("[inviteByEmail] Failed to revoke orphan invite:", revokeErr)
+        );
+
+        if (message === "EMAIL_NOT_CONFIGURED") {
+          res.status(500).json({
+            success: false,
+            emailSent: false,
+            error: "Email service is not configured. Please set SENDGRID_API_KEY and SENDGRID_FROM_EMAIL.",
+          });
+          return;
+        }
+
+        res.status(500).json({
+          success: false,
+          emailSent: false,
+          error: "Unable to deliver invitation email. Please check the email address and try again.",
+        });
+        return;
+      }
+
+      // Existing user — notification is the primary channel. Log but proceed.
+      console.error(`[inviteByEmail] ✗ Email failed  to=${email}  reason=${message}  notificationSent=true`);
+    }
+
+    // Send in-app notification if recipient has an account
+    if (existingUser) {
+      try {
+        await createAndDispatch({
+          userId: existingUser.id,
+          type: "INVITE_RECEIVED",
+          title: "Workspace invite",
+          body: `You've been invited to ${workspace.name} by ${inviterName}`,
+          link: invite.invitePath,
+          imageUrl: (workspace as any).imageUrl || undefined,
+          metadata: {
+            workspaceId,
+            workspaceName: workspace.name,
+            inviterId: userId,
+            inviterName,
+            token: invite.token,
+          },
+        });
+      } catch (notifErr) {
+        console.error("[inviteByEmail] Failed to send in-app notification:", notifErr);
+      }
+    }
+
+    console.log(
+      `[inviteByEmail] ✓ Complete  to=${email}  emailSent=${emailSent}  workspace=${workspace.name}`,
+    );
+
+    res.status(200).json({
+      success: true,
+      invited: email,
+      emailSent,
+    });
+  } catch (error: any) {
+    console.error("Error inviting by email:", error);
     if (error?.message?.startsWith("Forbidden")) {
       res.status(403).json({ error: error.message });
       return;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -11,16 +11,16 @@ import { Label } from "@/shared/components/ui/label";
 import { Button } from "@/shared/components/ui/button";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
-import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction } from "@/shared/components/ui/alert-dialog";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/shared/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction, AlertDialogHeader, AlertDialogFooter, AlertDialogMedia } from "@/shared/components/ui/alert-dialog";
 import { useWorkspaceDetails, useWorkspaceMembersQuery, useUpdateWorkspaceMutation, useDeleteWorkspaceMutation, useLeaveWorkspaceMutation, useUpdateMemberRole, useRemoveMember } from "../hooks/useWorkspaces";
 import { useUser } from "@/modules/auth/store/useAuthStore";
 import { useParams, useRouter } from "next/navigation";
-import { Camera, Loader2, ChevronDown, AlertTriangle, ArrowLeftFromLine, Trash, Shield, ShieldCheck, User as UserIcon } from "lucide-react";
+import { Camera, ArrowLeftFromLine, Trash, Shield, ShieldCheck, User as UserIcon } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import type { WorkspaceRole, WorkspaceMember } from "../types/workspace";
 import { useChatStore } from "@/modules/chat/store/chatStore";
 import { uploadWorkspaceIcon, getPublicUrl, deleteFile } from "@/shared/lib/upload";
+import { CustomRoleDropdown, ROLE_BADGE_STYLES } from "./CustomRoleDropdown";
 
 const workspaceSchema = z.object({
   name: z.string().min(1, "Workspace name is required").max(100),
@@ -29,12 +29,6 @@ const workspaceSchema = z.object({
 });
 
 type WorkspaceFormValues = z.infer<typeof workspaceSchema>;
-
-const ROLE_BADGE_STYLES: Record<WorkspaceRole, string> = {
-  OWNER: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  ADMIN: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-  MEMBER: "bg-muted text-muted-foreground",
-};
 
 const ROLE_ICONS: Record<WorkspaceRole, typeof Shield> = {
   OWNER: ShieldCheck,
@@ -50,7 +44,6 @@ interface WorkspaceSettingsModalProps {
 
 export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: WorkspaceSettingsModalProps) {
   const [activeTab, setActiveTab] = useState<"general" | "members">("general");
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
   const { data: workspaceData, isLoading: workspaceLoading } = useWorkspaceDetails(workspaceId);
   const { data: members, isLoading: membersLoading } = useWorkspaceMembersQuery(workspaceId);
@@ -67,7 +60,6 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
     handleSubmit,
     reset,
     watch,
-    setValue,
     formState: { errors, isDirty },
   } = useForm<WorkspaceFormValues>({
     resolver: zodResolver(workspaceSchema),
@@ -103,10 +95,8 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
       setIconFile(null);
       setIconPreview(null);
 
-      // Reset form state so isDirty becomes false
       reset(data);
 
-      // If slug changed, update the store and redirect the URL
       if (data.slug && data.slug !== workspace?.slug) {
         setActiveWorkspaceId(data.slug);
         const channelId = params?.channelId as string | undefined;
@@ -134,7 +124,6 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
     try {
       await deleteWorkspace({ workspaceId });
       toast.success("Workspace deleted");
-      setShowDeleteConfirm(false);
       onClose();
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Failed to delete workspace"));
@@ -199,9 +188,6 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
     setIconPreview(URL.createObjectURL(file));
   };
 
-  // No auto-derivation of slug from name — this is an edit form, not a create form
-  // Changing the workspace name should NOT change the slug automatically.
-
   const handleOpenChange = (open: boolean) => {
     if (!open && isDirty) {
       if (window.confirm("You have unsaved changes. Discard them?")) {
@@ -211,8 +197,6 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
     }
     if (!open) onClose();
   };
-
-  const ROLE_OPTIONS: WorkspaceRole[] = ["OWNER", "ADMIN", "MEMBER"];
 
   function getErrorMessage(error: unknown, fallback: string): string {
     if (error && typeof error === "object" && "response" in error) {
@@ -227,7 +211,7 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="w-full max-w-full h-[100dvh] max-h-full p-0 rounded-none top-0 left-0 translate-x-0 translate-y-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:max-w-2xl sm:h-[80vh] sm:max-h-[85vh] flex flex-col bg-background">
+      <DialogContent fullscreenMobile size="2xl" style={{ maxWidth: '1200px' }} className="sm:h-[80vh] p-0 bg-background">
         <DialogHeader className="sr-only">
           <DialogTitle>Workspace Settings</DialogTitle>
           <DialogDescription>Manage workspace settings</DialogDescription>
@@ -253,8 +237,7 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                 <div className="h-10 bg-muted rounded" />
               </div>
             ) : activeTab === "general" ? (
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-xl">
-                {/* Preview */}
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 <p className="text-xs text-muted-foreground">
                   Preview: <span className="font-medium text-foreground">{watch("name") || "Untitled"}</span>
                 </p>
@@ -285,11 +268,7 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                       {iconPreview ? (
                         <img src={iconPreview} alt="" className="h-full w-full rounded-xl object-cover" />
                       ) : workspace?.iconPath ? (
-                        <img
-                          src={getPublicUrl("avatars", workspace.iconPath) || ""}
-                          alt=""
-                          className="h-full w-full rounded-xl object-cover"
-                        />
+                        <img src={getPublicUrl("avatars", workspace.iconPath) || ""} alt="" className="h-full w-full rounded-xl object-cover" />
                       ) : workspace?.imageUrl ? (
                         <img src={workspace.imageUrl} alt="" className="h-full w-full rounded-xl object-cover" />
                       ) : (
@@ -301,20 +280,13 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleIconSelect(file);
-                      }}
+                      onChange={(e) => { const file = e.target.files?.[0]; if (file) handleIconSelect(file); }}
                     />
                     <div className="space-y-2">
                       <p className="text-sm font-medium">Workspace Icon</p>
                       <p className="text-xs text-muted-foreground">Square image, at least 256×256px. Max 5MB.</p>
                       {iconFile && (
-                        <Button type="button" variant="outline" size="sm" onClick={() => {
-                          if (iconPreview) URL.revokeObjectURL(iconPreview);
-                          setIconFile(null);
-                          setIconPreview(null);
-                        }}>
+                        <Button type="button" variant="outline" size="sm" onClick={() => { if (iconPreview) URL.revokeObjectURL(iconPreview); setIconFile(null); setIconPreview(null); }}>
                           Cancel
                         </Button>
                       )}
@@ -325,28 +297,15 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                 <div>
                   <p className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase mb-3">WORKSPACE IDENTITY</p>
                   <hr className="border-border mb-4" />
-
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="ws-name">Name</Label>
-                      <Input
-                        id="ws-name"
-                        {...register("name")}
-                      />
+                      <Input id="ws-name" {...register("name")} />
                       {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
                     </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="ws-slug">Slug</Label>
-                      <Input
-                        id="ws-slug"
-                        {...register("slug", {
-                          onChange: () => {
-                            isSlugManuallyEdited.current = true;
-                          },
-                        })}
-                        className="font-mono text-sm"
-                      />
+                      <Input id="ws-slug" {...register("slug", { onChange: () => { isSlugManuallyEdited.current = true; } })} className="font-mono text-sm" />
                       {errors.slug && <p className="text-sm text-destructive">{errors.slug.message}</p>}
                       {watch("slug") && (
                         <p className="font-mono text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
@@ -354,7 +313,6 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                         </p>
                       )}
                     </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="ws-description">Description</Label>
                       <Textarea id="ws-description" {...register("description")} className="resize-none" rows={3} />
@@ -371,69 +329,40 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
 
                 {/* Danger Zone */}
                 <div className="pt-8">
-                  <button
-                    type="button"
-                    onClick={() => setShowDeleteConfirm(!showDeleteConfirm)}
-                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <ChevronDown className={cn("h-4 w-4 transition-transform", showDeleteConfirm && "rotate-180")} />
-                    Show danger zone
-                  </button>
-                  {showDeleteConfirm && (
-                    <div className="mt-4 border border-destructive/30 rounded-lg p-4 space-y-4">
-                      <div className="flex items-center gap-2 text-destructive">
-                        <AlertTriangle className="h-5 w-5" />
-                        <h4 className="font-medium">Danger Zone</h4>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Deleting the workspace is irreversible. All channels, messages, and data will be permanently removed.
-                      </p>
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <Button variant="outline" onClick={handleLeave} disabled={isLeaving} className="text-destructive hover:text-destructive border-destructive/30 hover:border-destructive/50">
-                          <ArrowLeftFromLine className="h-4 w-4 mr-2" />
-                          {isLeaving ? "Leaving..." : "Leave Workspace"}
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger
-                            disabled={isDeleting}
-                            render={
-                              <Button variant="destructive">
-                                <Trash className="h-4 w-4 mr-2" />
-                                {isDeleting ? "Deleting..." : "Delete Workspace"}
-                              </Button>
-                            }
-                          />
-                          <AlertDialogContent>
-                            <AlertDialogTitle>Delete Workspace</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action is irreversible. Type <strong>{workspace?.name}</strong> to confirm.
-                            </AlertDialogDescription>
-                            <div className="space-y-4">
-                              <Input
-                                value={deleteConfirmName}
-                                onChange={(e) => setDeleteConfirmName(e.target.value)}
-                                placeholder={workspace?.name}
-                              />
-                              <div className="flex justify-end gap-2">
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  disabled={deleteConfirmName !== workspace?.name || isDeleting}
-                                  onClick={handleDelete}
-                                >
-                                  {isDeleting ? "Deleting..." : "Delete Workspace"}
-                                </AlertDialogAction>
-                              </div>
-                            </div>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </div>
-                  )}
+                  <p className="text-[11px] font-bold tracking-wider text-destructive uppercase mb-3">DANGER ZONE</p>
+                  <hr className="border-border mb-4" />
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button variant="outline" onClick={handleLeave} disabled={isLeaving} className="text-destructive hover:text-destructive border-destructive/30 hover:border-destructive/50">
+                      <ArrowLeftFromLine className="h-4 w-4 mr-2" />
+                      {isLeaving ? "Leaving..." : "Leave Workspace"}
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger disabled={isDeleting} render={<Button variant="destructive"><Trash className="h-4 w-4 mr-2" />{isDeleting ? "Deleting..." : "Delete Workspace"}</Button>} />
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogMedia><Trash className="size-5 text-destructive" /></AlertDialogMedia>
+                          <AlertDialogTitle>Delete Workspace</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action is irreversible. Type <strong>{workspace?.name}</strong> to confirm.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className="px-5 pb-2">
+                          <Input value={deleteConfirmName} onChange={(e) => setDeleteConfirmName(e.target.value)} placeholder={workspace?.name} />
+                        </div>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction variant="destructive" disabled={deleteConfirmName !== workspace?.name || isDeleting} onClick={handleDelete}>
+                            {isDeleting ? "Deleting..." : "Delete Workspace"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
               </form>
             ) : (
               /* Members Tab */
-              <div className="space-y-4 max-w-xl">
+              <div className="space-y-4">
                 <h3 className="text-lg font-medium">Members</h3>
                 {membersLoading ? (
                   <div className="animate-pulse space-y-3">
@@ -453,54 +382,31 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                       const role = member.role as WorkspaceRole;
                       const RoleIcon = ROLE_ICONS[role];
                       const isCurrentUser = member.userId === currentUser?.userId;
-                      const canManage = currentUser?.role === "OWNER" || currentUser?.role === "ADMIN";
+                      const canManage = currentUser?.role === "OWNER";
 
                       return (
-                        <div key={member.userId} className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors">
-                          <UserAvatar
-                            name={member.user?.username}
-                            src={member.user?.avatarUrl}
-                            className="h-10 w-10"
-                          />
+                        <div key={member.userId} className="flex items-center gap-3 px-4 py-3 rounded-lg border border-border/50 bg-card/30 hover:bg-muted/40 transition-colors group">
+                          <UserAvatar name={member.user?.username} src={member.user?.avatarUrl} className="h-10 w-10 ring-2 ring-background" />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">
+                            <p className="text-sm font-medium truncate flex items-center gap-1.5">
                               {member.user?.fullName || member.user?.username || "Unknown"}
-                              {isCurrentUser && <span className="text-muted-foreground font-normal ml-1">(you)</span>}
+                              {isCurrentUser && <span className="text-xs text-muted-foreground font-normal">(you)</span>}
                             </p>
                             <p className="text-xs text-muted-foreground truncate">@{member.user?.username}</p>
                           </div>
                           {canManage && role !== "OWNER" ? (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors", ROLE_BADGE_STYLES[role])}>
-                                <RoleIcon className="h-3 w-3" />
-                                {role}
-                                <ChevronDown className="h-3 w-3" />
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                {ROLE_OPTIONS.filter(r => r !== role && (r !== "OWNER" || currentUser?.role === "OWNER")).map((r) => {
-                                  const Icon = ROLE_ICONS[r];
-                                  return (
-                                    <DropdownMenuItem key={r} onClick={() => {
-                                  if (r === "OWNER") {
-                                    setPendingOwnerPromotion({ userId: member.userId, username: member.user?.username || "this user" });
-                                  } else {
-                                    handleRoleChange(member.userId, r);
-                                  }
-                                }}>
-                                <Icon className="h-4 w-4 mr-2" />
-                                {r}
-                              </DropdownMenuItem>
-                                  );
-                                })}
-                                <DropdownMenuItem onClick={() => handleRemoveMember(member.userId)} className="text-destructive">
-                                  <Trash className="h-4 w-4 mr-2" />
-                                  Remove
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <CustomRoleDropdown
+                              role={role}
+                              memberId={member.userId}
+                              memberUsername={member.user?.username || "Unknown"}
+                              canPromote={currentUser?.role === "OWNER"}
+                              onRoleChange={handleRoleChange}
+                              onRemove={handleRemoveMember}
+                              onPromote={(id, name) => setPendingOwnerPromotion({ userId: id, username: name })}
+                            />
                           ) : (
-                            <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border", ROLE_BADGE_STYLES[role])}>
-                              <RoleIcon className="h-3 w-3" />
+                            <span className={cn("inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border select-none", ROLE_BADGE_STYLES[role])}>
+                              <RoleIcon className="h-3.5 w-3.5" />
                               {role}
                             </span>
                           )}
@@ -513,22 +419,20 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                 {/* Promote to owner confirmation */}
                 <AlertDialog open={!!pendingOwnerPromotion} onOpenChange={(open) => { if (!open) setPendingOwnerPromotion(null); }}>
                   <AlertDialogContent>
-                    <AlertDialogTitle>Promote to Owner</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to make <strong>{pendingOwnerPromotion?.username}</strong> an owner?
-                      They will have full control over the workspace, including the ability to manage members, channels, and settings.
-                    </AlertDialogDescription>
-                    <div className="flex justify-end gap-2">
-                      <AlertDialogCancel onClick={() => setPendingOwnerPromotion(null)}>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => {
-                        if (pendingOwnerPromotion) {
-                          handleRoleChange(pendingOwnerPromotion.userId, "OWNER");
-                        }
-                        setPendingOwnerPromotion(null);
-                      }}>
+                    <AlertDialogHeader>
+                      <AlertDialogMedia><Shield className="size-5 text-amber-500" /></AlertDialogMedia>
+                      <AlertDialogTitle>Promote to Owner</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to make <strong>{pendingOwnerPromotion?.username}</strong> an owner?
+                        They will have full control over the workspace, including the ability to manage members, channels, and settings.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction disabled={!pendingOwnerPromotion} onClick={() => { if (pendingOwnerPromotion) { handleRoleChange(pendingOwnerPromotion.userId, "OWNER"); } setPendingOwnerPromotion(null); }}>
                         Promote to Owner
                       </AlertDialogAction>
-                    </div>
+                    </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
 

@@ -1,10 +1,10 @@
 export const OVERLAY_Z_INDEX = {
   tooltip: 1000,
   hoverCard: 1100,
-  dropdown: 1200,
-  contextMenu: 1250,
-  popover: 1300,
   dialog: 1400,
+  dropdown: 1450,
+  contextMenu: 1450,
+  popover: 1460,
   alertDialog: 1500,
   toast: 1600,
 } as const;

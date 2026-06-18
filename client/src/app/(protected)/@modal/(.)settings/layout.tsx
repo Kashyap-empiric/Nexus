@@ -11,7 +11,7 @@ export default function InterceptedSettingsLayout({ children }: { children: Reac
     <Dialog open={true} onOpenChange={(open) => {
       if (!open) router.back();
     }}>
-      <DialogContent className="p-0 sm:max-w-4xl border-0 h-[100dvh] w-screen max-w-none sm:h-[70vh] sm:min-h-[500px] sm:w-[90vw] rounded-none sm:rounded-xl flex flex-col overflow-hidden bg-background gap-0">
+      <DialogContent style={{ maxWidth: '1200px' }} className="p-0 border-0 h-[100dvh] w-screen max-w-none sm:h-[70vh] sm:min-h-[500px] rounded-none sm:rounded-xl flex flex-col overflow-hidden bg-background gap-0">
         <DialogTitle className="sr-only">Settings</DialogTitle>
         <DialogDescription className="sr-only">Configure your application preferences</DialogDescription>
         <SettingsLayout>{children}</SettingsLayout>

@@ -27,6 +27,10 @@ export const handleInviteContinuation = async (router: any) => {
     
     sessionStorage.removeItem("nexus_invite");
 
+    if (res.data.alreadyMember) {
+      toast.info("You're already a member of this workspace");
+    }
+
     if (res.status === 200 && res.data.redirectUrl) {
       safeRedirect(router, res.data.redirectUrl);
       return true;

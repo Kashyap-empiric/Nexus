@@ -65,7 +65,7 @@ export const SharedSettingsModal = ({ isOpen, currentTab, setTab, closeSettings 
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="w-full max-w-full h-[100dvh] p-0 rounded-none sm:rounded-xl sm:max-w-4xl sm:h-[80vh] md:w-[95vw] flex flex-col md:flex-row overflow-hidden bg-background">
+      <DialogContent fullscreenMobile size="xl" style={{ maxWidth: '1200px' }} className="sm:h-[80vh] p-0 bg-background md:flex-row overflow-hidden">
         <DialogHeader className="sr-only">
           <DialogTitle>Settings</DialogTitle>
           <DialogDescription>Manage your account settings</DialogDescription>

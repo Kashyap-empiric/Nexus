@@ -41,13 +41,13 @@ export function EmptyState() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 mt-6 w-full justify-center">
-              <button
+              <Button
                 onClick={() => setIsNewModalOpen(true)}
-                className="inline-flex h-11 items-center justify-center rounded-lg bg-brand px-6 text-sm font-medium text-brand-foreground shadow-sm transition-colors hover:bg-brand/90"
+                className="w-full sm:w-auto h-11 shadow-sm"
               >
                 <MessageSquarePlus className="h-4 w-4 mr-2" />
                 Start a Conversation
-              </button>
+              </Button>
               <Button onClick={() => inviteModal.open("USER")} variant="outline" className="w-full sm:w-auto h-11 shadow-sm transition-all">
                 <UserPlus className="mr-2 h-4 w-4" />
                 Invite Someone

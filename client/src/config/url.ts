@@ -33,8 +33,10 @@ export const API_ROUTES = {
     PIN_DETAIL: (conversationId: string, messageId: string) => `/conversations/${conversationId}/pins/${messageId}`,
   },
   INVITES: {
+    INFO: '/invites/info',
     RESOLVE: '/invites/resolve',
     GENERATE: '/invites/generate',
+    DECLINE: '/invites/decline',
   },
   NOTIFICATIONS: {
     BASE: '/notifications',

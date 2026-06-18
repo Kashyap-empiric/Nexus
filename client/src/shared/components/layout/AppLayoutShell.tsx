@@ -31,9 +31,9 @@ function MemberCountBadge({ workspaceId }: { workspaceId: string }) {
   const { data: members } = useWorkspaceMembersQuery(workspaceId);
   const count = members?.length ?? 0;
   return (
-    <div className="flex items-center gap-1.5 px-2 py-1 bg-muted/30 rounded-md border border-border/50 select-none">
+    <div className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded-md border border-border/40 select-none">
       <Users className="h-3.5 w-3.5 text-muted-foreground" />
-      <span className="text-xs font-medium text-muted-foreground">{count}</span>
+      <span className="text-xs font-medium tabular-nums text-muted-foreground">{count}</span>
     </div>
   );
 }
@@ -151,7 +151,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
 
       <main className={cn("flex-1 flex-col min-w-0 bg-background h-full", !isContentActive ? "hidden lg:flex" : "flex")}>
         {/* Global header bar */}
-        <div className="h-14 border-b flex items-center justify-between px-[15px] md:px-4 xl:px-6 shrink-0 bg-background shadow-sm">
+        <div className="h-14 border-b flex items-center justify-between px-[15px] md:px-4 xl:px-6 shrink-0 bg-background">
           <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
             {/* Back/Sidebar toggle (mobile only) */}
             {mounted && headerInfo && (
@@ -222,7 +222,12 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
             {mounted && (
               <button
                 onClick={() => setInfoPanelOpen(!infoPanelOpen)}
-                className={`p-2 rounded-md transition-colors ${infoPanelOpen ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                className={cn(
+                  "p-2 rounded-md transition-colors",
+                  infoPanelOpen
+                    ? "bg-brand/10 text-brand"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
                 title="Toggle Info"
               >
                 <Info className="h-5 w-5" />

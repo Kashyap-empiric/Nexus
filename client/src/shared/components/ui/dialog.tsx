@@ -67,11 +67,15 @@ function DialogOverlay({
 
 /* ─── Content (the visible card) ───────────────────────── */
 
-type DialogSize = "sm" | "md" | "lg" | "xl"
+type DialogSize = "sm" | "md" | "lg" | "xl" | "2xl"
+type DialogElevation = "sm" | "md" | "lg"
 
 interface DialogContentProps extends DialogPrimitive.Popup.Props {
   showCloseButton?: boolean
   size?: DialogSize
+  elevation?: DialogElevation
+  fullscreenMobile?: boolean
+  loading?: boolean
 }
 
 const SIZE_MAP: Record<DialogSize, string> = {
@@ -79,6 +83,13 @@ const SIZE_MAP: Record<DialogSize, string> = {
   md: "sm:max-w-[640px]",
   lg: "sm:max-w-[800px]",
   xl: "sm:max-w-[1000px]",
+  "2xl": "xl:max-w-[1280px]",
+}
+
+const ELEVATION_MAP: Record<DialogElevation, string> = {
+  sm: "shadow-lg ring-1 ring-border/50",
+  md: "shadow-xl ring-1 ring-border/50",
+  lg: "shadow-2xl ring-1 ring-border/50",
 }
 
 function DialogContent({
@@ -86,6 +97,9 @@ function DialogContent({
   children,
   showCloseButton = true,
   size = "sm",
+  elevation = "md",
+  fullscreenMobile = false,
+  loading = false,
   ...props
 }: DialogContentProps) {
   return (
@@ -95,26 +109,50 @@ function DialogContent({
         <DialogOverlay />
         <DialogPrimitive.Popup
           data-slot="dialog-content"
+          style={{ maxWidth: '1200px' }}
           className={cn(
-            /* Positioning — centre of viewport */
-            "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
-            /* Layout — flex column so header/body/footer stack */
-            "flex flex-col w-full",
-            "max-w-[calc(100%-2rem)] max-h-[85vh]",
-            /* Surface */
-            "rounded-xl bg-popover text-sm text-popover-foreground",
-            "ring-1 ring-border shadow-lg",
+            /* Base surface */
+            "flex flex-col w-full bg-popover text-sm text-popover-foreground",
+            /* Elevation (shadow + ring) */
+            ELEVATION_MAP[elevation],
             /* Entrance / exit */
             OVERLAY_ANIMATIONS.dialog,
-            /* Size variants */
-            SIZE_MAP[size],
+            /*
+             * Position + sizing — two modes:
+             *   default        → centered pill (same on all breakpoints)
+             *   fullscreenMobile → fills viewport on < sm, centered on sm+
+             */
+            fullscreenMobile
+              ? cn(
+                  "fixed",
+                  "inset-0",
+                  "w-full h-full max-w-none max-h-none",
+                  "rounded-none",
+                  "sm:inset-auto sm:top-1/2 sm:left-1/2",
+                  "sm:-translate-x-1/2 sm:-translate-y-1/2",
+                  "sm:w-auto sm:h-auto",
+                  "sm:max-w-[calc(100%-2rem)] sm:max-h-[85vh]",
+                  "sm:rounded-xl sm:shadow-xl",
+                  SIZE_MAP[size],
+                )
+              : cn(
+                  "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
+                  "max-w-[calc(100%-2rem)] max-h-[85vh]",
+                  "rounded-xl",
+                  SIZE_MAP[size],
+                ),
             className
           )}
           {...props}
         >
-          {children}
+          {/* Loading skeleton */}
+          {loading ? (
+            <DialogSkeleton />
+          ) : (
+            children
+          )}
 
-          {showCloseButton && (
+          {showCloseButton && !loading && (
             <DialogPrimitive.Close
               data-slot="dialog-close"
               render={
@@ -132,6 +170,38 @@ function DialogContent({
         </DialogPrimitive.Popup>
       </div>
     </DialogPortal>
+  )
+}
+
+/* ─── Skeleton (loading placeholder) ─────────────────────── */
+
+function DialogSkeleton({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col gap-0",
+        "animate-pulse",
+        "p-6",
+        className,
+      )}
+      {...props}
+    >
+      {/* Title skeleton */}
+      <div className="h-5 w-1/3 bg-muted rounded-md" />
+      <div className="mt-4 space-y-3">
+        <div className="h-4 w-full bg-muted rounded-md" />
+        <div className="h-4 w-4/5 bg-muted rounded-md" />
+        <div className="h-4 w-3/5 bg-muted rounded-md" />
+      </div>
+      {/* Footer skeleton */}
+      <div className="mt-6 flex justify-end gap-3">
+        <div className="h-9 w-20 bg-muted rounded-md" />
+        <div className="h-9 w-24 bg-muted/60 rounded-md" />
+      </div>
+    </div>
   )
 }
 
@@ -239,15 +309,16 @@ function DialogDescription({
 
 export {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogBody,
   DialogOverlay,
   DialogPortal,
+  DialogSkeleton,
   DialogTitle,
   DialogTrigger,
 }
-export type { DialogContentProps, DialogSize }
+export type { DialogContentProps, DialogElevation, DialogSize }

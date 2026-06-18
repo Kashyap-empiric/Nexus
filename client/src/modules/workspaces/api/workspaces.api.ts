@@ -72,6 +72,17 @@ export const updateMemberRole = async (workspaceId: string, userId: string, role
   return data.data;
 };
 
+export const inviteByEmail = async (
+  workspaceId: string,
+  email: string
+): Promise<{ success: boolean; invited: string; emailSent: boolean; error?: string }> => {
+  const { data } = await api.post<{ success: boolean; invited: string; emailSent: boolean; error?: string }>(
+    `/workspaces/${workspaceId}/invite-email`,
+    { email }
+  );
+  return data;
+};
+
 export const inviteMemberByUsername = async (workspaceId: string, username: string): Promise<{ success: boolean }> => {
   const { data } = await api.post<{ success: boolean }>(`/workspaces/${workspaceId}/invite`, { username });
   return data;

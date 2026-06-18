@@ -19,6 +19,7 @@ export interface DomainEvent {
 export interface ResolveInviteResult {
   redirectUrl: string;
   consumed?: boolean;
+  alreadyMember?: boolean;
   events?: DomainEvent[];
   /**
    * Notifications to dispatch after the invite transaction commits.

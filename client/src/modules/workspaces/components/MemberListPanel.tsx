@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useWorkspaceMembersQuery, useUpdateMemberRole, useRemoveMember } from "../hooks/useWorkspaces";
 import { useChannelMembersQuery } from "../hooks/useChannelMembers";
 import { useUser } from "@/modules/auth/store/useAuthStore";
@@ -8,25 +9,22 @@ import { useSocketStore } from "@/socket/socketStore";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { PresenceIndicator } from "@/modules/chat/components/PresenceIndicator";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/shared/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/shared/components/ui/dialog";
-import { Button } from "@/shared/components/ui/button";
-import { MoreVertical, Shield, ShieldAlert, ShieldCheck, UserIcon, UserX, UserPlus } from "lucide-react";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog";
+import { MoreVertical, Shield, ShieldCheck, UserIcon, UserX } from "lucide-react";
+import { cn } from "@/shared/lib/utils";
 import { toast } from "sonner";
 import type { WorkspaceMember, WorkspaceRole } from "../types/workspace";
 import type { ConversationMember } from "@/modules/conversations/types/conversation";
+import { ROLE_BADGE_STYLES } from "./CustomRoleDropdown";
 
 interface MemberListPanelProps {
   workspaceId: string;
@@ -103,63 +101,17 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
   const onlineMembers = members.filter(m => onlineUsers.has(m.userId));
   const offlineMembers = members.filter(m => !onlineUsers.has(m.userId));
 
-  const menuItems = (member: WorkspaceMember, isSelf: boolean) => {
-    if (isChannelView) return null;
-    if (isSelf || !canManage(member)) return null;
-
-    return (
-      <DropdownMenu key="menu">
-        <DropdownMenuTrigger className="opacity-0 group-hover:opacity-100 p-1 hover:bg-muted rounded text-muted-foreground transition-opacity focus-visible:outline-none">
-          <MoreVertical className="h-3.5 w-3.5" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48 border shadow-md">
-          {isOwner && (
-            <>
-              <DropdownMenuItem 
-                onClick={() => setMemberToPromote(member)}
-                disabled={member.role === "OWNER"}
-                className="cursor-pointer"
-              >
-                <ShieldCheck className="h-4 w-4 mr-2" />
-                Make Owner
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => handleRoleChange(member.userId, "ADMIN")}
-                disabled={member.role === "ADMIN"}
-                className="cursor-pointer"
-              >
-                <Shield className="h-4 w-4 mr-2" />
-                Make Admin
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => handleRoleChange(member.userId, "MEMBER")}
-                disabled={member.role === "MEMBER"}
-                className="cursor-pointer"
-              >
-                <UserIcon className="h-4 w-4 mr-2" />
-                Make Member
-              </DropdownMenuItem>
-            </>
-          )}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem 
-            onClick={() => setMemberToRemove(member)}
-            className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30"
-          >
-            <UserX className="h-4 w-4 mr-2" />
-            Remove from workspace
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-  };
-
   const renderMember = (member: any) => {
     const isSelf = member.userId === currentUser?.id;
+    const role = member.role as WorkspaceRole;
+    const RoleIcon: React.ComponentType<{ className?: string }> = 
+      role === "OWNER" ? ShieldCheck : role === "ADMIN" ? Shield : UserIcon;
+
+    const showMenu = !isChannelView && !isSelf && canManage(member);
 
     return (
       <div key={member.userId} className="group flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-muted/50 cursor-default">
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <div className="relative shrink-0">
             <UserAvatar
               name={member.user?.username || "User"}
@@ -173,16 +125,32 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
               className="-bottom-0.5 -right-0.5" 
             />
           </div>
-          <div className="flex flex-col min-w-0">
-            <span className="text-sm font-medium truncate flex items-center gap-1.5">
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className="text-sm font-medium truncate">
               {member.user?.username || "User"}
-              {!isChannelView && member.role === "OWNER" && <ShieldAlert className="h-3 w-3 text-yellow-600" />}
-              {!isChannelView && member.role === "ADMIN" && <Shield className="h-3 w-3 text-blue-500" />}
+              {isSelf && <span className="text-xs text-muted-foreground font-normal ml-1">(you)</span>}
             </span>
+            {!isChannelView && (
+              <span className={cn(
+                "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border w-fit mt-0.5",
+                ROLE_BADGE_STYLES[role]
+              )}>
+                <RoleIcon className="h-2.5 w-2.5" />
+                {role}
+              </span>
+            )}
           </div>
         </div>
 
-        {menuItems(member, isSelf)}
+        {showMenu && (
+          <MemberActionsMenu
+            member={member}
+            isOwner={isOwner}
+            onPromote={setMemberToPromote}
+            onRoleChange={handleRoleChange}
+            onRemove={setMemberToRemove}
+          />
+        )}
       </div>
     );
   };
@@ -212,20 +180,22 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
 
       {/* Promote to owner confirmation dialog */}
       {!isChannelView && (
-        <Dialog open={!!memberToPromote} onOpenChange={(open) => { if (!open) setMemberToPromote(null); }}>
-          <DialogContent className="sm:max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Promote to Owner</DialogTitle>
-              <DialogDescription>
+        <AlertDialog open={!!memberToPromote} onOpenChange={(open) => { if (!open) setMemberToPromote(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogMedia>
+                <ShieldCheck className="size-5 text-amber-500" />
+              </AlertDialogMedia>
+              <AlertDialogTitle>Promote to Owner</AlertDialogTitle>
+              <AlertDialogDescription>
                 Are you sure you want to make <strong>{memberToPromote?.user?.username || "this user"}</strong> an owner?
                 They will have full control over the workspace, including the ability to manage members, channels, and settings.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="ghost" onClick={() => setMemberToPromote(null)}>
-                Cancel
-              </Button>
-              <Button 
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={!memberToPromote}
                 onClick={() => {
                   if (!memberToPromote) return;
                   handleRoleChange(memberToPromote.userId, "OWNER");
@@ -233,35 +203,184 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
                 }}
               >
                 Promote to Owner
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
 
       {/* Remove member confirmation dialog (workspace view only) */}
       {!isChannelView && (
-        <Dialog open={!!memberToRemove} onOpenChange={(open) => { if (!open && !isRemoving) setMemberToRemove(null); }}>
-          <DialogContent className="sm:max-w-sm" showCloseButton={!isRemoving}>
-            <DialogHeader>
-              <DialogTitle>Remove member</DialogTitle>
-              <DialogDescription>
+        <AlertDialog open={!!memberToRemove} onOpenChange={(open) => { if (!open && !isRemoving) setMemberToRemove(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogMedia>
+                <UserX className="size-5 text-destructive" />
+              </AlertDialogMedia>
+              <AlertDialogTitle>Remove member</AlertDialogTitle>
+              <AlertDialogDescription>
                 Are you sure you want to remove <strong>{memberToRemove?.user?.username || "this user"}</strong> from the workspace?
                 They will lose access to all channels and conversations in this workspace.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter showCloseButton={!isRemoving}>
-              <Button 
-                variant="destructive" 
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isRemoving}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
                 onClick={handleRemoveMember}
                 disabled={isRemoving}
               >
                 {isRemoving ? "Removing..." : "Remove"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </div>
+  );
+}
+
+/* ─── Custom member actions menu ──────────────────────────
+ * Replaces Base UI DropdownMenu which doesn't work reliably.
+ * Uses plain button + createPortal for guaranteed click handling.
+ */
+
+interface MemberActionsMenuProps {
+  member: WorkspaceMember;
+  isOwner: boolean;
+  onPromote: (member: WorkspaceMember) => void;
+  onRoleChange: (userId: string, role: string) => void;
+  onRemove: (member: WorkspaceMember) => void;
+}
+
+function MemberActionsMenu({ member, isOwner, onPromote, onRoleChange, onRemove }: MemberActionsMenuProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ top: number; right: number } | null>(null);
+
+  // Measure and position on open
+  useEffect(() => {
+    if (!isOpen) {
+      setPosition(null);
+      return;
+    }
+
+    const measure = () => {
+      if (triggerRef.current) {
+        const rect = triggerRef.current.getBoundingClientRect();
+        setPosition({
+          top: rect.bottom + 2,
+          right: window.innerWidth - rect.right,
+        });
+      }
+    };
+
+    measure();
+    window.addEventListener("scroll", measure, true);
+    window.addEventListener("resize", measure);
+    return () => {
+      window.removeEventListener("scroll", measure, true);
+      window.removeEventListener("resize", measure);
+    };
+  }, [isOpen]);
+
+  // Click outside + escape
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      const isTrigger = triggerRef.current?.contains(target);
+      const isPanel = panelRef.current?.contains(target);
+      if (!isTrigger && !isPanel) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsOpen(false);
+    };
+
+    const raf = requestAnimationFrame(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleEscape);
+    });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen]);
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none cursor-pointer"
+      >
+        <MoreVertical className="h-3.5 w-3.5" />
+      </button>
+
+      {isOpen &&
+        position &&
+        createPortal(
+          <div
+            ref={panelRef}
+            role="menu"
+            className="fixed z-[9999] min-w-[180px] rounded-lg bg-popover p-1 text-popover-foreground shadow-xl ring-1 ring-foreground/10"
+            style={{
+              top: position.top,
+              right: position.right,
+            }}
+          >
+            {isOwner && (
+              <>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => { setIsOpen(false); onPromote(member); }}
+                  className="flex w-full items-center gap-2 rounded-md px-2 h-9 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                >
+                  <ShieldCheck className="h-4 w-4 shrink-0" />
+                  <span className="pt-[1px]">Make Owner</span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => { setIsOpen(false); onRoleChange(member.userId, "ADMIN"); }}
+                  className="flex w-full items-center gap-2 rounded-md px-2 h-9 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                >
+                  <Shield className="h-4 w-4 shrink-0" />
+                  <span className="pt-[1px]">Make Admin</span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => { setIsOpen(false); onRoleChange(member.userId, "MEMBER"); }}
+                  className="flex w-full items-center gap-2 rounded-md px-2 h-9 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                >
+                  <UserIcon className="h-4 w-4 shrink-0" />
+                  <span className="pt-[1px]">Make Member</span>
+                </button>
+                <div className="-mx-1 my-1 h-px bg-border" />
+              </>
+            )}
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => { setIsOpen(false); onRemove(member); }}
+              className="flex w-full items-center gap-2 rounded-md px-2 h-9 text-sm text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+            >
+              <UserX className="h-4 w-4 shrink-0" />
+              <span className="pt-[1px]">Remove from workspace</span>
+            </button>
+          </div>,
+          document.body
+        )}
+    </>
   );
 }
