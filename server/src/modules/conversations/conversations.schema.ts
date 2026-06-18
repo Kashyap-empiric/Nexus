@@ -1,17 +1,17 @@
 import * as z from "zod";
 
 export const conversationParamsSchema = z.object({
-  id: z.uuid("Invalid conversation ID format"),
+  id: z.uuid(),
 });
 
 export const createConversationSchema = z.object({
-  targetUserId: z.string().uuid("targetUserId must be a valid UUID"),
+  targetUserId: z.uuid(),
 });
 
 export type CreateConversationInput = z.infer<typeof createConversationSchema>;
 
 export const markReadSchema = z.object({
-  messageId: z.string().uuid("messageId must be a valid UUID"),
+  messageId: z.uuid(),
 });
 
 export type MarkReadInput = z.infer<typeof markReadSchema>;

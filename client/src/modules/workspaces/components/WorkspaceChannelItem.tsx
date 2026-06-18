@@ -114,7 +114,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
   const confirmRename = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (renameValue && renameValue.trim() !== channel.name) {
-      let channelName = renameValue.trim().toLowerCase().replace(/\s+/g, "-");
+      const channelName = renameValue.trim().toLowerCase().replace(/\s+/g, "-");
       updateChannel({ workspaceId, channelId: channel.id, data: { name: channelName } }, {
         onSuccess: () => closeModals()
       });

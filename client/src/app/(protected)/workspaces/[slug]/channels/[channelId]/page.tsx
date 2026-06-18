@@ -14,13 +14,15 @@ export default function WorkspaceChannelPage() {
   
   const setMode = useChatStore((state) => state.setMode);
   const setActiveWorkspaceId = useChatStore((state) => state.setActiveWorkspaceId);
+  const setActiveConversationId = useChatStore((state) => state.setActiveConversationId);
 
   useEffect(() => {
     if (slug) {
       setMode("WORKSPACE");
       setActiveWorkspaceId(slug); // Store uses slugOrId
+      setActiveConversationId(channelId);
     }
-  }, [slug, setMode, setActiveWorkspaceId]);
+  }, [slug, channelId, setMode, setActiveWorkspaceId, setActiveConversationId]);
   
   if (!channelId) return null;
 

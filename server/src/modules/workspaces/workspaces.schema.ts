@@ -37,7 +37,7 @@ export type ChannelMemberIdParams = z.infer<typeof channelMemberIdParamsSchema>;
 // =====================
 
 export const createWorkspaceBodySchema = z.object({
-  name: z.string().min(1, "Workspace name is required").max(100),
+  name: z.string().min(1, { message: "Workspace name is required" }).max(100),
   slug: z
     .string()
     .min(1)
@@ -54,7 +54,7 @@ export const createWorkspaceBodySchema = z.object({
 export type CreateWorkspaceBody = z.infer<typeof createWorkspaceBodySchema>;
 
 export const createChannelBodySchema = z.object({
-  name: z.string().min(1, "Channel name is required").max(80),
+  name: z.string().min(1, { message: "Channel name is required" }).max(80),
   visibility: z.enum(["PUBLIC", "PRIVATE"]),
 });
 
@@ -107,7 +107,7 @@ export const getWorkspaceChannelsParamsSchema = workspaceIdParamsSchema;
 export type GetWorkspaceChannelsParams = z.infer<typeof getWorkspaceChannelsParamsSchema>;
 
 export const inviteByEmailBodySchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: z.string().email({ message: "Invalid email address" }),
 });
 
 export type InviteByEmailBody = z.infer<typeof inviteByEmailBodySchema>;

@@ -20,7 +20,6 @@ import * as usersRepo from "./modules/users/users.repository.js";
 const app = express();
 
 const allowedOrigins = ENV.ALLOWED_ORIGINS;
-console.log(allowedOrigins)
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 app.use(morgan("dev"));
@@ -40,7 +39,7 @@ app.get("/api/me", authMiddleware, async (req: AuthRequest, res: Response) => {
 
     res.json(user);
   } catch (error) {
-    console.error(error);
+    console.error("[GET /api/me]", error instanceof Error ? error.message : error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

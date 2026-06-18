@@ -1,9 +1,29 @@
 # Nexus — Changelog
 
-> **Last Updated:** 2026-06-17  
+> **Last Updated:** 2026-06-18  
 > **Purpose:** Track all significant changes to the project in reverse chronological order.
 
 ---
+
+## 2026-06-18
+
+### Fixed
+- **Stale lockfile**: Removed `client/package-lock.json` (out of sync with package.json). `pnpm-lock.yaml` is the authoritative client lockfile.
+- **Env validation**: Added Zod runtime validation for both `client/src/config/env.ts` and `server/src/config/env.ts` — previously used non-null assertions that would silently fail at runtime.
+- **Debug log cleanup**: Removed leftover `console.log(allowedOrigins)` from `server/src/app.ts`.
+- **Server scripts**: Added `lint` and `typecheck` scripts to `server/package.json`.
+
+### Documentation
+- **README.md**: Comprehensive rewrite with pnpm setup, package manager notes, evaluation scores, and script table.
+- **`.docs/LIMITATIONS.md`**: Added findings from evaluation (no tests, in-memory rate limiter, string error handling, ESLint debt) along with resolutions for this session's fixes.
+- **`.docs/CHANGELOG.md`**: Added this entry.
+- **`.agents/AGENT_RULES.md`**: Added rules for env validation, lockfile discipline, typed errors, and test requirements.
+
+- **Bug Tracking**: Created `work/BUGS.md` documenting glaring frontend errors found during analysis.
+- **UI/UX Audit**: Created `work/UI-UX_PROBLEMS.md` listing inconsistencies in UI and UX (CSS + interactive + edge cases)
+
+- **Bug Tracking**: Created `work/BUGS.md` documenting glaring frontend errors found during analysis.
+- **UI/UX Audit**: Created `work/UI-UX_PROBLEMS.md` listing inconsistencies in UI and UX (CSS + interactive + edge cases)
 
 ## 2026-06-17
 

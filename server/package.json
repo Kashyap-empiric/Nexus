@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "nodemon -e ts,tsx,json --exec tsx src/server.ts",
     "build": "prisma generate && tsup",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",

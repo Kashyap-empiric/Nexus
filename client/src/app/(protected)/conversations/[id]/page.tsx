@@ -13,12 +13,14 @@ export default function ActiveConversationPage() {
 
   const setMode = useChatStore((state) => state.setMode);
   const setActiveWorkspaceId = useChatStore((state) => state.setActiveWorkspaceId);
+  const setActiveConversationId = useChatStore((state) => state.setActiveConversationId);
 
   // Reset mode to DM when viewing a DM conversation (fixes phantom workspace redirect)
   useEffect(() => {
     setMode("DM");
     setActiveWorkspaceId(null);
-  }, [setMode, setActiveWorkspaceId]);
+    setActiveConversationId(conversationId);
+  }, [setMode, setActiveWorkspaceId, setActiveConversationId, conversationId]);
   
   return <ActiveConversation conversationId={conversationId} highlightMessageId={highlightMessageId} />;
 }

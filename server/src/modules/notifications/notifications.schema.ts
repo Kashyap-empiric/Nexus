@@ -6,11 +6,11 @@ export const getNotificationsQuerySchema = z.object({
 });
 
 export const markAsReadParamsSchema = z.object({
-  id: z.string().min(1, "Notification ID is required"),
+  id: z.string().min(1, { message: "Notification ID is required" }),
 });
 
 export const pushSubscriptionSchema = z.object({
-  endpoint: z.string().url(),
+  endpoint: z.url(),
   keys: z.object({
     p256dh: z.string(),
     auth: z.string()
@@ -18,7 +18,7 @@ export const pushSubscriptionSchema = z.object({
 });
 
 export const unsubscribePushSchema = z.object({
-  endpoint: z.string().url()
+  endpoint: z.url()
 });
 
 export const updatePreferencesSchema = z.object({

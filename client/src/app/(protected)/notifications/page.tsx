@@ -8,6 +8,7 @@ import { useNotifications, useMarkAsRead, useMarkAllAsRead } from "@/modules/not
 import { timeAgo, NotificationIcon } from "@/modules/notifications/utils/notifications-ui";
 import type { Notification } from "@/modules/notifications/types/notification";
 import { cn } from "@/shared/lib/utils";
+import { presetNavigationFromLink } from "@/shared/lib/navigation";
 
 function NotificationCard({
   notification,
@@ -23,6 +24,7 @@ function NotificationCard({
       onMarkRead(notification.id);
     }
     if (notification.link) {
+      presetNavigationFromLink(notification.link);
       router.push(notification.link);
     }
   };

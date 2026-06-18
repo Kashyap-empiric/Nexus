@@ -11,6 +11,7 @@ import { timeAgo, formatNotificationTime, NotificationIcon } from "../utils/noti
 import { cn } from "@/shared/lib/utils";
 import { toast } from "sonner";
 import type { Notification } from "../types/notification";
+import { presetNavigationFromLink } from "@/shared/lib/navigation";
 
 type Tab = "replies" | "invites";
 
@@ -34,6 +35,9 @@ function NotificationItem({
       onMarkRead(notification.id);
     }
     if (notification.link) {
+      // Pre-set sidebar state so the sidebar renders with the correct
+      // mode/highlight on the very first frame after navigation
+      presetNavigationFromLink(notification.link);
       router.push(notification.link);
     }
   };

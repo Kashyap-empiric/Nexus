@@ -81,10 +81,10 @@ export function useMessageScroll({
     }
 
     if (isAtBottomRef.current) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       scrollToBottom("smooth");
     } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setHasNewMessages(true);
     }
   }, [latestMessageId, conversationId, isLatestMessageMine, scrollToBottom]);

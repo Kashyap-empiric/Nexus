@@ -13,6 +13,22 @@
 - Use descriptive variable names — avoid single-letter names outside of loops.
 - All files must end with a newline.
 
+### Environment Variables
+- **Always use Zod runtime validation** for environment variables in both client and server.
+- Never use non-null assertions (`process.env.X!`) without validation — they fail silently.
+- Never add a new env var without adding it to the validation schema in `config/env.ts` AND documenting it in `.docs/ENVIRONMENT_VARIABLES.md`.
+
+### Logging
+- Use structured error logging with context prefixes (e.g., `[Module] message`).
+- Remove leftover debug `console.log` statements before committing.
+- Use `console.error` for actual errors, not informational messages.
+
+### Package Manager Discipline
+- Client uses **pnpm** — `pnpm-lock.yaml` is the authoritative lockfile.
+- Server uses **npm** — `package-lock.json` is the authoritative lockfile.
+- Do not mix lockfile formats. If `npm install` was accidentally run in client, remove the generated `package-lock.json`.
+- Keep lockfiles in sync with `package.json` — stale lockfiles break CI onboarding.
+
 ### REST APIs
 - Extract data from wrappers correctly: `const { data } = await api.get()`.
 - If the backend returns `{ data: T }`, handle the wrapper properly in the frontend API client so components receive clean types.
@@ -76,7 +92,10 @@
 - [ ] UUIDv7 used for new IDs
 - [ ] Socket events use constants, not literals
 - [ ] No controller-level socket emissions (use dispatcher)
-- [ ] Environment variables centralized in `config/env.ts`
+- [ ] Environment variables centralized in `config/env.ts` and validated with Zod
+- [ ] Typed error handling — controllers do NOT compare string error messages
+- [ ] No new `console.log` in production request paths
+- [ ] Lockfile discipline — no mixing pnpm/npm lockfiles in the same package
 
 ### Performance Review Requirements
 - [ ] Heavy components (emoji picker, markdown, modals) use `dynamic(() => import(...))` — not eagerly imported

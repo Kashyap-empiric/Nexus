@@ -9,6 +9,7 @@ import { MessageSearchPopover } from "@/modules/messages/components/MessageSearc
 import { useChatStore } from "@/modules/chat/store/chatStore";
 import { useWorkspaceMembersQuery } from "@/modules/workspaces/hooks/useWorkspaces";
 import { cn } from "@/shared/lib/utils";
+import { presetNavigationFromLink } from "@/shared/lib/navigation";
 import { Menu, Hash, Users, X, ArrowLeft } from "lucide-react";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { PresenceIndicator } from "@/modules/chat/components/PresenceIndicator";
@@ -100,6 +101,8 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
     if ("serviceWorker" in navigator) {
       const handleMessage = (event: MessageEvent) => {
         if (event.data && event.data.type === 'NAVIGATE' && event.data.url) {
+          // Pre-set sidebar state for conversation links
+          presetNavigationFromLink(event.data.url);
           router.push(event.data.url);
         }
       };

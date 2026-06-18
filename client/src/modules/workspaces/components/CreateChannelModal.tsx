@@ -35,7 +35,7 @@ export function CreateChannelModal({ isOpen, onClose, workspaceId }: CreateChann
     e.preventDefault();
     if (!name.trim()) return;
 
-    let channelName = name.trim().toLowerCase().replace(/\s+/g, "-");
+    const channelName = name.trim().toLowerCase().replace(/\s+/g, "-");
 
     createChannel(
       { workspaceId, name: channelName, visibility },

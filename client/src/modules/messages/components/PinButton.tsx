@@ -10,9 +10,11 @@ interface PinButtonProps {
 }
 
 export function PinButton({ conversationId, messageId, isPinned, canPin = true }: PinButtonProps) {
-  if (!canPin) return null;
   const pinMutation = usePinMessage(conversationId);
   const unpinMutation = useUnpinMessage(conversationId);
+
+  // Must come after all hooks to comply with React's Rules of Hooks
+  if (!canPin) return null;
 
   const handleClick = () => {
     if (isPinned) {

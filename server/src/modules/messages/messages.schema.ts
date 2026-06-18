@@ -6,21 +6,21 @@ export const getMessagesQuerySchema = z.object({
 });
 
 export const messageParamsSchema = z.object({
-  conversationId: z.uuid("Invalid conversation ID format"),
+  conversationId: z.uuid(),
 });
 
 export const messageIdParamsSchema = z.object({
-  conversationId: z.uuid("Invalid conversation ID format"),
-  messageId: z.uuid("Invalid message ID format"),
+  conversationId: z.uuid(),
+  messageId: z.uuid(),
 });
 
 export const createMessageBodySchema = z.object({
-  content: z.string().trim().min(1, "Message cannot be empty").max(2000, "Message is too long"),
-  replyToId: z.string().uuid().optional(),
+  content: z.string().trim().min(1, { message: "Message cannot be empty" }).max(2000, { message: "Message is too long" }),
+  replyToId: z.uuid().optional(),
 });
 
 export const updateMessageBodySchema = z.object({
-  content: z.string().trim().min(1, "Message cannot be empty").max(2000, "Message is too long"),
+  content: z.string().trim().min(1, { message: "Message cannot be empty" }).max(2000, { message: "Message is too long" }),
 });
 
 export const searchMessagesQuerySchema = z.object({
@@ -29,12 +29,12 @@ export const searchMessagesQuerySchema = z.object({
 });
 
 export const pinsParamsSchema = z.object({
-  conversationId: z.uuid("Invalid conversation ID format"),
+  conversationId: z.uuid(),
 });
 
 export const pinsIdParamsSchema = z.object({
-  conversationId: z.uuid("Invalid conversation ID format"),
-  messageId: z.uuid("Invalid message ID format"),
+  conversationId: z.uuid(),
+  messageId: z.uuid(),
 });
 
 export type GetMessagesQuery = z.infer<typeof getMessagesQuerySchema>;
