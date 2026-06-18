@@ -17,6 +17,7 @@ import { useGlobalSocket } from "@/modules/chat/hooks/useGlobalSocket";
 import { useChatStore } from "@/modules/chat/store/chatStore";
 import { useSocketStore } from "@/socket/socketStore";
 import { cn, stripMarkdown } from "@/shared/lib/utils";
+import { toast } from "sonner";
 import { APP_ROUTES } from "@/config/url";
 import { useUser } from "@/modules/auth/store/useAuthStore";
 import { useInviteModal } from "@/modules/invites/hooks/useInviteModal";
@@ -75,7 +76,12 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
 
   // Redirect to last visited or fallback channel
   useEffect(() => {
-    if (pathname?.includes(APP_ROUTES.SETTINGS.INDEX) || pathname?.includes(APP_ROUTES.NOTIFICATIONS.INDEX)) return;
+    // Skip redirect for non-workspace routes (DM conversations, settings, etc.)
+    if (
+      pathname?.includes(APP_ROUTES.SETTINGS.INDEX) ||
+      pathname?.includes(APP_ROUTES.NOTIFICATIONS.INDEX) ||
+      pathname?.startsWith(APP_ROUTES.CONVERSATIONS.INDEX + "/")
+    ) return;
 
     if (mode === "WORKSPACE" && activeWorkspaceId && workspaceChannels && workspaceChannels.length > 0) {
       const isCurrentlyInAChannel = workspaceChannels.some(c => c.id === activeId);
@@ -89,6 +95,9 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
 
         if (activeId !== targetId && pendingRedirect.current !== targetId) {
           pendingRedirect.current = targetId;
+          const targetChannel = workspaceChannels.find(c => c.id === targetId);
+          const targetName = targetChannel?.name || targetId;
+          toast.info(`Switched to #${targetName}`, { duration: 2000 });
           router.push(`/workspaces/${activeWorkspaceId}/channels/${targetId}`);
         }
       }
@@ -280,7 +289,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
                       </div>
 
                       {isUnread && !isActive && (
-                          <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[12px] font-bold shrink-0 leading-none">
+                          <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-white text-[12px] font-bold shrink-0 leading-none">
                             {unreadCount > 99 ? '99+' : unreadCount}
                           </div>
                         )}

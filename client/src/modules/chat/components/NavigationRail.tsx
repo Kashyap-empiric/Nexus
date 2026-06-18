@@ -70,7 +70,7 @@ export function NavigationRail({ openSettings }: NavigationRailProps) {
                 )}
 
                 {unreadCount > 0 && !isActive && (
-                  <div className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none border-2 border-sidebar shadow-sm z-10">
+                  <div className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-white text-[10px] font-bold leading-none border-2 border-sidebar shadow-sm z-10">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </div>
                 )}

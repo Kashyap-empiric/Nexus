@@ -24,9 +24,10 @@ interface MessageListProps {
   otherMember?: User;
   onReply?: (messageId: string, username: string, content: string) => void;
   highlightMessageId?: string;
+  canPin?: boolean;
 }
 
-export function MessageList({ conversationId, currentUserId, myLastReadMessageId, partnerLastReadMessageId, members, isChannel, otherMember, onReply, highlightMessageId }: MessageListProps) {
+export function MessageList({ conversationId, currentUserId, myLastReadMessageId, partnerLastReadMessageId, members, isChannel, otherMember, onReply, highlightMessageId, canPin = true }: MessageListProps) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, error } = useMessagesInfiniteQuery(conversationId);
   const { mutate: markRead } = useMarkConversationReadMutation();
 
@@ -174,6 +175,7 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
                       isChannel={isChannel}
                       onReply={onReply}
                       pinnedMessageIds={pinnedMessageIds}
+                      canPin={canPin}
                     />
                   </React.Fragment>
                 );

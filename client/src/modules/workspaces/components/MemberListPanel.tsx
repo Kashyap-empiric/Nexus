@@ -62,9 +62,11 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
     );
   }
 
-  const currentUserMember = !isChannelView ? (members as WorkspaceMember[]).find(m => m.userId === currentUser?.id) : null;
-  const isOwner = (currentUserMember as any)?.role === "OWNER";
-  const isAdmin = (currentUserMember as any)?.role === "ADMIN";
+  const currentUserMember = !isChannelView
+    ? (members as WorkspaceMember[]).find(m => m.userId === currentUser?.id)
+    : null;
+  const isOwner = currentUserMember?.role === "OWNER";
+  const isAdmin = currentUserMember?.role === "ADMIN";
 
   const handleRoleChange = (userId: string, role: string) => {
     updateRole({ workspaceId, userId, role });

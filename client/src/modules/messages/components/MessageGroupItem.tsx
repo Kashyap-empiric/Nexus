@@ -39,9 +39,10 @@ interface MessageGroupItemProps {
   isChannel?: boolean;
   onReply?: (messageId: string, username: string, content: string) => void;
   pinnedMessageIds?: Set<string>;
+  canPin?: boolean;
 }
 
-export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageId, members, isChannel, onReply, pinnedMessageIds }: MessageGroupItemProps) {
+export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageId, members, isChannel, onReply, pinnedMessageIds, canPin = true }: MessageGroupItemProps) {
   const { user, messages } = group;
   const conversationId = messages[0]?.conversationId;
 
@@ -207,6 +208,13 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                     type="button"
                     className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 hover:text-foreground transition-colors cursor-pointer w-fit group/reply"
                     onClick={() => scrollToMessage(msg.replyTo!.id)}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                    }}
+                    onTouchEnd={(e) => {
+                      e.preventDefault();
+                      scrollToMessage(msg.replyTo!.id);
+                    }}
                   >
                     <Reply className="h-3 w-3 shrink-0 rotate-180" />
                     <span className="font-semibold truncate max-w-[120px]">
@@ -283,6 +291,13 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                   type="button"
                                   className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 hover:text-foreground transition-colors cursor-pointer w-fit group/reply"
                                   onClick={() => scrollToMessage(msg.replyTo!.id)}
+                                  onTouchStart={(e) => {
+                                    e.preventDefault();
+                                  }}
+                                  onTouchEnd={(e) => {
+                                    e.preventDefault();
+                                    scrollToMessage(msg.replyTo!.id);
+                                  }}
                                 >
                                   <Reply className="h-3 w-3 shrink-0 rotate-180" />
                                   <span className="font-semibold truncate max-w-[120px]">
@@ -332,6 +347,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                               conversationId={conversationId}
                               messageId={msg.id}
                               isPinned={isPinned}
+                              canPin={canPin}
                             />
                             <Button
                               variant="ghost"
@@ -378,10 +394,14 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                   <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(stripMarkdown(msg.content))}>
                                     <Text className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy as plain text</span>
                                   </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => isPinned ? unpinMutation.mutate(msg.id) : pinMutation.mutate(msg.id)}>
-                                    <Pin className={`h-4 w-4 mr-2 ${isPinned ? "text-amber-500" : ""}`} /> <span className="pt-[1px]">{isPinned ? "Unpin message" : "Pin message"}</span>
-                                  </DropdownMenuItem>
+                                  {canPin && (
+                                    <>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => isPinned ? unpinMutation.mutate(msg.id) : pinMutation.mutate(msg.id)}>
+                                        <Pin className={`h-4 w-4 mr-2 ${isPinned ? "text-amber-500" : ""}`} /> <span className="pt-[1px]">{isPinned ? "Unpin message" : "Pin message"}</span>
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
                                   {isMyMessage && (
                                     <>
                                       <DropdownMenuSeparator />
@@ -412,10 +432,14 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                  <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(stripMarkdown(msg.content))}>
                                    <Text className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy as plain text</span>
                                  </DropdownMenuItem>
-                                 <DropdownMenuSeparator />
-                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => isPinned ? unpinMutation.mutate(msg.id) : pinMutation.mutate(msg.id)}>
-                                   <Pin className={`h-4 w-4 mr-2 ${isPinned ? "text-amber-500" : ""}`} /> <span className="pt-[1px]">{isPinned ? "Unpin message" : "Pin message"}</span>
-                                 </DropdownMenuItem>
+                                 {canPin && (
+                                   <>
+                                     <DropdownMenuSeparator />
+                                     <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => isPinned ? unpinMutation.mutate(msg.id) : pinMutation.mutate(msg.id)}>
+                                       <Pin className={`h-4 w-4 mr-2 ${isPinned ? "text-amber-500" : ""}`} /> <span className="pt-[1px]">{isPinned ? "Unpin message" : "Pin message"}</span>
+                                     </DropdownMenuItem>
+                                   </>
+                                 )}
                                  {isMyMessage && (
                                    <>
                                      <DropdownMenuSeparator />
@@ -506,19 +530,23 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
             }}>
               <Text className="h-4 w-4 mr-2" /> Copy as plain text
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => {
-              if (contextMenuTarget.isPinned) {
-                unpinMutation.mutate(contextMenuTarget.msgId);
-              } else {
-                pinMutation.mutate(contextMenuTarget.msgId);
-              }
-              setOpenMenuId(null);
-              setContextMenuTarget(null);
-            }}>
-              <Pin className={`h-4 w-4 mr-2 ${contextMenuTarget.isPinned ? "text-amber-500" : ""}`} />
-              {contextMenuTarget.isPinned ? "Unpin message" : "Pin message"}
-            </DropdownMenuItem>
+            {canPin && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => {
+                  if (contextMenuTarget.isPinned) {
+                    unpinMutation.mutate(contextMenuTarget.msgId);
+                  } else {
+                    pinMutation.mutate(contextMenuTarget.msgId);
+                  }
+                  setOpenMenuId(null);
+                  setContextMenuTarget(null);
+                }}>
+                  <Pin className={`h-4 w-4 mr-2 ${contextMenuTarget.isPinned ? "text-amber-500" : ""}`} />
+                  {contextMenuTarget.isPinned ? "Unpin message" : "Pin message"}
+                </DropdownMenuItem>
+              </>
+            )}
             {contextMenuTarget.isMyMessage && (
               <>
                 <DropdownMenuSeparator />

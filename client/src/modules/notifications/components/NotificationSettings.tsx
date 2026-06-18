@@ -71,14 +71,14 @@ export function NotificationSettings() {
       </div>
 
       <div className="space-y-6">
-        {/* Desktop Notifications toggle */}
+        {/* Push Notifications toggle */}
         <div className="space-y-3">
           <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-            Desktop Notifications
+            Push Notifications
           </h2>
           <div className="border rounded-lg divide-y bg-card">
             <ToggleRow
-              label="Enable Desktop Notifications"
+              label="Enable Push Notifications"
               description="Receive notifications when you get new messages or invites"
               checked={actualPushEnabled}
               disabled={isUpdating}

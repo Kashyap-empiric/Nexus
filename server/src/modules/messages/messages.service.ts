@@ -5,6 +5,7 @@ import { createAndDispatch } from "../notifications/notifications.service.js";
 import { sendPushNotification } from "@/services/push.service.js";
 import { dispatchPinEvent } from "@/socket/socket.dispatcher.js";
 import { prisma } from "@/lib/db.js";
+import { findWorkspaceMember } from "../auth/auth.repository.js";
 
 /**
  * Send push notifications to conversation members for a new message.
@@ -135,12 +136,17 @@ export const createMessage = async (conversationId: string, userId: string, cont
       const isChannel = conversation?.type === "CHANNEL";
       const location = isChannel && channelName ? `#${channelName}` : "a conversation";
 
+      // Use workspace-aware link for channel conversations, DM link otherwise
+      const notificationLink = isChannel && conversation?.workspaceId
+        ? `/workspaces/${conversation.workspaceId}/channels/${conversationId}?highlight=${message.id}`
+        : `/conversations/${conversationId}?highlight=${message.id}`;
+
       await createAndDispatch({
         userId: parentMessageUserId,
         type: "MESSAGE_REPLIED",
         title: `Reply from ${message.user.username}`,
         body: message.content,
-        link: `/conversations/${conversationId}?highlight=${message.id}`,
+        link: notificationLink,
         metadata: {
           conversationId,
           messageId: message.id,
@@ -168,6 +174,16 @@ export const pinMessage = async (messageId: string, conversationId: string, user
   if (message.conversationId !== conversationId) {
     throw new Error("Message does not belong to this conversation.");
   }
+
+  // Check workspace role — only OWNER/ADMIN can pin in channels
+  const conversation = await conversationsRepo.findById(conversationId);
+  if (conversation?.workspaceId) {
+    const member = await findWorkspaceMember(userId, conversation.workspaceId);
+    if (!member || (member.role !== "OWNER" && member.role !== "ADMIN")) {
+      throw new Error("Forbidden: Only workspace owners and admins can pin messages.");
+    }
+  }
+
   const existing = await messagesRepo.findPinByMessageId(messageId);
   if (existing) {
     throw new Error("Message is already pinned.");
@@ -182,6 +198,15 @@ export const pinMessage = async (messageId: string, conversationId: string, user
 };
 
 export const unpinMessage = async (messageId: string, conversationId: string, userId: string) => {
+  // Check workspace role — only OWNER/ADMIN can unpin in channels
+  const conversation = await conversationsRepo.findById(conversationId);
+  if (conversation?.workspaceId) {
+    const member = await findWorkspaceMember(userId, conversation.workspaceId);
+    if (!member || (member.role !== "OWNER" && member.role !== "ADMIN")) {
+      throw new Error("Forbidden: Only workspace owners and admins can unpin messages.");
+    }
+  }
+
   const existing = await messagesRepo.findPinByMessageId(messageId);
   if (!existing) {
     throw new Error("Message is not pinned.");

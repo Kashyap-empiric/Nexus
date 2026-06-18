@@ -6,9 +6,11 @@ interface PinButtonProps {
   conversationId: string;
   messageId: string;
   isPinned: boolean | undefined;
+  canPin?: boolean;
 }
 
-export function PinButton({ conversationId, messageId, isPinned }: PinButtonProps) {
+export function PinButton({ conversationId, messageId, isPinned, canPin = true }: PinButtonProps) {
+  if (!canPin) return null;
   const pinMutation = usePinMessage(conversationId);
   const unpinMutation = useUnpinMessage(conversationId);
 

@@ -43,6 +43,13 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
   const isChannel = conversation?.type === "CHANNEL";
   const { data: workspaceDetails } = useWorkspaceDetails(isChannel ? conversation?.workspaceId || null : null);
 
+  // Compute pin permission: DMs have no restrictions; channels require OWNER/ADMIN role
+  const canPin = !isChannel
+    ? true
+    : workspaceDetails?.workspace.members?.some(
+        (m: { userId: string; role: string }) => m.userId === currentUserId && (m.role === "OWNER" || m.role === "ADMIN")
+      ) ?? false;
+
   // Set header info when conversation data loads
   useEffect(() => {
     if (!conversation) return;
@@ -121,6 +128,7 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
           isChannel={isChannel || undefined}
           onReply={handleReply}
           highlightMessageId={highlightMessageId}
+          canPin={canPin}
         />
 
         <MessageInput

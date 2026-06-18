@@ -61,7 +61,21 @@ export function PinnedMessagesPanel({ conversationId }: PinnedMessagesPanelProps
             if (pin.message.deletedAt) return;
             if (isMobile) {
               closeInfoPanel();
-              setTimeout(() => scrollToMessage(pin.messageId), 50);
+              setTimeout(() => scrollToMessage(pin.messageId), 300);
+            } else {
+              scrollToMessage(pin.messageId);
+            }
+          }}
+          onTouchStart={(e) => {
+            if (pin.message.deletedAt) return;
+            e.preventDefault();
+          }}
+          onTouchEnd={(e) => {
+            if (pin.message.deletedAt) return;
+            e.preventDefault();
+            if (isMobile) {
+              closeInfoPanel();
+              setTimeout(() => scrollToMessage(pin.messageId), 300);
             } else {
               scrollToMessage(pin.messageId);
             }
@@ -72,7 +86,7 @@ export function PinnedMessagesPanel({ conversationId }: PinnedMessagesPanelProps
               if (pin.message.deletedAt) return;
               if (isMobile) {
                 closeInfoPanel();
-                setTimeout(() => scrollToMessage(pin.messageId), 50);
+                setTimeout(() => scrollToMessage(pin.messageId), 300);
               } else {
                 scrollToMessage(pin.messageId);
               }
@@ -121,7 +135,7 @@ export function PinnedMessagesPanel({ conversationId }: PinnedMessagesPanelProps
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();

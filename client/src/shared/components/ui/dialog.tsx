@@ -109,7 +109,6 @@ function DialogContent({
         <DialogOverlay />
         <DialogPrimitive.Popup
           data-slot="dialog-content"
-          style={{ maxWidth: '1200px' }}
           className={cn(
             /* Base surface */
             "flex flex-col w-full bg-popover text-sm text-popover-foreground",

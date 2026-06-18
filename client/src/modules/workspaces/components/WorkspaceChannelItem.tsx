@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogHeader,
+  DialogBody,
   DialogFooter,
 } from "@/shared/components/ui/dialog";
 import { useDeleteChannel, useUpdateChannel } from "../hooks/useWorkspaces";
@@ -177,7 +178,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
 
       <div className="flex items-center gap-1 shrink-0">
         {isUnread && !isActive && (
-          <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[12px] font-bold leading-none">
+          <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-white text-[12px] font-bold leading-none">
             {unreadCount > 99 ? '99+' : unreadCount}
           </div>
         )}
@@ -239,40 +240,50 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
 
       {/* Rename Dialog */}
       <Dialog open={modalType === "rename"} onOpenChange={handleCloseModal}>
-        <DialogContent showCloseButton={false} size="sm">
+        <DialogContent size="sm" elevation="md" fullscreenMobile>
           <DialogHeader>
             <DialogTitle>Rename Channel</DialogTitle>
+            <DialogDescription>
+              Give this channel a new name for everyone.
+            </DialogDescription>
           </DialogHeader>
-          <form onSubmit={confirmRename} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="rename-channel">Channel Name</Label>
-              <Input
-                id="rename-channel"
-                value={renameValue}
-                onChange={(e) => setRenameValue(e.target.value)}
-                autoFocus
-                maxLength={30}
-              />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={closeModals} disabled={isUpdating}>Cancel</Button>
-              <Button type="submit" disabled={!renameValue.trim() || renameValue.trim() === channel.name || isUpdating}>
-                {isUpdating ? "Saving..." : "Rename"}
-              </Button>
-            </DialogFooter>
+          <form id="rename-channel-form" onSubmit={confirmRename}>
+            <DialogBody>
+              <div className="space-y-2">
+                <Label htmlFor="rename-channel">Channel Name</Label>
+                <Input
+                  id="rename-channel"
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  autoFocus
+                  maxLength={30}
+                />
+              </div>
+            </DialogBody>
           </form>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={closeModals} disabled={isUpdating}>Cancel</Button>
+            <Button type="submit" form="rename-channel-form" disabled={!renameValue.trim() || renameValue.trim() === channel.name || isUpdating}>
+              {isUpdating ? "Saving..." : "Rename"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Dialog */}
       <Dialog open={modalType === "delete"} onOpenChange={handleCloseModal}>
-        <DialogContent showCloseButton={false} size="sm">
+        <DialogContent size="sm" elevation="md" fullscreenMobile>
           <DialogHeader>
             <DialogTitle>Delete Channel</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete #{channel.name}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
+          <DialogBody>
+            <p className="text-sm text-muted-foreground">
+              All messages in this channel will be permanently deleted. This action cannot be undone.
+            </p>
+          </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={closeModals} disabled={isDeleting}>Cancel</Button>
             <Button type="button" variant="destructive" onClick={confirmDelete} disabled={isDeleting}>
@@ -292,13 +303,21 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
 
       {/* Visibility Dialog */}
       <Dialog open={modalType === "visibility"} onOpenChange={handleCloseModal}>
-        <DialogContent showCloseButton={false} size="sm">
+        <DialogContent size="sm" elevation="md" fullscreenMobile>
           <DialogHeader>
             <DialogTitle>Change Visibility</DialogTitle>
             <DialogDescription>
               Are you sure you want to make #{channel.name} {channel.visibility === "PRIVATE" ? "public" : "private"}?
             </DialogDescription>
           </DialogHeader>
+          <DialogBody>
+            <p className="text-sm text-muted-foreground">
+              {channel.visibility === "PRIVATE"
+                ? "Anyone in the workspace will be able to see and join this channel."
+                : "Only current members will be able to see this channel. New members won't be added automatically."
+              }
+            </p>
+          </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={closeModals} disabled={isUpdating}>Cancel</Button>
             <Button type="button" onClick={confirmVisibility} disabled={isUpdating}>
@@ -317,13 +336,18 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
 
       {/* Leave Channel Dialog */}
       <Dialog open={modalType === "leave"} onOpenChange={handleCloseModal}>
-        <DialogContent showCloseButton={false} size="sm">
+        <DialogContent size="sm" elevation="md" fullscreenMobile>
           <DialogHeader>
             <DialogTitle>Leave Channel</DialogTitle>
             <DialogDescription>
               Are you sure you want to leave #{channel.name}? You will need to be re-invited to rejoin.
             </DialogDescription>
           </DialogHeader>
+          <DialogBody>
+            <p className="text-sm text-muted-foreground">
+              You will no longer receive messages or notifications from this channel.
+            </p>
+          </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={closeModals} disabled={isLeaving}>Cancel</Button>
             <Button type="button" variant="destructive" onClick={confirmLeave} disabled={isLeaving}>

@@ -44,7 +44,7 @@ export function StatusSelector() {
   const handleStatusTextSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await updateStatus({ status: profile.status as any, statusText: statusText || null });
+      await updateStatus({ status: profile.status as "AVAILABLE" | "AWAY" | "DND" | "INVISIBLE", statusText: statusText || null });
       toast.success("Status text updated");
       setIsOpen(false);
     } catch (error) {

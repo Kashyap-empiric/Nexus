@@ -16,7 +16,8 @@ import {
 } from "@/shared/components/ui/dialog";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
-import { X, UserPlus, Search } from "lucide-react";
+import { X, UserPlus, Search, Check } from "lucide-react";
+import { cn } from "@/shared/lib/utils";
 import { toast } from "sonner";
 
 interface ManageChannelMembersModalProps {
@@ -35,6 +36,7 @@ export function ManageChannelMembersModal({ workspaceId, channelId, open, onOpen
 
   const [showAdd, setShowAdd] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const channelMemberIds = useMemo(() => new Set(channelMembers?.map(m => m.userId) || []), [channelMembers]);
 
@@ -49,10 +51,30 @@ export function ManageChannelMembersModal({ workspaceId, channelId, open, onOpen
     return availableMembers.filter(m => m.user?.username?.toLowerCase().includes(q));
   }, [availableMembers, searchQuery]);
 
-  const handleAddMembers = () => {
-    const userIds = filteredAvailable.map(m => m.userId);
+  const toggleMember = (userId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(filteredAvailable.map(m => m.userId)));
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleAddSelected = () => {
+    const userIds = Array.from(selectedIds);
     if (userIds.length === 0) {
-      toast.error("No users to add");
+      toast.error("No users selected");
       return;
     }
     addMembers({ workspaceId, channelId, userIds }, {
@@ -60,6 +82,7 @@ export function ManageChannelMembersModal({ workspaceId, channelId, open, onOpen
         toast.success(`${userIds.length} member(s) added to channel`);
         setShowAdd(false);
         setSearchQuery("");
+        setSelectedIds(new Set());
       },
       onError: (err: any) => {
         const errorMsg = err?.response?.data?.error || err?.message || "Failed to add members";
@@ -82,7 +105,7 @@ export function ManageChannelMembersModal({ workspaceId, channelId, open, onOpen
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="sm" style={{ maxWidth: '1200px' }}>
+      <DialogContent size="sm">
         <DialogHeader>
           <DialogTitle>Manage Members</DialogTitle>
           <DialogDescription>
@@ -101,6 +124,9 @@ export function ManageChannelMembersModal({ workspaceId, channelId, open, onOpen
                   variant="outline"
                   size="sm"
                   onClick={() => {
+                    if (showAdd) {
+                      setSelectedIds(new Set());
+                    }
                     setShowAdd(!showAdd);
                     setSearchQuery("");
                   }}
@@ -171,32 +197,70 @@ export function ManageChannelMembersModal({ workspaceId, channelId, open, onOpen
                   />
                 </div>
 
-                <div className="space-y-1 max-h-40 overflow-y-auto">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground">
+                    {selectedIds.size > 0
+                      ? `${selectedIds.size} selected`
+                      : `${filteredAvailable.length} available`}
+                  </span>
+                  {filteredAvailable.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={selectedIds.size === filteredAvailable.length ? clearSelection : selectAll}
+                      className="text-xs text-brand hover:text-brand/80 transition-colors font-medium"
+                    >
+                      {selectedIds.size === filteredAvailable.length ? "Clear all" : "Select all"}
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-0.5 max-h-44 overflow-y-auto">
                   {filteredAvailable.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">
                       {searchQuery ? "No matching members found" : "All workspace members are already in this channel"}
                     </p>
                   ) : (
-                    filteredAvailable.map(member => (
-                      <div key={member.userId} className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-muted/50">
-                        <UserAvatar
-                          name={member.user?.username || "User"}
-                          src={member.user?.avatarUrl}
-                          className="h-7 w-7"
-                          fallbackClassName="text-[9px]"
-                        />
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-sm font-medium truncate">
-                            {member.user?.username || "User"}
-                          </span>
-                          {member.user?.fullName && (
-                            <span className="text-xs text-muted-foreground truncate">
-                              {member.user.fullName}
-                            </span>
+                    filteredAvailable.map(member => {
+                      const isSelected = selectedIds.has(member.userId);
+                      return (
+                        <button
+                          key={member.userId}
+                          type="button"
+                          onClick={() => toggleMember(member.userId)}
+                          className={cn(
+                            "flex items-center gap-2.5 w-full px-2 py-1.5 rounded-md transition-colors text-left",
+                            isSelected
+                              ? "bg-brand/10 hover:bg-brand/15"
+                              : "hover:bg-muted/50"
                           )}
-                        </div>
-                      </div>
-                    ))
+                        >
+                          <div className={cn(
+                            "flex items-center justify-center h-4 w-4 rounded border shrink-0 transition-colors",
+                            isSelected
+                              ? "bg-brand border-brand text-brand-foreground"
+                              : "border-muted-foreground/30"
+                          )}>
+                            {isSelected && <Check className="h-3 w-3" />}
+                          </div>
+                          <UserAvatar
+                            name={member.user?.username || "User"}
+                            src={member.user?.avatarUrl}
+                            className="h-7 w-7"
+                            fallbackClassName="text-[9px]"
+                          />
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-medium truncate">
+                              {member.user?.username || "User"}
+                            </span>
+                            {member.user?.fullName && (
+                              <span className="text-xs text-muted-foreground truncate">
+                                {member.user.fullName}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -206,18 +270,20 @@ export function ManageChannelMembersModal({ workspaceId, channelId, open, onOpen
 
         {showAdd && (
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => { setShowAdd(false); setSearchQuery(""); }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAddMembers}
-              disabled={filteredAvailable.length === 0 || isAdding}
-            >
-              {isAdding ? "Adding..." : `Add all (${filteredAvailable.length})`}
-            </Button>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button
+                variant="outline"
+                onClick={() => { setShowAdd(false); setSearchQuery(""); setSelectedIds(new Set()); }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleAddSelected}
+                disabled={selectedIds.size === 0 || isAdding}
+              >
+                {isAdding ? "Adding..." : `Add selected (${selectedIds.size})`}
+              </Button>
+            </div>
           </DialogFooter>
         )}
       </DialogContent>

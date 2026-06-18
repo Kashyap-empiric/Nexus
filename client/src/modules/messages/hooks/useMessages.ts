@@ -86,7 +86,18 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
           return {
             ...conv,
             updatedAt: optimisticMessage.createdAt,
-            messages: [optimisticMessage as unknown as Message], // partial message for preview
+            latestMessageId: optimisticMessage.id,
+            latestMessage: {
+              id: optimisticMessage.id,
+              userId: optimisticMessage.userId,
+              content: optimisticMessage.content,
+              deletedAt: null,
+              createdAt: optimisticMessage.createdAt,
+              user: {
+                username: optimisticMessage.user.username,
+                fullName: optimisticMessage.user.fullName,
+              },
+            },
           };
         });
       });

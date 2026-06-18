@@ -74,6 +74,12 @@ export const handleMemberUpdate = (queryClient: QueryClient) => {
         if (isRedirectingFromRemoval) return;
         isRedirectingFromRemoval = true;
 
+        // Reset the guard after 10 seconds in case the redirect doesn't complete
+        // (e.g., component unmounts or navigation is interrupted)
+        setTimeout(() => {
+          isRedirectingFromRemoval = false;
+        }, 10_000);
+
         toast.error("You have been removed from the workspace");
         setTimeout(() => {
           window.location.href = APP_ROUTES.CONVERSATIONS.INDEX;

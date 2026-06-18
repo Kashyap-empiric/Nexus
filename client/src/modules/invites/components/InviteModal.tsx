@@ -226,7 +226,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent size="sm" elevation="md" style={{ maxWidth: '1200px' }}>
+      <DialogContent size="sm" elevation="md">
         <DialogHeader>
           <DialogTitle>Invite Someone</DialogTitle>
         </DialogHeader>

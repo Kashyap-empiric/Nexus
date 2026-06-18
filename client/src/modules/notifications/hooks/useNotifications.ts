@@ -97,7 +97,29 @@ export const useNotificationPreferences = () => {
 
   const updateMutation = useMutation({
     mutationFn: (prefs: Partial<NotificationPreference>) => notificationsApi.updatePreferences(prefs),
-    onSuccess: () => {
+    onMutate: async (newPrefs) => {
+      // Cancel in-flight refetches so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({ queryKey: queryKeys.notificationPreferences });
+
+      // Snapshot previous value for rollback
+      const previousPrefs = queryClient.getQueryData<NotificationPreference>(queryKeys.notificationPreferences);
+
+      // Optimistically update the cache so the toggle responds immediately
+      queryClient.setQueryData<NotificationPreference>(
+        queryKeys.notificationPreferences,
+        (old) => old ? { ...old, ...newPrefs } : old
+      );
+
+      return { previousPrefs };
+    },
+    onError: (_err, _newPrefs, context) => {
+      // Rollback on failure
+      if (context?.previousPrefs) {
+        queryClient.setQueryData(queryKeys.notificationPreferences, context.previousPrefs);
+      }
+    },
+    onSettled: () => {
+      // Refetch to sync with server state
       queryClient.invalidateQueries({ queryKey: queryKeys.notificationPreferences });
     },
   });

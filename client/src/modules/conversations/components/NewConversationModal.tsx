@@ -62,7 +62,7 @@ export function NewConversationModal({ isOpen, onClose }: NewConversationModalPr
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent size="md" elevation="md" style={{ maxWidth: '1200px' }}>
+      <DialogContent size="md" elevation="md">
         <DialogHeader>
           <DialogTitle>New Message</DialogTitle>
         </DialogHeader>
