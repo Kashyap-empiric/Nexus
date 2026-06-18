@@ -52,20 +52,30 @@ export function PinnedMessagesPanel({ conversationId, currentUserId }: PinnedMes
   return (
     <div className="flex flex-col gap-2 p-3">
       {pins.map((pin) => (
-        <button
+        <div
           key={pin.id}
-          type="button"
+          role="button"
+          tabIndex={0}
           onClick={() => {
-            // Only close the info panel on mobile/tablet (less space)
             if (isMobile) {
               closeInfoPanel();
-              // Small delay to let the info panel close animation start
               setTimeout(() => scrollToMessage(pin.messageId), 50);
             } else {
               scrollToMessage(pin.messageId);
             }
           }}
-          className="group flex items-start gap-3 p-3 rounded-lg bg-muted/20 hover:bg-muted/30 border border-border/50 transition-colors text-left w-full"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              if (isMobile) {
+                closeInfoPanel();
+                setTimeout(() => scrollToMessage(pin.messageId), 50);
+              } else {
+                scrollToMessage(pin.messageId);
+              }
+            }
+          }}
+          className="group flex items-start gap-3 p-3 rounded-lg bg-muted/20 hover:bg-muted/30 border border-border/50 transition-colors text-left w-full cursor-pointer"
         >
           <UserAvatar
             name={pin.message.user?.username}
@@ -109,7 +119,7 @@ export function PinnedMessagesPanel({ conversationId, currentUserId }: PinnedMes
               <Trash className="h-3.5 w-3.5" />
             </Button>
           )}
-        </button>
+        </div>
       ))}
     </div>
   );
