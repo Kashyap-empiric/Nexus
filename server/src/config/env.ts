@@ -4,7 +4,6 @@ const envSchema = z.object({
   // Required
   DATABASE_URL: z.string().min(1, { message: "DATABASE_URL is required" }),
   SUPABASE_URL: z.string().min(1, { message: "SUPABASE_URL is required" }),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, { message: "SUPABASE_SERVICE_ROLE_KEY is required" }),
   SUPABASE_PUBLISHABLE_KEY: z.string().min(1, { message: "SUPABASE_PUBLISHABLE_KEY is required" }),
   CLIENT_URL: z.string().min(1, { message: "CLIENT_URL is required" }),
   VAPID_PUBLIC_KEY: z.string().min(1, { message: "VAPID_PUBLIC_KEY is required" }),
