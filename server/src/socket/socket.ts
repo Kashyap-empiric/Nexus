@@ -15,14 +15,13 @@ export const initSocket = (httpServer: HttpServer) => {
     cors: {
       origin: ENV.ALLOWED_ORIGINS,
       methods: ["GET", "POST"],
-      credentials: true, // Consider adding if using cookies/sessions
+      credentials: true, 
     },
   });
 
   io.use(socketAuthMiddleware);
 
   io.on("connection", async (socket) => {
-    // Apply rate limiting immediately
     socket.use(socketRateLimiterMiddleware(socket));
 
     const userId = socket.data.user?.id;
@@ -42,7 +41,6 @@ export const initSocket = (httpServer: HttpServer) => {
 
     try {
       if (userId) {
-        // Join user-specific room for targeted messages
         await socket.join(`user:${userId}`);
 
         const dmMemberships = await getUserConversationMemberships(userId);
@@ -58,7 +56,6 @@ export const initSocket = (httpServer: HttpServer) => {
           console.log(`[Socket.io] socket=${socket.id} joined ${rooms.length} conversation/channel rooms`);
         }
 
-        // Join workspace rooms for broadcasts (channel:update, member:update, workspace:update)
         const workspaceIds = await getUserWorkspaceIds(userId);
         const workspaceRooms = workspaceIds.map((id) => `workspace:${id}`);
         if (workspaceRooms.length > 0) {

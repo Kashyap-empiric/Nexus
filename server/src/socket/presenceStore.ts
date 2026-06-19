@@ -24,17 +24,14 @@ class PresenceStore {
     }
   }
 
-  // ── Public API ──────────────────────────────────────────────────
 
   /**
    * Register a socket for a user.
    * Returns `true` if this is the user's *first* active socket.
    */
   async addSocket(userId: string, socketId: string): Promise<boolean> {
-    // Always write to memory first (fast, always works)
     const isFirst = this.memoryAddSocket(userId, socketId);
 
-    // Best-effort Redis sync
     if (this.redisAvailable) {
       try {
         await redis.sAdd(`user:presence:${userId}`, socketId);
@@ -52,10 +49,8 @@ class PresenceStore {
    * Returns `true` if the user has no more active sockets.
    */
   async removeSocket(userId: string, socketId: string): Promise<boolean> {
-    // Always update memory first
     const isNowOffline = this.memoryRemoveSocket(userId, socketId);
 
-    // Best-effort Redis sync
     if (this.redisAvailable) {
       try {
         await redis.sRem(`user:presence:${userId}`, socketId);
@@ -78,7 +73,6 @@ class PresenceStore {
       try {
         return await redis.sMembers("presence:users");
       } catch {
-        // fall through to memory
       }
     }
     return Array.from(this.memoryStore.keys());
@@ -91,7 +85,6 @@ class PresenceStore {
         const count = await redis.sCard(`user:presence:${userId}`);
         return count > 0;
       } catch {
-        // fall through to memory
       }
     }
     const sockets = this.memoryStore.get(userId);
@@ -103,7 +96,6 @@ class PresenceStore {
     this.memoryStore.clear();
   }
 
-  // ── In-memory helpers (always kept in sync) ─────────────────────
 
   private memoryAddSocket(userId: string, socketId: string): boolean {
     let sockets = this.memoryStore.get(userId);

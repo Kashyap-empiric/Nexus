@@ -1,6 +1,6 @@
 import type { Socket } from "socket.io";
 import { verifyToken } from "@/utils/jwt";
-import { SOCKET_AUTH_ERRORS } from "../socketErrors"; // adjust path as needed
+import { SOCKET_AUTH_ERRORS } from "../socketErrors"; 
 
 interface AuthError extends Error {
   code?: string;

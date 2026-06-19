@@ -1,6 +1,5 @@
 import type { ConversationMemberDTO } from "../modules/conversations/conversations.types";
 
-// ──── Dispatch Types ────
 
 export interface ConversationWithMembers {
   id: string;

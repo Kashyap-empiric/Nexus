@@ -17,25 +17,20 @@ export const registerWorkspaceHandlers = (io: Server, socket: Socket) => {
         const isMember = await isWorkspaceMember(userId, payload.workspaceId);
         if (!isMember) return callback?.({ success: false });
 
-        // Leave previous workspace conversation rooms
         socket.rooms.forEach((room) => {
           if (room.startsWith("conversation:") && socket.data.activeWorkspaceRooms?.includes(room)) {
             socket.leave(room);
           }
         });
 
-        // Leave previous workspace broadcast room
         const prevWorkspaceId = socket.data.activeWorkspaceId;
         if (prevWorkspaceId) {
           socket.leave(`workspace:${prevWorkspaceId}`);
         }
 
-        // Join new workspace broadcast room
         await socket.join(`workspace:${payload.workspaceId}`);
         socket.data.activeWorkspaceId = payload.workspaceId;
 
-        // Join new workspace channels (filters private channels to only those user can access)
-        // Owners bypass the filter — they have access to all channels
         const wsMember = await workspacesRepo.findUserRolesInWorkspaces(userId, [payload.workspaceId]);
         const isOwner = wsMember.some(m => m.role === "OWNER");
         const ownerWorkspaceIds = isOwner ? new Set([payload.workspaceId]) : undefined;

@@ -12,7 +12,6 @@ type MessageSendCallback = (response: {
 }) => void;
 
 export const registerMessageHandlers = (io: Server, socket: Socket) => {
-  // Typing indicators — broadcast to conversation room, exclude sender
   socket.on(
     SOCKET_EVENTS.TYPING_START,
     (payload: { conversationId: string; username: string }) => {
@@ -80,7 +79,7 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
           });
         }
 
-        const { message, conversationMetadata } = await createMessage(
+        const { message, conversationMetadata, parentMessageUserId } = await createMessage(
           payload.conversationId,
           userId,
           payload.content,
@@ -89,14 +88,13 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
 
         dispatchMessageEvent("NEW", payload.conversationId, message, conversationMetadata);
 
-        // Send push notifications in the background (fire-and-forget).
-        // Not awaiting here removes 50-150ms from the user-perceived message send latency.
-        // Push notifications are best-effort — errors are caught internally.
+        // Skip push for the reply parent — they already got one via createAndDispatch
         sendMessageNotifications(
           payload.conversationId,
           userId,
           message.user?.username || "Unknown",
-          payload.content
+          payload.content,
+          parentMessageUserId
         );
 
         return callback?.({

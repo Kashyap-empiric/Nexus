@@ -15,20 +15,18 @@ export const dispatchConversationNew = async (conversation: ConversationWithMemb
 
   try {
     const io = getIO();
+    const memberIds = conversation.members.map(m => m.userId);
 
-    for (const member of conversation.members) {
+    for (const userId of memberIds) {
       try {
-        const sockets = await io.in(`user:${member.userId}`).fetchSockets();
-        for (const socket of sockets) {
-          await socket.join(`conversation:${conversation.id}`);
-        }
+        io.in(`user:${userId}`).socketsJoin(`conversation:${conversation.id}`);
       } catch (err: unknown) {
         console.error("[Socket.io] failed to join room", err);
       }
     }
 
-    for (const member of conversation.members) {
-      io.to(`user:${member.userId}`).emit(SOCKET_EVENTS.CONVERSATION_NEW, conversation);
+    for (const userId of memberIds) {
+      io.to(`user:${userId}`).emit(SOCKET_EVENTS.CONVERSATION_NEW, conversation);
     }
   } catch (err: unknown) {
     console.error("[Socket.io] Failed to apply dynamic room join for new conversation:", err);
@@ -76,10 +74,8 @@ export const dispatchUserStatusUpdate = async (userId: string, status: string, s
   try {
     const io = getIO();
     
-    // Broadcast to the user's own sockets
     io.to(`user:${userId}`).emit(SOCKET_EVENTS.USER_STATUS_UPDATE, { userId, status, statusText });
 
-    // Broadcast to all workspaces the user is a member of
     const workspaces = await prisma.workspaceMember.findMany({
       where: { userId },
       select: { workspaceId: true }
@@ -89,8 +85,6 @@ export const dispatchUserStatusUpdate = async (userId: string, status: string, s
       io.to(`workspace:${w.workspaceId}`).emit(SOCKET_EVENTS.USER_STATUS_UPDATE, { userId, status, statusText });
     }
     
-    // Note: DMs are technically conversations. If we want we could emit to conversations as well,
-    // but for now workspace scoping covers 99% of chat scenarios in Nexus MVP.
   } catch (error) {
     console.error("Error dispatching status update:", error);
   }
@@ -100,10 +94,8 @@ export const dispatchUserProfileUpdate = async (userId: string) => {
   try {
     const io = getIO();
     
-    // Broadcast to the user's own sockets
     io.to(`user:${userId}`).emit(SOCKET_EVENTS.USER_UPDATE, { userId });
 
-    // Broadcast to all workspaces the user is a member of
     const workspaces = await prisma.workspaceMember.findMany({
       where: { userId },
       select: { workspaceId: true }
@@ -113,7 +105,6 @@ export const dispatchUserProfileUpdate = async (userId: string) => {
       io.to(`workspace:${w.workspaceId}`).emit(SOCKET_EVENTS.USER_UPDATE, { userId });
     }
     
-    // Note: Can also emit to conversations if necessary, but this is consistent with status updates
   } catch (error) {
     console.error("Error dispatching profile update:", error);
   }
@@ -164,9 +155,6 @@ export const dispatchWorkspaceUpdate = (
     const io = getIO();
     io.to(`workspace:${workspaceId}`).emit(SOCKET_EVENTS.WORKSPACE_UPDATE, payload);
 
-    // For DELETED, also notify each member directly to handle redirect
-    // Note: memberUserIds must be passed from the caller since workspace members
-    // are cascade-deleted before this point
     if (payload.action === "DELETED" && payload.memberUserIds) {
       for (const userId of payload.memberUserIds) {
         io.to(`user:${userId}`).emit(SOCKET_EVENTS.WORKSPACE_UPDATE, payload);
@@ -215,10 +203,7 @@ export const dispatchChannelMemberUpdate = async (
     if (action === "ADDED" && payload.addedMembers) {
       for (const member of payload.addedMembers) {
         try {
-          const sockets = await io.in(`user:${member.id}`).fetchSockets();
-          for (const socket of sockets) {
-            await socket.join(`conversation:${channelId}`);
-          }
+          io.in(`user:${member.id}`).socketsJoin(`conversation:${channelId}`);
         } catch (err: unknown) {
           console.error("[Socket.io] failed to join room for channel member", err);
         }
@@ -228,12 +213,32 @@ export const dispatchChannelMemberUpdate = async (
         channelId,
         addedMembers: payload.addedMembers,
       });
+      
+      for (const member of payload.addedMembers) {
+        io.to(`user:${member.id}`).emit(SOCKET_EVENTS.CHANNEL_MEMBER_ADDED, {
+          workspaceId,
+          channelId,
+          addedMembers: payload.addedMembers,
+        });
+      }
     } else if (action === "REMOVED" && payload.removedUserId) {
       io.to(`conversation:${channelId}`).emit(SOCKET_EVENTS.CHANNEL_MEMBER_REMOVED, {
         workspaceId,
         channelId,
         removedUserId: payload.removedUserId,
       });
+
+      io.to(`user:${payload.removedUserId}`).emit(SOCKET_EVENTS.CHANNEL_MEMBER_REMOVED, {
+        workspaceId,
+        channelId,
+        removedUserId: payload.removedUserId,
+      });
+
+      try {
+        io.in(`user:${payload.removedUserId}`).socketsLeave(`conversation:${channelId}`);
+      } catch (err: unknown) {
+        console.error("[Socket.io] failed to leave room for removed channel member", err);
+      }
     }
   } catch (err: unknown) {
     console.error("[Socket.io] Failed to dispatch CHANNEL_MEMBER_UPDATE:", err);
@@ -248,8 +253,11 @@ export const dispatchMemberUpdate = (
     const io = getIO();
     io.to(`workspace:${workspaceId}`).emit(SOCKET_EVENTS.MEMBER_UPDATE, payload);
 
-    // For REMOVED action, also notify the removed user directly
     if (payload.action === "REMOVED" && payload.member?.userId) {
+      io.to(`user:${payload.member.userId}`).emit(SOCKET_EVENTS.MEMBER_UPDATE, payload);
+    }
+
+    if (payload.action === "ADDED" && payload.member?.userId) {
       io.to(`user:${payload.member.userId}`).emit(SOCKET_EVENTS.MEMBER_UPDATE, payload);
     }
   } catch (err: unknown) {
