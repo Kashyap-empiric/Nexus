@@ -50,6 +50,7 @@ export interface NotificationOptions {
   title: string;
   body: string;
   icon?: string;
+  badge?: string;
   tag?: string;
   /** URL to navigate to when the notification is clicked */
   onClickUrl?: string;
@@ -69,7 +70,8 @@ export function showNotification(options: NotificationOptions): boolean {
   try {
     const notification = new Notification(options.title, {
       body: options.body,
-      icon: options.icon || undefined,
+      icon: options.icon || "/images/Logo.png",
+      badge: options.badge || "/images/Logo.png",
       tag: options.tag || options.conversationId, // Deduplicate by tag
       silent: false,
     });
@@ -95,7 +97,8 @@ export function showNotification(options: NotificationOptions): boolean {
       navigator.serviceWorker.ready.then(registration => {
         registration.showNotification(options.title, {
           body: options.body,
-          icon: options.icon || undefined,
+          icon: options.icon || "/images/Logo.png",
+          badge: options.badge || "/images/Logo.png",
           tag: options.tag || options.conversationId,
           data: { url: options.onClickUrl }
         }).catch(err => console.error("ServiceWorker showNotification failed:", err));
