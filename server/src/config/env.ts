@@ -1,16 +1,15 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  // Required
   DATABASE_URL: z.string().min(1, { message: "DATABASE_URL is required" }),
   SUPABASE_URL: z.string().min(1, { message: "SUPABASE_URL is required" }),
   SUPABASE_PUBLISHABLE_KEY: z.string().min(1, { message: "SUPABASE_PUBLISHABLE_KEY is required" }),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   CLIENT_URL: z.string().min(1, { message: "CLIENT_URL is required" }),
   VAPID_PUBLIC_KEY: z.string().min(1, { message: "VAPID_PUBLIC_KEY is required" }),
   VAPID_PRIVATE_KEY: z.string().min(1, { message: "VAPID_PRIVATE_KEY is required" }),
   VAPID_SUBJECT: z.string().min(1, { message: "VAPID_SUBJECT is required" }),
 
-  // Optional with defaults
   PORT: z.coerce.number().int().positive().default(4000),
   REDIS_URL: z.string().optional(),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(15 * 60 * 1000),
@@ -36,7 +35,6 @@ function loadEnv() {
     );
   }
 
-  // Build the ALLOWED_ORIGINS from CLIENT_URL (supports comma-separated list)
   const allowedOrigins = parsed.data.CLIENT_URL.split(",").map((url) => url.trim());
 
   return {

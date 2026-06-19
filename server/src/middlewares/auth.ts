@@ -12,6 +12,10 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
 
     try {
         const user = await verifyToken(token);
+        if (!user) {
+            res.status(401).json({ error: "Invalid token payload" });
+            return;
+        }
         req.user = user;
         next();
     } catch (error) {

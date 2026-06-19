@@ -15,7 +15,6 @@ type ClientHit = {
 const createRateLimiter = ({ windowMs, max, message }: RateLimitOptions) => {
   const hits = new Map<string, ClientHit>();
 
-  // Clean up expired entries every 60 seconds to prevent memory leak
   const CLEANUP_INTERVAL_MS = 60_000;
   const cleanupTimer = setInterval(() => {
     const now = Date.now();
@@ -26,7 +25,6 @@ const createRateLimiter = ({ windowMs, max, message }: RateLimitOptions) => {
     }
   }, CLEANUP_INTERVAL_MS);
 
-  // Don't prevent process exit
   if (cleanupTimer.unref) {
     cleanupTimer.unref();
   }

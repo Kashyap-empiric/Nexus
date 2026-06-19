@@ -13,7 +13,6 @@ async function main() {
       let slug = baseSlug;
       let counter = 1;
       
-      // Keep trying until we find a unique slug
       while (true) {
         const exists = await prisma.workspace.findUnique({ where: { slug } });
         if (!exists) break;

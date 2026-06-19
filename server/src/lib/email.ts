@@ -58,7 +58,7 @@ function buildWorkspaceInviteHtml(
       <td align="center" style="padding:40px 16px;">
         <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
           <tr>
-            <td style="padding:40px 40px 24px;text-align:center;background:linear-gradient(135deg,#6366f1,#8b5cf6);">
+            <td style="padding:40px 40px 24px;text-align:center;background-color:#6366f1;background-image:linear-gradient(135deg,#6366f1,#8b5cf6);">
               <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;">
                 Nexus
               </h1>
@@ -80,7 +80,7 @@ function buildWorkspaceInviteHtml(
 
               <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 24px;">
                 <tr>
-                  <td align="center">
+                  <td align="center" bgcolor="#6366f1" style="border-radius:8px;background-color:#6366f1;background-image:linear-gradient(135deg,#6366f1,#8b5cf6);">
                     <a
                       href="${escapeHtml(inviteUrl)}"
                       style="
@@ -89,9 +89,10 @@ function buildWorkspaceInviteHtml(
                         font-size:15px;
                         font-weight:600;
                         color:#ffffff;
-                        background:linear-gradient(135deg,#6366f1,#8b5cf6);
-                        border-radius:8px;
                         text-decoration:none;
+                        background-color:#6366f1;
+                        background-image:linear-gradient(135deg,#6366f1,#8b5cf6);
+                        border-radius:8px;
                       "
                     >
                       Accept Invitation

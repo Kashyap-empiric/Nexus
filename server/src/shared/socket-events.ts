@@ -129,7 +129,7 @@ export interface MemberUpdateMember {
 }
 
 export interface MemberUpdatePayload {
-  action: "ROLE_UPDATED" | "REMOVED";
+  action: "ROLE_UPDATED" | "REMOVED" | "ADDED";
   member: MemberUpdateMember;
 }
 
