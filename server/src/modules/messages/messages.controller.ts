@@ -91,7 +91,7 @@ export const createMessage = async (req: AuthRequest, res: Response): Promise<vo
     const { conversationId } = req.params as { conversationId: string };
     const { content, replyToId } = req.body as CreateMessageBody & { replyToId?: string };
 
-    const { message, conversationMetadata } = await messagesService.createMessage(conversationId, userId, content, replyToId);
+    const { message, conversationMetadata, parentMessageUserId } = await messagesService.createMessage(conversationId, userId, content, replyToId);
 
     try {
       dispatchMessageEvent("NEW", conversationId, message, conversationMetadata);
@@ -99,13 +99,13 @@ export const createMessage = async (req: AuthRequest, res: Response): Promise<vo
       console.error("[Socket.io] Failed to emit message:new from HTTP endpoint", err);
     }
 
-    // Send push notifications for this message (C3 fix — HTTP path had no notifications)
     try {
       await messagesService.sendMessageNotifications(
         conversationId,
         userId,
         message.user?.username || "Unknown",
-        content
+        content,
+        parentMessageUserId
       );
     } catch (notifErr) {
       console.error("[Message Push] Failed to send push notifications from HTTP endpoint:", notifErr);

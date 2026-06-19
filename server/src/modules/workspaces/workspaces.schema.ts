@@ -1,8 +1,5 @@
 import * as z from "zod";
 
-// =====================
-// Params Schemas
-// =====================
 
 export const workspaceIdParamsSchema = z.object({
   id: z.string().min(1),
@@ -32,9 +29,6 @@ export const channelMemberIdParamsSchema = z.object({
 
 export type ChannelMemberIdParams = z.infer<typeof channelMemberIdParamsSchema>;
 
-// =====================
-// Body Schemas
-// =====================
 
 export const createWorkspaceBodySchema = z.object({
   name: z.string().min(1, { message: "Workspace name is required" }).max(100),
@@ -101,7 +95,6 @@ export const updateMemberRoleBodySchema = z.object({
 
 export type UpdateMemberRoleBody = z.infer<typeof updateMemberRoleBodySchema>;
 
-// Existing schemas (preserved for backward compatibility)
 export const getWorkspaceChannelsParamsSchema = workspaceIdParamsSchema;
 
 export type GetWorkspaceChannelsParams = z.infer<typeof getWorkspaceChannelsParamsSchema>;

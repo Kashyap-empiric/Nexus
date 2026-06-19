@@ -5,9 +5,6 @@ export const userInviteResolver: InviteResolver = {
   async resolve(context: ResolveInviteContext) {
     const { tx, invite, actorId } = context;
     
-    // For USER invites, entityId is the userId of the inviter
-    // Pass tx so DM creation participates in the outer transaction
-    // Cast needed because ResolveInviteContext.tx is Omit<TransactionClient> for safety
     const result = await createOrGetDM(actorId, invite.entityId, tx as any);
 
     const events = [];
@@ -21,7 +18,7 @@ export const userInviteResolver: InviteResolver = {
 
     return {
       redirectUrl: `/conversations/${result.conversation.id}`,
-      consumed: result.created, // Only consume the invite if a new DM was created
+      consumed: result.created, 
       events,
     };
   }

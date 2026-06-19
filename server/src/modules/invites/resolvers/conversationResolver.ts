@@ -9,7 +9,6 @@ export const conversationInviteResolver: InviteResolver = {
     let membershipCreated = true;
 
     try {
-      // Safety check: ensure we don't add members to a DM
       const conversation = await tx.conversation.findUnique({
         where: { id: invite.entityId },
         select: { type: true }
@@ -26,7 +25,7 @@ export const conversationInviteResolver: InviteResolver = {
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        membershipCreated = false; // Already a member
+        membershipCreated = false; 
       } else {
         throw error;
       }
@@ -37,13 +36,13 @@ export const conversationInviteResolver: InviteResolver = {
       events.push({
         type: "CONVERSATION_UPDATE",
         conversationId: invite.entityId,
-        userId: actorId, // Could be useful if payload isn't immediately attached
+        userId: actorId, 
       });
     }
 
     return {
       redirectUrl: `/conversations/${invite.entityId}`,
-      consumed: membershipCreated, // Only consume if a new membership was created
+      consumed: membershipCreated, 
       events,
     };
   }

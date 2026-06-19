@@ -1,8 +1,8 @@
 import { uuidv7 } from "uuidv7";
 import * as messagesRepo from "./messages.repository.js";
 import * as conversationsRepo from "../conversations/conversations.repository.js";
-import { createAndDispatch } from "../notifications/notifications.service.js";
 import { sendPushNotification } from "@/services/push.service.js";
+import { createAndDispatch } from "../notifications/notifications.service.js";
 import { dispatchPinEvent } from "@/socket/socket.dispatcher.js";
 import { prisma } from "@/lib/db.js";
 import { findWorkspaceMember } from "../auth/auth.repository.js";
@@ -11,19 +11,28 @@ import { findWorkspaceMember } from "../auth/auth.repository.js";
  * Send push notifications to conversation members for a new message.
  * Checks each member's notification preferences (DM, channel, mention).
  * This is shared between the socket handler and HTTP endpoint.
+ * Note: In-app notifications for message events (MENTION, DIRECT_MESSAGE, CHANNEL_MESSAGE)
+ * are not created yet — those features are in a future milestone.
  */
 export const sendMessageNotifications = async (
   conversationId: string,
   senderId: string,
   senderUsername: string,
-  content: string
+  content: string,
+  /** User ID to skip — used when the user already received a reply notification */
+  excludeUserId?: string | null
 ): Promise<void> => {
   try {
     const conv = await conversationsRepo.findById(conversationId);
     if (!conv) return;
 
-    const pushPromises = conv.members.map(async (member) => {
+    const notificationLink = conv.type === "CHANNEL" && conv.workspaceId
+      ? `/workspaces/${conv.workspaceId}/channels/${conversationId}?highlight=latest`
+      : `/conversations/${conversationId}`;
+
+    const notificationPromises = conv.members.map(async (member) => {
       if (member.userId === senderId) return;
+      if (member.userId === excludeUserId) return; // already got a reply notification
 
       const memberUser = await prisma.user.findUnique({
         where: { id: member.userId },
@@ -39,34 +48,35 @@ export const sendMessageNotifications = async (
       if (!memberUser || !memberUser.pushNotificationsEnabled) return;
 
       const isMentioned = content.includes(`@${memberUser.username}`);
-      let shouldSendPush = false;
+      let shouldNotify = false;
+      let title = senderUsername;
 
       if (conv.type === "DM" && memberUser.dmNotifications) {
-        shouldSendPush = true;
+        shouldNotify = true;
+        title = senderUsername;
       } else if (conv.type === "CHANNEL") {
-        if (memberUser.channelNotifications || (memberUser.mentionNotifications && isMentioned)) {
-          shouldSendPush = true;
+        if (conv.name) {
+          title = `${senderUsername} in #${conv.name}`;
+        }
+        if (memberUser.mentionNotifications && isMentioned) {
+          shouldNotify = true;
+        } else if (memberUser.channelNotifications) {
+          shouldNotify = true;
         }
       }
 
-      if (shouldSendPush) {
-        let title = senderUsername;
-        if (conv.type === "CHANNEL" && conv.name) {
-          title = `${senderUsername} in #${conv.name}`;
-        }
-
+      if (shouldNotify) {
         await sendPushNotification(member.userId, {
           title,
           body: content,
-          url: `/conversations/${conversationId}`,
-          tag: conversationId,
+          url: notificationLink,
         });
       }
     });
 
-    await Promise.all(pushPromises);
+    await Promise.all(notificationPromises);
   } catch (err) {
-    console.error("[Message Notifications] Failed to send push:", err);
+    console.error("[Message Notifications] Failed to send notifications:", err);
   }
 };
 
@@ -93,7 +103,6 @@ export const getMessages = async (conversationId: string, cursor: string | undef
 export const createMessage = async (conversationId: string, userId: string, content: string, replyToId?: string | null) => {
   const messageId = uuidv7();
 
-  // Validate replyToId belongs to the same conversation (prevent cross-conversation replies)
   let parentMessageUserId: string | null = null;
   if (replyToId) {
     const parentMessage = await messagesRepo.findById(replyToId);
@@ -128,7 +137,6 @@ export const createMessage = async (conversationId: string, userId: string, cont
     }
   };
 
-  // If this is a reply to another user's message, create a notification
   if (replyToId && parentMessageUserId && parentMessageUserId !== userId) {
     try {
       const conversation = await conversationsRepo.findById(conversationId);
@@ -136,7 +144,6 @@ export const createMessage = async (conversationId: string, userId: string, cont
       const isChannel = conversation?.type === "CHANNEL";
       const location = isChannel && channelName ? `#${channelName}` : "a conversation";
 
-      // Use workspace-aware link for channel conversations, DM link otherwise
       const notificationLink = isChannel && conversation?.workspaceId
         ? `/workspaces/${conversation.workspaceId}/channels/${conversationId}?highlight=${message.id}`
         : `/conversations/${conversationId}?highlight=${message.id}`;
@@ -159,7 +166,7 @@ export const createMessage = async (conversationId: string, userId: string, cont
     }
   }
 
-  return { message, conversationMetadata };
+  return { message, conversationMetadata, parentMessageUserId };
 };
 
 export const searchMessages = async (query: string, userId: string, limit: number) => {
@@ -175,7 +182,6 @@ export const pinMessage = async (messageId: string, conversationId: string, user
     throw new Error("Message does not belong to this conversation.");
   }
 
-  // Check workspace role — only OWNER/ADMIN can pin in channels
   const conversation = await conversationsRepo.findById(conversationId);
   if (conversation?.workspaceId) {
     const member = await findWorkspaceMember(userId, conversation.workspaceId);
@@ -198,7 +204,6 @@ export const pinMessage = async (messageId: string, conversationId: string, user
 };
 
 export const unpinMessage = async (messageId: string, conversationId: string, userId: string) => {
-  // Check workspace role — only OWNER/ADMIN can unpin in channels
   const conversation = await conversationsRepo.findById(conversationId);
   if (conversation?.workspaceId) {
     const member = await findWorkspaceMember(userId, conversation.workspaceId);

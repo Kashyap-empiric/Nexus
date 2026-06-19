@@ -7,7 +7,6 @@ export const workspaceInviteResolver: InviteResolver = {
     const workspaceId = invite.entityId;
     const pendingNotifications: CreateNotificationInput[] = [];
 
-    // Verify workspace exists and get workspace details
     const workspace = await tx.workspace.findUnique({
       where: { id: workspaceId },
       select: { id: true, name: true, ownerId: true },
@@ -17,7 +16,6 @@ export const workspaceInviteResolver: InviteResolver = {
       throw new Error("WORKSPACE_NOT_FOUND");
     }
 
-    // Check if already a member — if so, don't consume the invite, redirect instead
     const existingMember = await tx.workspaceMember.findUnique({
       where: { workspaceId_userId: { workspaceId, userId: actorId } },
     });
@@ -37,10 +35,8 @@ export const workspaceInviteResolver: InviteResolver = {
       };
     }
 
-    // Call the onboarding service to securely handle joining the workspace & default channels
     const { generalChannelId } = await workspacesRepo.onboardUserToWorkspaceInTransaction(tx as any, workspaceId, actorId);
 
-    // Collect MEMBER_JOINED notifications (dispatched after transaction commit to prevent phantom notifications)
     try {
       const workspaceMembers = await tx.workspaceMember.findMany({
         where: { workspaceId, userId: { not: actorId } },
@@ -53,7 +49,6 @@ export const workspaceInviteResolver: InviteResolver = {
       });
 
       if (joiner && workspaceMembers.length > 0) {
-        // Find the general channel for the link
         const generalChannel = await tx.conversation.findFirst({
           where: { workspaceId, name: "general", type: "CHANNEL" },
           select: { id: true },
@@ -84,7 +79,6 @@ export const workspaceInviteResolver: InviteResolver = {
       console.error("[workspaceResolver] Failed to collect MEMBER_JOINED notifications:", err);
     }
 
-    // Collect INVITE_ACCEPTED notification (dispatched after transaction commit)
     try {
       const joiner = await tx.user.findUnique({
         where: { id: actorId },
@@ -111,10 +105,16 @@ export const workspaceInviteResolver: InviteResolver = {
       console.error("[workspaceResolver] Failed to collect INVITE_ACCEPTED notification:", err);
     }
 
-    // Return the new dedicated workspace route structure
     return {
       redirectUrl: `/workspaces/${workspaceId}/channels/${generalChannelId}`,
       pendingNotifications: pendingNotifications.length > 0 ? pendingNotifications : undefined,
+      events: [
+        {
+          type: "WORKSPACE_MEMBER_UPDATE",
+          workspaceId,
+          member: { userId: actorId }
+        }
+      ]
     };
   }
 };

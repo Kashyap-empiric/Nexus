@@ -37,7 +37,6 @@ export const findUserWorkspaces = async (userId: string) => {
   });
 };
 
-// ====== Writes ======
 
 export const createWorkspaceInTransaction = async (
   tx: Prisma.TransactionClient,
@@ -124,9 +123,6 @@ export const onboardUserToWorkspaceInTransaction = async (
     throw new Error("GENERAL_CHANNEL_NOT_FOUND");
   }
 
-  // Check membership upfront instead of catching P2002 — a caught
-  // Prisma error inside a transaction still aborts the underlying
-  // PostgreSQL transaction, causing all subsequent queries to fail (25P02).
   const existingMember = await tx.workspaceMember.findUnique({
     where: { workspaceId_userId: { workspaceId, userId } },
   });
@@ -227,7 +223,6 @@ export const findUserRolesInWorkspaces = async (userId: string, workspaceIds: st
 };
 
 export const removeWorkspaceMember = async (workspaceId: string, userId: string) => {
-  // Remove from all workspace channels first
   const workspaceChannels = await prisma.conversation.findMany({
     where: { workspaceId },
     select: { id: true },
@@ -244,7 +239,6 @@ export const removeWorkspaceMember = async (workspaceId: string, userId: string)
     });
   }
 
-  // Remove from workspace
   return prisma.workspaceMember.delete({
     where: { workspaceId_userId: { workspaceId, userId } },
   });

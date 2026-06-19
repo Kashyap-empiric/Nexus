@@ -2,7 +2,6 @@ import { prisma } from "@/lib/db.js";
 import type { Prisma } from "@prisma/client";
 import { InviteType } from "@prisma/client";
 
-// ====== Reads ======
 
 export const findInviteByToken = async (token: string) => {
   return prisma.invite.findUnique({ where: { token } });
@@ -42,7 +41,6 @@ export const findConversationById = async (
   });
 };
 
-// ====== Writes ======
 
 export const createInvite = async (data: {
   type: InviteType;
@@ -78,7 +76,6 @@ export const revokeAllInvitesCreatedByUser = async (userId: string) => {
   });
 };
 
-// ====== Transaction Helpers ======
 
 export const consumeInviteAtomicInTransaction = async (
   tx: Prisma.TransactionClient,

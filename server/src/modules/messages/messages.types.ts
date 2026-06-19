@@ -1,6 +1,5 @@
 import type { UserDTO, LatestMessageDTO } from "../conversations/conversations.types";
 
-// ──── DTOs ────
 
 export interface MessageDTO {
   id: string;
@@ -48,7 +47,6 @@ export interface DeleteMessageResult {
   conversationMetadata: ConversationMetadataDTO | null;
 }
 
-// ──── Service Input Types ────
 
 export interface CreateMessageInput {
   conversationId: string;

@@ -19,17 +19,14 @@ export const resolveInviteService = async ({ token, userId }: ResolveInviteParam
 
   try {
     await prismaTransaction(async (tx) => {
-      // 1. Fetch Invite
       const invite = await invitesRepo.findInviteByTokenInTransaction(tx, token);
 
       if (!invite) throw new Error("INVALID_OR_EXPIRED_INVITE");
 
-      // 2. Validate Invite
       if (invite.revoked) throw new Error("INVALID_OR_EXPIRED_INVITE");
       if (invite.expiresAt && invite.expiresAt < new Date()) throw new Error("INVALID_OR_EXPIRED_INVITE");
       if (invite.maxUses && invite.usedCount >= invite.maxUses) throw new Error("INVALID_OR_EXPIRED_INVITE");
 
-      // 3. Resolve using domain resolver
       const resolver = resolvers[invite.type];
       if (!resolver) throw new Error("RESOLVER_NOT_FOUND");
 
@@ -39,7 +36,6 @@ export const resolveInviteService = async ({ token, userId }: ResolveInviteParam
       pendingNotifications = result.pendingNotifications || [];
       alreadyMember = result.alreadyMember || false;
 
-      // 4. Consume Invite Atomically via Raw SQL (Guards against concurrency)
       if (result.consumed !== false) {
         const updateResult = await invitesRepo.consumeInviteAtomicInTransaction(tx, invite.id);
 
@@ -49,10 +45,7 @@ export const resolveInviteService = async ({ token, userId }: ResolveInviteParam
       }
     });
 
-    // Dispatch pending notifications AFTER the transaction commits successfully.
-    // This prevents phantom notifications on rollback (C1).
     if (pendingNotifications.length > 0) {
-      // Fire-and-forget — these are non-critical notifications, don't block the response
       Promise.all(
         pendingNotifications.map(notif => createAndDispatch(notif).catch(err => {
           console.error("[resolveInviteService] Failed to dispatch pending notification:", err);
@@ -73,7 +66,6 @@ export const resolveInviteService = async ({ token, userId }: ResolveInviteParam
 };
 
 export const generateInviteService = async ({ type, entityId, userId, forceNew }: GenerateInviteParams): Promise<GenerateInviteResult> => {
-  // 1. Validation
   let finalEntityId = entityId;
 
   if (type === "CONVERSATION") {
@@ -86,7 +78,6 @@ export const generateInviteService = async ({ type, entityId, userId, forceNew }
     if (!finalEntityId) throw new Error("ENTITY_ID_REQUIRED");
     const member = await authRepo.findWorkspaceMember(userId, finalEntityId).catch(() => null);
     if (!member) throw new Error("UNAUTHORIZED");
-    // H2: Only workspace admins and owners can generate invite links
     if (member.role !== "ADMIN" && member.role !== "OWNER") {
       throw new Error("UNAUTHORIZED");
     }
@@ -96,14 +87,10 @@ export const generateInviteService = async ({ type, entityId, userId, forceNew }
     if (!finalEntityId) throw new Error("ENTITY_ID_REQUIRED");
   }
 
-  // 2. Active Invite Rotation Policy (24h window) — skip when forceNew is true
-  //    forceNew is used for targeted user invites where each invite needs a unique token
   if (!forceNew) {
     const existingActive = await invitesRepo.findExistingActiveInvite(type, finalEntityId as string, userId);
 
     if (existingActive) {
-      // Check if the invite is exhausted (H1): if maxUses is set and usedCount >= maxUses,
-      // treat it as expired rather than returning an exhausted token
       const isExhausted = existingActive.maxUses !== null && existingActive.usedCount >= existingActive.maxUses;
 
       if (!isExhausted) {
@@ -119,12 +106,10 @@ export const generateInviteService = async ({ type, entityId, userId, forceNew }
         }
       }
 
-      // Revoke either way — exhausted or expired
       await invitesRepo.revokeInvite(existingActive.id);
     }
   }
 
-  // 3. Generation
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7);
@@ -146,7 +131,6 @@ export const generateInviteService = async ({ type, entityId, userId, forceNew }
   };
 };
 
-// --- Revocation & Cleanup Helpers ---
 
 export const revokeInvite = async (inviteId: string) => {
   return invitesRepo.revokeInvite(inviteId);

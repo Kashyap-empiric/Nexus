@@ -91,7 +91,6 @@ export const deleteWorkspace = async (req: AuthRequest, res: Response): Promise<
     const userId = req.user!.id;
     const { id: workspaceId } = req.params as { id: string };
 
-    // Fetch workspace info before deletion (for notifications)
     const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(workspaceId);
     if (!workspace) throw new Error("Workspace not found");
 
@@ -100,14 +99,12 @@ export const deleteWorkspace = async (req: AuthRequest, res: Response): Promise<
 
     await workspacesService.deleteWorkspace(workspaceId, userId);
 
-    // Dispatch WORKSPACE_UPDATE with DELETED action (to workspace room + each member)
     dispatchWorkspaceUpdate(workspace.id, {
       action: "DELETED",
       workspace: { id: workspace.id, name: workspaceName },
       memberUserIds,
     });
 
-    // Kick all members out of channel rooms
     try {
       const io = getIO();
       const channels = workspace.channels || [];
@@ -123,11 +120,10 @@ export const deleteWorkspace = async (req: AuthRequest, res: Response): Promise<
       console.error("[Socket.io] Failed to leave rooms on workspace deletion:", socketErr);
     }
 
-    // Create WORKSPACE_DELETED notifications for all members except the deleter
     try {
       const currentUser = await usersRepo.findUserById(userId);
       for (const memberUserId of memberUserIds) {
-        if (memberUserId === userId) continue; // Skip the person who deleted
+        if (memberUserId === userId) continue; 
         await createAndDispatch({
           userId: memberUserId,
           type: "WORKSPACE_DELETED",
@@ -188,8 +184,7 @@ export const createWorkspace = async (req: AuthRequest, res: Response): Promise<
       res.status(409).json({ error: "Slug already taken. Please choose a different slug." });
       return;
     }
-    // Fallback for Prisma unique constraint race condition
-    if ((error as any)?.code === "P2002") {
+    if (error instanceof Error && "code" in error && (error as Record<string, unknown>).code === "P2002") {
       res.status(409).json({ error: "Slug already taken. Please choose a different slug." });
       return;
     }
@@ -205,10 +200,8 @@ export const createChannel = async (req: AuthRequest, res: Response): Promise<vo
 
     const channel = await workspacesService.createChannel(workspaceId, name, visibility, userId);
     
-    // Dispatch new conversation event for socket clients
     dispatchConversationNew(channel as any);
 
-    // Create CHANNEL_CREATED notification for all workspace members except the creator
     try {
       if (channel && channel.members) {
         const workspace = await workspacesService.getWorkspaceDetails(userId, workspaceId);
@@ -305,8 +298,6 @@ async function sendWorkspaceInvite(
   inviterName: string,
   workspaceImageUrl?: string,
 ) {
-  // Generate a unique invite token per user (forceNew skips the 24h rotation policy
-  // so each invited user gets their own unique token)
   const invite = await generateInviteService({
     type: "WORKSPACE",
     entityId: workspaceId,
@@ -314,7 +305,6 @@ async function sendWorkspaceInvite(
     forceNew: true,
   });
 
-  // Create INVITE_RECEIVED notification with the token in the link
   await createAndDispatch({
     userId: targetUserId,
     type: "INVITE_RECEIVED",
@@ -331,7 +321,6 @@ async function sendWorkspaceInvite(
     },
   });
 
-  // Also send email if we have the user's email address
   try {
     const targetUser = await usersRepo.findUserById(targetUserId);
     if (targetUser?.email) {
@@ -347,7 +336,6 @@ async function sendWorkspaceInvite(
       });
     }
   } catch (emailErr) {
-    // Email is best-effort — the in-app notification is the primary channel
     console.error(`[sendWorkspaceInvite] Email failed for ${targetUserId}:`, emailErr);
   }
 }
@@ -381,7 +369,6 @@ export const inviteMemberByUsername = async (req: AuthRequest, res: Response): P
       return;
     }
 
-    // Check if already a member
     const workspace = await workspacesService.getWorkspaceDetails(userId, workspaceId);
     const isAlreadyMember = workspace.members.some((m: any) => m.userId === targetUser.id);
     if (isAlreadyMember) {
@@ -389,10 +376,8 @@ export const inviteMemberByUsername = async (req: AuthRequest, res: Response): P
       return;
     }
 
-    // Get current user info for the notification
     const currentUser = await usersRepo.findUserById(userId);
 
-    // Send invite with token-based flow
     await sendWorkspaceInvite(
       workspaceId,
       targetUser.id,
@@ -443,13 +428,11 @@ export const inviteMembers = async (req: AuthRequest, res: Response): Promise<vo
     const skipped: { userId: string; reason: string }[] = [];
 
     for (const targetUserId of userIds) {
-      // Skip self
       if (targetUserId === userId) {
         skipped.push({ userId: targetUserId, reason: "Cannot invite yourself" });
         continue;
       }
 
-      // Check if already a member
       const isAlreadyMember = workspace.members.some((m: any) => m.userId === targetUserId);
       if (isAlreadyMember) {
         skipped.push({ userId: targetUserId, reason: "Already a member" });
@@ -506,12 +489,10 @@ export const inviteByEmail = async (req: AuthRequest, res: Response): Promise<vo
     const currentUser = await usersRepo.findUserById(userId);
     const inviterName = currentUser?.username || "A workspace member";
 
-    // Check if recipient exists and isn't already a member
     let existingUser = null;
     try {
       existingUser = await usersRepo.findUserByEmail(email);
     } catch {
-      // email not found in DB — continue as external user
     }
     if (existingUser) {
       const isAlreadyMember = workspace.members.some((m: any) => m.userId === existingUser.id);
@@ -521,7 +502,6 @@ export const inviteByEmail = async (req: AuthRequest, res: Response): Promise<vo
       }
     }
 
-    // Create the invite
     const invite = await generateInviteService({
       type: "WORKSPACE",
       entityId: workspaceId,
@@ -532,7 +512,6 @@ export const inviteByEmail = async (req: AuthRequest, res: Response): Promise<vo
     const baseUrl = ENV.CLIENT_URL || "http://localhost:3000";
     const inviteUrl = `${baseUrl}${invite.invitePath}`;
 
-    // Send email
     let emailSent = false;
     try {
       await sendWorkspaceInviteEmail({
@@ -548,7 +527,6 @@ export const inviteByEmail = async (req: AuthRequest, res: Response): Promise<vo
         emailErr instanceof Error ? emailErr.message : "EMAIL_SEND_FAILED";
 
       if (!existingUser) {
-        // External user — email is the only delivery channel. Revoke invite and fail.
         console.error(
           `[inviteByEmail] ✗ Revoking invite  to=${email}  reason=${message}`,
         );
@@ -574,11 +552,9 @@ export const inviteByEmail = async (req: AuthRequest, res: Response): Promise<vo
         return;
       }
 
-      // Existing user — notification is the primary channel. Log but proceed.
       console.error(`[inviteByEmail] ✗ Email failed  to=${email}  reason=${message}  notificationSent=true`);
     }
 
-    // Send in-app notification if recipient has an account
     if (existingUser) {
       try {
         await createAndDispatch({
@@ -657,6 +633,36 @@ export const addChannelMembers = async (req: AuthRequest, res: Response): Promis
 
     dispatchChannelMemberUpdate(workspaceId, channelId, "ADDED", { addedMembers: result.addedUsers });
 
+    try {
+      if (result.addedUsers && result.addedUsers.length > 0) {
+        const workspace = await workspacesService.getWorkspaceDetails(userId, workspaceId);
+        const currentUser = await usersRepo.findUserById(userId);
+        const channel = await workspacesService.getWorkspaceChannels(userId, workspaceId).then(channels => channels.find(c => c.id === channelId));
+        
+        for (const addedUser of result.addedUsers) {
+          if (addedUser.id !== userId) {
+            await createAndDispatch({
+              userId: addedUser.id,
+              type: "CHANNEL_MEMBER_ADDED",
+              title: "Added to channel",
+              body: `You were added to #${channel?.name || "a channel"} in ${workspace.name} by ${currentUser?.username || "a member"}`,
+              link: `/workspaces/${workspaceId}/channels/${channelId}`,
+              metadata: {
+                channelId,
+                channelName: channel?.name,
+                workspaceId,
+                workspaceName: workspace.name,
+                addedBy: userId,
+                addedByUsername: currentUser?.username,
+              },
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.error("[Notifications] Failed to create CHANNEL_MEMBER_ADDED notifications:", err);
+    }
+
     res.status(201).json({ data: { added: result.added } });
   } catch (error: any) {
     console.error("Error adding channel members:", error);
@@ -680,6 +686,31 @@ export const removeChannelMember = async (req: AuthRequest, res: Response): Prom
     const result = await workspacesService.removeMemberFromChannel(workspaceId, channelId, userId, targetUserId);
 
     dispatchChannelMemberUpdate(workspaceId, channelId, "REMOVED", { removedUserId: targetUserId });
+
+    try {
+      const currentUser = await usersRepo.findUserById(userId);
+      const workspace = await workspacesService.getWorkspaceDetails(userId, workspaceId);
+      const channels = await workspacesService.getWorkspaceChannels(userId, workspaceId);
+      const channel = channels.find(c => c.id === channelId);
+
+      await createAndDispatch({
+        userId: targetUserId,
+        type: "CHANNEL_MEMBER_REMOVED",
+        title: "Removed from channel",
+        body: `You were removed from #${channel?.name || channelId} in ${workspace.name} by ${currentUser?.username || "a member"}`,
+        link: `/workspaces/${workspaceId}/channels`,
+        metadata: {
+          workspaceId,
+          channelId,
+          channelName: channel?.name,
+          workspaceName: workspace.name,
+          removedBy: userId,
+          removedByUsername: currentUser?.username,
+        },
+      });
+    } catch (notifError) {
+      console.error("[Notifications] Failed to create CHANNEL_MEMBER_REMOVED notification:", notifError);
+    }
 
     res.json({ data: result });
   } catch (error: any) {
@@ -724,6 +755,28 @@ export const updateMemberRole = async (req: AuthRequest, res: Response): Promise
     
     dispatchMemberUpdate(workspaceId, { action: "ROLE_UPDATED", member: updatedMember });
 
+    try {
+      const currentUser = await usersRepo.findUserById(userId);
+      const workspace = await workspacesService.getWorkspaceDetails(userId, workspaceId);
+
+      await createAndDispatch({
+        userId: memberUserId,
+        type: "ROLE_CHANGED",
+        title: "Role changed",
+        body: `Your role in ${workspace.name} has been changed to ${role}`,
+        link: `/workspaces/${workspaceId}/channels`,
+        metadata: {
+          workspaceId,
+          workspaceName: workspace.name,
+          changedBy: userId,
+          changedByUsername: currentUser?.username,
+          newRole: role,
+        },
+      });
+    } catch (notifError) {
+      console.error("[Notifications] Failed to create ROLE_CHANGED notification:", notifError);
+    }
+
     res.json({ data: updatedMember });
   } catch (error: any) {
     console.error("Error updating member role:", error);
@@ -742,11 +795,8 @@ export const removeWorkspaceMember = async (req: AuthRequest, res: Response): Pr
 
     const result = await workspacesService.removeMember(workspaceId, memberUserId, userId);
     
-    // Dispatch to workspace room (all members see updated list)
     dispatchMemberUpdate(workspaceId, { action: "REMOVED", member: { userId: memberUserId } });
 
-    // Leave the removed user's socket connections from all workspace channel rooms
-    // This prevents privilege escalation where a removed user continues receiving messages (C10)
     try {
       const io = getIO();
       const channels = await findChannelIdsByWorkspaceId(workspaceId);
@@ -760,7 +810,6 @@ export const removeWorkspaceMember = async (req: AuthRequest, res: Response): Pr
       console.error("[Socket.io] Failed to leave rooms on workspace member removal:", socketErr);
     }
 
-    // Create a MEMBER_REMOVED notification for the removed user
     try {
       const currentUser = await usersRepo.findUserById(userId);
       const workspace = await workspacesService.getWorkspaceDetails(userId, workspaceId);

@@ -1,4 +1,3 @@
-// ──── DTOs ────
 
 export interface UpdateWorkspacePayload {
   name?: string;
@@ -37,7 +36,6 @@ export interface WorkspaceDTO {
   members: WorkspaceMemberDTO[];
 }
 
-// ──── Service Input Types ────
 
 export interface GetChannelsParams {
   workspaceId: string;

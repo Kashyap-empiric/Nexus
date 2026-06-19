@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/db.js";
 import type { Prisma } from "@prisma/client";
 
-// ====== Reads ======
 
 export const findMessages = async (
   conversationId: string,
@@ -66,7 +65,6 @@ export const searchMessages = async (query: string, userId: string, limit: numbe
   });
 };
 
-// ====== Pins ======
 
 export const getPinnedMessages = async (conversationId: string) => {
   return prisma.pinnedMessage.findMany({
@@ -131,7 +129,6 @@ export const findPinnedMessageIds = async (conversationId: string): Promise<stri
   return pins.map(p => p.messageId);
 };
 
-// ====== Writes ======
 
 export const createMessageTransaction = async (
   conversationId: string,
@@ -196,7 +193,6 @@ export const updateMessage = async (
   });
 };
 
-// ====== Transaction Helpers (for use inside $transaction) ======
 
 export const findNextLatestMessageInTransaction = async (
   tx: Prisma.TransactionClient,

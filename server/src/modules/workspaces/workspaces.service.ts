@@ -12,13 +12,11 @@ export const getUserWorkspaces = async (userId: string) => {
 
   const workspaceIds = workspaces.map((w) => w.id);
 
-  // Determine which workspaces the user owns — owners see all channels (including private)
   const memberRoles = await workspacesRepo.findUserRolesInWorkspaces(userId, workspaceIds);
   const ownedWorkspaceIds = new Set(
     memberRoles.filter(m => m.role === "OWNER").map(m => m.workspaceId)
   );
 
-  // Get all accessible channels across all user workspaces (includes workspaceId)
   const accessibleChannels = await conversationsRepo.findChannelIdsByWorkspaceIds(
     workspaceIds,
     userId,
@@ -29,13 +27,11 @@ export const getUserWorkspaces = async (userId: string) => {
     return workspaces.map((w) => ({ ...w, unreadCount: 0 }));
   }
 
-  // Count unread messages per channel
   const unreadCountsMap = await conversationsRepo.countUnreadByConversations(
     userId,
     accessibleChannels.map((c) => c.id)
   );
 
-  // Aggregate by workspace using the workspaceId from the channel fetch
   const workspaceUnreadTotals = new Map<string, number>();
   for (const channel of accessibleChannels) {
     if (channel.workspaceId) {
@@ -70,7 +66,6 @@ export const getWorkspaceChannels = async (userId: string, slugOrId: string) => 
   const isMember = await isWorkspaceMember(userId, workspace.id);
   if (!isMember) throw new Error("Forbidden: Not a member of this workspace");
 
-  // Owners see all channels (including private)
   const member = workspace.members.find(m => m.userId === userId);
   const ownedWorkspaceIds = member?.role === WorkspaceRole.OWNER
     ? new Set([workspace.id])
@@ -78,7 +73,6 @@ export const getWorkspaceChannels = async (userId: string, slugOrId: string) => 
 
   const channels = await conversationsRepo.findChannelByWorkspaceId(workspace.id, userId, ownedWorkspaceIds);
 
-  // Count unread messages for all channels in a single query
   const unreadCountsMap = await conversationsRepo.countUnreadByConversations(
     userId,
     channels.map((c) => c.id)
@@ -95,7 +89,6 @@ export const createWorkspace = async (userId: string, name: string, slug: string
     throw new Error("Invalid slug format");
   }
 
-  // Check for duplicate slug before creating
   const existing = await workspacesRepo.findWorkspaceByIdOrSlug(slug);
   if (existing) {
     throw new Error("Slug already taken");
@@ -147,8 +140,6 @@ export const createChannel = async (slugOrId: string, name: string, visibility: 
 
   const channelId = uuidv7();
   
-  // If public, all workspace members are added.
-  // If private, only the creator is added initially.
   const memberUserIds = visibility === "PUBLIC" 
     ? workspace.members.map((m) => ({ userId: m.userId }))
     : [{ userId }];
@@ -359,9 +350,9 @@ export const addMembersToChannel = async (workspaceId: string, channelId: string
     .filter(m => validNewUserIds.includes(m.userId))
     .map(m => ({
       id: m.userId,
-      username: (m.user as any)?.username || "unknown",
-      fullName: (m.user as any)?.fullName || null,
-      avatarUrl: (m.user as any)?.avatarUrl || null,
+      username: m.user?.username || "unknown",
+      fullName: m.user?.fullName || null,
+      avatarUrl: m.user?.avatarUrl || null,
     }));
 
   return { added, addedUsers };
@@ -418,7 +409,6 @@ export const removeMember = async (slugOrId: string, memberUserId: string, userI
   const currentUserMember = workspace.members.find(m => m.userId === userId);
   if (!currentUserMember) throw new Error("Forbidden: Not a member of this workspace");
 
-  // Cannot remove yourself
   if (memberUserId === userId) {
     throw new Error("Forbidden: Cannot remove yourself from the workspace");
   }
@@ -426,12 +416,10 @@ export const removeMember = async (slugOrId: string, memberUserId: string, userI
   const targetMember = workspace.members.find(m => m.userId === memberUserId);
   if (!targetMember) throw new Error("Member not found in this workspace");
 
-  // Cannot remove the workspace owner
   if (targetMember.role === WorkspaceRole.OWNER) {
     throw new Error("Forbidden: Cannot remove the workspace owner");
   }
 
-  // Permission checks
   const canRemove =
     currentUserMember.role === WorkspaceRole.OWNER ||
     (currentUserMember.role === WorkspaceRole.ADMIN && targetMember.role === WorkspaceRole.MEMBER);

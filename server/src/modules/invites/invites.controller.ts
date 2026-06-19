@@ -2,7 +2,7 @@ import { type Response } from "express";
 import { type Request } from "express";
 import { type AuthRequest } from "../../types/shared.js";
 import { resolveInviteService, generateInviteService, getInviteInfoService, revokeInviteByToken } from "./invites.service.js";
-import { dispatchConversationNew } from "../../socket/socket.dispatcher.js";
+import { dispatchConversationNew, dispatchMemberUpdate } from "../../socket/socket.dispatcher.js";
 import { getIO } from "../../socket/socket.js";
 import { SOCKET_EVENTS } from "../../shared/socket-events.js";
 
@@ -23,8 +23,30 @@ export const resolveInvite = async (req: AuthRequest, res: Response): Promise<an
             dispatchConversationUpdate(event.conversationId, event.userId || userId);
           } else if (event.type === "CONVERSATION_NEW" && event.payload) {
             dispatchConversationNew(event.payload);
+          } else if (event.type === "WORKSPACE_MEMBER_UPDATE" && event.workspaceId && event.member) {
+            dispatchMemberUpdate(event.workspaceId, { action: "ADDED", member: event.member });
           }
         });
+
+        const workspaceEvent = events.find(e => e.type === "WORKSPACE_MEMBER_UPDATE");
+        if (workspaceEvent?.workspaceId) {
+          const wsId = workspaceEvent.workspaceId;
+          const redirectParts = redirectUrl.match(/\/workspaces\/[^/]+\/channels\/([^/]+)/);
+          const channelId = redirectParts?.[1];
+
+          try {
+            const io = getIO();
+            const sockets = await io.in(`user:${userId}`).fetchSockets();
+            for (const socket of sockets) {
+              await socket.join(`workspace:${wsId}`);
+              if (channelId) {
+                await socket.join(`conversation:${channelId}`);
+              }
+            }
+          } catch (joinError) {
+            console.error("[resolveInvite] Failed to dynamically join socket rooms:", joinError);
+          }
+        }
       } catch (ioError) {
         console.error("[resolveInvite] Failed to emit socket event:", ioError);
       }

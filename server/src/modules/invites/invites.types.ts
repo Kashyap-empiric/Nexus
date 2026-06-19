@@ -13,6 +13,7 @@ export interface DomainEvent {
   userId?: string;
   workspaceId?: string;
   channelId?: string;
+  member?: { userId: string };
   payload?: any;
 }
 

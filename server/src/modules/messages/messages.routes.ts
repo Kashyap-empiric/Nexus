@@ -6,7 +6,6 @@ import { messageLimiter } from "@/middlewares/rateLimiter.js";
 import { createMessage, getMessages, updateMessage, deleteMessage } from "./messages.controller.js";
 import { createMessageBodySchema, getMessagesQuerySchema, messageParamsSchema, messageIdParamsSchema, updateMessageBodySchema } from "./messages.schema.js";
 
-// mergeParams: true is critical so we can access :conversationId from the parent router
 const router = Router({ mergeParams: true });
 
 router.get(
