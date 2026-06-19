@@ -22,6 +22,9 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
+# Test
+.env.test
+
 # Prisma
 prisma/migrations/*.sql.bak
 
