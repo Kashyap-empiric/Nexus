@@ -264,18 +264,19 @@ function MemberActionsMenu({ member, isOwner, onPromote, onRoleChange, onRemove 
   // Measure and position on open
   useEffect(() => {
     if (!isOpen) {
-      setPosition(null);
       return;
     }
 
     const measure = () => {
-      if (triggerRef.current) {
-        const rect = triggerRef.current.getBoundingClientRect();
-        setPosition({
-          top: rect.bottom + 2,
-          right: window.innerWidth - rect.right,
-        });
-      }
+      requestAnimationFrame(() => {
+        if (triggerRef.current) {
+          const rect = triggerRef.current.getBoundingClientRect();
+          setPosition({
+            top: rect.bottom + 2,
+            right: window.innerWidth - rect.right,
+          });
+        }
+      });
     };
 
     measure();

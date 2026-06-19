@@ -134,13 +134,15 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
             {isFetchingNextPage && <span className="text-xs text-muted-foreground">Loading older messages...</span>}
           </div>
 
-          {messageGroups.length === 0 && hasNextPage === false ? (
-            <div className="text-center text-muted-foreground pt-10 text-sm">
-              <p>No messages yet. Send a message to start the conversation!</p>
-            </div>
-          ) : (
+          {!hasNextPage && (
             <>
-              {!hasNextPage && !isChannel && otherMember && (                  <div className="flex flex-col items-start px-4 md:px-6 xl:px-8 py-8 md:py-12 mt-auto">
+              {isChannel && messageGroups.length === 0 && (
+                <div className="text-center text-muted-foreground pt-10 text-sm mt-auto">
+                  <p>No messages yet. Send a message to start the conversation!</p>
+                </div>
+              )}
+              {!isChannel && otherMember && (
+                <div className="flex flex-col items-start px-4 md:px-6 xl:px-8 py-8 md:py-12 mt-auto">
                   <UserAvatar name={otherMember.username} src={otherMember.avatarUrl} className="h-20 w-20 md:h-24 md:w-24 mb-4 text-3xl" />
                   <h1 className="text-2xl md:text-3xl font-extrabold text-foreground mb-1">{otherMember.username}</h1>
                   {otherMember.fullName && (
@@ -151,37 +153,38 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
                   </p>
                 </div>
               )}
-              {messageGroups.map((group, index) => {
-                const currentGroupDate = new Date(group.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
-                const prevGroupDate = index > 0 ? new Date(messageGroups[index - 1].createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }) : null;
-                const showDateSeparator = currentGroupDate !== prevGroupDate;
-
-                return (
-                  <React.Fragment key={group.id}>
-                    {showDateSeparator && (
-                      <div className="flex items-center justify-center my-6">
-                        <div className="h-px bg-border flex-1 mx-4" />
-                        <span className="text-xs text-muted-foreground font-medium shrink-0">
-                          {currentGroupDate}
-                        </span>
-                        <div className="h-px bg-border flex-1 mx-4" />
-                      </div>
-                    )}
-                    <MessageGroupItem
-                      group={group}
-                      currentUserId={currentUserId}
-                      partnerLastReadMessageId={partnerLastReadMessageId}
-                      members={members}
-                      isChannel={isChannel}
-                      onReply={onReply}
-                      pinnedMessageIds={pinnedMessageIds}
-                      canPin={canPin}
-                    />
-                  </React.Fragment>
-                );
-              })}
             </>
           )}
+
+          {messageGroups.map((group, index) => {
+            const currentGroupDate = new Date(group.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
+            const prevGroupDate = index > 0 ? new Date(messageGroups[index - 1].createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }) : null;
+            const showDateSeparator = currentGroupDate !== prevGroupDate;
+
+            return (
+              <React.Fragment key={group.id}>
+                {showDateSeparator && (
+                  <div className="flex items-center justify-center my-6">
+                    <div className="h-px bg-border flex-1 mx-4" />
+                    <span className="text-xs text-muted-foreground font-medium shrink-0">
+                      {currentGroupDate}
+                    </span>
+                    <div className="h-px bg-border flex-1 mx-4" />
+                  </div>
+                )}
+                <MessageGroupItem
+                  group={group}
+                  currentUserId={currentUserId}
+                  partnerLastReadMessageId={partnerLastReadMessageId}
+                  members={members}
+                  isChannel={isChannel}
+                  onReply={onReply}
+                  pinnedMessageIds={pinnedMessageIds}
+                  canPin={canPin}
+                />
+              </React.Fragment>
+            );
+          })}
 
           {/* Typing indicator */}
           <TypingIndicator

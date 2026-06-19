@@ -6,7 +6,6 @@ import {
   deletePushSubscription,
 } from "@/modules/notifications/notifications.repository.js";
 
-// Initialize web-push with our VAPID keys
 export const initPushService = () => {
   if (!ENV.VAPID_PUBLIC_KEY || !ENV.VAPID_PRIVATE_KEY) {
     console.warn("[Push] VAPID keys not configured. Web push is disabled.");
@@ -39,7 +38,6 @@ export const sendPushNotification = async (userId: string, payload: PushPayload)
     const subscriptions = await getPushSubscriptionsByUserId(userId);
     if (!subscriptions || subscriptions.length === 0) return;
 
-    // Normalize relative URLs to absolute
     const absoluteUrl = payload.url
       ? payload.url.startsWith("http://") || payload.url.startsWith("https://")
         ? payload.url

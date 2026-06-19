@@ -91,12 +91,13 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
-    setMounted(true);
-    
-    // Open info panel by default on desktop
-    if (window.innerWidth >= 768) {
-      setInfoPanelOpen(true);
-    }
+    requestAnimationFrame(() => {
+      setMounted(true);
+      // Open info panel by default on desktop
+      if (window.innerWidth >= 768) {
+        setInfoPanelOpen(true);
+      }
+    });
 
     if ("serviceWorker" in navigator) {
       const handleMessage = (event: MessageEvent) => {
