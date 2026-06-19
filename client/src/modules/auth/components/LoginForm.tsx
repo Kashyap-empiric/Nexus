@@ -32,7 +32,7 @@ export const LoginForm = () => {
   return (
     <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
       <Card className="border border-border/40 shadow-lg bg-card/50 backdrop-blur-xl sm:rounded-2xl relative overflow-hidden">
-        {/* Subtle top gradient line */}
+        {}
         <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-brand to-transparent opacity-50" />
         
         <CardHeader className="space-y-2 pb-6 pt-8 sm:pt-10 px-6 sm:px-8">
@@ -133,6 +133,14 @@ export const LoginForm = () => {
                 </button>
               </div>
               {errors.password && <p className="text-xs font-medium text-destructive mt-1">{errors.password.message}</p>}
+              <div className="flex justify-end -mt-1">
+                <Link
+                  href={APP_ROUTES.AUTH.FORGOT_PASSWORD}
+                  className="text-xs font-medium text-muted-foreground hover:text-primary hover:underline transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
             </div>
 
             <Button 

@@ -1,14 +1,4 @@
-// ──────────────────────────────────────────────────────────────
-// URL Routes Configuration
-// ──────────────────────────────────────────────────────────────
 // 📌 AGENT INSTRUCTION: If you are adding, modifying, or removing
-//    any URL route (API endpoints or app page paths), make sure
-//    to update this file. This is the single source of truth for
-//    all route strings used across the client codebase.
-//
-//    - API_ROUTES: Backend API endpoint paths (prefixed by proxy)
-//    - APP_ROUTES: Frontend Next.js page paths
-// ──────────────────────────────────────────────────────────────
 
 export const API_ROUTES = {
   USERS: {
@@ -67,6 +57,7 @@ export const APP_ROUTES = {
     LOGIN: '/login',
     REGISTER: '/register',
     FORGOT_PASSWORD: '/forgot-password',
+    RESET_PASSWORD: '/reset-password',
     CALLBACK: '/auth/callback',
   },
   CONVERSATIONS: {

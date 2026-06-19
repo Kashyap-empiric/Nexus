@@ -1,7 +1,7 @@
 export default function AuthLoading() {
   return (
     <div className="flex min-h-dvh bg-background overflow-hidden">
-      {/* Auth sidebar skeleton */}
+      {}
       <div className="hidden lg:flex w-[480px] bg-sidebar flex-col justify-between p-12 border-r border-border">
         <div className="space-y-6">
           <div className="w-10 h-10 rounded-lg bg-muted animate-pulse" />
@@ -13,7 +13,7 @@ export default function AuthLoading() {
         <div className="h-4 w-36 bg-muted animate-pulse rounded" />
       </div>
 
-      {/* Form area skeleton */}
+      {}
       <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8">
         <div className="w-full max-w-[400px] space-y-6 animate-in fade-in">
           <div className="space-y-4">

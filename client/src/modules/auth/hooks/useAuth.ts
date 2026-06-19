@@ -16,7 +16,6 @@ export const useAuth = () => {
     if (identifier.includes("@")) return identifier;
     try {
       const { data } = await api.post<{ email: string | null }>(API_ROUTES.USERS.RESOLVE_USERNAME, { username: identifier });
-      // Return the resolved email, or a dummy email so Supabase returns a generic "Invalid login credentials"
       return data.email || `${identifier}@nonexistent.local`;
     } catch {
       return `${identifier}@nonexistent.local`;
@@ -36,7 +35,6 @@ export const useAuth = () => {
 
       if (authError) throw authError;
 
-      // On success, replace history with conversations page
       router.replace(APP_ROUTES.CONVERSATIONS.INDEX);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "An error occurred during login.";
@@ -87,7 +85,6 @@ export const useAuth = () => {
       });
 
       if (authError) {
-        // Check if the popup was blocked and fall back to redirect
         if (authError.message?.toLowerCase().includes('popup') || authError.message?.toLowerCase().includes('blocked')) {
           if (data?.url) {
             window.location.href = data.url;
@@ -110,7 +107,6 @@ export const useAuth = () => {
     try {
       const { error: authError } = await supabase.auth.signOut();
       if (authError) throw authError;
-      // Note: Teardown and routing are now handled by AuthProvider's onAuthStateChange listener
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "An error occurred during sign out.";
       setError(message);

@@ -24,7 +24,6 @@ function loadEnv() {
   }
 
   return {
-    // Keep the original property names that the codebase uses
     API_URL: parsed.data.NEXT_PUBLIC_API_URL,
     SUPABASE_URL: parsed.data.NEXT_PUBLIC_SUPABASE_URL,
     SUPABASE_ANON_KEY: parsed.data.NEXT_PUBLIC_SUPABASE_ANON_KEY,
