@@ -8,24 +8,9 @@ import { Button } from "@/shared/components/ui/button"
 import { XIcon } from "lucide-react"
 import { OVERLAY_ANIMATIONS } from "@/shared/constants/overlays"
 
-/* ============================================================
-   DIALOG / MODAL — Design System Component
-   
-   Architecture:
-     Dialog (Root)
-      └─ DialogContent
-           ├─ DialogHeader
-           │    ├─ DialogTitle
-           │    └─ DialogDescription
-           ├─ DialogBody        (scrollable)
-           └─ DialogFooter      (actions)
-   
-   Token-driven padding rhythm (all sections):
-     Horizontal:  px-6  (1.5rem)
-     Vertical:    py-4  (1rem)
-   ============================================================ */
 
-/* ─── Root ─────────────────────────────────────────────── */
+
+
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
@@ -43,7 +28,7 @@ function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
   return <DialogPrimitive.Close data-slot="dialog-close" {...props} />
 }
 
-/* ─── Overlay (Backdrop) ───────────────────────────────── */
+
 
 function DialogOverlay({
   className,
@@ -65,7 +50,7 @@ function DialogOverlay({
   )
 }
 
-/* ─── Content (the visible card) ───────────────────────── */
+
 
 type DialogSize = "sm" | "md" | "lg" | "xl" | "2xl"
 type DialogElevation = "sm" | "md" | "lg"
@@ -75,6 +60,7 @@ interface DialogContentProps extends DialogPrimitive.Popup.Props {
   size?: DialogSize
   elevation?: DialogElevation
   fullscreenMobile?: boolean
+  drawer?: boolean
   loading?: boolean
 }
 
@@ -99,54 +85,75 @@ function DialogContent({
   size = "sm",
   elevation = "md",
   fullscreenMobile = false,
+  drawer = false,
   loading = false,
   ...props
 }: DialogContentProps) {
   return (
     <DialogPortal>
-      {/* Portal container — single stacking context for overlay + popup */}
+      {}
       <div className="relative z-[var(--z-dialog)]">
         <DialogOverlay />
         <DialogPrimitive.Popup
           data-slot="dialog-content"
           className={cn(
-            /* Base surface */
+            
             "flex flex-col w-full bg-popover text-sm text-popover-foreground",
-            /* Elevation (shadow + ring) */
+            
             ELEVATION_MAP[elevation],
-            /* Entrance / exit */
+            
             OVERLAY_ANIMATIONS.dialog,
-            /*
-             * Position + sizing — two modes:
-             *   default        → centered pill (same on all breakpoints)
-             *   fullscreenMobile → fills viewport on < sm, centered on sm+
-             */
-            fullscreenMobile
+            
+            drawer
               ? cn(
-                  "fixed",
-                  "inset-0",
-                  "w-full h-full max-w-none max-h-none",
+                  
+                  "fixed inset-0",
+                  "w-full",
+                  "h-dvh",
+                  "overflow-y-auto",
                   "rounded-none",
+                  
+                  "data-open:slide-in-from-bottom-4",
+                  "data-closed:slide-out-to-bottom-4",
+                  
                   "sm:inset-auto sm:top-1/2 sm:left-1/2",
                   "sm:-translate-x-1/2 sm:-translate-y-1/2",
                   "sm:w-auto sm:h-auto",
                   "sm:max-w-[calc(100%-2rem)] sm:max-h-[85vh]",
-                  "sm:rounded-xl sm:shadow-xl",
+                  "sm:rounded-xl",
                   SIZE_MAP[size],
                 )
-              : cn(
-                  "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
-                  "max-w-[calc(100%-2rem)] max-h-[85vh]",
-                  "rounded-xl",
-                  SIZE_MAP[size],
-                ),
+              : fullscreenMobile
+                ? cn(
+                    "fixed",
+                    "inset-0",
+                    "w-full h-full max-w-none max-h-none",
+                    "rounded-none",
+                    "sm:inset-auto sm:top-1/2 sm:left-1/2",
+                    "sm:-translate-x-1/2 sm:-translate-y-1/2",
+                    "sm:w-auto sm:h-auto",
+                    "sm:max-w-[calc(100%-2rem)] sm:max-h-[85vh]",
+                    "sm:rounded-xl sm:shadow-xl",
+                    SIZE_MAP[size],
+                  )
+                : cn(
+                    "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
+                    "max-w-[calc(100%-2rem)] max-h-[85vh]",
+                    "rounded-xl",
+                    SIZE_MAP[size],
+                  ),
             className
           )}
           {...props}
         >
-          {/* Loading skeleton */}
+          {}
           {loading ? (
             <DialogSkeleton />
+          ) : drawer ? (
+            
+            <div className="flex flex-col mt-auto mb-auto w-full">
+              {children}
+            </div>
           ) : (
             children
           )}
@@ -172,7 +179,7 @@ function DialogContent({
   )
 }
 
-/* ─── Skeleton (loading placeholder) ─────────────────────── */
+
 
 function DialogSkeleton({
   className,
@@ -188,14 +195,14 @@ function DialogSkeleton({
       )}
       {...props}
     >
-      {/* Title skeleton */}
+      {}
       <div className="h-5 w-1/3 bg-muted rounded-md" />
       <div className="mt-4 space-y-3">
         <div className="h-4 w-full bg-muted rounded-md" />
         <div className="h-4 w-4/5 bg-muted rounded-md" />
         <div className="h-4 w-3/5 bg-muted rounded-md" />
       </div>
-      {/* Footer skeleton */}
+      {}
       <div className="mt-6 flex justify-end gap-3">
         <div className="h-9 w-20 bg-muted rounded-md" />
         <div className="h-9 w-24 bg-muted/60 rounded-md" />
@@ -204,7 +211,7 @@ function DialogSkeleton({
   )
 }
 
-/* ─── Header ───────────────────────────────────────────── */
+
 
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -220,7 +227,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-/* ─── Body (scrollable content area) ───────────────────── */
+
 
 function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -236,7 +243,7 @@ function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-/* ─── Footer (action buttons) ──────────────────────────── */
+
 
 function DialogFooter({
   className,
@@ -267,7 +274,7 @@ function DialogFooter({
   )
 }
 
-/* ─── Title ────────────────────────────────────────────── */
+
 
 function DialogTitle({
   className,
@@ -285,7 +292,7 @@ function DialogTitle({
   )
 }
 
-/* ─── Description ──────────────────────────────────────── */
+
 
 function DialogDescription({
   className,
@@ -304,7 +311,7 @@ function DialogDescription({
   )
 }
 
-/* ─── Exports ──────────────────────────────────────────── */
+
 
 export {
   Dialog,

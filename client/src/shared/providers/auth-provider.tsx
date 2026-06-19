@@ -16,7 +16,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const routerRef = useRef(router);
   const pathnameRef = useRef(pathname);
 
-  // Keep refs synced with latest route changes
   useEffect(() => {
     routerRef.current = router;
     pathnameRef.current = pathname;
@@ -38,7 +37,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         case "SIGNED_IN":
           setUser(session?.user || null);
           if (session?.user) handleSignIn();
-          // Only redirect if they are currently on auth routes
           if (pathnameRef.current?.startsWith(APP_ROUTES.AUTH.INDEX)) {
             routerRef.current.push(APP_ROUTES.CONVERSATIONS.INDEX);
           }
@@ -49,11 +47,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setInitialized(true);
           handleSignOut(queryClient);
           
-          // Only redirect to login if they are currently on a protected route
           const isPublicRoute = pathnameRef.current === APP_ROUTES.HOME || 
                                 pathnameRef.current === APP_ROUTES.AUTH.LOGIN || 
                                 pathnameRef.current === APP_ROUTES.AUTH.REGISTER || 
                                 pathnameRef.current === APP_ROUTES.AUTH.FORGOT_PASSWORD ||
+                                pathnameRef.current === APP_ROUTES.AUTH.RESET_PASSWORD ||
                                 pathnameRef.current?.startsWith(APP_ROUTES.AUTH.INDEX);
           if (!isPublicRoute) {
             routerRef.current.push(APP_ROUTES.AUTH.LOGIN);
@@ -62,6 +60,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         case "USER_UPDATED":
           setUser(session?.user || null);
+          break;
+
+        case "PASSWORD_RECOVERY":
+          setUser(session?.user || null);
+          if (pathnameRef.current !== APP_ROUTES.AUTH.RESET_PASSWORD) {
+            routerRef.current.push(APP_ROUTES.AUTH.RESET_PASSWORD);
+          }
           break;
 
         case "TOKEN_REFRESHED":

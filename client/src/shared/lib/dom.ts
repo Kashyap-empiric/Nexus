@@ -11,9 +11,7 @@ export function scrollToMessage(targetId: string) {
 
   el.scrollIntoView({ behavior: "smooth", block: "center" });
 
-  // Remove highlight from any previously highlighted message
   document.querySelectorAll(".highlight-message").forEach((e) => e.classList.remove("highlight-message"));
 
-  // Add highlight that fades out over 1.5s
   el.classList.add("highlight-message");
 }

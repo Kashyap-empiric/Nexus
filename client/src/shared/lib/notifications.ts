@@ -30,7 +30,6 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
     const permission = await Notification.requestPermission();
     return permission;
   } catch {
-    // Old browsers that don't support the promise-based API
     return null;
   }
 }
@@ -54,11 +53,10 @@ export function showNotification(options: NotificationOptions): boolean {
       body: options.body,
       icon: options.icon || "/images/Logo.png",
       badge: options.badge || "/images/Logo.png",
-      tag: options.tag || options.conversationId, // Deduplicate by tag
+      tag: options.tag || options.conversationId, 
       silent: false,
     });
 
-    // Navigate to conversation when notification is clicked
     if (options.onClickUrl) {
       notification.onclick = () => {
         window.focus();
@@ -69,12 +67,10 @@ export function showNotification(options: NotificationOptions): boolean {
       };
     }
 
-    // Auto-close after 8 seconds
     setTimeout(() => notification.close(), 8000);
 
     return true;
   } catch (error: any) {
-    // Mobile Chrome/Android requires ServiceWorkerRegistration.showNotification()
     if (error.name === 'TypeError' && 'serviceWorker' in navigator) {
       navigator.serviceWorker.ready.then(registration => {
         registration.showNotification(options.title, {

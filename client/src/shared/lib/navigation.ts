@@ -22,7 +22,6 @@ export function presetNavigationFromLink(link: string): void {
   const store = useChatStore.getState();
 
   if (link.startsWith("/workspaces/")) {
-    // Extract workspace slug — matches the first path segment after /workspaces/
     const slugMatch = link.match(/^\/workspaces\/([^/?]+)/);
     if (slugMatch) {
       store.setMode("WORKSPACE");
@@ -32,5 +31,4 @@ export function presetNavigationFromLink(link: string): void {
     store.setMode("DM");
     store.setActiveWorkspaceId(null);
   }
-  // Non-conversation links (e.g., settings, invites) don't need navigation state
 }

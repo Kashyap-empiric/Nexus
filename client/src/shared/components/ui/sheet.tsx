@@ -7,13 +7,7 @@ import { cn } from "@/shared/lib/utils"
 import { Button } from "@/shared/components/ui/button"
 import { XIcon } from "lucide-react"
 
-/* ============================================================
-   SHEET / DRAWER — Slide-over Panel
 
-   Sides: top | right | bottom | left
-   Designed for mobile-first drawer patterns and
-   slide-over panels on desktop.
-   ============================================================ */
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
@@ -31,7 +25,7 @@ function SheetPortal({ ...props }: SheetPrimitive.Portal.Props) {
   return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />
 }
 
-/* ─── Overlay ───────────────────────────────────────────── */
+
 
 function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
   return (
@@ -50,7 +44,7 @@ function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
   )
 }
 
-/* ─── Content ───────────────────────────────────────────── */
+
 
 function SheetContent({
   className,
@@ -69,31 +63,27 @@ function SheetContent({
         data-slot="sheet-content"
         data-side={side}
         className={cn(
-          /* Base */
+          
           "fixed z-50 flex flex-col bg-popover text-sm text-popover-foreground",
           "shadow-xl ring-1 ring-border/50",
-          /* Animation */
+          
           "transition-all duration-200 ease-out",
           "data-ending-style:opacity-0 data-starting-style:opacity-0",
-          /* ── Side-specific positioning & transforms ── */
-          // Bottom (mobile drawer)
+          
           "data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0",
           "data-[side=bottom]:h-auto data-[side=bottom]:max-h-[85dvh]",
           "data-[side=bottom]:border-t data-[side=bottom]:rounded-t-xl",
           "data-[side=bottom]:data-ending-style:translate-y-[2.5rem]",
           "data-[side=bottom]:data-starting-style:translate-y-[2.5rem]",
-          // Top
           "data-[side=top]:inset-x-0 data-[side=top]:top-0",
           "data-[side=top]:h-auto data-[side=top]:border-b data-[side=top]:rounded-b-xl",
           "data-[side=top]:data-ending-style:translate-y-[-2.5rem]",
           "data-[side=top]:data-starting-style:translate-y-[-2.5rem]",
-          // Left
           "data-[side=left]:inset-y-0 data-[side=left]:left-0",
           "data-[side=left]:h-full data-[side=left]:w-3/4 data-[side=left]:sm:max-w-sm",
           "data-[side=left]:border-r data-[side=left]:rounded-r-xl",
           "data-[side=left]:data-ending-style:translate-x-[-2.5rem]",
           "data-[side=left]:data-starting-style:translate-x-[-2.5rem]",
-          // Right
           "data-[side=right]:inset-y-0 data-[side=right]:right-0",
           "data-[side=right]:h-full data-[side=right]:w-3/4 data-[side=right]:sm:max-w-sm",
           "data-[side=right]:border-l data-[side=right]:rounded-l-xl",
@@ -124,7 +114,7 @@ function SheetContent({
   )
 }
 
-/* ─── Header ────────────────────────────────────────────── */
+
 
 function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -140,7 +130,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-/* ─── Footer ────────────────────────────────────────────── */
+
 
 function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -157,7 +147,7 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-/* ─── Title ─────────────────────────────────────────────── */
+
 
 function SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {
   return (
@@ -172,7 +162,7 @@ function SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {
   )
 }
 
-/* ─── Description ───────────────────────────────────────── */
+
 
 function SheetDescription({
   className,
@@ -190,7 +180,7 @@ function SheetDescription({
   )
 }
 
-/* ─── Exports ───────────────────────────────────────────── */
+
 
 export {
   Sheet,

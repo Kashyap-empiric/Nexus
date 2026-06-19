@@ -9,8 +9,6 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            // Don't retry on client errors (4xx) — these are auth/not-found errors,
-            // not transient network failures. Only retry on 5xx / network errors.
             retry: (failureCount, error: unknown) => {
               const status = typeof error === 'object' && error !== null && 'response' in error 
                 ? (error as { response?: { status?: number } }).response?.status 
@@ -18,9 +16,6 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
               if (status && status >= 400 && status < 500) return false;
               return failureCount < 2;
             },
-            // Keep data fresh for 30 seconds before refetching on navigation.
-            // This provides fast navigation between conversations/workspaces
-            // while still staying reasonably up-to-date.
             staleTime: 30_000,
           },
         },

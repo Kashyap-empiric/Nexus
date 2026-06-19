@@ -1,8 +1,6 @@
 "use client"
 
 import * as React from "react"
-// Note: Base UI currently does not have a dedicated HoverCard primitive.
-// We are wrapping Popover as a placeholder, or you can switch to @radix-ui/react-hover-card.
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
 
 import { cn } from "@/shared/lib/utils"

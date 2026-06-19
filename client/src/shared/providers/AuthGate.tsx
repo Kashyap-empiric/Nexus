@@ -15,7 +15,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   
-  const isPublicRoute = pathname === APP_ROUTES.HOME || pathname === APP_ROUTES.AUTH.LOGIN || pathname === APP_ROUTES.AUTH.REGISTER || pathname === APP_ROUTES.INVITE.INDEX;
+  const isPublicRoute = pathname === APP_ROUTES.HOME || pathname === APP_ROUTES.AUTH.LOGIN || pathname === APP_ROUTES.AUTH.REGISTER || pathname === APP_ROUTES.AUTH.FORGOT_PASSWORD || pathname === APP_ROUTES.AUTH.RESET_PASSWORD || pathname === APP_ROUTES.INVITE.INDEX;
   const isOnboardingRoute = pathname.startsWith('/onboarding');
 
   useEffect(() => {
@@ -25,8 +25,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       } else if (profile.isOnboarded) {
         handleInviteContinuation(router);
       }
+    } else if (isInitialized && !user && !isPublicRoute) {
+      router.push(APP_ROUTES.AUTH.LOGIN);
     }
-  }, [isInitialized, user, profile, router, isOnboardingRoute]);
+  }, [isInitialized, user, profile, router, isOnboardingRoute, isPublicRoute]);
 
   if (!isInitialized && !isPublicRoute) {
     return (

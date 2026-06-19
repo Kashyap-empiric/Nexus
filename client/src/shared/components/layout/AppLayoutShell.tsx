@@ -76,7 +76,6 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
   const headerInfo = useChatStore((state) => state.headerInfo);
   const activeWorkspaceId = useChatStore((state) => state.activeWorkspaceId);
 
-  // Local UI State (Single Source of Truth)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [infoPanelOpen, setInfoPanelOpen] = useState(false);
   const [infoPanelView, setInfoPanelView] = useState<InfoPanelView>('about');
@@ -93,7 +92,6 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     requestAnimationFrame(() => {
       setMounted(true);
-      // Open info panel by default on desktop
       if (window.innerWidth >= 768) {
         setInfoPanelOpen(true);
       }
@@ -102,7 +100,6 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
     if ("serviceWorker" in navigator) {
       const handleMessage = (event: MessageEvent) => {
         if (event.data && event.data.type === 'NAVIGATE' && event.data.url) {
-          // Pre-set sidebar state for conversation links
           presetNavigationFromLink(event.data.url);
           router.push(event.data.url);
         }
@@ -128,7 +125,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
-      {/* Mobile sidebar overlay */}
+      {}
       {mobileSidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-transparent lg:hidden"
@@ -136,7 +133,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
         />
       )}
 
-      {/* Sidebar area — toggled by button on mobile */}
+      {}
       <div className={cn(
         "shrink-0 flex transition-transform duration-300 ease-in-out",
         isContentActive
@@ -154,10 +151,10 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
       </div>
 
       <main className={cn("flex-1 flex-col min-w-0 bg-background h-full", !isContentActive ? "hidden lg:flex" : "flex")}>
-        {/* Global header bar */}
+        {}
         <div className="h-14 border-b flex items-center justify-between px-[15px] md:px-4 xl:px-6 shrink-0 bg-background">
           <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
-            {/* Back/Sidebar toggle (mobile only) */}
+            {}
             {mounted && headerInfo && (
               <button
                 onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
@@ -166,14 +163,14 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
               >
                 <ArrowLeft className="h-5 w-5" />
                 {headerInfo.totalUnreadCount > 0 && (
-                  <span className="absolute bottom-0 right-0 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-none font-bold text-white shadow-sm ring-2 ring-background">
+                  <span className="absolute bottom-0 right-0 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] leading-none font-bold text-white shadow-sm ring-2 ring-background">
                     {headerInfo.totalUnreadCount > 99 ? '99+' : headerInfo.totalUnreadCount}
                   </span>
                 )}
               </button>
             )}
 
-            {/* Conversation info */}
+            {}
             {(!mounted || !headerInfo) ? (
               <span className="text-sm text-muted-foreground">Nexus</span>
             ) : isChannel ? (
@@ -214,7 +211,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
             )}
           </div>
 
-          {/* Right side actions */}
+          {}
           <div className="flex items-center gap-2 shrink-0">
             {mounted && isChannel && headerInfo?.workspaceId && (
               <MemberCountBadge workspaceId={headerInfo.workspaceId} />
@@ -239,7 +236,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
             )}
           </div>
         </div>        
-        {/* Content area */}
+        {}
         <div className="flex-1 min-h-0 flex justify-center">
           <LayoutUIContext.Provider value={{
             infoPanelOpen,
@@ -252,7 +249,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
         </div>
       </main>
 
-      {/* Global modals rendered at top level */}
+      {}
       <InviteModal isOpen={inviteModal.isOpen} onClose={inviteModal.close} type={inviteModal.type} entityId={inviteModal.entityId} />
       <SharedSettingsModal
         isOpen={settingsOpen}
