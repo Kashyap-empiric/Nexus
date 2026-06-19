@@ -1,4 +1,3 @@
-// ──── DTOs ────
 
 export interface UserSearchResult {
   id: string;

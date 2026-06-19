@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/db.js";
 import { Prisma } from "@prisma/client";
 
-// ====== Reads ======
 
 export const findById = async (id: string) => {
   return prisma.conversation.findUnique({
@@ -105,7 +104,6 @@ export const findChannelIdsByWorkspaceIds = async (
   if (userId) {
     const conditions: any[] = [];
 
-    // In owned workspaces, owners see ALL channels (no visibility filter)
     const ownedIds = ownerWorkspaceIds?.size
       ? workspaceIds.filter(id => ownerWorkspaceIds.has(id))
       : [];
@@ -113,7 +111,6 @@ export const findChannelIdsByWorkspaceIds = async (
       conditions.push({ workspaceId: { in: ownedIds } });
     }
 
-    // In non-owned workspaces, only public or channels the user is a member of
     const nonOwnedIds = workspaceIds.filter(id => !ownedIds.includes(id));
     if (nonOwnedIds.length > 0) {
       conditions.push({
@@ -194,7 +191,6 @@ export const findConversationByIdForInvite = async (
   });
 };
 
-// ====== Counts ======
 
 export const countUnreadMessages = async (
   conversationId: string,
@@ -258,7 +254,6 @@ export const countUnreadByConversations = async (
   return resultMap;
 };
 
-// ====== Writes ======
 
 export const createDM = async (data: {
   id: string;

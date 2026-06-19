@@ -45,7 +45,6 @@ export const verifyChannelAccess = async (
   let allowed = false;
 
   if (conversation.type === "DM" || conversation.visibility === "PRIVATE") {
-    // DM or Private Channel → must be a direct member
     const membership = await prisma.conversationMember.findUnique({
       where: {
         conversationId_userId: { conversationId: channelId, userId },
@@ -53,7 +52,6 @@ export const verifyChannelAccess = async (
     });
     allowed = !!membership;
   } else if (conversation.type === "CHANNEL" && conversation.visibility === "PUBLIC") {
-    // Public Channel → must be a workspace member
     if (!conversation.workspaceId) {
       throw new Error("Public channel has no workspace association");
     }

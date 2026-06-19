@@ -44,7 +44,6 @@ export const createConversation = async (req: AuthRequest, res: Response): Promi
 
     const result = await conversationsService.createOrGetDM(userId, targetUserId);
 
-    // If a new conversation was created, dynamically join participants' sockets and notify them
     if (result.created) {
       await dispatchConversationNew(result.conversation);
     }

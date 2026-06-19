@@ -9,7 +9,6 @@ export const getConversationById = async (conversationId: string) => {
 export const getUserConversations = async (userId: string) => {
     const conversations = await conversationsRepo.findDMsByUserId(userId);
 
-    // 1. Identify unread candidates
     const conversationsWithState = conversations.map(conv => {
         const member = conv.members.find(m => m.userId === userId);
         const hasUnread = Boolean(
@@ -23,7 +22,6 @@ export const getUserConversations = async (userId: string) => {
 
     const unreadCandidates = conversationsWithState.filter(c => c.hasUnread);
 
-    // 2. Only execute count queries for that subset
     const unreadCounts = await Promise.all(
         unreadCandidates.map(async ({ conv, member }) => {
             const unreadCount = await conversationsRepo.countUnreadMessages(
@@ -37,7 +35,6 @@ export const getUserConversations = async (userId: string) => {
 
     const countsMap = Object.fromEntries(unreadCounts.map(uc => [uc.conversationId, uc.unreadCount]));
 
-    // 3. Return identically formatted payload
     return conversationsWithState.map(({ conv }) => ({
         ...conv,
         unreadCount: countsMap[conv.id] || 0

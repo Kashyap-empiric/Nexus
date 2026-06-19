@@ -1,8 +1,6 @@
-// ──── Value Types ────
 
-export type DMPair = string; // `${sorted(userA)}:${sorted(userB)}`
+export type DMPair = string; 
 
-// ──── DTOs (what services return) ────
 
 export interface UserDTO {
   id: string;
@@ -43,7 +41,6 @@ export interface ConversationDTO {
   unreadCount?: number;
 }
 
-// ──── Service Input DTOs ────
 
 export interface CreateConversationDTO {
   targetUserId: string;
@@ -53,7 +50,6 @@ export interface MarkReadDTO {
   messageId: string;
 }
 
-// ──── Repository Return Types ────
 
 export interface UnreadCountResult {
   conversationId: string;
@@ -65,7 +61,6 @@ export interface ConversationListResult {
   unreadCounts: UnreadCountResult[];
 }
 
-// ──── Repository Input Types ────
 
 export interface CreateDMData {
   id: string;
@@ -83,7 +78,6 @@ export interface DMResult {
   conversation: ConversationDTO & { members: Array<{ user: UserDTO & { email?: string } }> };
 }
 
-// ──── Channel Types ────
 
 export interface ChannelDTO {
   id: string;

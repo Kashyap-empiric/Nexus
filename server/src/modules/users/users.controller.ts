@@ -65,7 +65,6 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     const data = req.body;
     const updatedProfile = await usersService.updateProfile(userId, data);
     
-    // Emit socket event so other users see the profile changes (name, bio, etc.)
     dispatchUserProfileUpdate(userId);
 
     res.json({ data: updatedProfile });
@@ -95,7 +94,6 @@ export const updateAvatar = async (req: AuthRequest, res: Response): Promise<voi
     const userId = req.user!.id;
     const { avatarUrl } = req.body;
     
-    // Security: avatarUrl must point to the user's avatars folder or be null
     const avatarPrefix = `${ENV.SUPABASE_URL}/storage/v1/object/public/avatars/${userId}/`;
     if (avatarUrl && !avatarUrl.startsWith(avatarPrefix)) {
       res.status(403).json({ error: "Forbidden avatar URL" });
@@ -104,7 +102,6 @@ export const updateAvatar = async (req: AuthRequest, res: Response): Promise<voi
 
     const updatedProfile = await usersService.updateAvatar(userId, avatarUrl);
     
-    // Emit socket event so other users see the new avatar
     dispatchUserProfileUpdate(userId);
 
     res.json({ data: updatedProfile });
@@ -122,7 +119,6 @@ export const updateStatus = async (req: AuthRequest, res: Response): Promise<voi
     const { status, statusText } = req.body;
     const updatedProfile = await usersService.updateStatus(userId, status, statusText);
     
-    // Emit socket event
     dispatchUserStatusUpdate(userId, status, statusText || null);
 
     res.json({ data: updatedProfile });

@@ -55,11 +55,10 @@ export const createAndDispatch = async (input: CreateNotificationInput) => {
     body: input.body,
     link: input.link,
     imageUrl: input.imageUrl,
-    metadata: (input.metadata as any) ?? undefined,
+    metadata: (input.metadata ?? undefined) as Record<string, unknown> | undefined,
   });
   console.log(`[Notification Dispatch] Notification created in DB with ID: ${notification.id}`);
 
-  // Emit socket event to the user's personal room
   try {
     console.log(`[Notification Dispatch] Emitting socket event to room 'user:${input.userId}'...`);
     const io = getIO();
@@ -69,7 +68,6 @@ export const createAndDispatch = async (input: CreateNotificationInput) => {
     console.error("[Notification Dispatch] Failed to emit notification:new socket event:", err);
   }
 
-  // Push delivery for offline/background
   console.log(`[Notification Dispatch] Triggering Web Push delivery for user ${input.userId}...`);
   sendPushNotification(input.userId, {
     title: notification.title,

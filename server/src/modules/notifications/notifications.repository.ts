@@ -1,13 +1,13 @@
 import { prisma } from "@/lib/db.js";
 import type { Prisma, NotificationType } from "@prisma/client";
 
-// ====== Reads ======
+
 
 export const findByUserId = async (
   userId: string,
   cursor?: string,
   limit: number = 21,
-  type?: string // comma-separated list of NotificationType values
+  type?: string 
 ): Promise<{ data: any[]; nextCursor: string | null }> => {
   const where: Prisma.NotificationWhereInput = { userId };
 
@@ -37,7 +37,6 @@ export const countUnreadByUserId = async (userId: string): Promise<number> => {
   });
 };
 
-// ====== Writes ======
 
 export const create = async (data: {
   userId: string;
@@ -82,7 +81,6 @@ export const markAllAsRead = async (
   return { count: result.count };
 };
 
-// ====== Push Subscriptions ======
 
 export const savePushSubscription = async (
   userId: string,
@@ -91,9 +89,6 @@ export const savePushSubscription = async (
   auth: string,
   userAgent?: string
 ) => {
-  // Security: If this endpoint is already registered under a different user,
-  // delete that record first. This prevents the endpoint from being
-  // hijacked/reassigned to another user via upsert (which only keys on endpoint).
   await prisma.pushSubscription.deleteMany({
     where: { endpoint, userId: { not: userId } },
   });

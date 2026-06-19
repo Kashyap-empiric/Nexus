@@ -16,7 +16,6 @@ export const completeOnboarding = async (req: AuthRequest, res: Response): Promi
 
     const result = await onboardingService.completeOnboarding(userId, validationResult.data);
     
-    // Dispatch profile update so other sockets know the user is updated/onboarded
     dispatchUserProfileUpdate(userId);
 
     res.status(201).json({ data: result });

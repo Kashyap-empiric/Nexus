@@ -165,7 +165,6 @@ export const updatePreferences = async (req: AuthRequest, res: Response): Promis
       channelNotifications?: boolean;
     };
 
-    // Map client-facing field names to Prisma column names
     const dataToUpdate: Record<string, boolean> = {};
     if (prefs.pushEnabled !== undefined) dataToUpdate.pushNotificationsEnabled = prefs.pushEnabled;
     if (prefs.dmNotifications !== undefined) dataToUpdate.dmNotifications = prefs.dmNotifications;
@@ -179,7 +178,6 @@ export const updatePreferences = async (req: AuthRequest, res: Response): Promis
       });
     }
 
-    // Fetch and return the updated preferences
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {

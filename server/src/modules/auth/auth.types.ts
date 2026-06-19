@@ -1,4 +1,3 @@
-// ──── Permission Check Results ────
 
 export interface MembershipCheck {
   isMember: boolean;
@@ -14,7 +13,6 @@ export interface ConversationAccess {
   conversationType: "DM" | "CHANNEL" | null;
 }
 
-// ──── Service Input Types ────
 
 export interface WorkspaceMembershipParams {
   userId: string;

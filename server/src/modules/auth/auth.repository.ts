@@ -65,9 +65,6 @@ export const findWorkspaceChannelsByUserId = async (userId: string) => {
 
   const workspaceIds = memberships.map((m) => m.workspaceId);
 
-  // Only return channels the user can access:
-  // - PUBLIC channels → user is a workspace member, so they have access
-  // - PRIVATE channels → user must be a ConversationMember
   return prisma.conversation.findMany({
     where: {
       workspaceId: { in: workspaceIds },
