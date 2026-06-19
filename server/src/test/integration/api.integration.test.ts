@@ -2,7 +2,6 @@ import { describe, it, expect, beforeAll } from "vitest";
 import request from "supertest";
 import { PrismaClient } from "@prisma/client";
 
-// Set env before imports
 process.env.DATABASE_URL = "postgresql://nexus_test:nexus_test_pass@localhost:5433/nexus_test";
 process.env.SUPABASE_URL = "https://test-project.supabase.co";
 process.env.SUPABASE_PUBLISHABLE_KEY = "test-key";
@@ -13,24 +12,16 @@ process.env.VAPID_SUBJECT = "mailto:test@nexus.app";
 
 const { default: app } = await import("@/app.js");
 
-// These integration tests require a running test database.
-// Start it with: docker compose -f docker-compose.test.yml up -d
-// Then run migrations: dotenv -e .env.test -- prisma migrate deploy
 
 describe("API Integration Tests", () => {
   let testUser: any;
   let authToken: string;
 
   beforeAll(async () => {
-    // These tests require the database to be running and migrated.
-    // If DATABASE_URL is not reachable, skip integration tests.
     try {
-      const prisma = new PrismaClient({
-        datasources: { db: { url: process.env.DATABASE_URL } },
-      });
+      const prisma = new PrismaClient();
       await prisma.$connect();
 
-      // Seed a test user directly
       testUser = await prisma.user.upsert({
         where: { email: "test@nexus.app" },
         update: {},
@@ -43,9 +34,6 @@ describe("API Integration Tests", () => {
         },
       });
 
-      // We cannot get a real Supabase JWT without Supabase, so auth tests
-      // need a mocked auth middleware. The integration tests here focus on
-      // non-authenticated endpoints and basic app behavior.
 
       await prisma.$disconnect();
     } catch (err) {

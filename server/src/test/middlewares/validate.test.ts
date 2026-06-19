@@ -93,7 +93,6 @@ describe("validate middleware", () => {
     const schema = z.object({ name: z.string() });
     const handler = validate({ body: schema });
 
-    // Force a non-Zod error by making parse throw something else
     const badSchema = {
       parse: vi.fn().mockImplementation(() => {
         throw new Error("DB connection lost");

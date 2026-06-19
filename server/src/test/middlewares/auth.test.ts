@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 process.env.SUPABASE_URL = "https://test-project.supabase.co";
 
-// Mock jwt verification
 vi.mock("@/utils/jwt.js", () => ({
   verifyToken: vi.fn(),
 }));

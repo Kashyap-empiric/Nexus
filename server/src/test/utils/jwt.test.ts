@@ -1,9 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 
-// Set env before any imports
 process.env.SUPABASE_URL = "https://test-project.supabase.co";
 
-// Mock jose entirely since verifyToken calls createRemoteJWKSet at module scope
 const mockJwtVerify = vi.fn();
 vi.mock("jose", () => ({
   createRemoteJWKSet: vi.fn(() => vi.fn()),

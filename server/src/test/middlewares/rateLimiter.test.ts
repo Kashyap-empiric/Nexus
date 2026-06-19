@@ -21,7 +21,6 @@ describe("rate limiters", () => {
 
   it("generalLimiter exists and calls next", async () => {
     await generalLimiter(req, res, next);
-    // In-memory rate limiter allows the first request
     expect(next).toHaveBeenCalled();
   });
 

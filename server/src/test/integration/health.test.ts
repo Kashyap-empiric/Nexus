@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import request from "supertest";
 
-// Set env before importing app
 process.env.DATABASE_URL = "postgresql://nexus_test:nexus_test_pass@localhost:5433/nexus_test";
 process.env.SUPABASE_URL = "https://test-project.supabase.co";
 process.env.SUPABASE_PUBLISHABLE_KEY = "test-key";
@@ -63,7 +62,6 @@ describe("CORS headers", () => {
       .options("/health")
       .set("Origin", "https://evil.com")
       .set("Access-Control-Request-Method", "GET");
-    // CORS middleware returns 204 or doesn't set the header for disallowed origins
     expect(res.headers["access-control-allow-origin"]).toBeUndefined();
   });
 });

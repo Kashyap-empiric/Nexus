@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { setupPrismaMock, mockPrisma, resetPrismaMock } from "../../mock-db.js";
 import { setupTransactionMock } from "../../mock-transaction.js";
 
-// Set env vars before any imports
 process.env.SUPABASE_URL = "https://test-project.supabase.co";
 
 setupPrismaMock();
@@ -11,23 +10,19 @@ setupTransactionMock();
 const messagesService = await import("@/modules/messages/messages.service.js");
 const { uuidv7 } = await import("uuidv7");
 
-// Mock socket dispatcher (used by pin/unpin)
 vi.mock("@/socket/socket.dispatcher.js", () => ({
   dispatchPinEvent: vi.fn(),
   dispatchMessageEvent: vi.fn(),
 }));
 
-// Mock notification service (used by createMessage)
 vi.mock("@/modules/notifications/notifications.service.js", () => ({
   createAndDispatch: vi.fn(),
 }));
 
-// Mock push service (used by sendMessageNotifications)
 vi.mock("@/services/push.service.js", () => ({
   sendPushNotification: vi.fn(),
 }));
 
-// Mock auth repository (used by pin/unpin for workspace role check)
 vi.mock("@/modules/auth/auth.repository.js", () => ({
   findWorkspaceMember: vi.fn(),
 }));
@@ -38,7 +33,6 @@ describe("messages service", () => {
     vi.clearAllMocks();
   });
 
-  // ──── getMessages ────
 
   describe("getMessages", () => {
     it("returns messages with pagination info", async () => {
@@ -48,10 +42,8 @@ describe("messages service", () => {
         { id: "msg-3", content: "Third", user: { username: "bob" } },
       ];
 
-      // findMessages mock — return limit+1 messages for hasNextPage check
       mockPrisma.message.findMany.mockResolvedValueOnce([...fakeMessages, { id: "msg-4", content: "Extra" } as any]);
 
-      // findPinnedMessageIds mock
       mockPrisma.pinnedMessage.findMany.mockResolvedValueOnce([
         { messageId: "msg-1" },
       ]);
@@ -78,14 +70,13 @@ describe("messages service", () => {
     });
   });
 
-  // ──── createMessage ────
 
   describe("createMessage", () => {
     it("creates a message and returns it with metadata", async () => {
       const messageId = uuidv7();
       const now = new Date();
 
-      mockPrisma.message.findUnique.mockResolvedValueOnce(null); // replyToId validation — no parent
+      mockPrisma.message.findUnique.mockResolvedValueOnce(null); 
 
       const fakeCreatedMessage = {
         id: messageId,
@@ -137,7 +128,6 @@ describe("messages service", () => {
     });
   });
 
-  // ──── editMessage ────
 
   describe("editMessage", () => {
     it("edits own non-deleted message", async () => {
@@ -201,7 +191,6 @@ describe("messages service", () => {
     });
   });
 
-  // ──── deleteMessage ────
 
   describe("deleteMessage", () => {
     it("soft-deletes own message", async () => {
@@ -267,7 +256,6 @@ describe("messages service", () => {
     });
   });
 
-  // ──── pinMessage / unpinMessage ────
 
   describe("pinMessage", () => {
     it("pins a message in a DM (no workspace check)", async () => {
@@ -346,7 +334,6 @@ describe("messages service", () => {
     });
   });
 
-  // ──── searchMessages ────
 
   describe("searchMessages", () => {
     it("searches for messages", async () => {
@@ -362,7 +349,6 @@ describe("messages service", () => {
     });
   });
 
-  // ──── sendMessageNotifications ────
 
   describe("sendMessageNotifications", () => {
     it("sends push to DM members with notifications enabled", async () => {
@@ -371,7 +357,7 @@ describe("messages service", () => {
         type: "DM",
         name: null,
         members: [
-          { userId: "user-1" }, // sender, skipped
+          { userId: "user-1" }, 
           { userId: "user-2" },
           { userId: "user-3" },
         ],

@@ -87,10 +87,9 @@ describe("conversations service", () => {
     });
 
     it("returns existing DM if duplicate caught (P2002)", async () => {
-      // findDMByPair uses findUnique, not findFirst
       mockPrisma.conversation.findUnique
-        .mockResolvedValueOnce(null) // first check - no existing
-        .mockResolvedValueOnce({ // after P2002, fallback find
+        .mockResolvedValueOnce(null) 
+        .mockResolvedValueOnce({ 
           id: "existing-conv",
           type: "DM",
           members: [],

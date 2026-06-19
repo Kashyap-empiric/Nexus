@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 
-// extractAvatarPath reads ENV.SUPABASE_URL at call time, so we set it before import
 process.env.SUPABASE_URL = "https://test-project.supabase.co";
 
 const { extractAvatarPath } = await import("@/utils/upload.js");

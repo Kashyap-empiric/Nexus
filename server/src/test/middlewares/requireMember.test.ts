@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 process.env.SUPABASE_URL = "https://test-project.supabase.co";
 
-// Mock the permissions module
 vi.mock("@/shared/permissions.js", () => ({
   verifyConversationMembership: vi.fn(),
 }));
@@ -16,7 +15,6 @@ const { verifyConversationMembership } = await import(
 
 describe("requireConversationMember middleware", () => {
   let req: any, res: any, next: any;
-  // The middleware is a factory: requireConversationMember({ paramName })
   const handler = requireConversationMember({ paramName: "conversationId" });
 
   beforeEach(() => {
