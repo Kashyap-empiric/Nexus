@@ -192,7 +192,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
             >
               <div className="w-[36px] shrink-0 flex justify-center items-start relative select-none">
                 {isFirst ? (
-                  <UserAvatar 
+                  <UserAvatar
                     name={user?.username}
                     src={user?.avatarUrl}
                     className="h-9 w-9 mt-0.5 absolute left-0"
@@ -232,8 +232,8 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
 
                 {isFirst && (
                   <div className="flex items-baseline gap-1.5 mb-0.5">
-                    <span className="font-extrabold text-[15px] text-foreground hover:text-brand hover:underline cursor-pointer transition-colors">
-                      <Link href={`/users/${user?.id}`}>{user?.username || "Deleted user"}</Link>
+                    <span className="font-extrabold text-[15px] text-foreground">
+                      {user?.username || "Deleted user"}
                     </span>
                     <span className="text-[11px] text-muted-foreground/60 font-medium">
                       {time}
@@ -264,8 +264,8 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                     </div>
                   ) : (
                     <>
-                      <div 
-                        className="flex-1 relative inline" 
+                      <div
+                        className="flex-1 relative inline"
                         onContextMenu={(e) => {
                           handleContextMenu(e, msg.id, isDeleted);
                           if (!isDeleted) {
@@ -391,20 +391,20 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(msg.content)}>
                                   <Copy className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy</span>
                                 </DropdownMenuItem>
-                                  <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(stripMarkdown(msg.content))}>
-                                    <Text className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy as plain text</span>
-                                  </DropdownMenuItem>
-                                  {canPin && (
-                                    <>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => isPinned ? unpinMutation.mutate(msg.id) : pinMutation.mutate(msg.id)}>
-                                        <Pin className={`h-4 w-4 mr-2 ${isPinned ? "text-amber-500" : ""}`} /> <span className="pt-[1px]">{isPinned ? "Unpin message" : "Pin message"}</span>
-                                      </DropdownMenuItem>
-                                    </>
-                                  )}
-                                  {isMyMessage && (
-                                    <>
-                                      <DropdownMenuSeparator />
+                                <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(stripMarkdown(msg.content))}>
+                                  <Text className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy as plain text</span>
+                                </DropdownMenuItem>
+                                {canPin && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => isPinned ? unpinMutation.mutate(msg.id) : pinMutation.mutate(msg.id)}>
+                                      <Pin className={`h-4 w-4 mr-2 ${isPinned ? "text-amber-500" : ""}`} /> <span className="pt-[1px]">{isPinned ? "Unpin message" : "Pin message"}</span>
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                                {isMyMessage && (
+                                  <>
+                                    <DropdownMenuSeparator />
                                     <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => handleEditStart(msg.id, msg.content)}>
                                       <Pencil className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Edit Message</span>
                                     </DropdownMenuItem>
@@ -419,42 +419,42 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                           </div>
                         )}                        {/* Mobile dropdown: Reply, Copy, Pin, Edit/Delete for own messages */}
                         {!isDeleted && !msg.pending && !msg.optimistic && (
-                           <div className="md:hidden">
-                             <DropdownMenu>
-                               <DropdownMenuTrigger className="absolute right-0 top-0 w-full h-full opacity-0 pointer-events-none" aria-hidden="true" tabIndex={-1} />
-                               <DropdownMenuContent align="end" side="bottom" sideOffset={4} className="w-48">
-                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => onReply?.(msg.id, user?.username || "Unknown", msg.content)}>
-                                   <Reply className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply</span>
-                                 </DropdownMenuItem>
-                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(msg.content)}>
-                                   <Copy className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy</span>
-                                 </DropdownMenuItem>
-                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(stripMarkdown(msg.content))}>
-                                   <Text className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy as plain text</span>
-                                 </DropdownMenuItem>
-                                 {canPin && (
-                                   <>
-                                     <DropdownMenuSeparator />
-                                     <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => isPinned ? unpinMutation.mutate(msg.id) : pinMutation.mutate(msg.id)}>
-                                       <Pin className={`h-4 w-4 mr-2 ${isPinned ? "text-amber-500" : ""}`} /> <span className="pt-[1px]">{isPinned ? "Unpin message" : "Pin message"}</span>
-                                     </DropdownMenuItem>
-                                   </>
-                                 )}
-                                 {isMyMessage && (
-                                   <>
-                                     <DropdownMenuSeparator />
-                                   <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => handleEditStart(msg.id, msg.content)}>
-                                     <Pencil className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Edit Message</span>
-                                   </DropdownMenuItem>
-                                   <DropdownMenuSeparator />
-                                   <DropdownMenuItem className="text-destructive focus:text-destructive flex items-center cursor-pointer" onClick={() => setMessageToDelete(msg.id)}>
-                                     <Trash className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Delete Message</span>
-                                   </DropdownMenuItem>
-                                 </>
+                          <div className="md:hidden">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger className="absolute right-0 top-0 w-full h-full opacity-0 pointer-events-none" aria-hidden="true" tabIndex={-1} />
+                              <DropdownMenuContent align="end" side="bottom" sideOffset={4} className="w-48">
+                                <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => onReply?.(msg.id, user?.username || "Unknown", msg.content)}>
+                                  <Reply className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(msg.content)}>
+                                  <Copy className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(stripMarkdown(msg.content))}>
+                                  <Text className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy as plain text</span>
+                                </DropdownMenuItem>
+                                {canPin && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => isPinned ? unpinMutation.mutate(msg.id) : pinMutation.mutate(msg.id)}>
+                                      <Pin className={`h-4 w-4 mr-2 ${isPinned ? "text-amber-500" : ""}`} /> <span className="pt-[1px]">{isPinned ? "Unpin message" : "Pin message"}</span>
+                                    </DropdownMenuItem>
+                                  </>
                                 )}
-                               </DropdownMenuContent>
-                             </DropdownMenu>
-                           </div>
+                                {isMyMessage && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => handleEditStart(msg.id, msg.content)}>
+                                      <Pencil className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Edit Message</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="text-destructive focus:text-destructive flex items-center cursor-pointer" onClick={() => setMessageToDelete(msg.id)}>
+                                      <Trash className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Delete Message</span>
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         )}
                       </div>
                     </>

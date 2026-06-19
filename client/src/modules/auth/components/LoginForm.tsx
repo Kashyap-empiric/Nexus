@@ -111,14 +111,9 @@ export const LoginForm = () => {
             </div>
 
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className={errors.password ? "text-destructive" : "text-foreground/80 font-medium"}>
-                  Password <span className="text-destructive">*</span>
-                </Label>
-                <Link href="/forgot-password" className="text-xs font-medium text-brand hover:text-brand-muted hover:underline transition-colors">
-                  Forgot password?
-                </Link>
-              </div>
+              <Label htmlFor="password" className={errors.password ? "text-destructive" : "text-foreground/80 font-medium"}>
+                Password <span className="text-destructive">*</span>
+              </Label>
               <div className="relative">
                 <Input
                   id="password"

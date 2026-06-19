@@ -66,7 +66,7 @@ export const resolveInviteService = async ({ token, userId }: ResolveInviteParam
     if (error.message === "NOT_IMPLEMENTED") throw error;
     if (error.message === "ALREADY_MEMBER") throw error;
     console.error("[resolveInviteService] error:", error);
-    throw error;
+    throw new Error("INTERNAL_SERVER_ERROR");
   }
 
   return { redirectUrl, events: domainEvents, alreadyMember };
