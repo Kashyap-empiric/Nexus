@@ -54,14 +54,12 @@ self.addEventListener('notificationclick', function (event) {
   let urlToOpen = event.notification.data && event.notification.data.url;
 
   if (urlToOpen) {
-    // Normalize relative URLs to absolute for reliable client comparisons
     if (urlToOpen.startsWith('/')) {
       urlToOpen = self.location.origin + urlToOpen;
     }
 
     event.waitUntil(
       clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (windowClients) {
-        // Check if there is already a window/tab open with the exact target URL
         for (let i = 0; i < windowClients.length; i++) {
           let client = windowClients[i];
           if (client.url === urlToOpen && 'focus' in client) {
@@ -69,7 +67,6 @@ self.addEventListener('notificationclick', function (event) {
           }
         }
 
-        // Check if there is ANY window/tab open on our origin
         for (let i = 0; i < windowClients.length; i++) {
           let client = windowClients[i];
           if (client.url.startsWith(self.location.origin) && 'focus' in client) {
@@ -81,7 +78,6 @@ self.addEventListener('notificationclick', function (event) {
           }
         }
 
-        // If not, open a new window/tab
         if (clients.openWindow) {
           return clients.openWindow(urlToOpen);
         }

@@ -38,13 +38,11 @@ export const handleMessageRead = (queryClient: QueryClient) => {
       });
     };
 
-    // Update main conversations list (DM sidebar)
     queryClient.setQueryData<Conversation[]>(
       queryKeys.conversations,
       (oldData) => updateCache(oldData)
     );
 
-    // Also update workspace channel caches
     const queries = queryClient.getQueriesData<Conversation[]>({ queryKey: ["workspace-channels"] });
     queries.forEach(([queryKey]) => {
       queryClient.setQueryData<Conversation[]>(
@@ -53,7 +51,6 @@ export const handleMessageRead = (queryClient: QueryClient) => {
       );
     });
 
-    // Recalculate workspace-level unread totals when the current user reads messages
     if (isCurrentUser) {
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
     }
@@ -64,13 +61,11 @@ export const handleConversationNew = (queryClient: QueryClient) => {
   return (conversation: Conversation) => {
     if (!conversation?.id) return;
 
-    // Update DM conversations sidebar
     queryClient.setQueryData<Conversation[]>(
       queryKeys.conversations,
       (oldData) => {
         if (!Array.isArray(oldData)) return oldData;
 
-        // Avoid duplicates — only add if not already present
         const exists = oldData.some((conv) => conv.id === conversation.id);
         if (exists) return oldData;
 
@@ -78,7 +73,6 @@ export const handleConversationNew = (queryClient: QueryClient) => {
       }
     );
 
-    // If this is a workspace channel, also add it to the workspace-channels cache
     if (conversation.workspaceId) {
       queryClient.setQueryData<Conversation[]>(
         ["workspace-channels", conversation.workspaceId],
@@ -115,21 +109,17 @@ export const handleConversationUpdate = (queryClient: QueryClient) => {
         };
       });
 
-      // Re-sort by updatedAt descending — only for the main sidebar (DMs),
-      // not for workspace channels which have a fixed order per workspace
       if (shouldSort) {
         return updatedData.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
       }
       return updatedData;
     };
 
-    // Update main conversations list (sidebar DMs) — sort by most recent activity
     queryClient.setQueryData<Conversation[]>(
       queryKeys.conversations,
       (oldData) => updateCache(oldData, true)
     );
 
-    // Also update workspace channel caches — no sort, preserves fixed channel order
     const queries = queryClient.getQueriesData<Conversation[]>({ queryKey: ["workspace-channels"] });
     queries.forEach(([queryKey]) => {
       queryClient.setQueryData<Conversation[]>(

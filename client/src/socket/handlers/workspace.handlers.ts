@@ -6,13 +6,12 @@ import { APP_ROUTES } from "@/config/url";
 import type { ChannelUpdatePayload, MemberUpdatePayload, ChannelMemberAddedPayload, ChannelMemberRemovedPayload } from "@/socket/socket-events";
 import { toast } from "sonner";
 
-// Guard against duplicate REMOVED events (emitted to both workspace and user rooms)
 let isRedirectingFromRemoval = false;
+let isRedirectingFromChannelRemoval = false;
 
 export const handleWorkspaceUpdate = (queryClient: QueryClient) => {
   return (payload?: { action?: string; workspace?: { id?: string; name?: string } }) => {
     if (payload?.action === "DELETED") {
-      // Workspace was deleted — redirect to conversations
       queryClient.removeQueries({ queryKey: ["workspaces"] });
       queryClient.removeQueries({ queryKey: ["workspace-members"] });
       queryClient.removeQueries({ queryKey: ["workspace-channels"] });
@@ -21,14 +20,12 @@ export const handleWorkspaceUpdate = (queryClient: QueryClient) => {
         duration: 5000,
       });
 
-      // Redirect to conversations after a short delay
       setTimeout(() => {
         window.location.href = APP_ROUTES.CONVERSATIONS.INDEX;
       }, 1500);
       return;
     }
 
-    // Workspace metadata changes are infrequent; invalidation is fine
     queryClient.invalidateQueries({ queryKey: ["workspaces"] });
   };
 };
@@ -39,7 +36,6 @@ export const handleChannelUpdate = (queryClient: QueryClient) => {
 
     const { id, name, visibility } = payload.channel;
 
-    // Update workspace channels cache with targeted changes
     const queries = queryClient.getQueriesData<Conversation[]>({ queryKey: ["workspace-channels"] });
     queries.forEach(([queryKey, oldData]) => {
       if (!Array.isArray(oldData)) return;
@@ -67,15 +63,11 @@ export const handleMemberUpdate = (queryClient: QueryClient) => {
     const { userId, role } = payload.member;
 
     if (payload.action === "REMOVED") {
-      // If the current user was removed, redirect to home
       const currentUser = getAuthUser();
       if (currentUser?.id === userId) {
-        // Guard against duplicate events (workspace room + user room)
         if (isRedirectingFromRemoval) return;
         isRedirectingFromRemoval = true;
 
-        // Reset the guard after 10 seconds in case the redirect doesn't complete
-        // (e.g., component unmounts or navigation is interrupted)
         setTimeout(() => {
           isRedirectingFromRemoval = false;
         }, 10_000);
@@ -87,19 +79,16 @@ export const handleMemberUpdate = (queryClient: QueryClient) => {
         return;
       }
 
-      // Remove member from cached member lists
       const queries = queryClient.getQueriesData<WorkspaceMember[]>({ queryKey: ["workspace-members"] });
       queries.forEach(([queryKey, oldData]) => {
         if (!Array.isArray(oldData)) return;
         queryClient.setQueryData(queryKey, oldData.filter((member) => member.userId !== userId));
       });
 
-      // Invalidate workspaces cache
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
       return;
     }
 
-    // Update workspace members cache with targeted role change
     const queries = queryClient.getQueriesData<WorkspaceMember[]>({ queryKey: ["workspace-members"] });
     queries.forEach(([queryKey, oldData]) => {
       if (!Array.isArray(oldData)) return;
@@ -110,7 +99,6 @@ export const handleMemberUpdate = (queryClient: QueryClient) => {
       }));
     });
 
-    // Also invalidate workspaces since roles are embedded in workspace details
     queryClient.invalidateQueries({ queryKey: ["workspaces"] });
   };
 };
@@ -118,9 +106,17 @@ export const handleMemberUpdate = (queryClient: QueryClient) => {
 export const handleChannelMemberAdded = (queryClient: QueryClient) => {
   return (payload: ChannelMemberAddedPayload) => {
     if (!payload?.workspaceId || !payload?.channelId) return;
+
     queryClient.invalidateQueries({
       queryKey: ["workspaces", payload.workspaceId, "channels", payload.channelId, "members"],
     });
+
+    const currentUser = getAuthUser();
+    if (currentUser && payload.addedMembers?.some((m) => m.id === currentUser.id)) {
+      queryClient.invalidateQueries({
+        queryKey: ["workspace-channels", payload.workspaceId],
+      });
+    }
   };
 };
 
@@ -134,9 +130,31 @@ export const handleChannelMemberRemoved = (queryClient: QueryClient) => {
 
     const currentUser = getAuthUser();
     if (currentUser?.id === payload.removedUserId) {
+      if (isRedirectingFromChannelRemoval) return;
+      isRedirectingFromChannelRemoval = true;
+
+      setTimeout(() => {
+        isRedirectingFromChannelRemoval = false;
+      }, 10_000);
+
+      queryClient.setQueryData<Conversation[]>(
+        ["workspace-channels", payload.workspaceId],
+        (oldData) => {
+          if (!Array.isArray(oldData)) return oldData;
+          return oldData.filter((ch) => ch.id !== payload.channelId);
+        }
+      );
+
       toast.error("You have been removed from the channel");
       setTimeout(() => {
-        window.location.href = APP_ROUTES.CONVERSATIONS.INDEX;
+        const channels = queryClient.getQueryData<Conversation[]>(["workspace-channels", payload.workspaceId]);
+        const generalChannel = channels?.find((ch) => ch.name === "general");
+        if (generalChannel) {
+          const dest = `/workspaces/${payload.workspaceId}/channels/${generalChannel.id}`;
+          window.location.href = dest;
+        } else {
+          window.location.href = APP_ROUTES.CONVERSATIONS.INDEX;
+        }
       }, 1500);
     }
   };

@@ -3,44 +3,31 @@ import { queryKeys } from "@/shared/constants/queryKeys";
 import type { Notification } from "@/modules/notifications/types/notification";
 import { showNotification } from "@/shared/lib/notifications";
 
+/**
+ * Notification types that should NOT trigger a desktop notification
+ * because the message:new handler already shows one for the same event.
+ */
+const SUPPRESS_DESKTOP_TYPES = new Set(["MESSAGE_REPLIED"]);
+
 export const handleNotificationNew = (queryClient: QueryClient) => {
   return (notification: Notification) => {
     try {
       if (!notification || !notification.id) return;
 
-      // Append to the inbox cache
-      queryClient.setQueryData<{ pages: { data: Notification[]; nextCursor: string | null }[] }>(
-        queryKeys.notifications,
-        (oldData) => {
-          if (!oldData?.pages) return oldData;
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
 
-          const updatedPages = oldData.pages.map((page, index) => {
-            if (index === 0) {
-              return {
-                ...page,
-                data: [notification, ...page.data],
-              };
-            }
-            return page;
-          });
-
-          return { ...oldData, pages: updatedPages };
-        }
-      );
-
-      // Increment unread count
       queryClient.setQueryData<number>(
         queryKeys.unreadCount,
         (oldCount) => (oldCount ?? 0) + 1
       );
 
-      // Show desktop notification if the tab is visible but the user is not viewing
-      // the relevant page. When the tab is hidden (document.hidden === true),
-      // we suppress the browser Notification API because the Service Worker
-      // will handle it via Web Push — showing both would cause duplicates (C8).
+      // Skip desktop notification for types that are already covered
+      // by the message:new handler (e.g. MESSAGE_REPLIED) to avoid duplicates.
+      if (SUPPRESS_DESKTOP_TYPES.has(notification.type)) return;
+
       if (
         typeof document !== "undefined" &&
-        !document.hidden &&
+        document.hasFocus() &&
         typeof window !== "undefined"
       ) {
         const isViewingRelevantPage =

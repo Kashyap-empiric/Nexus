@@ -2,16 +2,23 @@
 
 import { useEffect, useMemo } from "react";
 import { socket } from "@/socket/socketClient";
-import { SOCKET_EVENTS, type InitialPresencePayload } from "@/socket/socket-events";
+import { SOCKET_EVENTS, type InitialPresencePayload, type MemberUpdatePayload } from "@/socket/socket-events";
 import { useSocketEvents } from "@/socket/useSocketEvent";
 import { useSocketStore } from "@/socket/socketStore";
+import { useAuthInitialized, useUser } from "@/modules/auth/store/useAuthStore";
 import { toast } from "sonner";
 import { requestNotificationPermission } from "@/shared/lib/notifications";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter, usePathname } from "next/navigation";
+import { useChatStore } from "@/modules/chat/store/chatStore";
 
 export function SocketProvider() {
   const setSocketStatus = useSocketStore((state) => state.setSocketStatus);
+  const isAuthInitialized = useAuthInitialized();
+  const user = useUser();
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     requestNotificationPermission();
@@ -27,23 +34,69 @@ export function SocketProvider() {
 
     const handleInitialPresence = (payload: InitialPresencePayload) => {
       useSocketStore.getState().setInitialOnlineUsers(payload.users.map((u: { userId: string }) => u.userId));
-      // We could manually update cache here, but invalidating ensures fresh data
       queryClient.invalidateQueries({ queryKey: ["users"] });
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
     };
 
     const handleUserStatusUpdate = () => {
-      // Invalidate relevant queries when someone's status changes
       queryClient.invalidateQueries({ queryKey: ["users"] });
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
     };
 
     const handleUserUpdate = () => {
-      // Invalidate queries when someone's profile/avatar changes
       queryClient.invalidateQueries({ queryKey: ["users"] });
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    };
+
+    const handleWorkspaceUpdate = (payload: { action: "UPDATED" | "DELETED"; workspace: { id: string; name?: string } }) => {
+      if (payload.action === "DELETED" && payload.workspace?.id) {
+        const currentWorkspaceId = useChatStore.getState().activeWorkspaceId;
+        if (currentWorkspaceId === payload.workspace.id) {
+          toast.error("The workspace you were viewing has been deleted.");
+          useChatStore.getState().setMode("DM");
+          useChatStore.getState().setActiveWorkspaceId(null);
+          useChatStore.getState().setActiveConversationId(null);
+          router.push("/conversations");
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+    };
+
+    const handleMemberUpdate = (payload: MemberUpdatePayload & { workspaceId?: string }) => {
+      if (payload.action === "REMOVED" && payload.member?.userId === user?.id) {
+        const currentWorkspaceId = useChatStore.getState().activeWorkspaceId;
+        if (currentWorkspaceId === payload.workspaceId) {
+          toast.error("You are no longer in this workspace.", { id: `removed-ws-${payload.workspaceId}` });
+          useChatStore.getState().setMode("DM");
+          useChatStore.getState().setActiveWorkspaceId(null);
+          useChatStore.getState().setActiveConversationId(null);
+          router.push("/conversations");
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: ["workspace-members"] });
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+    };
+
+    const handleChannelMemberUpdate = (payload: { workspaceId: string; channelId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ["workspaces", payload.workspaceId, "channels", payload.channelId, "members"] });
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["workspace-channels"] });
+    };
+
+    const handleChannelMemberRemoved = (payload: { workspaceId: string; channelId: string; removedUserId?: string }) => {
+      if (payload.removedUserId === user?.id) {
+        if (pathname.includes(`/channels/${payload.channelId}`)) {
+          toast.error("You have been removed from this channel.", { id: `removed-${payload.channelId}` });
+          const workspacePath = pathname.split('/channels/')[0];
+          router.push(workspacePath || '/');
+        }
+      }
+      
+      setTimeout(() => {
+        handleChannelMemberUpdate(payload);
+      }, 150);
     };
 
     const handleUserOnline = ({ userId }: { userId: string }) => {
@@ -63,12 +116,18 @@ export function SocketProvider() {
       [SOCKET_EVENTS.USER_OFFLINE]: handleUserOffline,
       [SOCKET_EVENTS.USER_STATUS_UPDATE as string]: handleUserStatusUpdate,
       [SOCKET_EVENTS.USER_UPDATE as string]: handleUserUpdate,
+      [SOCKET_EVENTS.WORKSPACE_UPDATE as string]: handleWorkspaceUpdate,
+      [SOCKET_EVENTS.MEMBER_UPDATE as string]: handleMemberUpdate,
+      [SOCKET_EVENTS.CHANNEL_MEMBER_ADDED as string]: handleChannelMemberUpdate,
+      [SOCKET_EVENTS.CHANNEL_MEMBER_REMOVED as string]: handleChannelMemberRemoved,
     };
-  }, [setSocketStatus]);
+  }, [setSocketStatus, queryClient, user?.id, pathname, router]);
 
   useSocketEvents(events);
 
   useEffect(() => {
+    if (!isAuthInitialized || !user) return;
+
     if (socket.connected) {
       setSocketStatus("connected");
     } else {
@@ -78,7 +137,7 @@ export function SocketProvider() {
     return () => {
       socket.disconnect();
     };
-  }, [setSocketStatus]);
+  }, [setSocketStatus, isAuthInitialized, user]);
 
   return null;
 }

@@ -7,6 +7,7 @@ import type { Workspace } from "@/modules/workspaces/types/workspace";
 
 import { getAuthUser } from "@/modules/auth/store/useAuthStore";
 import { showMessageNotification } from "@/shared/lib/notifications";
+import { useChatStore } from "@/modules/chat/store/chatStore";
 
 export const handleMessageNew = (queryClient: QueryClient) => {
   return (message: Message) => {
@@ -30,7 +31,6 @@ export const handleMessageNew = (queryClient: QueryClient) => {
         }
       );
 
-      // Also update workspace channels if applicable
       const queries = queryClient.getQueriesData<Conversation[]>({ queryKey: ["workspace-channels"] });
       queries.forEach(([queryKey, oldData]) => {
         if (!Array.isArray(oldData)) return;
@@ -44,7 +44,6 @@ export const handleMessageNew = (queryClient: QueryClient) => {
         }));
       });
 
-      // Also update workspace-level unread count (for the navigation rail badge)
       const currentUser = getAuthUser();
       if (message.userId !== currentUser?.id) {
         const channelQueries = queryClient.getQueriesData<Conversation[]>({ queryKey: ["workspace-channels"] });
@@ -71,15 +70,14 @@ export const handleMessageNew = (queryClient: QueryClient) => {
 
       if (currentUser && message.userId === currentUser.id) return;
 
-      // Suppress desktop notification if user is already viewing this conversation
+      const { activeConversationId } = useChatStore.getState();
       const isViewingConversation =
-        typeof window !== "undefined" && (
-          window.location.pathname === `/conversations/${message.conversationId}` ||
-          window.location.pathname.includes(`/channels/${message.conversationId}`)
-        );
+        typeof window !== "undefined" &&
+        activeConversationId === message.conversationId &&
+        document.hasFocus();
 
       if (!isViewingConversation) {
-        const originalTitle = document.title.replace(/^\(\d+\)\s/, "");
+        const originalTitle = document.title.replace(/^\(\d+\) New Message! - /, "");
         document.title = `(1) New Message! - ${originalTitle}`;
 
         const onFocus = () => {
@@ -88,10 +86,7 @@ export const handleMessageNew = (queryClient: QueryClient) => {
         };
         window.addEventListener("focus", onFocus);
 
-        // Show desktop notification only when tab is visible.
-        // When tab is hidden, Web Push (via Service Worker) handles it.
-        // Showing both would cause duplicates (C8).
-        if (typeof document !== "undefined" && !document.hidden) {
+        if (typeof document !== "undefined" && !document.hasFocus()) {
           const senderName = message.user?.username || "Someone";
           const conversationName = extractConversationName(queryClient, message.conversationId);
 
@@ -114,7 +109,6 @@ export const handleMessageUpdate = (queryClient: QueryClient) => {
     try {
       if (!message || !message.id) return;
 
-      // Update conversations list sidebar cache
       queryClient.setQueryData<Conversation[]>(
         queryKeys.conversations,
         (oldData) => {
@@ -140,7 +134,6 @@ export const handleMessageUpdate = (queryClient: QueryClient) => {
         }
       );
 
-      // Update workspace channels cache
       const queries = queryClient.getQueriesData<Conversation[]>({ queryKey: ["workspace-channels"] });
       queries.forEach(([queryKey, oldData]) => {
         if (!Array.isArray(oldData)) return;
@@ -173,7 +166,6 @@ export const handleMessageDelete = (queryClient: QueryClient) => {
     try {
       if (!message || !message.id) return;
 
-      // Update conversations list sidebar cache
       queryClient.setQueryData<Conversation[]>(
         queryKeys.conversations,
         (oldData) => {
@@ -199,7 +191,6 @@ export const handleMessageDelete = (queryClient: QueryClient) => {
         }
       );
 
-      // Update workspace channels cache
       const queries = queryClient.getQueriesData<Conversation[]>({ queryKey: ["workspace-channels"] });
       queries.forEach(([queryKey, oldData]) => {
         if (!Array.isArray(oldData)) return;
@@ -231,7 +222,6 @@ export const handlePinEvent = (queryClient: QueryClient) => {
   return (payload: { messageId: string; conversationId: string; action?: "pin" | "unpin" }) => {
     if (!payload || !payload.conversationId) return;
 
-    // Update the pinnedMessageIds in the cached infinite query pages so the pin icon updates in real-time
     queryClient.setQueriesData<InfiniteData<MessagesResponse>>(
       { queryKey: queryKeys.messages(payload.conversationId) },
       (oldData) => {
@@ -251,7 +241,6 @@ export const handlePinEvent = (queryClient: QueryClient) => {
       }
     );
 
-    // Invalidate the PinnedMessagesPanel query so it refreshes
     queryClient.invalidateQueries({ queryKey: [...queryKeys.conversation(payload.conversationId), "pins"] });
   };
 };
@@ -275,12 +264,10 @@ function extractConversationName(queryClient: QueryClient, conversationId: strin
 
   if (!conversation) return null;
 
-  // Return channel name for channels, or null for DMs (sender name is enough)
   if (conversation.type === "CHANNEL") {
     return `# ${conversation.name || "channel"}`;
   }
 
-  // For DMs, return the other person's name as context
   const currentUser = getAuthUser();
   const otherMember = conversation.members?.find((m: ConversationMember) => m.userId !== currentUser?.id);
   return otherMember?.user?.username || null;
