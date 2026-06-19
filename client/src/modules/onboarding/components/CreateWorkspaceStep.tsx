@@ -20,6 +20,7 @@ export function CreateWorkspaceStep({ onCreate, isLoading, initialName, defaultF
   const [iconFile, setIconFile] = useState<File | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [slugEdited, setSlugEdited] = useState(false);
+  const [isSkipping, setIsSkipping] = useState(false);
   const iconInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -45,6 +46,7 @@ export function CreateWorkspaceStep({ onCreate, isLoading, initialName, defaultF
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (workspaceName.trim() && workspaceSlug.trim()) {
+      setIsSkipping(false);
       onCreate({ 
         workspaceName: workspaceName.trim(), 
         workspaceSlug: workspaceSlug.trim().toLowerCase(),
@@ -54,14 +56,21 @@ export function CreateWorkspaceStep({ onCreate, isLoading, initialName, defaultF
     }
   };
 
+  const handleSkip = () => {
+    setIsSkipping(true);
+    onCreate({ skipWorkspace: true });
+  };
+
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-8 animate-in fade-in slide-in-from-right-4">
       <div className="text-center space-y-2">
         <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">Create your workspace</h2>
-        <p className="text-muted-foreground text-sm sm:text-base">A workspace is where you and your team collaborate.</p>
+        <p className="text-muted-foreground text-sm sm:text-base">
+          A workspace is where you and your team collaborate.
+        </p>
       </div>
 
-      <div className="bg-card border shadow-sm rounded-xl p-6 space-y-6">
+      <div className="bg-card/50 backdrop-blur-xl border border-border/40 shadow-lg rounded-3xl p-6 space-y-6">
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="workspaceName">Workspace Name</Label>
@@ -71,7 +80,7 @@ export function CreateWorkspaceStep({ onCreate, isLoading, initialName, defaultF
               value={workspaceName}
               onChange={(e) => setWorkspaceName(e.target.value)}
               required
-              className="bg-background"
+              className="bg-background/50 focus:bg-background transition-colors"
               disabled={isLoading}
             />
           </div>
@@ -79,7 +88,7 @@ export function CreateWorkspaceStep({ onCreate, isLoading, initialName, defaultF
           <div className="space-y-2">
             <Label htmlFor="workspaceSlug">Workspace URL</Label>
             <div className="flex rounded-md shadow-sm">
-              <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground sm:text-sm">
+              <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted/50 text-muted-foreground sm:text-sm">
                 nexus.app/
               </span>
               <Input
@@ -91,7 +100,7 @@ export function CreateWorkspaceStep({ onCreate, isLoading, initialName, defaultF
                   setSlugEdited(true);
                 }}
                 required
-                className="rounded-l-none bg-background focus-visible:z-10"
+                className="rounded-l-none bg-background/50 focus:bg-background transition-colors focus-visible:z-10"
                 disabled={isLoading}
               />
             </div>
@@ -105,7 +114,7 @@ export function CreateWorkspaceStep({ onCreate, isLoading, initialName, defaultF
               placeholder="What is this workspace about?"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="resize-none bg-background"
+              className="resize-none bg-background/50 focus:bg-background transition-colors"
               rows={2}
               disabled={isLoading}
             />
@@ -119,7 +128,7 @@ export function CreateWorkspaceStep({ onCreate, isLoading, initialName, defaultF
                 tabIndex={0}
                 onClick={() => iconInputRef.current?.click()}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") iconInputRef.current?.click(); }}
-                className="relative h-14 w-14 rounded-xl border-2 border-dashed flex items-center justify-center cursor-pointer hover:border-muted-foreground/50 transition-colors border-muted-foreground/25 bg-background"
+                className="relative h-14 w-14 rounded-xl border-2 border-dashed flex items-center justify-center cursor-pointer hover:border-muted-foreground/50 transition-colors border-muted-foreground/25 bg-background/50"
               >
                 {iconPreview ? (
                   <img src={iconPreview} alt="" className="h-full w-full rounded-xl object-cover" />
@@ -152,40 +161,46 @@ export function CreateWorkspaceStep({ onCreate, isLoading, initialName, defaultF
           </div>
         </div>
         
-        <div className="bg-muted/50 rounded-lg p-4 flex gap-3 items-start border border-border/50">
-          <div className="mt-0.5 bg-brand/10 p-1 rounded">
+        <div className="bg-muted/30 rounded-xl p-4 flex gap-3 items-start border border-border/40">
+          <div className="mt-0.5 bg-brand/10 p-1.5 rounded-lg shadow-sm">
             <Hash className="w-4 h-4 text-brand" />
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground leading-relaxed">
             We'll automatically create a <span className="font-medium text-foreground">#general</span> channel for your team to get started.
           </p>
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleSkip}
+          disabled={isLoading}
+          className="w-full sm:w-1/3 h-11 text-base font-medium shadow-sm hover:bg-muted/50 transition-colors"
+        >
+          {isLoading && isSkipping ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Skipping...
+            </>
+          ) : (
+            "Skip for now"
+          )}
+        </Button>
         <Button
           type="submit"
           disabled={!workspaceName.trim() || !workspaceSlug.trim() || isLoading}
-          className="w-full h-11 text-base font-medium"
+          className="w-full sm:w-2/3 h-11 text-base font-medium shadow-sm hover:shadow transition-all"
         >
-          {isLoading ? (
+          {isLoading && !isSkipping ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Creating Workspace...
+              Creating...
             </>
           ) : (
             "Create Workspace"
           )}
-        </Button>
-        
-        <Button
-          type="button"
-          variant="ghost"
-          disabled={isLoading}
-          onClick={() => onCreate({ skipWorkspace: true })}
-          className="w-full h-11 text-muted-foreground"
-        >
-          Skip for now
         </Button>
       </div>
     </form>

@@ -66,7 +66,7 @@ export const resolveInviteService = async ({ token, userId }: ResolveInviteParam
     if (error.message === "NOT_IMPLEMENTED") throw error;
     if (error.message === "ALREADY_MEMBER") throw error;
     console.error("[resolveInviteService] error:", error);
-    throw new Error("INTERNAL_SERVER_ERROR");
+    throw error;
   }
 
   return { redirectUrl, events: domainEvents, alreadyMember };
@@ -179,13 +179,25 @@ export const getInviteInfoService = async (token: string) => {
   const invite = await invitesRepo.findInviteByToken(token);
   if (!invite) return null;
 
-  const workspace = await workspacesRepo.findWorkspaceById(invite.entityId);
   const inviter = await usersRepo.findUserById(invite.createdBy);
+  
+  let entityName = "Unknown Target";
+  
+  if (invite.type === "WORKSPACE") {
+    const workspace = await workspacesRepo.findWorkspaceById(invite.entityId);
+    entityName = workspace?.name || "Unknown Workspace";
+  } else if (invite.type === "CONVERSATION") {
+    const conversation = await conversationsRepo.findById(invite.entityId);
+    entityName = conversation?.name ? `#${conversation.name}` : "a channel";
+  } else if (invite.type === "USER") {
+    entityName = inviter?.username || "a user";
+  }
 
   return {
     token: invite.token,
-    workspaceName: workspace?.name || "Unknown Workspace",
-    inviterName: inviter?.username || "A workspace member",
+    inviteType: invite.type,
+    entityName,
+    inviterName: inviter?.username || "Someone",
     inviterAvatar: inviter?.avatarUrl || null,
     expiresAt: invite.expiresAt?.toISOString() || null,
     isRevoked: invite.revoked,

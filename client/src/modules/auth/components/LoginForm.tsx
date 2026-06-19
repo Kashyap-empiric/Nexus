@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, type LoginFormData } from "../schemas/auth";
@@ -8,6 +9,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { APP_ROUTES } from "@/config/url";
 import { useSearchParams } from "next/navigation";
@@ -17,6 +19,7 @@ export const LoginForm = () => {
   const searchParams = useSearchParams();
   const registered = searchParams.get("registered") === "true";
   const needsConfirmation = searchParams.get("confirm") === "true";
+  const [showPassword, setShowPassword] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -28,7 +31,7 @@ export const LoginForm = () => {
 
   return (
     <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <Card className="border border-border/40 shadow-2xl shadow-brand/5 bg-card/50 backdrop-blur-xl sm:rounded-2xl relative overflow-hidden">
+      <Card className="border border-border/40 shadow-lg bg-card/50 backdrop-blur-xl sm:rounded-2xl relative overflow-hidden">
         {/* Subtle top gradient line */}
         <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-brand to-transparent opacity-50" />
         
@@ -116,20 +119,30 @@ export const LoginForm = () => {
                   Forgot password?
                 </Link>
               </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                className="h-11 bg-background/50 focus:bg-background transition-colors"
-                {...register("password")}
-                aria-invalid={!!errors.password}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  className="h-11 bg-background/50 focus:bg-background transition-colors pr-10"
+                  {...register("password")}
+                  aria-invalid={!!errors.password}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               {errors.password && <p className="text-xs font-medium text-destructive mt-1">{errors.password.message}</p>}
             </div>
 
             <Button 
               type="submit" 
-              className="w-full h-11 text-base font-medium shadow-lg shadow-brand/20 transition-all hover:shadow-brand/40 mt-2" 
+              className="w-full h-11 text-base font-medium shadow-sm hover:shadow transition-all mt-2" 
               disabled={isLoading}
             >
               {isLoading ? "Signing in..." : "Sign in"}

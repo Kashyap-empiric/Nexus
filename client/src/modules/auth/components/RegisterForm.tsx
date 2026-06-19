@@ -9,7 +9,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/shared/components/ui/card";
-import { Loader2, Check, X } from "lucide-react";
+import { Loader2, Check, X, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { APP_ROUTES, API_ROUTES } from "@/config/url";
 import { api } from "@/shared/lib/api";
@@ -18,6 +18,8 @@ export const RegisterForm = () => {
   const { register: registerUser, loginWithGithub, isLoading, error } = useAuth();
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -50,7 +52,7 @@ export const RegisterForm = () => {
 
   return (
     <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <Card className="border border-border/40 shadow-2xl shadow-brand/5 bg-card/50 backdrop-blur-xl sm:rounded-2xl relative overflow-hidden">
+      <Card className="border border-border/40 shadow-lg bg-card/50 backdrop-blur-xl sm:rounded-2xl relative overflow-hidden">
         {/* Subtle top gradient line */}
         <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-brand to-transparent opacity-50" />
         
@@ -150,14 +152,24 @@ export const RegisterForm = () => {
               <Label htmlFor="password" className={errors.password ? "text-destructive" : "text-foreground/80 font-medium"}>
                 Password <span className="text-destructive">*</span>
               </Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                className="h-11 bg-background/50 focus:bg-background transition-colors"
-                {...register("password")}
-                aria-invalid={!!errors.password}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  className="h-11 bg-background/50 focus:bg-background transition-colors pr-10"
+                  {...register("password")}
+                  aria-invalid={!!errors.password}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               {errors.password && <p className="text-xs font-medium text-destructive mt-1">{errors.password.message}</p>}
             </div>
 
@@ -165,20 +177,30 @@ export const RegisterForm = () => {
               <Label htmlFor="confirmPassword" className={errors.confirmPassword ? "text-destructive" : "text-foreground/80 font-medium"}>
                 Confirm Password <span className="text-destructive">*</span>
               </Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                className="h-11 bg-background/50 focus:bg-background transition-colors"
-                {...register("confirmPassword")}
-                aria-invalid={!!errors.confirmPassword}
-              />
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  className="h-11 bg-background/50 focus:bg-background transition-colors pr-10"
+                  {...register("confirmPassword")}
+                  aria-invalid={!!errors.confirmPassword}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+                  tabIndex={-1}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               {errors.confirmPassword && <p className="text-xs font-medium text-destructive mt-1">{errors.confirmPassword.message}</p>}
             </div>
 
             <Button 
               type="submit" 
-              className="w-full h-11 text-base font-medium shadow-lg shadow-brand/20 transition-all hover:shadow-brand/40 mt-2" 
+              className="w-full h-11 text-base font-medium shadow-sm hover:shadow transition-all mt-2" 
               disabled={isLoading}
             >
               {isLoading ? "Creating account..." : "Sign up"}

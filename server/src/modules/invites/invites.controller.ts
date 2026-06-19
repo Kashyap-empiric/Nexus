@@ -35,7 +35,7 @@ export const resolveInvite = async (req: AuthRequest, res: Response): Promise<an
     if (error.message === "INVALID_OR_EXPIRED_INVITE") {
       return res.status(400).json({ error: "INVALID_OR_EXPIRED_INVITE" });
     }
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: error.message || "Internal server error" });
   }
 };
 
