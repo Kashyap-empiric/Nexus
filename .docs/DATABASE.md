@@ -1,6 +1,6 @@
 # Nexus — Database Schema
 
-> **Last Updated:** 2026-06-16  
+> **Last Updated:** 2026-06-19  
 > **Purpose:** Complete database schema reference. All models, fields, relations, and constraints.
 
 ---
@@ -155,7 +155,7 @@ enum ConversationType { DM, CHANNEL }
 enum ChannelVisibility { PUBLIC, PRIVATE }
 enum InviteType { USER, CONVERSATION, WORKSPACE, CHANNEL }
 enum WorkspaceRole { OWNER, ADMIN, MEMBER }
-enum NotificationType { INVITE_RECEIVED, INVITE_ACCEPTED, MEMBER_JOINED, CHANNEL_CREATED, MEMBER_REMOVED }
+enum NotificationType { INVITE_RECEIVED, INVITE_ACCEPTED, MEMBER_JOINED, CHANNEL_CREATED, CHANNEL_MEMBER_ADDED, CHANNEL_MEMBER_REMOVED, MEMBER_REMOVED, MESSAGE_REPLIED, ROLE_CHANGED, WORKSPACE_DELETED }
 enum UserStatus { AVAILABLE, AWAY, DND, INVISIBLE }
 ```
 

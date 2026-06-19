@@ -1,6 +1,6 @@
 # Nexus — Architecture Guide
 
-> **Last Updated:** 2026-06-16  
+> **Last Updated:** 2026-06-19  
 > **Purpose:** Architectural overview, data flow, and communication patterns.
 
 ---
@@ -83,7 +83,11 @@ client/src/socket/           server/src/socket/
 ├── eventRouter.ts           ├── socketErrors.ts
 ├── socket-events.ts         ├── presenceStore.ts
 ├── useSocketEvent.ts        ├── handlers/
-└── handlers/                └── middlewares/
+│   handlers/                │   ├── message.handler.ts
+│   ├── message.handlers.ts  │   ├── presence.handler.ts
+│   ├── conversation.handlers.ts  └── workspace.handler.ts
+│   ├── workspace.handlers.ts
+│   └── notification.handlers.ts
 ```
 
 ---
@@ -125,3 +129,7 @@ Client connects → Server auth middleware → PresenceStore.addSocket(userId, s
 | Socket dispatcher pattern | Controllers do NOT import socket.io — dispatcher is the only emission path |
 | Slug-based workspace routing | Human-readable URLs: `/workspaces/{slug}/channels/{id}` |
 | Auto-join on channel creation | All workspace members auto-added to new public channels |
+| `socketsJoin()` for room ops | Replaced per-socket `fetchSockets()` iteration with `io.in().socketsJoin()` for O(1) room joins |
+| AlertDialog over window.confirm | shadcn AlertDialog replaces native `confirm()` for consistent styling and behavior |
+| Server-side message notifications | `sendMessageNotifications` handles both socket notification + Web Push in one function |
+| Invite acceptance joins socket rooms | Dynamically joins workspace/channel rooms on invite resolve, no reconnect needed |

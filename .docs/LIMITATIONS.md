@@ -1,6 +1,6 @@
 # Nexus — Known Limitations
 
-> **Last Updated:** 2026-06-18  
+> **Last Updated:** 2026-06-19  
 > **Purpose:** Track known limitations, technical debt, and constraints.
 
 ---
@@ -14,6 +14,13 @@
 | Presence in-memory Map | Prevents horizontal scaling beyond single Node.js instance. Needs Redis Pub/Sub adapter. | 🟡 Open |
 | `editMessage` stale `updatedAt` | Editing a message doesn't bump the conversation's position in the sidebar | 🟡 Open |
 | In-memory rate limiter | Per-process only — breaks in multi-instance deployments | 🟡 Open |
+| Socket room dispatch O(n*m) | Replaced per-socket `fetchSockets()` with `io.in().socketsJoin()` | ✅ Resolved 2026-06-19 |
+| Missing forgot/reset password flow | No UI for password reset after email request | ✅ Resolved 2026-06-19 |
+| Missing notification types | `CHANNEL_MEMBER_ADDED`, `CHANNEL_MEMBER_REMOVED`, `ROLE_CHANGED` | ✅ Resolved 2026-06-19 |
+| window.confirm used in modals | Replaced with shadcn AlertDialog across all confirmation flows | ✅ Resolved 2026-06-19 |
+| No server-side message notifications | `sendMessageNotifications` now wired to both socket handler and HTTP endpoint | ✅ Resolved 2026-06-19 |
+| Channel management: no add/remove members modal | Created `ManageChannelMembersModal` | ✅ Resolved 2026-06-19 |
+| Invite acceptance doesn't join socket rooms | Dynamically joins workspace/channel rooms on invite resolve | ✅ Resolved 2026-06-19 |
 
 ## Moderate
 

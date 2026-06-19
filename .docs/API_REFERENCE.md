@@ -1,6 +1,6 @@
 # Nexus — API Reference
 
-> **Last Updated:** 2026-06-16  
+> **Last Updated:** 2026-06-19  
 > **Purpose:** Complete catalog of all REST endpoints and Socket.io events.
 
 ---
@@ -37,19 +37,29 @@
 |--------|-------|------|-------------|
 | GET | `/api/users` | ✅ | List all users |
 | GET | `/api/users/search?q=` | ✅ | Search users |
+| GET | `/api/users/check-username?username=` | ❌ | Check username availability |
+| POST | `/api/users/resolve-username` | ❌ | Resolve username to email |
 | GET | `/api/users/:id` | ✅ | Get public profile |
 | GET | `/api/users/me` | ✅ | Get own profile (full) |
 | PATCH | `/api/users/me` | ✅ | Update own profile |
+| PATCH | `/api/users/me/avatar` | ✅ | Update avatar URL |
+| PATCH | `/api/users/me/status` | ✅ | Update presence status |
 
 ### Workspaces
 | Method | Route | Auth | Description |
 |--------|-------|------|-------------|
 | GET | `/api/workspaces` | ✅ | List user's workspaces |
 | POST | `/api/workspaces` | ✅ | Create workspace |
-| GET | `/api/workspaces/:id` | ✅ | Get workspace details |
+| PATCH | `/api/workspaces/:id` | ✅ | Update workspace settings |
+| DELETE | `/api/workspaces/:id` | ✅ | Delete workspace (owner only) |
+| GET | `/api/workspaces/:id` | ✅ | Get workspace details + channels |
+| POST | `/api/workspaces/:id/leave` | ✅ | Leave workspace |
 | GET | `/api/workspaces/:id/members` | ✅ | List workspace members |
 | PATCH | `/api/workspaces/:id/members/:userId/role` | ✅ | Change member role |
 | DELETE | `/api/workspaces/:id/members/:userId` | ✅ | Remove member from workspace |
+| POST | `/api/workspaces/:id/invite` | ✅ | Invite by username |
+| POST | `/api/workspaces/:id/invite-multiple` | ✅ | Batch invite by user IDs |
+| POST | `/api/workspaces/:id/invite-email` | ✅ | Invite by email (SendGrid) |
 | GET | `/api/workspaces/:id/channels` | ✅ | List channels in workspace |
 | POST | `/api/workspaces/:id/channels` | ✅ | Create channel |
 | PATCH | `/api/workspaces/:id/channels/:channelId` | ✅ | Update channel (rename, visibility) |
@@ -61,10 +71,13 @@
 ### Invites
 | Method | Route | Auth | Description |
 |--------|-------|------|-------------|
+| GET | `/api/invites/info?token=` | ❌ | Get invite info (public) |
 | POST | `/api/invites/generate` | ✅ | Generate invite link |
 | POST | `/api/invites/resolve` | ✅ | Resolve/consume invite |
+| POST | `/api/invites/decline` | ✅ | Decline/revoke invite |
 | POST | `/api/workspaces/:id/invite` | ✅ | Invite by username |
 | POST | `/api/workspaces/:id/invite-multiple` | ✅ | Batch invite |
+| POST | `/api/workspaces/:id/invite-email` | ✅ | Invite by email (SendGrid) |
 
 ### Notifications
 | Method | Route | Auth | Description |
@@ -89,6 +102,7 @@
 | `workspace:join` | `{ workspaceId }` | Join workspace room |
 | `typing:start` | `{ conversationId, username }` | Start typing |
 | `typing:stop` | `{ conversationId }` | Stop typing |
+| `message:read` | `{ conversationId, messageId }` | Send read receipt |
 
 ### Server → Client
 | Event | Payload | Description |

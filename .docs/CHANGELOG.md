@@ -5,6 +5,30 @@
 
 ---
 
+## 2026-06-19
+
+### Added
+- **Forgot/Reset Password Flow**: Complete password reset flow with `ForgotPasswordForm`, `ResetPasswordForm`, Supabase `resetPasswordForEmail` integration, PASSWORD_RECOVERY event handling, password visibility toggles, Zod validation (8-128 chars, match check)
+- **New Notification Types**: Added `CHANNEL_MEMBER_ADDED`, `CHANNEL_MEMBER_REMOVED`, `ROLE_CHANGED` to NotificationType enum with Prisma migrations
+- **AlertDialog Confirmation Migration**: Replaced native `window.confirm` with shadcn AlertDialog across `ManageChannelMembersModal`, `WorkspaceSettingsModal`, and `CustomRoleDropdown`
+- **UI Polish**: Redesigned `CreateWorkspaceModal` with 2-column grid layout, `drawer` prop for mobile, `maxWidth` 960px; `MessageGroupItem` hover action buttons enlarged to `h-9 w-9` with `hover:ring`; mobile unread badge color standardized to `bg-destructive`
+- **Pre-Demo Bug Fixes (Wave 1)**: Fixed 8 bugs — socket room dispatch optimization (`socketsJoin()`), desktop notification suppression when viewing conversation, deleted message stale content merge, tab title accumulation, logout state cleanup, onboarding slug collision (alphanumeric), `req.user!.id` null guard, profile form `isDirty` after save
+- **Server Refactoring**: `invites.controller.ts` socket room joining on invite acceptance; `messages.service.ts` `excludeUserId` param for notifications; `socket.dispatcher.ts` now uses `io.in().socketsJoin()` for efficiency
+- **Channel Management Modal**: New `ManageChannelMembersModal` for adding/removing channel members
+
+### Fixed
+- **C7**: Socket room dispatch no longer iterates ALL connected sockets — replaced with `socketsJoin()`/`socketsLeave()`
+- **M36**: Deleted message no longer shows stale content — full message replacement instead of merge
+- **m56**: Desktop notifications suppressed when viewing the relevant conversation
+- **m15**: Tab title no longer accumulates `(1)(1)(1)` — proper regex prefix stripping
+- **M13**: Logout now clears query cache, disconnects socket, resets chat store before redirect
+- **H14**: Onboarding slug collision suffix changed to alphanumeric (human-readable)
+- **H13**: `authMiddleware` now guards against missing `req.user`
+- **M16**: Profile form `isDirty` correctly resets after save with null-coerced values
+
+### Documentation
+- Full update of all `.docs/`, `.qa/`, `.agents/`, `docs/`, and `work/` directories to current codebase state.
+
 ## 2026-06-18
 
 ### Fixed
@@ -18,10 +42,6 @@
 - **`.docs/LIMITATIONS.md`**: Added findings from evaluation (no tests, in-memory rate limiter, string error handling, ESLint debt) along with resolutions for this session's fixes.
 - **`.docs/CHANGELOG.md`**: Added this entry.
 - **`.agents/AGENT_RULES.md`**: Added rules for env validation, lockfile discipline, typed errors, and test requirements.
-
-- **Bug Tracking**: Created `work/BUGS.md` documenting glaring frontend errors found during analysis.
-- **UI/UX Audit**: Created `work/UI-UX_PROBLEMS.md` listing inconsistencies in UI and UX (CSS + interactive + edge cases)
-
 - **Bug Tracking**: Created `work/BUGS.md` documenting glaring frontend errors found during analysis.
 - **UI/UX Audit**: Created `work/UI-UX_PROBLEMS.md` listing inconsistencies in UI and UX (CSS + interactive + edge cases)
 

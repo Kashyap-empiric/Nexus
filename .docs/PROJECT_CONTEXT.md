@@ -1,6 +1,6 @@
 # Nexus — Project Context
 
-> **Last Updated:** 2026-06-17  
+> **Last Updated:** 2026-06-19  
 > **Purpose:** Single source of truth for the current system state. Agents must read this before any feature work.
 
 ---
@@ -10,7 +10,7 @@
 Nexus is a real-time messaging platform built as a full-stack TypeScript monorepo. It is a Slack-clone with workspaces, channels, DMs, in-app notifications, and web push notifications.
 
 **Repository:** `nexus/`  
-**Active Branch:** `feat/ui`  
+**Active Branch:** `feat/ui` (actively developed since June 19)  
 **Deployment:** Render (server), Vercel (client — planned)
 
 ---
@@ -39,6 +39,19 @@ Nexus is a real-time messaging platform built as a full-stack TypeScript monorep
 | Onboarding | Multi-step wizard (profile → workspace). |
 | Channel Member Management | Add/remove members from channels via Manage Members modal. |
 
+### 🟢 Recently Completed (June 19)
+
+| Feature | Details |
+|---------|---------|
+| Forgot/Reset Password Flow | Full Supabase `resetPasswordForEmail` flow with PASSWORD_RECOVERY handling, visibility toggles, Zod validation |
+| AlertDialog Confirmation Migration | Replaced `window.confirm` across all modals with shadcn AlertDialog |
+| New Notification Types | `CHANNEL_MEMBER_ADDED`, `CHANNEL_MEMBER_REMOVED`, `ROLE_CHANGED` |
+| Pre-Demo Bug Fixes (Wave 1) | 8 critical/major bugs fixed (socket dispatch, notifications, logout, onboarding, etc.) |
+| Socket Room Optimization | `io.in().socketsJoin()` replacing per-socket `fetchSockets()` iteration |
+| Password Visibility Toggles | Both login and register forms now support show/hide password |
+| Manage Channel Members Modal | Dedicated modal for adding/removing channel members |
+| CreateWorkspaceModal Redesign | 2-column grid, mobile drawer, improved responsive classes |
+
 ### 🟡 Partially Implemented / Known Issues
 
 | Feature | Issue |
@@ -48,6 +61,8 @@ Nexus is a real-time messaging platform built as a full-stack TypeScript monorep
 | Conversation UpdatedAt | Editing a message doesn't bump sidebar position. |
 | Push Subscription Lifecycle | No proactive re-subscription on `pushsubscriptionchange` events. |
 | Server Scaling | Presence system's in-memory Map prevents horizontal scaling. |
+| Typing Indicators | Constants defined, client-side debounce not implemented |
+| Channel List Polling | Uses 5s polling instead of socket events for channel updates |
 
 ### ❌ Not Yet Started
 
@@ -55,14 +70,31 @@ Nexus is a real-time messaging platform built as a full-stack TypeScript monorep
 |---------|----------|
 | Reactions (emoji) | Medium |
 | Mentions (@user) | Medium |
-| Pinned Messages | Low |
 | File Uploads | Low |
 | Global Search / Cmd+K | Low |
-| Message Threads / Replies UI | Low |
+| Message Threads | Low |
+| URL Unfurling | Low |
+| Emoji Reactions | Low |
 
 ---
 
-## 5. Performance Considerations
+## 5. Testing Status
+
+A comprehensive test suite is now in place (added 2026-06-19):
+
+| Area | Details |
+|------|---------|
+| Test Runner | Vitest v4.1.9 with Supertest |
+| Test Files | 17 passed, 0 failed |
+| Tests | 134 passed, 0 failed |
+| Duration | 2.88s |
+| Coverage | Unit + Integration |
+| Test Database | Docker Postgres 16 Alpine |
+| Migration Tests | Additive-only migration validation |
+
+Test infrastructure includes: mock DB, mock transaction wrappers, auth middleware tests, conversations schema/service, messages schema/service, notifications schema, onboarding schema, users schema, workspaces schema, JWT utils, upload utils, error handler, rate limiter, requireMember, validate middleware, health endpoint, API integration.
+
+## 6. Performance Considerations
 
 A comprehensive optimization audit was conducted on 2026-06-17. Key findings:
 

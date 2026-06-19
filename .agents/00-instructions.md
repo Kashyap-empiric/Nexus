@@ -133,4 +133,4 @@ Learning
 - If something breaks, inspect actual terminal logs rather than guessing.
 - When implementing, read related files thoroughly before making edits.
 
-> **Last Updated:** 2026-06-16 — Restructured to use formal policy files in `.agents/`, knowledge base in `.docs/`, and QA system in `.qa/`.
+> **Last Updated:** 2026-06-19 — Added notes on socket dispatcher patterns, AlertDialog migration, forgot/reset password flow, and ManageChannelMembersModal.

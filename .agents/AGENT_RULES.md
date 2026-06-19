@@ -96,6 +96,10 @@
 - [ ] Typed error handling — controllers do NOT compare string error messages
 - [ ] No new `console.log` in production request paths
 - [ ] Lockfile discipline — no mixing pnpm/npm lockfiles in the same package
+- [ ] AlertDialog used instead of `window.confirm` for all confirmation dialogs
+- [ ] Socket room operations use `socketsJoin()` / `socketsLeave()` instead of per-socket `fetchSockets()` iteration
+- [ ] Invite acceptance must join socket rooms dynamically for the accepted entity
+- [ ] Forgot/reset password flow must handle `PASSWORD_RECOVERY` Supabase event with 10-second link expiry timeout
 
 ### Performance Review Requirements
 - [ ] Heavy components (emoji picker, markdown, modals) use `dynamic(() => import(...))` — not eagerly imported
