@@ -3,6 +3,7 @@ import { APP_ROUTES } from "@/config/url";
 import Link from "next/link";
 import { useChatStore } from "../store/chatStore";
 import { useWorkspaces } from "@/modules/workspaces/hooks/useWorkspaces";
+import { useConversationsQuery } from "@/modules/conversations/hooks/useConversations";
 import { CreateWorkspaceModal } from "@/modules/workspaces/components/CreateWorkspaceModal";
 import { useState } from "react";
 import { cn } from "@/shared/lib/utils";
@@ -15,16 +16,23 @@ interface NavigationRailProps {
 export function NavigationRail({ openSettings }: NavigationRailProps) {
   const { mode, activeWorkspaceId, setMode, setActiveWorkspaceId } = useChatStore();
   const { data: workspaces = [] } = useWorkspaces();
+  const { data: conversations = [] } = useConversationsQuery();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  const dmConversations = conversations.filter(c => c.type === "DM");
+  const dmUnreadCount = dmConversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+
+  const latestDm = [...dmConversations].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
+  const dmHref = latestDm ? `/conversations/${latestDm.id}` : APP_ROUTES.CONVERSATIONS.INDEX;
 
   return (
     <>
       <aside className="w-[60px] border-r flex flex-col items-center justify-between shrink-0 bg-sidebar py-3 gap-3 overflow-y-auto hide-scrollbar">
         <div className="flex flex-col items-center gap-3 w-full">
           <Link
-            href={APP_ROUTES.CONVERSATIONS.INDEX}
+            href={dmHref}
             className={cn(
-              "w-[40px] h-[40px] rounded-2xl bg-muted text-muted-foreground flex items-center justify-center transition-all duration-200 hover:rounded-xl hover:bg-accent hover:text-accent-foreground",
+              "relative w-[40px] h-[40px] rounded-2xl bg-muted text-muted-foreground flex items-center justify-center transition-all duration-200 hover:rounded-xl hover:bg-accent hover:text-accent-foreground",
               mode === "DM" ? "bg-brand text-brand-foreground rounded-xl shadow-sm" : ""
             )}
             title="Direct Messages"
@@ -34,6 +42,11 @@ export function NavigationRail({ openSettings }: NavigationRailProps) {
             }}
           >
             <MessagesSquare size={20} />
+            {dmUnreadCount > 0 && mode !== "DM" && (
+              <div className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-white text-[10px] font-bold leading-none border-2 border-sidebar shadow-sm z-10 pointer-events-none">
+                {dmUnreadCount > 99 ? '99+' : dmUnreadCount}
+              </div>
+            )}
           </Link>
 
           <div className="w-8 h-[2px] bg-border rounded-full shrink-0" />

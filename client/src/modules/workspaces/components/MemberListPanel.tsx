@@ -105,11 +105,14 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
 
   const renderMember = (member: any) => {
     const isSelf = member.userId === currentUser?.id;
-    const role = member.role as WorkspaceRole;
+    // For channel view, the member object is ConversationMember which lacks role. We look it up in wsMembers.
+    const wsMember = isChannelView ? (wsMembers as WorkspaceMember[] | undefined)?.find(w => w.userId === member.userId) : member;
+    const role = (wsMember?.role || "MEMBER") as WorkspaceRole;
+    
     const RoleIcon: React.ComponentType<{ className?: string }> = 
       role === "OWNER" ? ShieldCheck : role === "ADMIN" ? Shield : UserIcon;
 
-    const showMenu = !isChannelView && !isSelf && canManage(member);
+    const showMenu = !isChannelView && !isSelf && wsMember && canManage(wsMember);
 
     return (
       <div key={member.userId} className="group flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-muted/50 cursor-default">
@@ -127,20 +130,25 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
               className="-bottom-0.5 -right-0.5" 
             />
           </div>
-          <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-sm font-medium truncate">
-              {member.user?.username || "User"}
-              {isSelf && <span className="text-xs text-muted-foreground font-normal ml-1">(you)</span>}
-            </span>
-            {!isChannelView && (
-              <span className={cn(
-                "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border w-fit mt-0.5",
-                ROLE_BADGE_STYLES[role]
-              )}>
-                <RoleIcon className="h-2.5 w-2.5" />
-                {role}
+          <div className="flex flex-col min-w-0 flex-1 justify-center">
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-medium truncate">
+                {member.user?.username || "User"}
               </span>
-            )}
+              {role === "OWNER" && (
+                <span className="inline-flex items-center">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                  <span className="sr-only">Workspace Owner</span>
+                </span>
+              )}
+              {role === "ADMIN" && (
+                <span className="inline-flex items-center">
+                  <Shield className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                  <span className="sr-only">Workspace Admin</span>
+                </span>
+              )}
+              {isSelf && <span className="text-xs text-muted-foreground font-normal shrink-0">(you)</span>}
+            </div>
           </div>
         </div>
 

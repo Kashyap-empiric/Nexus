@@ -76,11 +76,10 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
 
   // Redirect to last visited or fallback channel
   useEffect(() => {
-    // Skip redirect for non-workspace routes (DM conversations, settings, etc.)
+    // Skip redirect for non-workspace routes (settings, etc.)
     if (
       pathname?.includes(APP_ROUTES.SETTINGS.INDEX) ||
-      pathname?.includes(APP_ROUTES.NOTIFICATIONS.INDEX) ||
-      pathname?.startsWith(APP_ROUTES.CONVERSATIONS.INDEX + "/")
+      pathname?.includes(APP_ROUTES.NOTIFICATIONS.INDEX)
     ) return;
 
     if (mode === "WORKSPACE" && activeWorkspaceId && workspaceChannels && workspaceChannels.length > 0) {
@@ -95,9 +94,6 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
 
         if (activeId !== targetId && pendingRedirect.current !== targetId) {
           pendingRedirect.current = targetId;
-          const targetChannel = workspaceChannels.find(c => c.id === targetId);
-          const targetName = targetChannel?.name || targetId;
-          toast.info(`Switched to #${targetName}`, { duration: 2000 });
           router.push(`/workspaces/${activeWorkspaceId}/channels/${targetId}`);
         }
       }
