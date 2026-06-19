@@ -59,7 +59,6 @@ export function useMessageScroll({
     }
   }, []);
 
-  // Auto-scroll logic
   useEffect(() => {
     if (prevConversationId.current !== conversationId) {
       prevConversationId.current = conversationId;
@@ -89,7 +88,6 @@ export function useMessageScroll({
     }
   }, [latestMessageId, conversationId, isLatestMessageMine, scrollToBottom]);
 
-  // Intersection observer for infinite scroll
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {

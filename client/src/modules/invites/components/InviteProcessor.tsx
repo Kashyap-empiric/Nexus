@@ -78,7 +78,7 @@ function InviteLandingPage({ info, token }: { info: InviteInfo | null; token: st
 
   return (
     <div className="flex items-center justify-center min-h-dvh bg-zinc-950 text-foreground relative overflow-hidden selection:bg-brand/30">
-      {/* Brand Background Image */}
+      {}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <img 
           src="/images/auth-bg.png" 
@@ -90,7 +90,7 @@ function InviteLandingPage({ info, token }: { info: InviteInfo | null; token: st
 
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-brand/10 rounded-full blur-[100px] pointer-events-none" />
 
-      {/* Top Logo */}
+      {}
       <div className="absolute top-8 left-8 z-20">
         <img 
           src="/images/Nexus_brandname.png" 
@@ -99,7 +99,7 @@ function InviteLandingPage({ info, token }: { info: InviteInfo | null; token: st
         />
       </div>
 
-      {/* Card */}
+      {}
       <div className="relative z-10 w-full max-w-md px-8 py-10 bg-zinc-900/60 backdrop-blur-2xl border border-white/5 shadow-lg rounded-3xl m-4 animate-in fade-in slide-in-from-bottom-8 duration-700">
         
         <div className="flex flex-col items-center text-center">
@@ -166,7 +166,6 @@ export function InviteProcessor() {
 
   const token = searchParams.get("token");
 
-  // Fetch invite info on mount
   useEffect(() => {
     if (!token) return;
 
@@ -182,7 +181,6 @@ export function InviteProcessor() {
       });
   }, [token]);
 
-  // Resolve invite when authenticated
   useEffect(() => {
     if (isLoading || !infoLoaded) return;
     if (resolvedRef.current) return;
@@ -213,7 +211,6 @@ export function InviteProcessor() {
     }
   }, [searchParams, router, user, isLoading, infoLoaded, token]);
 
-  // Loading state
   if (isLoading || !infoLoaded) {
     return (
       <div className="flex items-center justify-center min-h-dvh bg-zinc-950 text-foreground relative overflow-hidden">
@@ -229,7 +226,6 @@ export function InviteProcessor() {
     );
   }
 
-  // No token
   if (!token) {
     return (
       <div className="flex items-center justify-center min-h-dvh bg-zinc-950 text-foreground relative overflow-hidden">
@@ -244,12 +240,10 @@ export function InviteProcessor() {
     );
   }
 
-  // Unauthenticated — show landing page
   if (!user) {
     return <InviteLandingPage info={inviteInfo} token={token} />;
   }
 
-  // Authenticated — waiting for resolve redirect (spinner shown during resolution)
   return (
     <div className="flex items-center justify-center min-h-dvh bg-zinc-950 text-foreground relative overflow-hidden">
       <div className="absolute inset-0 z-0 pointer-events-none">

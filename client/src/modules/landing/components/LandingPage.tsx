@@ -7,7 +7,7 @@ export const LandingPage = () => {
   return (
     <div className="flex flex-col min-h-dvh bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 font-sans selection:bg-brand/30">
 
-      {/* Navigation Bar */}
+      {}
       <header className="px-6 lg:px-12 h-16 flex items-center border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md sticky top-0 z-50">
         <Link className="flex items-center justify-center gap-2" href="/">
           <Image src="/images/Logo.png" alt="Nexus Logo" width={32} height={32} className="w-8 h-8 object-contain" />
@@ -29,7 +29,7 @@ export const LandingPage = () => {
         </nav>
       </header>
 
-      {/* Hero Section */}
+      {}
       <main className="flex-1">
         <section className="w-full py-20 md:py-32 flex flex-col items-center justify-center px-4 md:px-6 text-center border-b border-zinc-100 dark:border-zinc-900 bg-zinc-50 dark:bg-zinc-900/20">
           <div className="max-w-4xl space-y-6">
@@ -57,7 +57,7 @@ export const LandingPage = () => {
           </div>
         </section>
 
-        {/* Features Section */}
+        {}
         <section id="features" className="w-full py-20 md:py-32 px-4 md:px-6">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
@@ -68,7 +68,7 @@ export const LandingPage = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {/* Feature 1 */}
+              {}
               <div className="flex flex-col space-y-4 p-6 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-950 shadow-sm">
                 <div className="w-12 h-12 bg-brand-muted dark:bg-brand-muted/50 rounded-lg flex items-center justify-center">
                   <Zap className="h-6 w-6 text-brand dark:text-brand/80" />
@@ -79,7 +79,7 @@ export const LandingPage = () => {
                 </p>
               </div>
 
-              {/* Feature 2 */}
+              {}
               <div className="flex flex-col space-y-4 p-6 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-950 shadow-sm">
                 <div className="w-12 h-12 bg-brand-muted dark:bg-brand-muted/50 rounded-lg flex items-center justify-center">
                   <Shield className="h-6 w-6 text-brand dark:text-brand/80" />
@@ -90,7 +90,7 @@ export const LandingPage = () => {
                 </p>
               </div>
 
-              {/* Feature 3 */}
+              {}
               <div className="flex flex-col space-y-4 p-6 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-950 shadow-sm">
                 <div className="w-12 h-12 bg-brand-muted dark:bg-brand-muted/50 rounded-lg flex items-center justify-center">
                   <LayoutDashboard className="h-6 w-6 text-brand dark:text-brand/80" />
@@ -104,7 +104,7 @@ export const LandingPage = () => {
           </div>
         </section>
 
-        {/* CTA Section */}
+        {}
         <section className="w-full py-20 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/20">
           <div className="max-w-4xl mx-auto px-4 text-center">
             <h2 className="text-3xl font-bold tracking-tight mb-6">Ready to improve your workflow?</h2>
@@ -121,7 +121,7 @@ export const LandingPage = () => {
         </section>
       </main>
 
-      {/* Footer */}
+      {}
       <footer className="w-full py-8 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400">
           <div className="flex items-center gap-2 font-semibold text-zinc-900 dark:text-zinc-100">

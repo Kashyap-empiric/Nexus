@@ -23,7 +23,6 @@ export default function AuthCallback() {
       }
     });
 
-    // Fallback check in case the event fired before we subscribed
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {

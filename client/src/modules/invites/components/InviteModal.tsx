@@ -46,7 +46,6 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
   const emailInviteRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Debounce email input for search
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(emailInput), 300);
     return () => clearTimeout(timer);
@@ -57,9 +56,26 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
     isOpen && type === "WORKSPACE" && debouncedQuery.length > 0
   );
 
-  // Filter out already selected users from search results
+  const [workspaceMemberIds, setWorkspaceMemberIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (isOpen && type === "WORKSPACE" && entityId) {
+      import("../../workspaces/api/workspaces.api").then(({ fetchWorkspaceMembers }) => {
+        fetchWorkspaceMembers(entityId).then((members) => {
+          setWorkspaceMemberIds(new Set(members.map((m) => m.userId)));
+        }).catch(() => {
+          
+        });
+      });
+    } else {
+      setWorkspaceMemberIds(new Set());
+    }
+  }, [isOpen, type, entityId]);
+
   const filteredResults = searchResults?.filter(
-    (u) => !selectedUsers.some((s) => s.id === u.id)
+    (u) =>
+      !selectedUsers.some((s) => s.id === u.id) &&
+      !workspaceMemberIds.has(u.id)
   );
 
   const addUser = (user: SelectedUser) => {
@@ -144,7 +160,6 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
     }
   };
 
-  // Generate invite link on open
   useEffect(() => {
     if (isOpen && type && !inviteUrl && !isLoading && !error) {
       generate(type, entityId);
@@ -152,7 +167,6 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, type, entityId]);
 
-  // Reset state when closed
   useEffect(() => {
     if (!isOpen) {
       setTimeout(() => {
@@ -166,7 +180,6 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
     }
   }, [isOpen, reset]);
 
-  // Close dropdown on click outside
   useEffect(() => {
     if (!isOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
@@ -236,7 +249,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
             <div className="mb-4">
               <h3 className="font-medium text-sm mb-2">Invite by email</h3>
 
-              {/* Chip input area */}
+              {}
               <div className="flex flex-wrap gap-1.5 p-2 border rounded-lg bg-muted/30 min-h-[42px] mb-2 focus-within:ring-1 focus-within:ring-ring focus-within:border-border">
                 {selectedUsers.map((user) => (
                   <span
@@ -280,7 +293,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
                 />
               </div>
 
-              {/* Search results dropdown */}
+              {}
               {showDropdown && debouncedQuery.length > 0 && (
                 <div
                   ref={dropdownRef}
@@ -341,7 +354,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
                 </div>
               )}
 
-              {/* Invite button for selected users */}
+              {}
               <Button
                 onClick={handleSubmit}
                 disabled={selectedUsers.length === 0 || isInviting}
@@ -362,7 +375,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
                 )}
               </Button>
 
-              {/* Email-only invite section */}
+              {}
               <div className="mb-4">
                 <div className="flex gap-2">
                   <Input

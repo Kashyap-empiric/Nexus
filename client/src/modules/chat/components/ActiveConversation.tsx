@@ -25,7 +25,6 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
   const currentUserId = user?.id || null;
   const setHeaderInfo = useChatStore((state) => state.setHeaderInfo);
 
-  // Reply state
   const [replyingTo, setReplyingTo] = useState<{ id: string; username: string; content: string } | null>(null);
   const handleReply = useCallback((messageId: string, username: string, content: string) => {
     setReplyingTo({ id: messageId, username, content });
@@ -43,14 +42,12 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
   const isChannel = conversation?.type === "CHANNEL";
   const { data: workspaceDetails } = useWorkspaceDetails(isChannel ? conversation?.workspaceId || null : null);
 
-  // Compute pin permission: DMs have no restrictions; channels require OWNER/ADMIN role
   const canPin = !isChannel
     ? true
     : workspaceDetails?.workspace.members?.some(
         (m: { userId: string; role: string }) => m.userId === currentUserId && (m.role === "OWNER" || m.role === "ADMIN")
       ) ?? false;
 
-  // Set header info when conversation data loads
   useEffect(() => {
     if (!conversation) return;
 
@@ -139,10 +136,10 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
         />
       </div>
 
-      {/* Info Panel Sidebar */}
+      {}
       {infoPanelOpen && (
         <>
-          {/* Desktop version */}
+          {}
           <div className="hidden md:block h-full border-l">
             <InfoPanel 
               conversationId={conversationId}
@@ -159,7 +156,7 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
             />
           </div>
           
-          {/* Mobile version */}
+          {}
           <div className="md:hidden flex flex-col fixed inset-y-0 right-0 z-50 transform transition-transform duration-300 ease-in-out translate-x-0">
             <InfoPanel 
               conversationId={conversationId}
@@ -175,7 +172,7 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
               onClose={closeInfoPanel}
             />
           </div>
-          {/* Mobile overlay */}
+          {}
           <div 
             className="md:hidden fixed inset-0 z-40 bg-black/50 transition-opacity"
             onClick={closeInfoPanel}

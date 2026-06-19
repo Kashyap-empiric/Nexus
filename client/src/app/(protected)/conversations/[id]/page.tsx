@@ -15,7 +15,6 @@ export default function ActiveConversationPage() {
   const setActiveWorkspaceId = useChatStore((state) => state.setActiveWorkspaceId);
   const setActiveConversationId = useChatStore((state) => state.setActiveConversationId);
 
-  // Reset mode to DM when viewing a DM conversation (fixes phantom workspace redirect)
   useEffect(() => {
     setMode("DM");
     setActiveWorkspaceId(null);

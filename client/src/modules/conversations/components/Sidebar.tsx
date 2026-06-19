@@ -27,7 +27,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog";
 import { MessageSquarePlus, UserPlus } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { socket } from "@/socket/socketClient";
 import { useProfile } from "@/modules/users/hooks/useProfile";
 import { WorkspaceHeader } from "@/modules/workspaces/components/WorkspaceHeader";
 import { useWorkspaceDetails } from "@/modules/workspaces/hooks/useWorkspaces";
@@ -45,6 +57,7 @@ interface SidebarProps {
 export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
   useGlobalSocket();
   const { logout } = useAuth();
+  const queryClient = useQueryClient();
   const { data: conversations, isLoading } = useConversationsQuery();
 
   const mode = useChatStore((state) => state.mode);
@@ -53,6 +66,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
   const { data: workspaceDetails } = useWorkspaceDetails(mode === "WORKSPACE" ? activeWorkspaceId : null);
   const currentAuthUser = useUser();
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const inviteModal = useInviteModal();
   const [searchQuery, setSearchQuery] = useState("");
   const params = useParams();
@@ -63,20 +77,17 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
   const setLastVisitedChannel = useChatStore((state) => state.setLastVisitedChannel);
   const pendingRedirect = useRef<string | null>(null);
 
-  // Save last visited channel
   useEffect(() => {
     if (mode === "WORKSPACE" && activeWorkspaceId && activeId) {
       const isChannel = workspaceChannels?.some(c => c.id === activeId);
       if (isChannel) {
         setLastVisitedChannel(activeWorkspaceId, activeId);
-        pendingRedirect.current = null; // Clear pending once we arrive
+        pendingRedirect.current = null; 
       }
     }
   }, [mode, activeWorkspaceId, activeId, workspaceChannels, setLastVisitedChannel]);
 
-  // Redirect to last visited or fallback channel
   useEffect(() => {
-    // Skip redirect for non-workspace routes (settings, etc.)
     if (
       pathname?.includes(APP_ROUTES.SETTINGS.INDEX) ||
       pathname?.includes(APP_ROUTES.NOTIFICATIONS.INDEX)
@@ -100,7 +111,6 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
     }
   }, [mode, activeWorkspaceId, activeId, workspaceChannels, lastVisitedChannels, router]);
 
-  // Try to find the actual database user profile from the conversation members
   const { data: dbProfile } = useProfile();
 
   const socketStatus = useSocketStore((state) => state.socketStatus);
@@ -145,6 +155,9 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
         {mode === "WORKSPACE" && workspaceDetails ? (
           <WorkspaceHeader
             workspace={workspaceDetails.workspace}
+            canManage={workspaceDetails.workspace.members?.some(
+              m => m.userId === currentAuthUser?.id && (m.role === "OWNER" || m.role === "ADMIN")
+            )}
             onInviteClick={() => inviteModal.open("WORKSPACE", workspaceDetails.workspace.id)}
             onSettingsClick={() => onOpenWorkspaceSettings?.()}
             rightElement={
@@ -188,14 +201,21 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
           </div>
         )}
 
-        {/* Middle: Lists */}
+        {}
         <div className="flex-1 overflow-y-auto px-2 py-3 space-y-6">
           <div>
             <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2 mt-2">
               <span>{mode === "DM" ? "Direct Messages" : "Public Channels"}</span>
               {mode === "DM" ? (
                 <DropdownMenu>
-                  <DropdownMenuTrigger className="flex items-center gap-1 transition-colors py-1 px-2.5 -mr-1 rounded-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-brand/10 text-brand hover:bg-brand/20 normal-case tracking-normal font-medium leading-none">
+                  <DropdownMenuTrigger
+                    render={
+                      <button
+                        type="button"
+                        className="flex items-center gap-1 transition-colors py-1 px-2.5 -mr-1 rounded-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-brand/10 text-brand hover:bg-brand/20 normal-case tracking-normal font-medium leading-none cursor-pointer"
+                      />
+                    }
+                  >
                     <span className="text-xs leading-none">New</span>
                     <Plus className="h-3.5 w-3.5" />
                   </DropdownMenuTrigger>
@@ -266,7 +286,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
                           fallbackClassName="text-xs bg-primary/20 text-primary font-medium"
                         />
                         {userId && (
-                          <PresenceIndicator userId={userId} status={(otherMember?.user as any)?.status} className="-bottom-0.5 -right-0.5" />
+                          <PresenceIndicator userId={userId} status={(otherMember?.user as { status?: string })?.status} className="-bottom-0.5 -right-0.5" />
                         )}
                       </div>
 
@@ -295,7 +315,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
               </div>
             ) : (
               <div className="space-y-4">
-                {/* Public Channels */}
+                {}
                 <div className="space-y-[2px]">
                   {displayList.filter(c => c.visibility === "PUBLIC").map((chat) => {
                     const isActive = chat.id === activeId;
@@ -317,7 +337,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
                   })}
                 </div>
 
-                {/* Private Channels */}
+                {}
                 {displayList.some(c => c.visibility === "PRIVATE") && (
                   <div>
                     <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2 mt-4">
@@ -350,7 +370,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
           </div>
         </div>
 
-        {/* Bottom: User Profile */}
+        {}
         <div className="p-4 border-t bg-sidebar shrink-0 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative shrink-0 flex items-center">
@@ -372,7 +392,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
             </div>
           </div>
           <button
-            onClick={() => logout()}
+            onClick={() => setIsLogoutModalOpen(true)}
             className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
             title="Sign out"
           >
@@ -380,6 +400,21 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
           </button>
         </div>
       </aside>
+
+      <AlertDialog open={isLogoutModalOpen} onOpenChange={setIsLogoutModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sign Out</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to sign out? You will need to log in again to access your messages and workspaces.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={async () => { try { await logout(); } catch {} queryClient.clear(); socket.disconnect(); setIsLogoutModalOpen(false); useChatStore.getState().setMode("DM"); useChatStore.getState().setActiveWorkspaceId(null); useChatStore.getState().setActiveConversationId(null); router.push("/login"); }}>Sign Out</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <NewConversationModal isOpen={mode === "DM" && isNewModalOpen} onClose={() => setIsNewModalOpen(false)} />
       {mode === "WORKSPACE" && <CreateChannelModal isOpen={isNewModalOpen} onClose={() => setIsNewModalOpen(false)} workspaceId={activeWorkspaceId!} />}

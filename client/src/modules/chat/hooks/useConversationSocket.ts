@@ -36,7 +36,6 @@ export const useConversationSocket = (conversationId: string) => {
         if (!message || !message.id) throw new Error("Invalid payload");
         if (message.conversationId !== conversationId) return;
 
-        // Skip own messages — the mutation's onSuccess handles replacing the optimistic message
         const currentUser = getAuthUser();
         if (currentUser && message.userId === currentUser.id) return;
 
@@ -47,7 +46,6 @@ export const useConversationSocket = (conversationId: string) => {
 
             const updatedPages = oldData.pages.map((page, index) => {
               if (index === 0) {
-                // Check if optimistic message already exists
                 const exists = page.data.some((m) => m.id === message.id);
                 if (exists) {
                   return {
@@ -148,7 +146,7 @@ export const useConversationSocket = (conversationId: string) => {
 
             const updatedPages = oldData.pages.map((page) => ({
               ...page,
-              data: page.data.map((m) => (m.id === message.id ? { ...m, ...message } : m)),
+              data: page.data.map((m) => (m.id === message.id ? message : m)),
             }));
 
             return {

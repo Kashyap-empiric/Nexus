@@ -43,7 +43,6 @@ interface SharedSettingsModalProps {
 export const SharedSettingsModal = ({ isOpen, currentTab, setTab, closeSettings }: SharedSettingsModalProps) => {
   const [showMobileMenu, setShowMobileMenu] = useState(true);
 
-  // Reset to menu view when opened
   useEffect(() => {
     if (isOpen) {
       setShowMobileMenu(true);
@@ -71,14 +70,14 @@ export const SharedSettingsModal = ({ isOpen, currentTab, setTab, closeSettings 
           <DialogDescription>Manage your account settings</DialogDescription>
         </DialogHeader>
         
-        {/* Sidebar */}
+        {}
         <div 
           className={cn(
             "w-full md:w-64 bg-muted/10 md:bg-muted/30 border-r border-border p-0 md:p-4 flex-col overflow-y-auto shrink-0",
             showMobileMenu ? "flex" : "hidden md:flex"
           )}
         >
-          {/* Mobile Settings Header */}
+          {}
           <div className="px-6 pt-12 pb-4 md:hidden">
             <h2 className="text-2xl font-bold">Settings</h2>
           </div>
@@ -118,7 +117,7 @@ export const SharedSettingsModal = ({ isOpen, currentTab, setTab, closeSettings 
           </div>
         </div>
 
-        {/* Content Area */}
+        {}
         <div 
           className={cn(
             "flex-1 p-6 md:p-8 overflow-y-auto bg-background",

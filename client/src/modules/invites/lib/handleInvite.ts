@@ -14,13 +14,11 @@ export const handleInviteContinuation = async (router: any) => {
 
   let token = inviteData;
 
-  // Handle legacy JSON format gracefully
   if (inviteData.startsWith("{")) {
     try {
       const parsed = JSON.parse(inviteData);
       token = parsed.token;
     } catch {
-      // Not valid JSON, assume it's the raw token string
     }
   }
 

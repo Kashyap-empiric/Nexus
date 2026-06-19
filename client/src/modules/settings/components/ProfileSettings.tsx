@@ -91,7 +91,7 @@ export const ProfileSettings = () => {
       setAvatarFile(null);
       setAvatarPreview(null);
       setIsAvatarRemoved(false);
-      reset(data); // Reset form with new values to clear dirty state
+      reset({ ...data, fullName: data.fullName || "", bio: data.bio || "" }); 
     } catch (error: any) {
       if (error.status === 409) {
         toast.error("Username is already taken. Please choose another one.");

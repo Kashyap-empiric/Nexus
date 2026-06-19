@@ -98,7 +98,7 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
       <div className="flex-1 overflow-y-auto min-h-0">
         {view === 'about' && isDM && userProfile && (
           <div className="p-6 space-y-6">
-            {/* Avatar + Name */}
+            {}
             <Link href={`/users/${userProfile.id}`} className="flex flex-col items-center gap-3 group">
               <div className="relative">
 <UserAvatar
@@ -117,7 +117,7 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
               </div>
             </Link>
 
-            {/* Status */}
+            {}
             {userProfile.status && (
               <div className="flex items-center gap-2 text-sm">
                 <span className={cn("h-2.5 w-2.5 rounded-full shrink-0", STATUS_LABELS[userProfile.status]?.dotClass || "bg-muted-foreground")} />
@@ -128,7 +128,7 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
               </div>
             )}
 
-            {/* Bio */}
+            {}
             {userProfile.bio && (
               <div>
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Bio</h4>
@@ -136,7 +136,7 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
               </div>
             )}
 
-            {/* Joined date */}
+            {}
             {userProfile.createdAt && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <CalendarDays className="h-4 w-4 shrink-0" />

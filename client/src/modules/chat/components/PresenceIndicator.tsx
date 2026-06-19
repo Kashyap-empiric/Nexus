@@ -11,8 +11,6 @@ export const PresenceIndicator = ({ userId, className, status }: PresenceIndicat
   const onlineUsers = useSocketStore((state) => state.onlineUsers);
   const isOnline = onlineUsers.has(userId);
 
-  // If they are invisible or offline, show gray.
-  // Otherwise show status color or default green for AVAILABLE.
   const isActuallyOnline = isOnline && status !== "INVISIBLE";
   
   let colorClass = "bg-status-offline";

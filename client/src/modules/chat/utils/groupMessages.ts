@@ -33,7 +33,6 @@ export function groupMessages(messages: Message[]): MessageGroup[] {
       }
     }
     
-    // Start a new group
     groups.push({
       id: message.id,
       user: message.user,

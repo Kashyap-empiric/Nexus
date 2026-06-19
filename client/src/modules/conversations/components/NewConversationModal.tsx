@@ -28,7 +28,6 @@ export function NewConversationModal({ isOpen, onClose }: NewConversationModalPr
   const router = useRouter();
   const { mutate: createConversation, isPending: isCreating } = useCreateConversationMutation();
 
-  // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query), 300);
     return () => clearTimeout(timer);
@@ -68,7 +67,7 @@ export function NewConversationModal({ isOpen, onClose }: NewConversationModalPr
         </DialogHeader>
 
         <DialogBody>
-          {/* Search input */}
+          {}
           <div className="relative mb-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -80,7 +79,7 @@ export function NewConversationModal({ isOpen, onClose }: NewConversationModalPr
             />
           </div>
 
-          {/* User results */}
+          {}
           <div className="overflow-y-auto max-h-64 -mx-6 px-6">
             {isSearching ? (
               <div className="flex items-center justify-center py-8 text-muted-foreground">

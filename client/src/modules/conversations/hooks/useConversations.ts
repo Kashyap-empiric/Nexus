@@ -26,8 +26,6 @@ export const useCreateConversationMutation = () => {
   return useMutation({
     mutationFn: conversationsApi.createConversation,
     onSuccess: (conversation) => {
-      // Directly prepend the new conversation to the cache so the sidebar updates instantly.
-      // The receiver's sidebar is updated via the `conversation:new` socket event.
       queryClient.setQueryData<Conversation[]>(
         queryKeys.conversations,
         (oldData) => {

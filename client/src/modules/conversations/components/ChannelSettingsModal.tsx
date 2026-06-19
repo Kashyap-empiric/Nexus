@@ -109,7 +109,7 @@ export function ChannelSettingsModal({ isOpen, workspaceId, channel, onClose }: 
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6 overflow-y-auto max-h-[80vh]">
-          {/* Channel Identity */}
+          {}
           <div>
             <p className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase mb-3">CHANNEL IDENTITY</p>
             <hr className="border-border mb-4" />
@@ -164,7 +164,7 @@ export function ChannelSettingsModal({ isOpen, workspaceId, channel, onClose }: 
             </Button>
           </div>
 
-          {/* Danger Zone */}
+          {}
           <div className="pt-8">
             <button
               type="button"
@@ -227,7 +227,7 @@ export function ChannelSettingsModal({ isOpen, workspaceId, channel, onClose }: 
           </div>
         </form>
       </DialogContent>
-      {/* Unsaved changes confirmation dialog */}
+      {}
       <AlertDialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>

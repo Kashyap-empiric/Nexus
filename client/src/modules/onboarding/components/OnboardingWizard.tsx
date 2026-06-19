@@ -21,7 +21,6 @@ export function OnboardingWizard() {
   const stepParam = searchParams.get("step");
   const currentStep = stepParam ? parseInt(stepParam, 10) : 1;
 
-  // Local state for all forms
   const [profileData, setProfileData] = useState<{ fullName: string; bio: string; avatarFile: File | null }>({
     fullName: "",
     bio: "",
@@ -31,7 +30,6 @@ export function OnboardingWizard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [completionData, setCompletionData] = useState<OnboardingCompleteResponse | null>(null);
 
-  // Initialize fullName from user metadata once
   useEffect(() => {
     if (user?.user_metadata?.full_name && !profileData.fullName) {
       setProfileData(prev => ({ ...prev, fullName: user.user_metadata.full_name }));
@@ -49,7 +47,6 @@ export function OnboardingWizard() {
       let avatarUrl: string | undefined = undefined;
       let workspaceIconPath: string | undefined = undefined;
       
-      // Upload avatar first if provided (non-blocking — toast on failure)
       if (profileData.avatarFile && user?.id) {
         try {
           const { uploadAvatarAndGetUrl } = await import("@/shared/lib/upload");
@@ -60,7 +57,6 @@ export function OnboardingWizard() {
         }
       }
 
-      // Upload workspace icon if provided
       if (data.workspaceIconFile && data.workspaceSlug) {
         try {
           const { uploadWorkspaceIcon } = await import("@/shared/lib/upload");
@@ -84,7 +80,6 @@ export function OnboardingWizard() {
       
       setCompletionData(response);
       
-      // Invalidate queries to reflect new user state and workspaces
       await queryClient.invalidateQueries({ queryKey: ["users", "me"] });
       await queryClient.invalidateQueries({ queryKey: ["workspaces"] });
       
