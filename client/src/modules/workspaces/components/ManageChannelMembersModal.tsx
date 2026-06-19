@@ -14,9 +14,19 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/shared/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/shared/components/ui/alert-dialog";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
-import { X, UserPlus, Search, Check } from "lucide-react";
+import { UserMinus, UserPlus, Search, Check } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { toast } from "sonner";
 
@@ -37,6 +47,7 @@ export function ManageChannelMembersModal({ workspaceId, channelId, open, onOpen
   const [showAdd, setShowAdd] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [pendingRemove, setPendingRemove] = useState<{ userId: string; username: string } | null>(null);
 
   const channelMemberIds = useMemo(() => new Set(channelMembers?.map(m => m.userId) || []), [channelMembers]);
 
@@ -91,20 +102,25 @@ export function ManageChannelMembersModal({ workspaceId, channelId, open, onOpen
     });
   };
 
-  const handleRemoveMember = (userId: string, username: string) => {
+  const confirmRemoveMember = () => {
+    if (!pendingRemove) return;
+    const { userId, username } = pendingRemove;
     removeMember({ workspaceId, channelId, userId }, {
       onSuccess: () => {
         toast.success(`${username} removed from channel`);
+        setPendingRemove(null);
       },
-      onError: (err: any) => {
+      onError: (err: { response?: { data?: { error?: string } }; message?: string }) => {
         const errorMsg = err?.response?.data?.error || err?.message || "Failed to remove member";
         toast.error(errorMsg);
+        setPendingRemove(null);
       },
     });
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="sm">
         <DialogHeader>
           <DialogTitle>Manage Members</DialogTitle>
@@ -170,12 +186,12 @@ export function ManageChannelMembersModal({ workspaceId, channelId, open, onOpen
                       </div>
                       {member.userId !== currentUser?.id && (
                         <button
-                          onClick={() => handleRemoveMember(member.userId, member.user?.username || "User")}
+                          onClick={() => setPendingRemove({ userId: member.userId, username: member.user?.username || "User" })}
                           disabled={isRemoving}
                           className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 transition-opacity"
                           title="Remove from channel"
                         >
-                          <X className="h-3.5 w-3.5" />
+                          <UserMinus className="h-4 w-4" />
                         </button>
                       )}
                     </div>
@@ -288,5 +304,31 @@ export function ManageChannelMembersModal({ workspaceId, channelId, open, onOpen
         )}
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={!!pendingRemove} onOpenChange={(open) => { if (!open) setPendingRemove(null); }}>
+      <AlertDialogContent size="sm">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Remove member</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to remove{" "}
+            <span className="font-medium text-foreground">{pendingRemove?.username}</span>{" "}
+            from this channel? They will lose access immediately.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setPendingRemove(null)}>
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            onClick={confirmRemoveMember}
+            disabled={isRemoving}
+          >
+            {isRemoving ? "Removing..." : "Remove"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

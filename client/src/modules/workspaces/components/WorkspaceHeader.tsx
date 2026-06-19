@@ -1,8 +1,22 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import type { Workspace } from "../types/workspace";
-import { ChevronDown, UserPlus, Settings } from "lucide-react";
+import { ChevronDown, UserPlus, Settings, LogOut } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog";
+import { useLeaveWorkspaceMutation } from "../hooks/useWorkspaces";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { useChatStore } from "@/modules/chat/store/chatStore";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,11 +29,31 @@ interface WorkspaceHeaderProps {
   onInviteClick?: () => void;
   onSettingsClick?: () => void;
   rightElement?: React.ReactNode;
+  canManage?: boolean;
 }
 
-export function WorkspaceHeader({ workspace, onInviteClick, onSettingsClick, rightElement }: WorkspaceHeaderProps) {
+export function WorkspaceHeader({ workspace, onInviteClick, onSettingsClick, rightElement, canManage = false }: WorkspaceHeaderProps) {
+  const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
+  const { mutateAsync: leaveWorkspace, isPending: isLeaving } = useLeaveWorkspaceMutation();
+  const router = useRouter();
+
+  const handleLeave = async () => {
+    if (!workspace.id) return;
+    try {
+      await leaveWorkspace({ workspaceId: workspace.id });
+      toast.success("Left workspace successfully");
+      setIsLeaveModalOpen(false);
+      useChatStore.getState().setActiveWorkspaceId(null);
+      useChatStore.getState().setMode("DM");
+      router.push("/conversations");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || err.message || "Failed to leave workspace");
+    }
+  };
+
   return (
-    <div className="flex items-center h-14 border-b bg-sidebar z-10 sticky top-0 shrink-0 w-full">
+    <>
+      <div className="flex items-center h-14 border-b bg-sidebar z-10 sticky top-0 shrink-0 w-full">
       <div className="flex-1 h-full min-w-0">
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -31,19 +65,30 @@ export function WorkspaceHeader({ workspace, onInviteClick, onSettingsClick, rig
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
+            {canManage && (
+              <>
+                <DropdownMenuItem
+                  onClick={() => onSettingsClick?.()}
+                  className="gap-2 cursor-pointer"
+                >
+                  <Settings className="h-4 w-4" />
+                  Workspace Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onInviteClick?.()}
+                  className="gap-2 cursor-pointer text-brand focus:text-brand"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Invite People
+                </DropdownMenuItem>
+              </>
+            )}
             <DropdownMenuItem
-              onClick={() => onSettingsClick?.()}
-              className="gap-2 cursor-pointer"
+              onClick={() => setIsLeaveModalOpen(true)}
+              className="gap-2 cursor-pointer text-destructive focus:text-destructive"
             >
-              <Settings className="h-4 w-4" />
-              Workspace Settings
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => onInviteClick?.()}
-              className="gap-2 cursor-pointer text-brand focus:text-brand"
-            >
-              <UserPlus className="h-4 w-4" />
-              Invite People
+              <LogOut className="h-4 w-4" />
+              Leave Workspace
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -55,5 +100,31 @@ export function WorkspaceHeader({ workspace, onInviteClick, onSettingsClick, rig
         </div>
       )}
     </div>
+
+      <AlertDialog open={isLeaveModalOpen} onOpenChange={setIsLeaveModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Leave Workspace</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to leave <strong>{workspace.name}</strong>?
+              You will lose access to all channels and messages.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isLeaving}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={(e) => {
+                e.preventDefault();
+                handleLeave();
+              }}
+              disabled={isLeaving}
+            >
+              {isLeaving ? "Leaving..." : "Leave Workspace"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

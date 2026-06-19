@@ -6,7 +6,7 @@ import { ChevronDown, Shield, ShieldCheck, User as UserIcon, UserX } from "lucid
 import { cn } from "@/shared/lib/utils";
 import type { WorkspaceRole } from "../types/workspace";
 
-/* ─── Shared constants ─────────────────────────────────── */
+
 
 export const ROLE_BADGE_STYLES: Record<WorkspaceRole, string> = {
   OWNER: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
@@ -22,7 +22,7 @@ const ROLE_ICONS: Record<WorkspaceRole, typeof Shield> = {
 
 const ROLE_OPTIONS: WorkspaceRole[] = ["OWNER", "ADMIN", "MEMBER"];
 
-/* ─── Props ──────────────────────────────────────────────── */
+
 
 interface CustomRoleDropdownProps {
   role: WorkspaceRole;
@@ -30,11 +30,10 @@ interface CustomRoleDropdownProps {
   memberUsername: string;
   canPromote: boolean;
   onRoleChange: (userId: string, role: WorkspaceRole) => void;
-  onRemove: (userId: string) => void;
   onPromote: (userId: string, username: string) => void;
 }
 
-/* ─── Component ──────────────────────────────────────────── */
+
 
 export function CustomRoleDropdown({
   role,
@@ -42,7 +41,6 @@ export function CustomRoleDropdown({
   memberUsername,
   canPromote,
   onRoleChange,
-  onRemove,
   onPromote,
 }: CustomRoleDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -50,7 +48,6 @@ export function CustomRoleDropdown({
   const panelRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; right: number } | null>(null);
 
-  // Measure and position on open
   useEffect(() => {
     if (!isOpen) {
       setPosition(null);
@@ -68,7 +65,6 @@ export function CustomRoleDropdown({
     };
 
     measure();
-    // Re-measure on scroll/resize in case the dialog moved
     window.addEventListener("scroll", measure, true);
     window.addEventListener("resize", measure);
     return () => {
@@ -77,7 +73,6 @@ export function CustomRoleDropdown({
     };
   }, [isOpen]);
 
-  // Click outside + escape
   useEffect(() => {
     if (!isOpen) return;
 
@@ -94,7 +89,6 @@ export function CustomRoleDropdown({
       if (e.key === "Escape") setIsOpen(false);
     };
 
-    // Use rAF delay so the same mousedown that opened doesn't immediately close
     const raf = requestAnimationFrame(() => {
       document.addEventListener("mousedown", handleClickOutside);
       document.addEventListener("keydown", handleEscape);
@@ -120,11 +114,6 @@ export function CustomRoleDropdown({
     } else {
       onRoleChange(memberId, newRole);
     }
-  };
-
-  const handleRemove = () => {
-    setIsOpen(false);
-    onRemove(memberId);
   };
 
   return (
@@ -179,16 +168,6 @@ export function CustomRoleDropdown({
                 </button>
               );
             })}
-            <div className="-mx-1 my-1 h-px bg-border" />
-            <button
-              type="button"
-              role="menuitem"
-              onClick={handleRemove}
-              className="flex w-full items-center gap-2 rounded-md px-2 h-9 text-sm text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
-            >
-              <UserX className="h-4 w-4 shrink-0" />
-              <span className="pt-[1px]">Remove</span>
-            </button>
           </div>,
           document.body
         )}

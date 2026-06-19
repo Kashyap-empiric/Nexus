@@ -145,6 +145,7 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
   };
 
   const [pendingOwnerPromotion, setPendingOwnerPromotion] = useState<{ userId: string; username: string } | null>(null);
+  const [pendingRemoval, setPendingRemoval] = useState<{ userId: string; username: string } | null>(null);
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
   const handleRoleChange = async (userId: string, role: WorkspaceRole) => {
@@ -210,15 +211,15 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent fullscreenMobile size="2xl" className="sm:h-[80vh] p-0 bg-background">
+      <DialogContent drawer size="xl" className="w-[90vw] md:!w-[750px] lg:!w-[900px] p-0 bg-background !block">
         <DialogHeader className="sr-only">
           <DialogTitle>Workspace Settings</DialogTitle>
           <DialogDescription>Manage workspace settings</DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col sm:flex-row flex-1 overflow-hidden">
-          {/* Sidebar */}
-          <div className="w-full sm:w-48 bg-muted/10 sm:bg-muted/30 border-r border-border p-4 flex sm:flex-col gap-1 shrink-0">
+        <div className="flex flex-col sm:flex-row">
+          {}
+          <div className="w-full sm:w-48 bg-muted/10 sm:bg-muted/30 border-r border-border p-4 flex sm:flex-col gap-1 shrink-0 max-h-[85vh] overflow-y-auto">
             <button onClick={() => setActiveTab("general")} className={cn("text-left px-3 py-2 rounded-md text-sm font-medium transition-colors", activeTab === "general" ? "bg-brand/10 text-brand" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground")}>
               General
             </button>
@@ -227,8 +228,8 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
             </button>
           </div>
 
-          {/* Content */}
-          <div className="flex-1 p-6 overflow-y-auto">
+          {}
+          <div className="flex-1 p-6 overflow-y-auto max-h-[85vh]">
             {workspaceLoading ? (
               <div className="animate-pulse space-y-4">
                 <div className="h-8 w-1/3 bg-muted rounded" />
@@ -241,7 +242,7 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                   Preview: <span className="font-medium text-foreground">{watch("name") || "Untitled"}</span>
                 </p>
 
-                {/* Icon Upload */}
+                {}
                 <div>
                   <p className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase mb-3">BRANDING</p>
                   <hr className="border-border mb-4" />
@@ -326,7 +327,7 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                   </Button>
                 </div>
 
-                {/* Danger Zone */}
+                {}
                 <div className="pt-8">
                   <p className="text-[11px] font-bold tracking-wider text-destructive uppercase mb-3">DANGER ZONE</p>
                   <hr className="border-border mb-4" />
@@ -360,8 +361,8 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                 </div>
               </form>
             ) : (
-              /* Members Tab */
-              <div className="space-y-4">
+              
+              <div className="space-y-4 px-2 sm:px-6">
                 <h3 className="text-lg font-medium">Members</h3>
                 {membersLoading ? (
                   <div className="animate-pulse space-y-3">
@@ -376,7 +377,7 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                     ))}
                   </div>
                 ) : (
-                  <div className="space-y-1">
+                  <div className="space-y-3">
                     {(members || []).map((member: WorkspaceMember) => {
                       const role = member.role as WorkspaceRole;
                       const RoleIcon = ROLE_ICONS[role];
@@ -394,15 +395,25 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                             <p className="text-xs text-muted-foreground truncate">@{member.user?.username}</p>
                           </div>
                           {canManage && role !== "OWNER" ? (
-                            <CustomRoleDropdown
-                              role={role}
-                              memberId={member.userId}
-                              memberUsername={member.user?.username || "Unknown"}
-                              canPromote={currentUser?.role === "OWNER"}
-                              onRoleChange={handleRoleChange}
-                              onRemove={handleRemoveMember}
-                              onPromote={(id, name) => setPendingOwnerPromotion({ userId: id, username: name })}
-                            />
+                            <div className="flex items-center gap-2">
+                              <CustomRoleDropdown
+                                role={role}
+                                memberId={member.userId}
+                                memberUsername={member.user?.username || "Unknown"}
+                                canPromote={currentUser?.role === "OWNER"}
+                                onRoleChange={handleRoleChange}
+                                onPromote={(id, name) => setPendingOwnerPromotion({ userId: id, username: name })}
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => setPendingRemoval({ userId: member.userId, username: member.user?.username || "Unknown" })}
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            </div>
                           ) : (
                             <span className={cn("inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border select-none", ROLE_BADGE_STYLES[role])}>
                               <RoleIcon className="h-3.5 w-3.5" />
@@ -415,7 +426,19 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                   </div>
                 )}
 
-                {/* Promote to owner confirmation */}
+                <div className="pt-4">
+                  <Button variant="outline" onClick={handleLeave} disabled={isLeaving} className="text-destructive hover:text-destructive">
+                    <ArrowLeftFromLine className="h-4 w-4 mr-2" />
+                    {isLeaving ? "Leaving..." : "Leave Workspace"}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {}
+            {activeTab === "members" && (
+              <>
+                {}
                 <AlertDialog open={!!pendingOwnerPromotion} onOpenChange={(open) => { if (!open) setPendingOwnerPromotion(null); }}>
                   <AlertDialogContent>
                     <AlertDialogHeader>
@@ -435,18 +458,31 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                   </AlertDialogContent>
                 </AlertDialog>
 
-                <div className="pt-4">
-                  <Button variant="outline" onClick={handleLeave} disabled={isLeaving} className="text-destructive hover:text-destructive">
-                    <ArrowLeftFromLine className="h-4 w-4 mr-2" />
-                    {isLeaving ? "Leaving..." : "Leave Workspace"}
-                  </Button>
-                </div>
-              </div>
+                {}
+                <AlertDialog open={!!pendingRemoval} onOpenChange={(open) => { if (!open) setPendingRemoval(null); }}>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogMedia><Trash className="size-5 text-destructive" /></AlertDialogMedia>
+                      <AlertDialogTitle>Remove Member</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to remove <strong>{pendingRemoval?.username}</strong> from this workspace?
+                        They will lose access to all channels and messages.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction variant="destructive" disabled={!pendingRemoval} onClick={() => { if (pendingRemoval) { handleRemoveMember(pendingRemoval.userId); } setPendingRemoval(null); }}>
+                        Remove Member
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </>
             )}
           </div>
         </div>
       </DialogContent>
-      {/* Unsaved changes confirmation dialog */}
+      {}
       <AlertDialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>

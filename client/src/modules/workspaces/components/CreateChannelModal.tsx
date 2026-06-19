@@ -69,7 +69,7 @@ export function CreateChannelModal({ isOpen, onClose, workspaceId }: CreateChann
         <form id="create-channel-form" onSubmit={handleSubmit}>
           <DialogBody>
             <div className="space-y-4">
-              {/* Channel Name */}
+              {}
               <div className="space-y-2">
                 <Label htmlFor="channel-name">Channel Name</Label>
                 <div className="relative">
@@ -88,7 +88,7 @@ export function CreateChannelModal({ isOpen, onClose, workspaceId }: CreateChann
                 </div>
               </div>
 
-              {/* Visibility */}
+              {}
               <div className="space-y-2">
                 <Label>Visibility</Label>
                 <div className="flex gap-2">

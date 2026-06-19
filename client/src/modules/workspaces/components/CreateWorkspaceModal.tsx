@@ -66,7 +66,6 @@ export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalPr
       setMode("WORKSPACE");
       setActiveWorkspaceId(workspace.slug);
     } catch (error: unknown) {
-      // Extract meaningful error message from API response
       const axiosError = error as AxiosError<{ error?: string }>;
       const message = axiosError?.response?.data?.error || (error instanceof Error ? error.message : "Failed to create workspace");
       toast.error(message);
@@ -75,7 +74,7 @@ export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalPr
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent size="sm" style={{ maxWidth: '1200px' }}>
+      <DialogContent size="sm" drawer className="sm:max-h-[90vh]" style={{ maxWidth: '960px' }}>
         <DialogHeader>
           <DialogTitle>Create Workspace</DialogTitle>
           <DialogDescription>
@@ -85,37 +84,40 @@ export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalPr
 
         <form id="create-workspace-form" onSubmit={handleSubmit}>
           <DialogBody>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="workspace-name">Workspace Name</Label>
-                <Input
-                  id="workspace-name"
-                  placeholder="e.g. Acme Corp"
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    if (!slug || slug === name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "")) {
-                      setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, ""));
-                    }
-                  }}
-                  autoFocus
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="workspace-slug">Workspace URL</Label>
-                <div className="flex items-center">
-                  <span className="text-muted-foreground bg-muted px-3 py-2 border border-r-0 rounded-l-md text-sm">
-                    nexus.app/
-                  </span>
+            <div className="space-y-5">
+              {}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="workspace-name">Workspace Name</Label>
                   <Input
-                    id="workspace-slug"
-                    placeholder="e.g. acme-corp"
-                    value={slug}
-                    onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, ""))}
-                    className="rounded-l-none"
-                    maxLength={50}
+                    id="workspace-name"
+                    placeholder="e.g. Acme Corp"
+                    value={name}
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      if (!slug || slug === name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "")) {
+                        setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, ""));
+                      }
+                    }}
+                    autoFocus
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="workspace-slug">Workspace URL</Label>
+                  <div className="flex items-center">
+                    <span className="text-muted-foreground bg-muted px-3 py-2 border border-r-0 rounded-l-md text-sm shrink-0">
+                      nexus.app/
+                    </span>
+                    <Input
+                      id="workspace-slug"
+                      placeholder="e.g. acme-corp"
+                      value={slug}
+                      onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, ""))}
+                      className="rounded-l-none"
+                      maxLength={50}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -127,24 +129,24 @@ export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalPr
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="resize-none"
-                  rows={2}
+                  rows={3}
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Label>Icon <span className="text-muted-foreground">(optional)</span></Label>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   <div
                     role="button"
                     tabIndex={0}
                     onClick={() => iconInputRef.current?.click()}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") iconInputRef.current?.click(); }}
-                    className="relative h-14 w-14 rounded-xl border-2 border-dashed flex items-center justify-center cursor-pointer hover:border-muted-foreground/50 transition-colors border-muted-foreground/25 shrink-0"
+                    className="relative h-16 w-16 rounded-xl border-2 border-dashed flex items-center justify-center cursor-pointer hover:border-muted-foreground/50 hover:bg-muted/50 transition-all border-muted-foreground/25 shrink-0 group"
                   >
                     {iconPreview ? (
                       <img src={iconPreview} alt="" className="h-full w-full rounded-xl object-cover" />
                     ) : (
-                      <Camera className="h-5 w-5 text-muted-foreground/50" />
+                      <Camera className="h-6 w-6 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors" />
                     )}
                   </div>
                   <input
@@ -157,20 +159,20 @@ export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalPr
                       if (file) handleIconSelect(file);
                     }}
                   />
-                  <div>
+                  <div className="space-y-0.5">
                     <p className="text-sm font-medium">Workspace Icon</p>
-                    <p className="text-xs text-muted-foreground">Square image, max 5MB</p>
+                    <p className="text-xs text-muted-foreground">Square image, max 5MB. PNG, JPEG, or WebP.</p>
                   </div>
+                  {iconFile && (
+                    <Button type="button" variant="outline" size="sm" className="ml-auto" onClick={() => {
+                      if (iconPreview) URL.revokeObjectURL(iconPreview);
+                      setIconFile(null);
+                      setIconPreview(null);
+                    }}>
+                      Remove
+                    </Button>
+                  )}
                 </div>
-                {iconFile && (
-                  <Button type="button" variant="outline" size="sm" onClick={() => {
-                    if (iconPreview) URL.revokeObjectURL(iconPreview);
-                    setIconFile(null);
-                    setIconPreview(null);
-                  }}>
-                    Remove
-                  </Button>
-                )}
               </div>
             </div>
           </DialogBody>

@@ -84,9 +84,12 @@ export const useRemoveMember = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ workspaceId, userId }: { workspaceId: string; userId: string }) => removeMember(workspaceId, userId),
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
-      queryClient.invalidateQueries({ queryKey: ["workspace-members", data.workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ["workspace-members", variables.workspaceId] });
+      if (data.workspaceId !== variables.workspaceId) {
+        queryClient.invalidateQueries({ queryKey: ["workspace-members", data.workspaceId] });
+      }
     },
   });
 };

@@ -105,7 +105,6 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
 
   const renderMember = (member: any) => {
     const isSelf = member.userId === currentUser?.id;
-    // For channel view, the member object is ConversationMember which lacks role. We look it up in wsMembers.
     const wsMember = isChannelView ? (wsMembers as WorkspaceMember[] | undefined)?.find(w => w.userId === member.userId) : member;
     const role = (wsMember?.role || "MEMBER") as WorkspaceRole;
     
@@ -126,7 +125,7 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
             />
             <PresenceIndicator 
               userId={member.userId} 
-              status={member.user?.status as any}
+              status={member.user?.status as string | undefined}
               className="-bottom-0.5 -right-0.5" 
             />
           </div>
@@ -188,7 +187,7 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
         </div>
       )}
 
-      {/* Promote to owner confirmation dialog */}
+      {}
       {!isChannelView && (
         <AlertDialog open={!!memberToPromote} onOpenChange={(open) => { if (!open) setMemberToPromote(null); }}>
           <AlertDialogContent>
@@ -219,7 +218,7 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
         </AlertDialog>
       )}
 
-      {/* Remove member confirmation dialog (workspace view only) */}
+      {}
       {!isChannelView && (
         <AlertDialog open={!!memberToRemove} onOpenChange={(open) => { if (!open && !isRemoving) setMemberToRemove(null); }}>
           <AlertDialogContent>
@@ -250,10 +249,7 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
   );
 }
 
-/* ─── Custom member actions menu ──────────────────────────
- * Replaces Base UI DropdownMenu which doesn't work reliably.
- * Uses plain button + createPortal for guaranteed click handling.
- */
+
 
 interface MemberActionsMenuProps {
   member: WorkspaceMember;
@@ -269,7 +265,6 @@ function MemberActionsMenu({ member, isOwner, onPromote, onRoleChange, onRemove 
   const panelRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; right: number } | null>(null);
 
-  // Measure and position on open
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -296,7 +291,6 @@ function MemberActionsMenu({ member, isOwner, onPromote, onRoleChange, onRemove 
     };
   }, [isOpen]);
 
-  // Click outside + escape
   useEffect(() => {
     if (!isOpen) return;
 

@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useState, useRef } from "react";
 import { MoreVertical, Edit2, Trash2, Hash, Lock, Globe, Users, Settings, LogOut } from "lucide-react";
 import {
   DropdownMenu,
@@ -53,47 +52,65 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
   const [modalType, setModalType] = useState<"rename" | "delete" | "visibility" | "members" | "settings" | "leave" | null>(null);
   const [renameValue, setRenameValue] = useState(channel.name || "");
 
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const longPressRef = useRef(false);
+  const pressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const startPosRef = useRef<{ x: number; y: number } | null>(null);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === "mouse") return;
+
+    longPressRef.current = false;
+    startPosRef.current = { x: e.clientX, y: e.clientY };
+
+    pressTimerRef.current = setTimeout(() => {
+      pressTimerRef.current = null;
+      longPressRef.current = true;
+      setTimeout(() => triggerRef.current?.click(), 0);
+    }, 500);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (e.pointerType === "mouse" || !startPosRef.current || !pressTimerRef.current) return;
+    const dx = Math.abs(e.clientX - startPosRef.current.x);
+    const dy = Math.abs(e.clientY - startPosRef.current.y);
+    if (dx > 10 || dy > 10) {
+      clearTimeout(pressTimerRef.current);
+      pressTimerRef.current = null;
+    }
+  };
+
+  const handlePointerUp = () => {
+    if (pressTimerRef.current) {
+      clearTimeout(pressTimerRef.current);
+      pressTimerRef.current = null;
+    }
+  };
+
+  const handleItemClick = () => {
+    if (longPressRef.current) {
+      longPressRef.current = false;
+      return;
+    }
+    onNavigate?.();
+    router.push(`/workspaces/${workspaceId}/channels/${channel.id}`);
+  };
+
   const closeModals = () => {
     setModalType(null);
     setRenameValue(channel.name || "");
   };
 
-  const handleRenameClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleRenameClick = () => {
     setRenameValue(channel.name || "");
     setModalType("rename");
   };
 
-  const handleDeleteClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setModalType("delete");
-  };
-
-  const handleVisibilityClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setModalType("visibility");
-  };
-
-  const handleManageMembersClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setModalType("members");
-  };
-
-  const handleSettingsClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setModalType("settings");
-  };
-
-  const handleLeaveClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setModalType("leave");
-  };
+  const handleDeleteClick = () => setModalType("delete");
+  const handleVisibilityClick = () => setModalType("visibility");
+  const handleManageMembersClick = () => setModalType("members");
+  const handleSettingsClick = () => setModalType("settings");
+  const handleLeaveClick = () => setModalType("leave");
 
   const confirmDelete = () => {
     deleteChannel({ workspaceId, channelId: channel.id }, {
@@ -101,11 +118,10 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
         closeModals();
         if (isActive) {
           const generalChannel = channels?.find(c => c.name === "general");
-          if (generalChannel) {
-            router.push(`/workspaces/${workspaceId}/channels/${generalChannel.id}`);
-          } else {
-            router.push(`/workspaces/${workspaceId}`);
-          }
+          router.push(generalChannel
+            ? `/workspaces/${workspaceId}/channels/${generalChannel.id}`
+            : `/workspaces/${workspaceId}`
+          );
         }
       }
     });
@@ -139,11 +155,10 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
           closeModals();
           if (isActive) {
             const generalChannel = channels?.find(c => c.name === "general");
-            if (generalChannel) {
-              router.push(`/workspaces/${workspaceId}/channels/${generalChannel.id}`);
-            } else {
-              router.push(`/workspaces/${workspaceId}`);
-            }
+            router.push(generalChannel
+              ? `/workspaces/${workspaceId}/channels/${generalChannel.id}`
+              : `/workspaces/${workspaceId}`
+            );
           }
         },
       }
@@ -156,96 +171,119 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
 
   return (
     <>
-      <Link
-        href={`/workspaces/${workspaceId}/channels/${channel.id}`}
-        prefetch={false}
-      onClick={() => onNavigate?.()}
-      className={`group flex items-center justify-between px-2 py-2 rounded-md transition-colors ${isActive
-        ? "bg-brand/10 text-brand dark:bg-brand/10 dark:text-brand"
-        : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+      {}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={handleItemClick}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          triggerRef.current?.click();
+        }}
+        className={`group flex items-center justify-between px-2 py-2 rounded-md transition-colors cursor-pointer ${
+          isActive
+            ? "bg-brand/10 text-brand dark:bg-brand/10 dark:text-brand"
+            : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
         }`}
-    >
-      <div className="flex items-center gap-2 min-w-0">
-        {channel.visibility === "PRIVATE" ? (
-          <Lock className="h-4 w-4 shrink-0 opacity-70" />
-        ) : (
-          <Hash className="h-4 w-4 shrink-0 opacity-70" />
-        )}
-        <span className={`truncate text-sm leading-snug ${isUnread && !isActive ? 'font-bold text-foreground' : 'font-medium'}`}>
-          {channel.name}
-        </span>
-      </div>
+      >
+        {}
+        <div className="flex items-center gap-2 min-w-0">
+          {channel.visibility === "PRIVATE" ? (
+            <Lock className="h-4 w-4 shrink-0 opacity-70" />
+          ) : (
+            <Hash className="h-4 w-4 shrink-0 opacity-70" />
+          )}
+          <span className={`truncate text-sm leading-snug ${isUnread && !isActive ? "font-bold text-foreground" : "font-medium"}`}>
+            {channel.name}
+          </span>
+        </div>
 
-      <div className="flex items-center gap-1 shrink-0">
-        {isUnread && !isActive && (
-          <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-white text-[12px] font-bold leading-none">
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </div>
-        )}
-        
-        <DropdownMenu>
-          <DropdownMenuTrigger className={`p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/10 dark:hover:bg-white/10 focus-visible:outline-none ${isActive ? 'opacity-100' : ''}`}>
-            <MoreVertical className="h-3.5 w-3.5" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 border shadow-md">
-            <DropdownMenuItem onClick={handleSettingsClick} className="cursor-pointer">
-              <Settings className="h-4 w-4 mr-2" />
-              Channel Settings
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleRenameClick} className="cursor-pointer">
-              <Edit2 className="h-4 w-4 mr-2" />
-              Rename Channel
-            </DropdownMenuItem>
-            {canManage && (
-              <DropdownMenuItem onClick={handleManageMembersClick} className="cursor-pointer">
-                <Users className="h-4 w-4 mr-2" />
-                Manage Members
+        {}
+        <div
+          className="flex items-center gap-1 shrink-0"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {isUnread && !isActive && (
+            <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-white text-[12px] font-bold leading-none">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </div>
+          )}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <button
+                  ref={triggerRef}
+                  className={`p-1 rounded transition-opacity focus-visible:outline-none hover:bg-black/10 dark:hover:bg-white/10 ${
+                    isActive ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"
+                  }`}
+                />
+              }
+            >
+              <MoreVertical className="h-3.5 w-3.5" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 border shadow-md">
+              <DropdownMenuItem onClick={handleSettingsClick} className="cursor-pointer">
+                <Settings className="h-4 w-4 mr-2" />
+                Channel Settings
               </DropdownMenuItem>
-            )}
-            {!isGeneral && canManage && (
-              <>
-                <DropdownMenuItem onClick={handleVisibilityClick} className="cursor-pointer">
-                  {channel.visibility === "PRIVATE" ? (
-                    <>
-                      <Globe className="h-4 w-4 mr-2" />
-                      Make Public
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="h-4 w-4 mr-2" />
-                      Make Private
-                    </>
-                  )}
+              <DropdownMenuItem onClick={handleRenameClick} className="cursor-pointer">
+                <Edit2 className="h-4 w-4 mr-2" />
+                Rename Channel
+              </DropdownMenuItem>
+              {canManage && (
+                <DropdownMenuItem onClick={handleManageMembersClick} className="cursor-pointer">
+                  <Users className="h-4 w-4 mr-2" />
+                  Manage Members
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleDeleteClick} className="text-destructive focus:text-destructive cursor-pointer">
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Channel
-                </DropdownMenuItem>
-              </>
-            )}
-            {!isGeneral && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLeaveClick} className="text-destructive focus:text-destructive cursor-pointer">
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Leave Channel
-                </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              )}
+              {!isGeneral && canManage && (
+                <>
+                  <DropdownMenuItem onClick={handleVisibilityClick} className="cursor-pointer">
+                    {channel.visibility === "PRIVATE" ? (
+                      <>
+                        <Globe className="h-4 w-4 mr-2" />
+                        Make Public
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="h-4 w-4 mr-2" />
+                        Make Private
+                      </>
+                    )}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleDeleteClick} className="text-destructive focus:text-destructive cursor-pointer">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Channel
+                  </DropdownMenuItem>
+                </>
+              )}
+              {!isGeneral && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLeaveClick} className="text-destructive focus:text-destructive cursor-pointer">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Leave Channel
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
-      </Link>
 
-      {/* Rename Dialog */}
+      {}
       <Dialog open={modalType === "rename"} onOpenChange={handleCloseModal}>
         <DialogContent size="sm" elevation="md" fullscreenMobile>
           <DialogHeader>
             <DialogTitle>Rename Channel</DialogTitle>
-            <DialogDescription>
-              Give this channel a new name for everyone.
-            </DialogDescription>
+            <DialogDescription>Give this channel a new name for everyone.</DialogDescription>
           </DialogHeader>
           <form id="rename-channel-form" onSubmit={confirmRename}>
             <DialogBody>
@@ -270,7 +308,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
         </DialogContent>
       </Dialog>
 
-      {/* Delete Dialog */}
+      {}
       <Dialog open={modalType === "delete"} onOpenChange={handleCloseModal}>
         <DialogContent size="sm" elevation="md" fullscreenMobile>
           <DialogHeader>
@@ -281,7 +319,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
           </DialogHeader>
           <DialogBody>
             <p className="text-sm text-muted-foreground">
-              All messages in this channel will be permanently deleted. This action cannot be undone.
+              All messages in this channel will be permanently deleted.
             </p>
           </DialogBody>
           <DialogFooter>
@@ -293,7 +331,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
         </DialogContent>
       </Dialog>
 
-      {/* Manage Members Modal */}
+      {}
       <ManageChannelMembersModal
         workspaceId={workspaceId}
         channelId={channel.id}
@@ -301,21 +339,21 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
         onOpenChange={handleCloseModal}
       />
 
-      {/* Visibility Dialog */}
+      {}
       <Dialog open={modalType === "visibility"} onOpenChange={handleCloseModal}>
         <DialogContent size="sm" elevation="md" fullscreenMobile>
           <DialogHeader>
             <DialogTitle>Change Visibility</DialogTitle>
             <DialogDescription>
-              Are you sure you want to make #{channel.name} {channel.visibility === "PRIVATE" ? "public" : "private"}?
+              Are you sure you want to make #{channel.name}{" "}
+              {channel.visibility === "PRIVATE" ? "public" : "private"}?
             </DialogDescription>
           </DialogHeader>
           <DialogBody>
             <p className="text-sm text-muted-foreground">
               {channel.visibility === "PRIVATE"
                 ? "Anyone in the workspace will be able to see and join this channel."
-                : "Only current members will be able to see this channel. New members won't be added automatically."
-              }
+                : "Only current members will be able to see this channel."}
             </p>
           </DialogBody>
           <DialogFooter>
@@ -334,7 +372,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
         onClose={closeModals}
       />
 
-      {/* Leave Channel Dialog */}
+      {}
       <Dialog open={modalType === "leave"} onOpenChange={handleCloseModal}>
         <DialogContent size="sm" elevation="md" fullscreenMobile>
           <DialogHeader>
