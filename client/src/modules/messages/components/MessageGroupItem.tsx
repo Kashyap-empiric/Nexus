@@ -63,7 +63,6 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
     }
   }, [editingMessageId]);
 
-  // Cleanup long press timer on unmount
   useEffect(() => {
     return () => {
       if (longPressTimerRef.current) {
@@ -151,7 +150,6 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
       const touch = e.touches[0];
       const dx = Math.abs(touch.clientX - touchStartPosRef.current.x);
       const dy = Math.abs(touch.clientY - touchStartPosRef.current.y);
-      // Cancel long press if finger moved more than 10px (scrolling)
       if (dx > 10 || dy > 10) {
         clearLongPress();
       }
@@ -202,7 +200,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
               </div>
 
               <div className="flex-1 min-w-0 ml-2">
-                {/* Reply quote block — shown above the username for the first message */}
+                {}
                 {isFirst && msg.replyTo && !isDeleted && (
                   <button
                     type="button"
@@ -285,7 +283,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                             <span className="italic text-muted-foreground">This message was deleted.</span>
                           ) : (
                             <>
-                              {/* Reply quote block — for non-first messages (no username header above) */}
+                              {}
                               {!isFirst && msg.replyTo && !isDeleted && (
                                 <button
                                   type="button"
@@ -331,13 +329,13 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                           )}
                         </span>
 
-                        {/* Desktop hover actions: Reply + Copy for everyone; Edit/Delete/More for own messages */}
+                        {}
                         {!isDeleted && !msg.pending && !msg.optimistic && (
                           <div className="hidden md:inline-flex opacity-0 scale-95 group-hover/row:opacity-100 group-hover/row:scale-100 transition-all duration-150 absolute top-0 right-2 md:right-auto md:ml-2 bg-card border border-border/60 shadow-md rounded-lg z-10 items-center overflow-hidden">
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60"
+                              className="h-9 w-9 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60 hover:ring-1 hover:ring-ring"
                               onClick={() => onReply?.(msg.id, user?.username || "Unknown", msg.content)}
                               title="Reply"
                             >
@@ -352,7 +350,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60"
+                              className="h-9 w-9 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60 hover:ring-1 hover:ring-ring"
                               onClick={() => navigator.clipboard.writeText(msg.content)}
                               title="Copy"
                             >
@@ -363,7 +361,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60"
+                                  className="h-9 w-9 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60 hover:ring-1 hover:ring-ring"
                                   onClick={() => handleEditStart(msg.id, msg.content)}
                                 >
                                   <Pencil className="h-3.5 w-3.5" />
@@ -371,7 +369,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 rounded-none text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                  className="h-9 w-9 rounded-none text-muted-foreground hover:text-destructive hover:bg-destructive/10 hover:ring-1 hover:ring-ring"
                                   onClick={() => setMessageToDelete(msg.id)}
                                 >
                                   <Trash className="h-3.5 w-3.5" />
@@ -417,7 +415,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
-                        )}                        {/* Mobile dropdown: Reply, Copy, Pin, Edit/Delete for own messages */}
+                        )}                        {}
                         {!isDeleted && !msg.pending && !msg.optimistic && (
                           <div className="md:hidden">
                             <DropdownMenu>
@@ -487,7 +485,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Shared cursor-positioned context menu (right-click) */}
+      {}
       {openMenuId && contextMenuTarget && (
         <DropdownMenu
           open={true}

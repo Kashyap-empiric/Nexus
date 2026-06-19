@@ -12,14 +12,12 @@ interface TypingIndicatorProps {
 }
 
 export function TypingIndicator({ conversationId, currentUserId, className }: TypingIndicatorProps) {
-  // Subscribe only to the typing users for this specific conversation
   const conversationTyping = useSocketStore(
     (state) => state.typingUsers.get(conversationId)
   );
 
   if (!conversationTyping || conversationTyping.size === 0) return null;
 
-  // Filter out current user and expired entries
   const now = Date.now();
   const activeTypers = Array.from(conversationTyping.values()).filter(
     (u) => u.userId !== currentUserId && now - u.timestamp < TYPING_EXPIRY_MS

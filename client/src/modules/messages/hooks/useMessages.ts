@@ -29,7 +29,6 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
       return new Promise<Message>((resolve, reject) => {
         socket.emit(SOCKET_EVENTS.MESSAGE_SEND, { conversationId, content, tempId, replyToId }, (response: SocketResponse<Message>) => {
           if (response?.error) {
-            // error can be a string (rate limiter) or a structured object { code, message, retryable }
             const errorMsg = typeof response.error === 'string'
               ? response.error
               : response.error.message || "Failed to send message";
@@ -78,7 +77,6 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
         };
       });
 
-      // Optimistically update the conversations list to bring it to top
       queryClient.setQueryData<Conversation[]>(queryKeys.conversations, (old) => {
         if (!Array.isArray(old)) return old;
         return old.map((conv) => {

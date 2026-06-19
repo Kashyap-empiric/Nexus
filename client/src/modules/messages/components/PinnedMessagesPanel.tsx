@@ -110,11 +110,11 @@ export function PinnedMessagesPanel({ conversationId }: PinnedMessagesPanelProps
             />
           )}
           <div className="flex-1 min-w-0">
-            <div className="flex items-baseline gap-2">
-              <span className="text-sm font-semibold text-foreground">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-sm font-semibold text-foreground truncate">
                 {pin.message.user?.username || "Deleted user"}
               </span>
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-[11px] text-muted-foreground shrink-0 whitespace-nowrap">
                 {new Intl.DateTimeFormat("en-US", {
                   month: "short",
                   day: "numeric",

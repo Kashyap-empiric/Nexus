@@ -27,28 +27,21 @@ export function NotificationSettings() {
   const handleToggle = async (key: "pushEnabled" | "dmNotifications" | "mentionNotifications" | "channelNotifications") => {
     if (!preferences) return;
 
-    // Non-push toggles can be updated directly
     if (key !== "pushEnabled") {
       update({ [key]: !preferences[key] });
       return;
     }
 
-    // For push toggles, sequence operations to avoid race conditions:
-    // 1. First try the browser subscription/unsubscription
-    // 2. Only persist to server if the browser operation succeeds
     if (actualPushEnabled) {
-      // Turning OFF: unsubscribe from browser first, then persist
       await unsubscribeFromPush();
       setActualPushEnabled(false);
       await updateAsync({ pushEnabled: false });
     } else {
-      // Turning ON: subscribe to browser push first, then persist
       const sub = await subscribeToPush();
       if (sub) {
         setActualPushEnabled(true);
         await updateAsync({ pushEnabled: true });
       }
-      // If subscription fails, don't update the server — preference stays false
     }
   };
 
@@ -62,7 +55,7 @@ export function NotificationSettings() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {}
       <div>
         <h3 className="text-lg font-medium">Notifications</h3>
         <p className="text-sm text-muted-foreground">
@@ -71,7 +64,7 @@ export function NotificationSettings() {
       </div>
 
       <div className="space-y-6">
-        {/* Push Notifications toggle */}
+        {}
         <div className="space-y-3">
           <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
             Push Notifications
@@ -87,7 +80,7 @@ export function NotificationSettings() {
           </div>
         </div>
 
-        {/* Notification Type toggles (next level) */}
+        {}
         <div className="space-y-3">
           <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
             Notification Types

@@ -52,12 +52,11 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
     fetchNextPage,
   });
 
-  // Mark conversation as read when entering or when new messages arrive
   useEffect(() => {
     if (!latestMessageId) return;
     if (latestMessage?.pending) return;
     if (myLastReadMessageId && latestMessageId <= myLastReadMessageId) return;
-    if (isLatestMessageMine) return; // Prevent redundant API call if we sent the message
+    if (isLatestMessageMine) return; 
 
     markRead({
       conversationId,
@@ -67,34 +66,25 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
 
 
 
-  // Track whether we've already scrolled to the current highlightMessageId
-  // Without this, re-renders caused by new messages (data changes) would re-trigger the scroll
   const highlightHandledRef = useRef<string | null>(null);
 
-  // Scroll to and highlight a message when highlightMessageId is provided
   useEffect(() => {
     if (!highlightMessageId || isFetchingNextPage || isLoading) return;
 
-    // Only scroll once per highlightMessageId — don't re-scroll on subsequent data changes
     if (highlightHandledRef.current === highlightMessageId) return;
 
-    // Wait a tick for the DOM to render
     const timer = setTimeout(() => {
       const el = document.getElementById(`msg-${highlightMessageId}`);
       if (!el) return;
 
       el.scrollIntoView({ behavior: "smooth", block: "center" });
 
-      // Remove highlight from any previously highlighted message
       document.querySelectorAll(".highlight-message").forEach((e) => e.classList.remove("highlight-message"));
 
-      // Add highlight that fades out over 1.5s
       el.classList.add("highlight-message");
 
-      // Mark as handled so future data changes won't re-scroll
       highlightHandledRef.current = highlightMessageId;
 
-      // Remove the highlight param from the URL so a page refresh doesn't re-highlight
       const url = new URL(window.location.href);
       if (url.searchParams.has("highlight")) {
         url.searchParams.delete("highlight");
@@ -186,7 +176,7 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
             );
           })}
 
-          {/* Typing indicator */}
+          {}
           <TypingIndicator
             conversationId={conversationId}
             currentUserId={currentUserId}
@@ -196,7 +186,7 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
         </div>
       </div>
 
-      {/* Jump to bottom button */}
+      {}
       {!isAtBottom && (
         <div className="absolute bottom-2 right-4 md:right-8 z-10 animate-in fade-in zoom-in-95 duration-200">
           <Button

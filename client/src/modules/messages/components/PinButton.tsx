@@ -13,7 +13,6 @@ export function PinButton({ conversationId, messageId, isPinned, canPin = true }
   const pinMutation = usePinMessage(conversationId);
   const unpinMutation = useUnpinMessage(conversationId);
 
-  // Must come after all hooks to comply with React's Rules of Hooks
   if (!canPin) return null;
 
   const handleClick = () => {

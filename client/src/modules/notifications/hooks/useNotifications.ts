@@ -18,7 +18,7 @@ export const useUnreadCount = () => {
   return useQuery({
     queryKey: queryKeys.unreadCount,
     queryFn: () => notificationsApi.getUnreadCount().then((r) => r.count),
-    refetchInterval: 30000, // Poll every 30s as fallback
+    refetchInterval: 30000, 
   });
 };
 
@@ -28,13 +28,10 @@ export const useMarkAsRead = () => {
   return useMutation({
     mutationFn: (id: string) => notificationsApi.markAsRead(id),
     onMutate: async (id: string) => {
-      // Cancel any in-flight unread count refetches so they don't overwrite
       await queryClient.cancelQueries({ queryKey: queryKeys.unreadCount });
 
-      // Snapshot the previous value for rollback
       const previousCount = queryClient.getQueryData<number>(queryKeys.unreadCount);
 
-      // Optimistically decrement the unread count (floor at 0)
       queryClient.setQueryData<number>(
         queryKeys.unreadCount,
         (old) => Math.max((old ?? 1) - 1, 0)
@@ -43,13 +40,11 @@ export const useMarkAsRead = () => {
       return { previousCount };
     },
     onError: (_err, _id, context) => {
-      // Roll back to the previous count on failure
       if (context?.previousCount !== undefined) {
         queryClient.setQueryData(queryKeys.unreadCount, context.previousCount);
       }
     },
     onSettled: () => {
-      // Refetch to sync with server state
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
       queryClient.invalidateQueries({ queryKey: queryKeys.unreadCount });
     },
@@ -62,25 +57,20 @@ export const useMarkAllAsRead = () => {
   return useMutation({
     mutationFn: () => notificationsApi.markAllAsRead(),
     onMutate: async () => {
-      // Cancel any in-flight unread count refetches
       await queryClient.cancelQueries({ queryKey: queryKeys.unreadCount });
 
-      // Snapshot the previous value for rollback
       const previousCount = queryClient.getQueryData<number>(queryKeys.unreadCount);
 
-      // Optimistically set unread count to 0
       queryClient.setQueryData<number>(queryKeys.unreadCount, 0);
 
       return { previousCount };
     },
     onError: (_err, _vars, context) => {
-      // Roll back to the previous count on failure
       if (context?.previousCount !== undefined) {
         queryClient.setQueryData(queryKeys.unreadCount, context.previousCount);
       }
     },
     onSettled: () => {
-      // Refetch to sync with server state
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
       queryClient.invalidateQueries({ queryKey: queryKeys.unreadCount });
     },
@@ -98,13 +88,10 @@ export const useNotificationPreferences = () => {
   const updateMutation = useMutation({
     mutationFn: (prefs: Partial<NotificationPreference>) => notificationsApi.updatePreferences(prefs),
     onMutate: async (newPrefs) => {
-      // Cancel in-flight refetches so they don't overwrite our optimistic update
       await queryClient.cancelQueries({ queryKey: queryKeys.notificationPreferences });
 
-      // Snapshot previous value for rollback
       const previousPrefs = queryClient.getQueryData<NotificationPreference>(queryKeys.notificationPreferences);
 
-      // Optimistically update the cache so the toggle responds immediately
       queryClient.setQueryData<NotificationPreference>(
         queryKeys.notificationPreferences,
         (old) => old ? { ...old, ...newPrefs } : old
@@ -113,13 +100,11 @@ export const useNotificationPreferences = () => {
       return { previousPrefs };
     },
     onError: (_err, _newPrefs, context) => {
-      // Rollback on failure
       if (context?.previousPrefs) {
         queryClient.setQueryData(queryKeys.notificationPreferences, context.previousPrefs);
       }
     },
     onSettled: () => {
-      // Refetch to sync with server state
       queryClient.invalidateQueries({ queryKey: queryKeys.notificationPreferences });
     },
   });

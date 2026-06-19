@@ -1,4 +1,4 @@
-import { Mail, CheckCircle, UserPlus, Hash, Bell, UserMinus, MessageSquareReply } from "lucide-react";
+import { Mail, CheckCircle, UserPlus, Hash, Bell, UserMinus, MessageSquareReply, UserCheck, ShieldAlert, Trash2 } from "lucide-react";
 
 export function timeAgo(dateStr: string): string {
   const now = Date.now();
@@ -32,7 +32,6 @@ export function formatNotificationTime(dateStr: string): string {
     return timeStr;
   }
 
-  // Check if yesterday
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
   const isYesterday =
@@ -44,7 +43,6 @@ export function formatNotificationTime(dateStr: string): string {
     return `Yesterday ${timeStr}`;
   }
 
-  // For older dates, show "Mon DD at time"
   const formattedDate = date.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
@@ -58,8 +56,12 @@ export function NotificationIcon({ type }: { type: string }) {
     INVITE_ACCEPTED: <CheckCircle className="h-4 w-4 text-green-500" />,
     MEMBER_JOINED: <UserPlus className="h-4 w-4 text-brand" />,
     CHANNEL_CREATED: <Hash className="h-4 w-4 text-muted-foreground" />,
+    CHANNEL_MEMBER_ADDED: <UserCheck className="h-4 w-4 text-brand" />,
+    CHANNEL_MEMBER_REMOVED: <UserMinus className="h-4 w-4 text-destructive" />,
     MEMBER_REMOVED: <UserMinus className="h-4 w-4 text-destructive" />,
     MESSAGE_REPLIED: <MessageSquareReply className="h-4 w-4 text-brand" />,
+    ROLE_CHANGED: <ShieldAlert className="h-4 w-4 text-amber-500" />,
+    WORKSPACE_DELETED: <Trash2 className="h-4 w-4 text-destructive" />,
   };
   return <div className="mr-3 shrink-0 flex items-center justify-center mt-0.5 text-muted-foreground">{iconMap[type] || <Bell className="h-4 w-4" />}</div>;
 }

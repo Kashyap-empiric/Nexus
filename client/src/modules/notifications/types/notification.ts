@@ -3,8 +3,11 @@ export type NotificationType =
   | "INVITE_ACCEPTED"
   | "MEMBER_JOINED"
   | "CHANNEL_CREATED"
+  | "CHANNEL_MEMBER_ADDED"
+  | "CHANNEL_MEMBER_REMOVED"
   | "MEMBER_REMOVED"
   | "MESSAGE_REPLIED"
+  | "ROLE_CHANGED"
   | "WORKSPACE_DELETED";
 
 export interface Notification {

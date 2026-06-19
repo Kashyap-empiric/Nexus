@@ -32,7 +32,6 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
   const { theme } = useTheme();
   const { mutate: sendMessage } = useSendMessageMutation(conversationId, currentUser);
 
-  // Typing indicator state
   const isTypingRef = useRef(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const TYPING_STOP_TIMEOUT_MS = 1500;
@@ -53,15 +52,10 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
   }, [conversationId]);
 
   const handleTypingActivity = useCallback(() => {
-    // Only emit typing:start on the first keystroke after inactivity.
-    // Subsequent keystrokes within the same typing session are debounced —
-    // emitTypingStart already guards against duplicate emissions via isTypingRef.
     if (!isTypingRef.current) {
       emitTypingStart();
     }
 
-    // Debounce typing:stop — reset timer on every keystroke.
-    // The stop event only fires after the user stops typing for 1.5s.
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
@@ -70,7 +64,6 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
     }, TYPING_STOP_TIMEOUT_MS);
   }, [emitTypingStart, emitTypingStop]);
 
-  // Clean up typing state on unmount
   useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -81,13 +74,11 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
   const submitMessage = () => {
     if (!editor) return;
     
-    // We get standard Markdown back from TipTap!
     // @ts-ignore - tiptap-markdown doesn't provide strong types for storage by default
     const markdownContent = editor.storage.markdown.getMarkdown();
     
     if (!markdownContent.trim()) return;
 
-    // Stop typing on send
     emitTypingStop();
 
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -145,7 +136,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
         emptyEditorClass: 'is-editor-empty',
       }),
       Markdown.configure({
-        html: false, // only parse/serialize standard markdown, not raw HTML
+        html: false, 
         transformPastedText: true,
         transformCopiedText: true,
       }),
@@ -174,13 +165,10 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
 
         if (event.key === 'Enter') {
           if (isMobile) {
-            // On mobile, Enter adds a newline (let TipTap handle it)
             return false;
           }
 
-          // On desktop, Enter sends, Shift+Enter adds newline
           if (!event.shiftKey) {
-            // Don't send on Enter inside lists — let TipTap create new list items
             if (editor?.isActive('bulletList') || editor?.isActive('orderedList')) {
               return false;
             }
@@ -194,7 +182,6 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
     },
   });
 
-  // Keep editor's editable state synced with disabled prop
   useEffect(() => {
     if (editor && editor.isEditable === disabled) {
       editor.setEditable(!disabled);
@@ -213,10 +200,9 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
   };
 
   if (!editor) {
-    return null; // Or a loading skeleton
+    return null; 
   }
 
-  // To toggle states efficiently and prevent getting "stuck" due to schema exclusions (code excludes bold/italic)
   const toggleBold = () => {
     if (editor.isActive('code')) {
       editor.chain().focus().unsetCode().toggleBold().run();
@@ -242,7 +228,6 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
   };
 
   const toggleCode = () => {
-    // Code excludes other marks, so if we're turning it ON, we clear the others
     if (!editor.isActive('code')) {
       editor.chain().focus().unsetBold().unsetItalic().unsetStrike().toggleCode().run();
     } else {
@@ -263,7 +248,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
 
   return (
     <form onSubmit={handleSubmit} className="px-4 md:px-6 xl:px-8 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:pb-6 pt-2 bg-background shrink-0 w-full">
-      {/* Reply banner */}
+      {}
       {replyingTo && (
         <div className="flex items-center gap-2 px-3 py-2 mb-1 bg-muted/50 border border-border rounded-t-lg text-sm">
           <Reply className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -285,7 +270,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
 
       <div className="w-full flex flex-col bg-card dark:bg-card border border-border/60 rounded-xl shadow-sm transition-colors focus-within:ring-1 focus-within:ring-brand/30 focus-within:border-brand/40 overflow-hidden">
         
-        {/* Toolbar Row */}
+        {}
         <div className="flex items-center gap-1 px-4 pt-3 pb-1 text-muted-foreground">
           <button type="button" onClick={toggleBold} className={`p-1.5 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.bold ? activeClass : ''}`} title="Bold">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 12a4 4 0 0 0 0-8H6v8"/><path d="M15 20a4 4 0 0 0 0-8H6v8Z"/></svg>
@@ -341,10 +326,10 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
               />
             </PopoverContent>
           </Popover>
-          {/* Attachment icon removed per request */}
+          {}
         </div>
 
-        {/* TipTap Editor and Send Button */}
+        {}
         <div className="flex items-end w-full pl-4 pr-3 py-2 gap-2">
           <div className="flex-1 min-w-0 relative cursor-text" onClick={() => editor.commands.focus()}>
             <EditorContent editor={editor} className="w-full" />

@@ -35,8 +35,6 @@ function NotificationItem({
       onMarkRead(notification.id);
     }
     if (notification.link) {
-      // Pre-set sidebar state so the sidebar renders with the correct
-      // mode/highlight on the very first frame after navigation
       presetNavigationFromLink(notification.link);
       router.push(notification.link);
     }
@@ -184,7 +182,7 @@ export function BellPopover() {
   const [activeTab, setActiveTab] = useState<Tab>("invites");
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const INVITE_TYPES = "INVITE_RECEIVED,INVITE_ACCEPTED,MEMBER_JOINED,CHANNEL_CREATED,MEMBER_REMOVED";
+  const INVITE_TYPES = "INVITE_RECEIVED,INVITE_ACCEPTED,MEMBER_JOINED,CHANNEL_CREATED,CHANNEL_MEMBER_ADDED,CHANNEL_MEMBER_REMOVED,MEMBER_REMOVED,ROLE_CHANGED,WORKSPACE_DELETED";
 
   const { data: unreadCount = 0 } = useUnreadCount();
   const {
@@ -211,12 +209,29 @@ export function BellPopover() {
     [invitesData]
   );
 
-  const activeNotifications = activeTab === "replies" ? replies : invites;
-  const activeFetchMore = activeTab === "replies" ? fetchMoreReplies : fetchMoreInvites;
-  const activeHasMore = activeTab === "replies" ? hasMoreReplies : hasMoreInvites;
-  const activeIsLoadingMore = activeTab === "replies" ? isLoadingMoreReplies : isLoadingMoreInvites;
+  const notificationMap: Record<Tab, Notification[]> = {
+    replies,
+    invites,
+  };
 
-  // Compute unread counts per tab
+  const activeNotifications = notificationMap[activeTab];
+  const fetchMoreMap: Record<Tab, () => void> = {
+    replies: fetchMoreReplies,
+    invites: fetchMoreInvites,
+  };
+  const hasMoreMap: Record<Tab, boolean> = {
+    replies: hasMoreReplies ?? false,
+    invites: hasMoreInvites ?? false,
+  };
+  const isLoadingMoreMap: Record<Tab, boolean> = {
+    replies: isLoadingMoreReplies,
+    invites: isLoadingMoreInvites,
+  };
+
+  const activeFetchMore = fetchMoreMap[activeTab];
+  const activeHasMore = hasMoreMap[activeTab];
+  const activeIsLoadingMore = isLoadingMoreMap[activeTab];
+
   const repliesUnread = useMemo(
     () => replies.filter((n) => !n.read).length,
     [replies]
@@ -226,7 +241,6 @@ export function BellPopover() {
     [invites]
   );
 
-  // Close on click outside
   useEffect(() => {
     if (!isOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
@@ -243,7 +257,6 @@ export function BellPopover() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
-  // Close on escape
   useEffect(() => {
     if (!isOpen) return;
     const handleEscape = (e: KeyboardEvent) => {
@@ -274,7 +287,7 @@ export function BellPopover() {
           ref={popoverRef}
           className="absolute top-full right-0 mt-2 w-80 bg-popover border rounded-xl shadow-xl overflow-hidden z-50"
         >
-          {/* Header */}
+          {}
           <div className="flex items-center justify-between px-3 py-2.5 border-b">
             <span className="text-sm font-semibold">Notifications</span>
             <div className="flex items-center gap-1">
@@ -290,7 +303,7 @@ export function BellPopover() {
             </div>
           </div>
 
-          {/* Tabs */}
+          {}
           <div className="flex items-center gap-1 px-3 pt-2.5 pb-2 border-b">
             <TabButton
               active={activeTab === "invites"}
@@ -308,7 +321,7 @@ export function BellPopover() {
             />
           </div>
 
-          {/* Notification list */}
+          {}
           <div className="max-h-80 overflow-y-auto">
             {activeNotifications.length === 0 ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
@@ -338,7 +351,7 @@ export function BellPopover() {
             )}
           </div>
 
-          {/* Footer */}
+          {}
           {unreadCount > 0 && (
             <div className="border-t p-2">
               <button
