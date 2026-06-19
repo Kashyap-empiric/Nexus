@@ -5,14 +5,18 @@ import 'dotenv/config'
 import { ENV } from '@/config/env.js'
 import { prisma } from '@/lib/db'
 
+if (!ENV.SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('SUPABASE_SERVICE_ROLE_KEY is required to run the seed script')
+  process.exit(1)
+}
+
 const supabase = createClient(
   ENV.SUPABASE_URL,
-  ENV.SUPABASE_SERVICE_ROLE_KEY, // service role — never expose client-side
+  ENV.SUPABASE_SERVICE_ROLE_KEY,
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
 async function main() {
-  // 1. Create or fetch two users via Supabase Auth
   let aliceId: string
   const { data: authUser1, error: err1 } = await supabase.auth.admin.createUser({
     email: 'alice@example.com',
@@ -47,7 +51,6 @@ async function main() {
     bobId = authUser2.user!.id
   }
 
-  // Ensure they exist in public.User (fallback in case the Postgres trigger is missing/delayed)
   await prisma.user.upsert({
     where: { id: aliceId },
     update: {},
@@ -59,7 +62,6 @@ async function main() {
     create: { id: bobId, email: 'bob@example.com', username: 'bob' }
   })
 
-  // 2. Create a DM conversation between them
   const conversationId = uuidv7()
   await prisma.conversation.create({
     data: {
@@ -82,7 +84,6 @@ async function main() {
     },
   })
 
-  // 3. Seed some messages
   const messages = [
     { id: uuidv7(), userId: aliceId, content: 'Hey Bob! How are you?' },
     { id: uuidv7(), userId: bobId, content: 'Hey Alice! Doing great, you?' },
