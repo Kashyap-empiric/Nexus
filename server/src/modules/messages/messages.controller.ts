@@ -1,10 +1,11 @@
-import type { Response } from "express";
+import type { Response, NextFunction } from "express";
 import type { AuthRequest } from "@/types/shared.js";
+import { AppError } from "@/lib/app-error.js";
 import * as messagesService from "./messages.service.js";
 import { getMessagesQuerySchema, type CreateMessageBody, type GetMessagesQuery, type UpdateMessageBody, type SearchMessagesQuery } from "./messages.schema.js";
 import { dispatchMessageEvent } from "@/socket/socket.dispatcher.js";
 
-export const pinMessage = async (req: AuthRequest, res: Response): Promise<void> => {
+export const pinMessage = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { conversationId, messageId } = req.params as { conversationId: string; messageId: string };
@@ -12,17 +13,17 @@ export const pinMessage = async (req: AuthRequest, res: Response): Promise<void>
     const pin = await messagesService.pinMessage(messageId, conversationId, userId);
 
     res.status(201).json({ data: pin });
-  } catch (error: any) {
-    console.error("Error pinning message:", error);
-    if (error.message === "Message not found." || error.message === "Message is already pinned." || error.message === "Message does not belong to this conversation.") {
-      res.status(400).json({ error: error.message });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
       return;
     }
+    console.error("Error pinning message:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const unpinMessage = async (req: AuthRequest, res: Response): Promise<void> => {
+export const unpinMessage = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { conversationId, messageId } = req.params as { conversationId: string; messageId: string };
@@ -30,12 +31,12 @@ export const unpinMessage = async (req: AuthRequest, res: Response): Promise<voi
     const result = await messagesService.unpinMessage(messageId, conversationId, userId);
 
     res.json({ data: result });
-  } catch (error: any) {
-    console.error("Error unpinning message:", error);
-    if (error.message === "Message is not pinned.") {
-      res.status(400).json({ error: error.message });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
       return;
     }
+    console.error("Error unpinning message:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -120,7 +121,7 @@ export const createMessage = async (req: AuthRequest, res: Response): Promise<vo
   }
 };
 
-export const updateMessage = async (req: AuthRequest, res: Response): Promise<void> => {
+export const updateMessage = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { conversationId, messageId } = req.params as { conversationId: string; messageId: string };
@@ -137,21 +138,17 @@ export const updateMessage = async (req: AuthRequest, res: Response): Promise<vo
     res.json({
       data: message,
     });
-  } catch (error: any) {
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
+      return;
+    }
     console.error("Error updating message:", error);
-    if (error.message === "403 Forbidden") {
-      res.status(403).json({ error: "Forbidden" });
-      return;
-    }
-    if (error.message === "Message not found." || error.message === "Cannot edit a deleted message." || error.message === "Message does not belong to this conversation.") {
-      res.status(400).json({ error: error.message });
-      return;
-    }
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const deleteMessage = async (req: AuthRequest, res: Response): Promise<void> => {
+export const deleteMessage = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { conversationId, messageId } = req.params as { conversationId: string; messageId: string };
@@ -167,16 +164,12 @@ export const deleteMessage = async (req: AuthRequest, res: Response): Promise<vo
     res.json({
       data: message,
     });
-  } catch (error: any) {
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
+      return;
+    }
     console.error("Error deleting message:", error);
-    if (error.message === "403 Forbidden") {
-      res.status(403).json({ error: "Forbidden" });
-      return;
-    }
-    if (error.message === "Message not found." || error.message === "Message is already deleted." || error.message === "Message does not belong to this conversation.") {
-      res.status(400).json({ error: error.message });
-      return;
-    }
     res.status(500).json({ error: "Internal server error" });
   }
 };

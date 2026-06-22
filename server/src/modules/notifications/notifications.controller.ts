@@ -135,6 +135,9 @@ export const getPreferences = async (req: AuthRequest, res: Response): Promise<v
         dmNotifications: true,
         mentionNotifications: true,
         channelNotifications: true,
+        inviteNotifications: true,
+        replyNotifications: true,
+        workspaceActivityNotifications: true,
       }
     });
     
@@ -143,6 +146,9 @@ export const getPreferences = async (req: AuthRequest, res: Response): Promise<v
       dmNotifications: user?.dmNotifications ?? true,
       mentionNotifications: user?.mentionNotifications ?? true,
       channelNotifications: user?.channelNotifications ?? false,
+      inviteNotifications: user?.inviteNotifications ?? true,
+      replyNotifications: user?.replyNotifications ?? true,
+      workspaceActivityNotifications: user?.workspaceActivityNotifications ?? true,
     });
   } catch (error) {
     console.error("Error fetching preferences:", error);
@@ -163,6 +169,9 @@ export const updatePreferences = async (req: AuthRequest, res: Response): Promis
       dmNotifications?: boolean;
       mentionNotifications?: boolean;
       channelNotifications?: boolean;
+      inviteNotifications?: boolean;
+      replyNotifications?: boolean;
+      workspaceActivityNotifications?: boolean;
     };
 
     const dataToUpdate: Record<string, boolean> = {};
@@ -170,6 +179,9 @@ export const updatePreferences = async (req: AuthRequest, res: Response): Promis
     if (prefs.dmNotifications !== undefined) dataToUpdate.dmNotifications = prefs.dmNotifications;
     if (prefs.mentionNotifications !== undefined) dataToUpdate.mentionNotifications = prefs.mentionNotifications;
     if (prefs.channelNotifications !== undefined) dataToUpdate.channelNotifications = prefs.channelNotifications;
+    if (prefs.inviteNotifications !== undefined) dataToUpdate.inviteNotifications = prefs.inviteNotifications;
+    if (prefs.replyNotifications !== undefined) dataToUpdate.replyNotifications = prefs.replyNotifications;
+    if (prefs.workspaceActivityNotifications !== undefined) dataToUpdate.workspaceActivityNotifications = prefs.workspaceActivityNotifications;
 
     if (Object.keys(dataToUpdate).length > 0) {
       await prisma.user.update({
@@ -185,6 +197,9 @@ export const updatePreferences = async (req: AuthRequest, res: Response): Promis
         dmNotifications: true,
         mentionNotifications: true,
         channelNotifications: true,
+        inviteNotifications: true,
+        replyNotifications: true,
+        workspaceActivityNotifications: true,
       }
     });
 
@@ -193,6 +208,9 @@ export const updatePreferences = async (req: AuthRequest, res: Response): Promis
       dmNotifications: user?.dmNotifications ?? true,
       mentionNotifications: user?.mentionNotifications ?? true,
       channelNotifications: user?.channelNotifications ?? false,
+      inviteNotifications: user?.inviteNotifications ?? true,
+      replyNotifications: user?.replyNotifications ?? true,
+      workspaceActivityNotifications: user?.workspaceActivityNotifications ?? true,
     });
   } catch (error) {
     console.error("Error updating preferences:", error);

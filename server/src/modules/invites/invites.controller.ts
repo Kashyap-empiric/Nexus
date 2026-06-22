@@ -1,12 +1,15 @@
-import { type Response } from "express";
+import { type Response, type NextFunction } from "express";
 import { type Request } from "express";
 import { type AuthRequest } from "../../types/shared.js";
+import { AppError } from "@/lib/app-error.js";
+import { createAndDispatch } from "../notifications/notifications.service.js";
 import { resolveInviteService, generateInviteService, getInviteInfoService, revokeInviteByToken } from "./invites.service.js";
 import { dispatchConversationNew, dispatchMemberUpdate } from "../../socket/socket.dispatcher.js";
 import { getIO } from "../../socket/socket.js";
 import { SOCKET_EVENTS } from "../../shared/socket-events.js";
+import { prisma } from "@/lib/db.js";
 
-export const resolveInvite = async (req: AuthRequest, res: Response): Promise<any> => {
+export const resolveInvite = async (req: AuthRequest, res: Response, next: NextFunction): Promise<any> => {
   const { token } = req.body;
   const userId = req.user?.id;
 
@@ -53,11 +56,13 @@ export const resolveInvite = async (req: AuthRequest, res: Response): Promise<an
     }
 
     res.json({ redirectUrl, alreadyMember: alreadyMember || undefined });
-  } catch (error: any) {
-    if (error.message === "INVALID_OR_EXPIRED_INVITE") {
-      return res.status(400).json({ error: "INVALID_OR_EXPIRED_INVITE" });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
+      return;
     }
-    return res.status(500).json({ error: "Internal server error" });
+    console.error("[resolveInvite] error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -87,10 +92,27 @@ export const declineInvite = async (req: AuthRequest, res: Response): Promise<an
   }
 
   try {
-    const result = await revokeInviteByToken(token);
+    const invite = await revokeInviteByToken(token);
 
-    if (!result) {
+    if (!invite) {
       return res.status(404).json({ error: "INVITE_NOT_FOUND" });
+    }
+
+    if (invite.createdBy && invite.createdBy !== userId) {
+      const decliner = userId ? await prisma.user.findUnique({ where: { id: userId }, select: { username: true } }) : null;
+      let entityName = "a workspace";
+      if (invite.type === "WORKSPACE") {
+        const workspace = await prisma.workspace.findUnique({ where: { id: invite.entityId }, select: { name: true } });
+        entityName = workspace?.name || "a workspace";
+      }
+
+      createAndDispatch({
+        userId: invite.createdBy,
+        type: "INVITE_DECLINED",
+        title: "Invite declined",
+        body: `${decliner?.username || "Someone"} declined your invite to ${entityName}`,
+        metadata: { token, entityId: invite.entityId },
+      }).catch(err => console.error("[declineInvite] Failed to dispatch INVITE_DECLINED:", err));
     }
 
     console.log(`[declineInvite] ✓ Invite declined  token=${token.substring(0, 8)}...  userId=${userId}`);
@@ -120,7 +142,7 @@ export const getInviteInfo = async (req: Request, res: Response): Promise<any> =
   }
 };
 
-export const generateInvite = async (req: AuthRequest, res: Response): Promise<any> => {
+export const generateInvite = async (req: AuthRequest, res: Response, next: NextFunction): Promise<any> => {
   const { type, entityId } = req.body;
   const userId = req.user?.id;
 
@@ -131,15 +153,10 @@ export const generateInvite = async (req: AuthRequest, res: Response): Promise<a
   try {
     const result = await generateInviteService({ type, entityId, userId });
     return res.json(result);
-  } catch (error: any) {
-    if (error.message === "CONVERSATION_NOT_FOUND") {
-      return res.status(404).json({ error: "Conversation not found" });
-    }
-    if (error.message === "UNAUTHORIZED") {
-      return res.status(403).json({ error: "Not authorized to generate invite for this entity" });
-    }
-    if (error.message === "ENTITY_ID_REQUIRED") {
-      return res.status(400).json({ error: "Entity ID is required for this invite type" });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
+      return;
     }
     console.error("[generateInvite] error:", error);
     return res.status(500).json({ error: "Internal server error" });

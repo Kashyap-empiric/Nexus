@@ -26,14 +26,16 @@ export interface PushPayload {
   tag?: string;
 }
 
-export const sendPushNotification = async (userId: string, payload: PushPayload) => {
+export const sendPushNotification = async (userId: string, payload: PushPayload, force = false) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { pushNotificationsEnabled: true }
-    });
+    if (!force) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { pushNotificationsEnabled: true }
+      });
 
-    if (!user || !user.pushNotificationsEnabled) return;
+      if (!user || !user.pushNotificationsEnabled) return;
+    }
 
     const subscriptions = await getPushSubscriptionsByUserId(userId);
     if (!subscriptions || subscriptions.length === 0) return;
@@ -55,6 +57,12 @@ export const sendPushNotification = async (userId: string, payload: PushPayload)
     let errorCount = 0;
 
     const promises = subscriptions.map(async (sub) => {
+      if (!sub.p256dh || !sub.auth) {
+        console.warn(`[Push] Skipping subscription with missing keys for endpoint: ${sub.endpoint.substring(0, 50)}...`);
+        await deletePushSubscription(sub.endpoint);
+        return;
+      }
+
       const pushSubscription = {
         endpoint: sub.endpoint,
         keys: {
@@ -64,7 +72,10 @@ export const sendPushNotification = async (userId: string, payload: PushPayload)
       };
 
       try {
-        await webpush.sendNotification(pushSubscription, payloadString);
+        await webpush.sendNotification(pushSubscription, payloadString, {
+          TTL: 1800,
+          urgency: "high",
+        });
       } catch (err: unknown) {
         const error = err as { statusCode?: number };
         if (error.statusCode === 410 || error.statusCode === 404) {

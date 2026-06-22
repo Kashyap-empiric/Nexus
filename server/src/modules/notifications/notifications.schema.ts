@@ -26,4 +26,7 @@ export const updatePreferencesSchema = z.object({
   dmNotifications: z.boolean().optional(),
   mentionNotifications: z.boolean().optional(),
   channelNotifications: z.boolean().optional(),
+  inviteNotifications: z.boolean().optional(),
+  replyNotifications: z.boolean().optional(),
+  workspaceActivityNotifications: z.boolean().optional(),
 });

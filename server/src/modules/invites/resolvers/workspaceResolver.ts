@@ -38,41 +38,54 @@ export const workspaceInviteResolver: InviteResolver = {
     const { generalChannelId } = await workspacesRepo.onboardUserToWorkspaceInTransaction(tx as any, workspaceId, actorId);
 
     try {
-      const workspaceMembers = await tx.workspaceMember.findMany({
-        where: { workspaceId, userId: { not: actorId } },
-        select: { userId: true },
-      });
-
       const joiner = await tx.user.findUnique({
         where: { id: actorId },
         select: { id: true, username: true, avatarUrl: true },
       });
 
-      if (joiner && workspaceMembers.length > 0) {
-        const generalChannel = await tx.conversation.findFirst({
-          where: { workspaceId, name: "general", type: "CHANNEL" },
-          select: { id: true },
+      if (joiner) {
+        // Notify admins/owners only (excluding the joiner)
+        const adminMembers = await tx.workspaceMember.findMany({
+          where: {
+            workspaceId,
+            userId: { not: actorId },
+            role: { in: ["ADMIN", "OWNER"] },
+          },
+          select: { userId: true },
         });
 
-        const channelLink = generalChannel
-          ? `/workspaces/${workspaceId}/channels/${generalChannel.id}`
-          : undefined;
+        // Include the inviter if they sent the invite and aren't already targeted
+        const targetIds = new Set(adminMembers.map(m => m.userId));
+        if (invite.createdBy && invite.createdBy !== actorId) {
+          targetIds.add(invite.createdBy);
+        }
 
-        for (const member of workspaceMembers) {
-          pendingNotifications.push({
-            userId: member.userId,
-            type: "MEMBER_JOINED",
-            title: "New member",
-            body: `${joiner.username} joined the workspace`,
-            link: channelLink,
-            imageUrl: joiner.avatarUrl || undefined,
-            metadata: {
-              workspaceId,
-              workspaceName: workspace.name,
-              joinerId: joiner.id,
-              joinerName: joiner.username,
-            },
+        if (targetIds.size > 0) {
+          const generalChannel = await tx.conversation.findFirst({
+            where: { workspaceId, name: "general", type: "CHANNEL" },
+            select: { id: true },
           });
+
+          const channelLink = generalChannel
+            ? `/workspaces/${workspaceId}/channels/${generalChannel.id}`
+            : undefined;
+
+          for (const targetId of targetIds) {
+            pendingNotifications.push({
+              userId: targetId,
+              type: "MEMBER_JOINED",
+              title: "New member",
+              body: `${joiner.username} joined the workspace`,
+              link: channelLink,
+              imageUrl: joiner.avatarUrl || undefined,
+              metadata: {
+                workspaceId,
+                workspaceName: workspace.name,
+                joinerId: joiner.id,
+                joinerName: joiner.username,
+              },
+            });
+          }
         }
       }
     } catch (err) {

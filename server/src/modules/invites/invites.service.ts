@@ -1,4 +1,9 @@
 import { Prisma } from "@prisma/client";
+import { AppError, BadRequestError, NotFoundError, ForbiddenError, ConflictError } from "@/lib/app-error.js";
+import { prisma } from "@/lib/db.js";
+import { runTransaction as prismaTransaction } from "@/lib/transaction.js";
+import { createAndDispatch } from "../notifications/notifications.service.js";
+import { dispatchNotificationUpdate } from "../../socket/socket.dispatcher.js";
 import { type ResolveInviteParams, type ResolveInviteResult, type GenerateInviteParams, type GenerateInviteResult, type DomainEvent } from "./invites.types.js";
 import type { CreateNotificationInput } from "../notifications/notifications.types.js";
 import { InviteType } from "@prisma/client";
@@ -8,6 +13,8 @@ import { resolvers } from "./resolvers/index.js";
 import * as invitesRepo from "./invites.repository.js";
 import * as conversationsRepo from "../conversations/conversations.repository.js";
 import * as workspacesService from "../workspaces/workspaces.service.js";
+import * as workspacesRepo from "../workspaces/workspaces.repository.js";
+import * as usersRepo from "../users/users.repository.js";
 
 import * as authRepo from "../auth/auth.repository.js";
 
@@ -21,11 +28,11 @@ export const resolveInviteService = async ({ token, userId }: ResolveInviteParam
     await prismaTransaction(async (tx) => {
       const invite = await invitesRepo.findInviteByTokenInTransaction(tx, token);
 
-      if (!invite) throw new Error("INVALID_OR_EXPIRED_INVITE");
+      if (!invite) throw new BadRequestError("INVALID_OR_EXPIRED_INVITE");
 
-      if (invite.revoked) throw new Error("INVALID_OR_EXPIRED_INVITE");
-      if (invite.expiresAt && invite.expiresAt < new Date()) throw new Error("INVALID_OR_EXPIRED_INVITE");
-      if (invite.maxUses && invite.usedCount >= invite.maxUses) throw new Error("INVALID_OR_EXPIRED_INVITE");
+      if (invite.revoked) throw new BadRequestError("INVALID_OR_EXPIRED_INVITE");
+      if (invite.expiresAt && invite.expiresAt < new Date()) throw new BadRequestError("INVALID_OR_EXPIRED_INVITE");
+      if (invite.maxUses && invite.usedCount >= invite.maxUses) throw new BadRequestError("INVALID_OR_EXPIRED_INVITE");
 
       const resolver = resolvers[invite.type];
       if (!resolver) throw new Error("RESOLVER_NOT_FOUND");
@@ -40,24 +47,70 @@ export const resolveInviteService = async ({ token, userId }: ResolveInviteParam
         const updateResult = await invitesRepo.consumeInviteAtomicInTransaction(tx, invite.id);
 
         if (updateResult === 0) {
-          throw new Error("INVALID_OR_EXPIRED_INVITE");
+          throw new BadRequestError("INVALID_OR_EXPIRED_INVITE");
         }
       }
     });
 
-    if (pendingNotifications.length > 0) {
-      Promise.all(
-        pendingNotifications.map(notif => createAndDispatch(notif).catch(err => {
-          console.error("[resolveInviteService] Failed to dispatch pending notification:", err);
-        }))
-      ).catch(err => {
-        console.error("[resolveInviteService] Failed to dispatch pending notifications:", err);
-      });
+    if (!alreadyMember) {
+      try {
+        const inviteRecord = await invitesRepo.findInviteByToken(token);
+        if (inviteRecord?.type === "WORKSPACE") {
+          const workspace = await prisma.workspace.findUnique({
+            where: { id: inviteRecord.entityId },
+            select: { name: true },
+          });
+          if (workspace) {
+            const updated = await prisma.notification.updateMany({
+              where: {
+                userId,
+                type: "INVITE_RECEIVED",
+                metadata: { path: ["token"], equals: token },
+              },
+              data: {
+                body: `You accepted the invite to ${workspace.name}`,
+                read: true,
+                metadata: {
+                  token,
+                  workspaceId: inviteRecord.entityId,
+                  workspaceName: workspace.name,
+                  accepted: true,
+                },
+              },
+            });
+
+            if (updated.count > 0) {
+              const notification = await prisma.notification.findFirst({
+                where: {
+                  userId,
+                  type: "INVITE_RECEIVED",
+                  metadata: { path: ["token"], equals: token },
+                },
+              });
+              if (notification) {
+                dispatchNotificationUpdate(userId, notification as any);
+              }
+            }
+          }
+        }
+      } catch (notifErr) {
+        console.error("[resolveInviteService] Failed to update INVITE_RECEIVED notification:", notifErr);
+      }
     }
-  } catch (error: any) {
-    if (error.message === "INVALID_OR_EXPIRED_INVITE") throw error;
-    if (error.message === "NOT_IMPLEMENTED") throw error;
-    if (error.message === "ALREADY_MEMBER") throw error;
+
+    if (pendingNotifications.length > 0) {
+      await Promise.allSettled(
+        pendingNotifications.map(notif =>
+          createAndDispatch(notif).catch(err => {
+            console.error("[resolveInviteService] Failed to dispatch pending notification:", err);
+          })
+        )
+      );
+    }
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    if (error instanceof Error && error.message === "NOT_IMPLEMENTED") throw error;
+    if (error instanceof Error && error.message === "ALREADY_MEMBER") throw error;
     console.error("[resolveInviteService] error:", error);
     throw new Error("INTERNAL_SERVER_ERROR");
   }
@@ -69,22 +122,22 @@ export const generateInviteService = async ({ type, entityId, userId, forceNew }
   let finalEntityId = entityId;
 
   if (type === "CONVERSATION") {
-    if (!finalEntityId) throw new Error("ENTITY_ID_REQUIRED");
+    if (!finalEntityId) throw new BadRequestError("Entity ID is required for this invite type");
     const conversation = await conversationsRepo.findConversationByIdForInvite(finalEntityId, userId);
-    if (!conversation) throw new Error("CONVERSATION_NOT_FOUND");
-    if (conversation.type === "DM") throw new Error("UNAUTHORIZED");
-    if (conversation.members.length === 0) throw new Error("UNAUTHORIZED");
+    if (!conversation) throw new NotFoundError("Conversation not found");
+    if (conversation.type === "DM") throw new ForbiddenError("Not authorized to generate invite for this entity");
+    if (conversation.members.length === 0) throw new ForbiddenError("Not authorized to generate invite for this entity");
   } else if (type === "WORKSPACE") {
-    if (!finalEntityId) throw new Error("ENTITY_ID_REQUIRED");
+    if (!finalEntityId) throw new BadRequestError("Entity ID is required for this invite type");
     const member = await authRepo.findWorkspaceMember(userId, finalEntityId).catch(() => null);
-    if (!member) throw new Error("UNAUTHORIZED");
+    if (!member) throw new ForbiddenError("Not authorized to generate invite for this entity");
     if (member.role !== "ADMIN" && member.role !== "OWNER") {
-      throw new Error("UNAUTHORIZED");
+      throw new ForbiddenError("Not authorized to generate invite for this entity");
     }
   } else if (type === "USER") {
     finalEntityId = userId;
   } else {
-    if (!finalEntityId) throw new Error("ENTITY_ID_REQUIRED");
+    if (!finalEntityId) throw new BadRequestError("Entity ID is required for this invite type");
   }
 
   if (!forceNew) {
@@ -153,11 +206,6 @@ export const revokeAllInvitesCreatedByUser = async (userId: string) => {
 export const deleteInvitesForEntity = async (tx: Prisma.TransactionClient, type: InviteType, entityId: string) => {
   return invitesRepo.deleteInvitesForEntityInTransaction(tx, type, entityId);
 };
-
-import { createAndDispatch } from "../notifications/notifications.service.js";
-import { runTransaction as prismaTransaction } from "@/lib/transaction.js";
-import * as workspacesRepo from "../workspaces/workspaces.repository.js";
-import * as usersRepo from "../users/users.repository.js";
 
 export const getInviteInfoService = async (token: string) => {
   const invite = await invitesRepo.findInviteByToken(token);

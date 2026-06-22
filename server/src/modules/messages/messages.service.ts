@@ -1,4 +1,5 @@
 import { uuidv7 } from "uuidv7";
+import { NotFoundError, ForbiddenError, BadRequestError, ConflictError } from "@/lib/app-error.js";
 import * as messagesRepo from "./messages.repository.js";
 import * as conversationsRepo from "../conversations/conversations.repository.js";
 import { sendPushNotification } from "@/services/push.service.js";
@@ -30,34 +31,37 @@ export const sendMessageNotifications = async (
       ? `/workspaces/${conv.workspaceId}/channels/${conversationId}?highlight=latest`
       : `/conversations/${conversationId}`;
 
-    const notificationPromises = conv.members.map(async (member) => {
-      if (member.userId === senderId) return;
-      if (member.userId === excludeUserId) return; // already got a reply notification
+    const targetMembers = conv.members.filter(
+      m => m.userId !== senderId && m.userId !== excludeUserId
+    );
 
-      const memberUser = await prisma.user.findUnique({
-        where: { id: member.userId },
-        select: {
-          pushNotificationsEnabled: true,
-          dmNotifications: true,
-          channelNotifications: true,
-          mentionNotifications: true,
-          username: true,
-        },
-      });
+    if (targetMembers.length === 0) return;
 
+    const memberIds = targetMembers.map(m => m.userId);
+    const memberUsers = await prisma.user.findMany({
+      where: { id: { in: memberIds } },
+      select: {
+        id: true,
+        pushNotificationsEnabled: true,
+        dmNotifications: true,
+        channelNotifications: true,
+        mentionNotifications: true,
+        username: true,
+      },
+    });
+
+    const userPrefsMap = new Map(memberUsers.map(u => [u.id, u]));
+
+    const notificationPromises = targetMembers.map(async (member) => {
+      const memberUser = userPrefsMap.get(member.userId);
       if (!memberUser || !memberUser.pushNotificationsEnabled) return;
 
-      const isMentioned = content.includes(`@${memberUser.username}`);
+      const isMentioned = new RegExp(`@${escapeRegex(memberUser.username)}\\b`).test(content);
       let shouldNotify = false;
-      let title = senderUsername;
 
       if (conv.type === "DM" && memberUser.dmNotifications) {
         shouldNotify = true;
-        title = senderUsername;
       } else if (conv.type === "CHANNEL") {
-        if (conv.name) {
-          title = `${senderUsername} in #${conv.name}`;
-        }
         if (memberUser.mentionNotifications && isMentioned) {
           shouldNotify = true;
         } else if (memberUser.channelNotifications) {
@@ -66,10 +70,12 @@ export const sendMessageNotifications = async (
       }
 
       if (shouldNotify) {
+        const prefix = conv.type === "CHANNEL" && conv.name ? `#${conv.name}\n\n${senderUsername}` : senderUsername;
         await sendPushNotification(member.userId, {
-          title,
-          body: content,
+          title: "Nexus",
+          body: `${prefix}: ${content}`,
           url: notificationLink,
+          tag: conversationId,
         });
       }
     });
@@ -107,10 +113,10 @@ export const createMessage = async (conversationId: string, userId: string, cont
   if (replyToId) {
     const parentMessage = await messagesRepo.findById(replyToId);
     if (!parentMessage) {
-      throw new Error("Reply target message not found.");
+      throw new BadRequestError("Reply target message not found.");
     }
     if (parentMessage.conversationId !== conversationId) {
-      throw new Error("Cannot reply to a message in a different conversation.");
+      throw new BadRequestError("Cannot reply to a message in a different conversation.");
     }
     parentMessageUserId = parentMessage.userId;
   }
@@ -176,23 +182,23 @@ export const searchMessages = async (query: string, userId: string, limit: numbe
 export const pinMessage = async (messageId: string, conversationId: string, userId: string) => {
   const message = await messagesRepo.findById(messageId);
   if (!message) {
-    throw new Error("Message not found.");
+    throw new NotFoundError("Message not found.");
   }
   if (message.conversationId !== conversationId) {
-    throw new Error("Message does not belong to this conversation.");
+    throw new BadRequestError("Message does not belong to this conversation.");
   }
 
   const conversation = await conversationsRepo.findById(conversationId);
   if (conversation?.workspaceId) {
     const member = await findWorkspaceMember(userId, conversation.workspaceId);
     if (!member || (member.role !== "OWNER" && member.role !== "ADMIN")) {
-      throw new Error("Forbidden: Only workspace owners and admins can pin messages.");
+      throw new ForbiddenError("Only workspace owners and admins can pin messages.");
     }
   }
 
   const existing = await messagesRepo.findPinByMessageId(messageId);
   if (existing) {
-    throw new Error("Message is already pinned.");
+    throw new ConflictError("Message is already pinned.");
   }
   const pin = await messagesRepo.createPin(messageId, conversationId, userId);
   dispatchPinEvent("pin", conversationId, {
@@ -208,13 +214,13 @@ export const unpinMessage = async (messageId: string, conversationId: string, us
   if (conversation?.workspaceId) {
     const member = await findWorkspaceMember(userId, conversation.workspaceId);
     if (!member || (member.role !== "OWNER" && member.role !== "ADMIN")) {
-      throw new Error("Forbidden: Only workspace owners and admins can unpin messages.");
+      throw new ForbiddenError("Only workspace owners and admins can unpin messages.");
     }
   }
 
   const existing = await messagesRepo.findPinByMessageId(messageId);
   if (!existing) {
-    throw new Error("Message is not pinned.");
+    throw new BadRequestError("Message is not pinned.");
   }
   await messagesRepo.deletePin(messageId);
   dispatchPinEvent("unpin", conversationId, {
@@ -235,16 +241,16 @@ export const getMessageById = async (messageId: string) => {
 export const editMessage = async (messageId: string, conversationId: string, userId: string, content: string) => {
   const message = await getMessageById(messageId);
   if (!message) {
-    throw new Error("Message not found.")
+    throw new NotFoundError("Message not found.")
   }
   if (message.deletedAt) {
-    throw new Error("Cannot edit a deleted message.")
+    throw new BadRequestError("Cannot edit a deleted message.")
   }
   if (message.userId !== userId) {
-    throw new Error("403 Forbidden")
+    throw new ForbiddenError("Forbidden")
   }
   if (message.conversationId !== conversationId) {
-    throw new Error("Message does not belong to this conversation.");
+    throw new BadRequestError("Message does not belong to this conversation.");
   }
 
   const updatedMessage = await messagesRepo.updateMessage(messageId, content);
@@ -275,16 +281,16 @@ export const editMessage = async (messageId: string, conversationId: string, use
 export const deleteMessage = async (messageId: string, conversationId: string, userId: string) => {
   const message = await getMessageById(messageId);
   if (!message) {
-    throw new Error("Message not found.");
+    throw new NotFoundError("Message not found.");
   }
   if (message.deletedAt) {
-    throw new Error("Message is already deleted.");
+    throw new BadRequestError("Message is already deleted.");
   }
   if (message.userId !== userId) {
-    throw new Error("403 Forbidden");
+    throw new ForbiddenError("Forbidden");
   }
   if (message.conversationId !== conversationId) {
-    throw new Error("Message does not belong to this conversation.");
+    throw new BadRequestError("Message does not belong to this conversation.");
   }
 
   const conversation = message.conversation;
@@ -322,3 +328,7 @@ export const deleteMessage = async (messageId: string, conversationId: string, u
 };
 
 import { runTransaction as prismaTransaction } from "@/lib/transaction.js";
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}

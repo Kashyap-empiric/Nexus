@@ -1,9 +1,65 @@
+import { prisma } from "@/lib/db.js";
 import { sendPushNotification } from "@/services/push.service.js";
 import * as notificationsRepo from "./notifications.repository.js";
 import type { CreateNotificationInput, PaginationParams } from "./notifications.types.js";
 import { getIO } from "@/socket/socket.js";
 import { SOCKET_EVENTS } from "@/shared/socket-events.js";
 import type { NotificationType } from "@prisma/client";
+
+enum NotificationCategory {
+  INVITES = "INVITES",
+  REPLIES = "REPLIES",
+  WORKSPACE_ACTIVITY = "WORKSPACE_ACTIVITY",
+  SYSTEM_CRITICAL = "SYSTEM_CRITICAL",
+}
+
+const NOTIFICATION_CATEGORY_MAP: Record<NotificationType, NotificationCategory> = {
+  INVITE_RECEIVED: NotificationCategory.INVITES,
+  INVITE_ACCEPTED: NotificationCategory.INVITES,
+  INVITE_DECLINED: NotificationCategory.INVITES,
+
+  MESSAGE_REPLIED: NotificationCategory.REPLIES,
+
+  MEMBER_JOINED: NotificationCategory.WORKSPACE_ACTIVITY,
+  ROLE_CHANGED: NotificationCategory.WORKSPACE_ACTIVITY,
+  WORKSPACE_DELETED: NotificationCategory.SYSTEM_CRITICAL,
+  CHANNEL_CREATED: NotificationCategory.WORKSPACE_ACTIVITY,
+  CHANNEL_MEMBER_ADDED: NotificationCategory.WORKSPACE_ACTIVITY,
+  MEMBER_REMOVED: NotificationCategory.SYSTEM_CRITICAL,
+  CHANNEL_MEMBER_REMOVED: NotificationCategory.SYSTEM_CRITICAL,
+};
+
+const CATEGORY_PREFERENCE_MAP = {
+  [NotificationCategory.INVITES]: "inviteNotifications",
+  [NotificationCategory.REPLIES]: "replyNotifications",
+  [NotificationCategory.WORKSPACE_ACTIVITY]: "workspaceActivityNotifications",
+} as const;
+
+type UserPreferences = {
+  inviteNotifications: boolean;
+  replyNotifications: boolean;
+  workspaceActivityNotifications: boolean;
+};
+
+const shouldReceiveNotification = (
+  userPrefs: UserPreferences,
+  type: NotificationType
+): boolean => {
+  const category = NOTIFICATION_CATEGORY_MAP[type];
+
+  if (category === NotificationCategory.SYSTEM_CRITICAL) {
+    return true;
+  }
+
+  const prefKey = CATEGORY_PREFERENCE_MAP[category];
+  
+  if (!prefKey) {
+    return true;
+  }
+
+  return userPrefs[prefKey];
+};
+
 
 /**
  * Fetch paginated notifications for a user.
@@ -47,10 +103,34 @@ export const markAllAsRead = async (userId: string) => {
  * This is the central function used by all notification-producing flows.
  */
 export const createAndDispatch = async (input: CreateNotificationInput) => {
-  console.log(`[Notification Dispatch] Creating notification of type '${input.type}' for user ${input.userId}...`);
+  const type = input.type as NotificationType;
+  
+  const category = NOTIFICATION_CATEGORY_MAP[type];
+  const isCritical = category === NotificationCategory.SYSTEM_CRITICAL;
+
+  const prefs = await prisma.user.findUnique({
+    where: { id: input.userId },
+    select: {
+      inviteNotifications: true,
+      replyNotifications: true,
+      workspaceActivityNotifications: true,
+    },
+  });
+
+  if (!prefs) {
+    console.log(`[Notification Dispatch] User ${input.userId} not found. Skipping.`);
+    return null;
+  }
+
+  if (!isCritical && !shouldReceiveNotification(prefs, type)) {
+    console.log(`[Notification Dispatch] Skipping notification of type '${type}' for user ${input.userId} due to preferences.`);
+    return null;
+  }
+
+  console.log(`[Notification Dispatch] Creating notification of type '${type}' for user ${input.userId}...`);
   const notification = await notificationsRepo.create({
     userId: input.userId,
-    type: input.type as NotificationType,
+    type: type,
     title: input.title,
     body: input.body,
     link: input.link,
@@ -69,12 +149,15 @@ export const createAndDispatch = async (input: CreateNotificationInput) => {
   }
 
   console.log(`[Notification Dispatch] Triggering Web Push delivery for user ${input.userId}...`);
+  const pushBody = notification.body
+    ? `${notification.title}: ${notification.body}`
+    : notification.title;
   sendPushNotification(input.userId, {
-    title: notification.title,
-    body: notification.body || undefined,
+    title: "Nexus",
+    body: pushBody,
     url: notification.link || undefined,
     tag: notification.id,
-  }).catch(err => console.error("[Notification Dispatch] Push send failed:", err));
+  }, isCritical).catch(err => console.error("[Notification Dispatch] Push send failed:", err));
 
   return notification;
 };

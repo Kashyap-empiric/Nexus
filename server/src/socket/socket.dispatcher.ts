@@ -1,6 +1,7 @@
 import { getIO } from "./socket.js";
 import { SOCKET_EVENTS } from "../shared/socket-events.js";
 import { prisma } from "../lib/db.js";
+import type { NotificationDTO } from "../modules/notifications/notifications.types.js";
 
 import type { Socket } from "socket.io";
 import type { Conversation, Message, ConversationMember } from "@prisma/client";
@@ -262,6 +263,18 @@ export const dispatchMemberUpdate = (
     }
   } catch (err: unknown) {
     console.error("[Socket.io] Failed to dispatch MEMBER_UPDATE:", err);
+  }
+};
+
+export const dispatchNotificationUpdate = (
+  userId: string,
+  notification: NotificationDTO
+): void => {
+  try {
+    const io = getIO();
+    io.to(`user:${userId}`).emit(SOCKET_EVENTS.NOTIFICATION_UPDATE, notification);
+  } catch (err: unknown) {
+    console.error("[Socket.io] Failed to dispatch NOTIFICATION_UPDATE:", err);
   }
 };
 
