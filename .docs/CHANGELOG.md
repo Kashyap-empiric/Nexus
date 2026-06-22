@@ -1,9 +1,22 @@
 # Nexus — Changelog
 
-> **Last Updated:** 2026-06-18  
+> **Last Updated:** 2026-06-22  
 > **Purpose:** Track all significant changes to the project in reverse chronological order.
 
 ---
+
+## 2026-06-22
+
+### Fixed
+- **Accepted/Declined invites now unclickable in BellPopover**: Accepted invites (detected via `metadata.accepted`) and declined invites (tracked via local state) are now non-interactive — no hover effects, disabled buttons, reduced opacity, and "Accepted"/"Declined" badges.
+- **Client TypeScript errors**: Fixed 13 errors across 6 files (imports, type mismatches, unused directives, missing type params) — client now compiles clean.
+- **Server TypeScript errors**: Fixed 2 TS2883 errors in `mock-db.ts` by adding explicit type annotations.
+- **Server test environment**: Added `SUPABASE_SERVICE_ROLE_KEY` to test setup to fix 2 env-dependent test failures.
+- **Server test assertion**: Fixed `sendMessageNotifications` test to match the batched `findMany` query and correct push payload format.
+- **Client test**: Added `notificationUpdate` to expected router keys in `eventRouter.test.ts`.
+
+### Changed
+- **Deployment readiness**: All TypeScript compiles clean (client + server), all tests pass (334 total, 0 failures).
 
 ## 2026-06-19
 

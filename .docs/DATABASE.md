@@ -1,168 +1,301 @@
-# Nexus — Database Schema
+# Nexus — Database Reference
 
-> **Last Updated:** 2026-06-19  
-> **Purpose:** Complete database schema reference. All models, fields, relations, and constraints.
-
----
-
-## Architectural Decisions
-
-1. **UUIDv7 Primary Keys**: All `id` fields use UUIDv7 for time-ordered cursor pagination. Generate in app layer using the `uuidv7` npm package — do not use `crypto.randomUUID()` or Prisma's `@default(uuid())`.
-2. **Supabase Auth Separation**: Supabase handles authentication. The Prisma `User` table is synced via a Supabase database trigger (`SUPABASE_QUERIES.sql`), not through Express middleware.
-3. **Soft Deletes**: Messages use `deletedAt` for soft deletion. All queries must filter `where: { deletedAt: null }`.
+> **Last Updated:** 2026-06-22
+> **Purpose:** Database schema, entity relationships, access patterns, and performance considerations. Uses Mermaid ER diagrams instead of raw schema tables.
 
 ---
 
-## Models
+## 1. Entity Relationship Diagram
 
-### User
-| Field | Type | Attributes | Notes |
-|-------|------|-----------|-------|
-| id | String | PK | UUIDv7 (matches Supabase Auth UID) |
-| email | String | @unique | |
-| username | String | | Synced from Supabase Auth metadata |
-| fullName | String? | | |
-| avatarUrl | String? | | |
-| avatarPath | String? | | For uploaded avatars |
-| bio | String? | @db.Text | |
-| status | UserStatus? | Enum: AVAILABLE, AWAY, DND, INVISIBLE |
-| statusText | String? | | Custom status text |
-| createdAt | DateTime | @default(now()) | |
-| updatedAt | DateTime | @updatedAt | |
+```mermaid
+erDiagram
+    User {
+        string id PK "UUIDv7"
+        string email UK
+        string username UK
+        string fullName "nullable"
+        string avatarUrl "nullable"
+        string avatarPath "nullable"
+        string bio "nullable"
+        enum status "AVAILABLE | AWAY | DND | INVISIBLE"
+        string statusText "nullable"
+        boolean isOnboarded
+        datetime createdAt
+        datetime updatedAt
+    }
 
-### Notification
-| Field | Type | Attributes | Notes |
-|-------|------|-----------|-------|
-| id | String | @id @default(cuid()) | |
-| userId | String | FK → User | Recipient |
-| type | NotificationType | Enum: INVITE_RECEIVED, INVITE_ACCEPTED, MEMBER_JOINED, CHANNEL_CREATED, MEMBER_REMOVED |
-| title | String | | Short title |
-| body | String? | | Optional body |
-| link | String? | | Deep link |
-| imageUrl | String? | | |
-| read | Boolean | @default(false) | |
-| metadata | Json? | | Flexible payload |
-| createdAt | DateTime | @default(now()) | |
+    Workspace {
+        string id PK "UUIDv7"
+        string name
+        string slug UK
+        string description "nullable"
+        string imageUrl "nullable"
+        string iconPath "nullable"
+        string ownerId FK
+        datetime createdAt
+        datetime updatedAt
+    }
 
-Index: `@@index([userId, read, createdAt])`
+    WorkspaceMember {
+        string workspaceId PK, FK
+        string userId PK, FK
+        enum role "OWNER | ADMIN | MEMBER"
+        datetime joinedAt
+    }
 
-### PushSubscription
-| Field | Type | Attributes | Notes |
-|-------|------|-----------|-------|
-| id | String | @id @default(cuid()) | |
-| userId | String | FK → User | |
-| endpoint | String | @unique @db.Text | Browser push endpoint |
-| p256dh | String | | Encryption key |
-| auth | String | | Auth secret |
-| userAgent | String? | | Browser info |
-| createdAt | DateTime | @default(now()) | |
-| updatedAt | DateTime | @updatedAt | |
+    Conversation {
+        string id PK "UUIDv7"
+        enum type "DM | CHANNEL"
+        string name "nullable"
+        string description "nullable"
+        string workspaceId FK "nullable"
+        string dmPair UK "nullable"
+        enum visibility "PUBLIC | PRIVATE"
+        string latestMessageId FK "nullable"
+        string createdBy FK "nullable"
+        datetime createdAt
+        datetime updatedAt
+    }
 
-### Workspace
-| Field | Type | Attributes | Notes |
-|-------|------|-----------|-------|
-| id | String | PK | UUIDv7 |
-| name | String | | Display name |
-| slug | String | @unique | URL-friendly identifier |
-| imageUrl | String? | | Workspace avatar |
-| ownerId | String | FK → User | Creator |
-| createdAt | DateTime | @default(now()) | |
-| updatedAt | DateTime | @updatedAt | |
+    ConversationMember {
+        string id PK "cuid"
+        string conversationId FK
+        string userId FK
+        string lastReadMessageId FK "nullable"
+        datetime joinedAt
+    }
 
-### WorkspaceMember
-Composite PK: `@@id([workspaceId, userId])`
+    Message {
+        string id PK "UUIDv7"
+        string content
+        string conversationId FK
+        string userId FK
+        string replyToId FK "nullable"
+        boolean isEdited
+        datetime deletedAt "nullable"
+        datetime createdAt
+        datetime updatedAt
+    }
 
-| Field | Type | Attributes | Notes |
-|-------|------|-----------|-------|
-| workspaceId | String | FK → Workspace | |
-| userId | String | FK → User | |
-| role | WorkspaceRole | @default(MEMBER) | Enum: OWNER, ADMIN, MEMBER |
-| joinedAt | DateTime | @default(now()) | |
+    PinnedMessage {
+        string id PK "cuid"
+        string messageId FK, UK
+        string conversationId FK
+        string pinnedBy FK
+        datetime createdAt
+    }
 
-### Conversation
-| Field | Type | Attributes | Notes |
-|-------|------|-----------|-------|
-| id | String | PK | UUIDv7 |
-| type | ConversationType | | Enum: DM, CHANNEL |
-| name | String? | | Channel name, null for DMs |
-| workspaceId | String? | FK → Workspace | null for DMs |
-| visibility | ChannelVisibility? | @default(PUBLIC) | Enum: PUBLIC, PRIVATE |
-| createdBy | String? | | User ID who created this channel |
-| dmPair | String? | @unique | Sorted user pair for DM dedup |
-| latestMessageId | String? | FK → Message | Sidebar preview |
-| createdAt | DateTime | @default(now()) | |
-| updatedAt | DateTime | @updatedAt | |
+    Invite {
+        string id PK "cuid"
+        enum type "USER | CONVERSATION | WORKSPACE | CHANNEL"
+        string entityId
+        string token UK "32-byte random hex"
+        string createdBy FK
+        int maxUses "nullable"
+        int usedCount
+        boolean revoked
+        datetime expiresAt "nullable"
+        datetime lastUsedAt "nullable"
+        datetime createdAt
+    }
 
-### ConversationMember
-| Field | Type | Attributes | Notes |
-|-------|------|-----------|-------|
-| id | String | PK | cuid (for backward compat) |
-| conversationId | String | FK → Conversation | |
-| userId | String | FK → User | |
-| lastReadMessageId | String? | FK → Message | Read receipt |
-| joinedAt | DateTime | @default(now()) | |
+    Notification {
+        string id PK "cuid"
+        string userId FK
+        enum type "INVITE_RECEIVED | INVITE_ACCEPTED | INVITE_DECLINED | MEMBER_JOINED | CHANNEL_CREATED | CHANNEL_MEMBER_ADDED | CHANNEL_MEMBER_REMOVED | MEMBER_REMOVED | MESSAGE_REPLIED | ROLE_CHANGED | WORKSPACE_DELETED"
+        string title
+        string body "nullable"
+        string link "nullable"
+        string imageUrl "nullable"
+        boolean read
+        json metadata "nullable"
+        datetime createdAt
+    }
 
-Unique: `@@unique([conversationId, userId])`
+    PushSubscription {
+        string id PK "cuid"
+        string userId FK
+        string endpoint UK
+        string p256dh
+        string auth
+        string userAgent "nullable"
+        datetime createdAt
+        datetime updatedAt
+    }
 
-### Message
-| Field | Type | Attributes | Notes |
-|-------|------|-----------|-------|
-| id | String | PK | UUIDv7 — used for sorting |
-| content | String | | Message text (markdown) |
-| conversationId | String | FK → Conversation | |
-| userId | String | FK → User | Sender |
-| replyToId | String? | FK → Message | Reply parent |
-| isEdited | Boolean | @default(false) | |
-| deletedAt | DateTime? | | Soft delete |
-| pending | Boolean | @default(false) | |
-| createdAt | DateTime | @default(now()) | |
-| updatedAt | DateTime | @updatedAt | |
+    PasswordResetToken {
+        string id PK "cuid"
+        string userId FK
+        string tokenHash
+        datetime expiresAt
+        datetime usedAt "nullable"
+        datetime createdAt
+    }
 
-Index: `@@index([conversationId, id])` — critical for cursor pagination
+    User ||--o{ WorkspaceMember : "is member of"
+    User ||--o{ ConversationMember : "participates in"
+    User ||--o{ Message : "sends"
+    User ||--o{ Invite : "creates"
+    User ||--o{ Notification : "receives"
+    User ||--o{ PushSubscription : "registers"
+    User ||--o{ PasswordResetToken : "requests"
+    User ||--o{ PinnedMessage : "pins"
 
-### Invite
-| Field | Type | Attributes | Notes |
-|-------|------|-----------|-------|
-| id | String | PK | UUIDv7 |
-| type | InviteType | Enum: USER, CONVERSATION, WORKSPACE, CHANNEL |
-| entityId | String | | Target entity |
-| token | String | @unique | Random hex (32 bytes) |
-| maxUses | Int? | | null = unlimited |
-| usedCount | Int | @default(0) | |
-| expiresAt | DateTime? | | Default: 7 days |
-| revoked | Boolean | @default(false) | |
-| createdBy | String | FK → User | |
-| lastUsedAt | DateTime? | | |
-| createdAt | DateTime | @default(now()) | |
+    Workspace ||--o{ WorkspaceMember : "has members"
+    Workspace ||--o{ Conversation : "contains channels"
+    Workspace ||--|| User : "owned by"
 
-### NotificationPreference
-| Field | Type | Attributes | Notes |
-|-------|------|-----------|-------|
-| id | String | @id @default(cuid()) | |
-| userId | String | FK → User | @unique |
-| pushEnabled | Boolean | @default(true) | |
-| dmMentions | Boolean | @default(true) | |
-| channelNotifications | Boolean | @default(true) | |
-| createdAt | DateTime | @default(now()) | |
-| updatedAt | DateTime | @updatedAt | |
+    Conversation ||--o{ ConversationMember : "has members"
+    Conversation ||--o{ Message : "contains"
+    Conversation ||--o{ PinnedMessage : "has pinned"
+    Conversation }o--|| Workspace : "belongs to workspace"
+    Conversation }o--|| Message : "latest message"
 
----
+    Message ||--|| User : "authored by"
+    Message ||--o{ Message : "replies to"
+    Message ||--o| PinnedMessage : "pinned state"
+    Message }o--|| Conversation : "part of conversation"
 
-## Enums
-
-```prisma
-enum ConversationType { DM, CHANNEL }
-enum ChannelVisibility { PUBLIC, PRIVATE }
-enum InviteType { USER, CONVERSATION, WORKSPACE, CHANNEL }
-enum WorkspaceRole { OWNER, ADMIN, MEMBER }
-enum NotificationType { INVITE_RECEIVED, INVITE_ACCEPTED, MEMBER_JOINED, CHANNEL_CREATED, CHANNEL_MEMBER_ADDED, CHANNEL_MEMBER_REMOVED, MEMBER_REMOVED, MESSAGE_REPLIED, ROLE_CHANGED, WORKSPACE_DELETED }
-enum UserStatus { AVAILABLE, AWAY, DND, INVISIBLE }
+    PinnedMessage ||--|| Message : "references"
+    PinnedMessage }o--|| Conversation : "belongs to conversation"
+    PinnedMessage ||--|| User : "pinned by user"
 ```
 
 ---
 
-## Migration Rules
+## 2. Core Relationships — Details
 
-- All migrations must be **purely additive**: `CREATE TABLE` / `ADD COLUMN` / `CREATE INDEX` only.
-- Use `@@unique([field1, field2])` instead of composite `@@id` when backward compatibility is required with production.
-- Use `IF NOT EXISTS` and PL/pgSQL `DO $$ ... EXCEPTION` blocks for idempotent migrations.
+### Workspace Membership
+
+```
+User ──< WorkspaceMember >── Workspace
+       (composite PK: workspaceId, userId)
+```
+
+- **Cardinality**: A user can be in many workspaces; a workspace has many users.
+- **Role-based access**: `WorkspaceMember.role` determines what the user can do (OWNER > ADMIN > MEMBER).
+- **Composite primary key**: `@@id([workspaceId, userId])` — a user can only have one role per workspace.
+- **Cascade**: Deleting a Workspace cascades to WorkspaceMember, Conversation (channels), and all messages.
+
+### Conversations (DMs + Channels)
+
+```
+Conversation ──< ConversationMember >── User
+     │
+     └──< Message ── (optional) PinnedMessage
+```
+
+- **Polymorphic design**: `Conversation.type` distinguishes DMs (`DM`) from channels (`CHANNEL`).
+- **dmPair deduplication**: Sorted user IDs (e.g., `"alice:bob"`) prevent duplicate DMs. Unique constraint enforces this at the database level.
+- **Channel workspace relationship**: When `type: CHANNEL`, `workspaceId` links to the parent Workspace.
+- **Soft deletes for messages**: `Message.deletedAt` preserves data while filtering from queries.
+
+### Message Pinning
+
+```
+Message ──< PinnedMessage >── Conversation
+         (1:0..1 — unique on messageId)
+```
+
+- One pin per message (enforced by `@@unique([messageId])`).
+- Pins survive message edits but are cascade-deleted with the message or conversation.
+
+---
+
+## 3. Indexing Strategy
+
+```mermaid
+flowchart LR
+    subgraph Critical_Indexes["Critical Indexes"]
+        I1["@@index([conversationId, id])<br/>on Message"]
+        I2["@@index([userId, read, createdAt])<br/>on Notification"]
+        I3["@@unique([conversationId, userId])<br/>on ConversationMember"]
+    end
+
+    subgraph Secondary_Indexes["Secondary Indexes"]
+        I4["@@index([userId])<br/>on WorkspaceMember"]
+        I5["@@index([token])<br/>on Invite"]
+        I6["@@index([userId, conversationId])<br/>on ConversationMember"]
+        I7["@@index([userId])<br/>on PushSubscription"]
+        I8["@@index([tokenHash])<br/>on PasswordResetToken"]
+    end
+
+    subgraph Query_Patterns["Driving Queries"]
+        Q1["Load message history:<br/>WHERE conversationId = ?<br/>AND id < cursor<br/>ORDER BY id DESC<br/>LIMIT 50"]
+        Q2["Unread notifications:<br/>WHERE userId = ?<br/>AND read = false<br/>ORDER BY createdAt DESC"]
+        Q3["Sidebar conversations:<br/>WHERE userId = ?<br/>INNER JOIN Conversation"]
+        Q4["Resolve invite:<br/>WHERE token = ?"]
+    end
+
+    I1 --> Q1
+    I2 --> Q2
+    I3 --> Q3
+    I5 --> Q4
+```
+
+---
+
+## 4. Access Patterns by Model
+
+| Model | Primary Read Pattern | Primary Write Pattern | Typical Volume |
+|-------|---------------------|----------------------|----------------|
+| **User** | By ID (profile load) | On registration, profile edit | Reads >> writes |
+| **Workspace** | By slug (routing), by ID (settings) | Create, update settings | 1 per user |
+| **Conversation** | By user ID (sidebar load) | Create DM, create channel | 1-50 per user |
+| **Message** | Cursor pagination per conversation | Send, edit, delete | Reads >> writes |
+| **Notification** | By user ID (paginated) | Create on events, mark read | Reads >> writes |
+| **Invite** | By token (resolution) | Generate, consume | 1-5 per user |
+| **PinnedMessage** | By conversation ID (panel load) | Pin, unpin | Low |
+| **PushSubscription** | By user ID (send push) | Subscribe, unsubscribe | 1-3 per user |
+
+---
+
+## 5. Performance Characteristics
+
+### Critical Query: Message History
+
+```sql
+-- Generated by Prisma:
+SELECT * FROM Message
+WHERE conversationId = $1
+  AND deletedAt IS NULL
+  AND id < $2
+ORDER BY id DESC
+LIMIT 50;
+```
+
+- **Index**: `@@index([conversationId, id])` — covers the WHERE and ORDER BY clauses.
+- **UUIDv7 ordering**: `id < cursor` works because UUIDv7 encodes time monotonically.
+- **Expected performance**: O(log n) per query via B-tree index. Sub-ms for conversation sizes under 10K messages.
+
+### Potential Bottlenecks
+
+| Query | Pattern | Concern | Mitigation |
+|-------|---------|---------|------------|
+| Message search | `WHERE content CONTAINS %query%` | Full table scan at scale | Add GIN index on `to_tsvector(content)` |
+| Conversation sidebar | JOIN with `latestMessage` | N+1 if not eager-loaded | Always use Prisma `include: { latestMessage: true }` |
+| Push notification dispatch | Per-member queries | N+1 per message send | Batch with `findMany` (WHERE userId IN (...)) |
+| Notification page | Cursor pagination with read filter | Large unread sets | Composite index `(userId, read, createdAt)` already in place |
+
+---
+
+## 6. Enum Reference
+
+| Enum | Values | Usage |
+|------|--------|-------|
+| `ConversationType` | `DM`, `CHANNEL` | Discriminator for conversation behavior |
+| `ChannelVisibility` | `PUBLIC`, `PRIVATE` | Channel access control |
+| `WorkspaceRole` | `OWNER`, `ADMIN`, `MEMBER` | Hierarchical permissions (OWNER > ADMIN > MEMBER) |
+| `InviteType` | `USER`, `CONVERSATION`, `WORKSPACE`, `CHANNEL` | Target entity type for invites |
+| `NotificationType` | `INVITE_RECEIVED`, `INVITE_ACCEPTED`, `INVITE_DECLINED`, `MEMBER_JOINED`, `CHANNEL_CREATED`, `CHANNEL_MEMBER_ADDED`, `CHANNEL_MEMBER_REMOVED`, `MEMBER_REMOVED`, `MESSAGE_REPLIED`, `ROLE_CHANGED`, `WORKSPACE_DELETED` | Notification event types |
+| `UserStatus` | `AVAILABLE`, `AWAY`, `DND`, `INVISIBLE` | Presence status |
+
+---
+
+## 7. Migration Rules
+
+1. **All migrations must be purely additive**: `CREATE TABLE`, `ADD COLUMN`, `CREATE INDEX` only.
+2. **No destructive operations**: Never `DROP TABLE`, `DROP COLUMN`, or `ALTER COLUMN ... DROP NOT NULL` in a migration.
+3. **Idempotent execution**: Use `IF NOT EXISTS` and PL/pgSQL `DO $$ ... EXCEPTION` blocks for safe re-runs.
+4. **Backward compatibility**: New columns must have defaults or be nullable to avoid breaking running instances.
+5. **Testing**: Every migration must be verified against the test database before merging.
