@@ -19,10 +19,13 @@ model User {
   statusText               String?
   avatarPath               String?
   isOnboarded              Boolean              @default(false)
-  pushNotificationsEnabled Boolean              @default(false)
-  dmNotifications          Boolean              @default(true)
-  mentionNotifications     Boolean              @default(true)
-  channelNotifications     Boolean              @default(false)
+  pushNotificationsEnabled       Boolean              @default(true)
+  dmNotifications                Boolean              @default(true)
+  mentionNotifications           Boolean              @default(true)
+  channelNotifications           Boolean              @default(false)
+  inviteNotifications            Boolean              @default(true)
+  replyNotifications             Boolean              @default(true)
+  workspaceActivityNotifications Boolean              @default(true)
   createdConversations     Conversation[]       @relation("ConversationCreator")
   conversations            ConversationMember[]
   invites                  Invite[]
@@ -31,6 +34,7 @@ model User {
   workspaces               WorkspaceMember[]
   notifications            Notification[]
   pushSubscriptions        PushSubscription[]
+  passwordResetTokens      PasswordResetToken[]
   userPins                 PinnedMessage[] @relation("PinToUser")
 }
 
@@ -162,6 +166,7 @@ enum WorkspaceRole {
 enum NotificationType {
   INVITE_RECEIVED
   INVITE_ACCEPTED
+  INVITE_DECLINED
   MEMBER_JOINED
   CHANNEL_CREATED
   CHANNEL_MEMBER_ADDED
@@ -216,6 +221,19 @@ model PushSubscription {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
 }
 
 enum UserStatus {

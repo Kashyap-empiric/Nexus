@@ -1,0 +1,2 @@
+-- Add INVITE_DECLINED to NotificationType enum
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'INVITE_DECLINED';
