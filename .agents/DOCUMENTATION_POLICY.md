@@ -2,6 +2,7 @@
 
 > **Mandatory:** Any feature that changes code must also update the relevant documentation
 > before the task can be considered complete.
+> Aligns with `Rules_Expectations.md` Section 5 (Documentation Requirement), Section 6 (Context File Requirement), and Section 7 (AI Usage Policy).
 
 ---
 
@@ -68,6 +69,17 @@ Only update `.docs/` files when **explicitly asked** by the user. These are poli
 
 ## Documentation Quality Standards
 
+Per `Rules_Expectations.md` Section 5, every module doc must cover:
+
+- **Purpose** — What the module does
+- **Flow** — How it works step by step
+- **Key APIs** — Relevant endpoints or functions
+- **Important Logic** — Notable implementation details
+
+Documentation should allow another developer to understand the module without asking questions.
+
+Additional standards:
+
 1. **Be accurate** — Document the system as it IS, not as it SHOULD BE.
 2. **Be concise** — Prefer bullet points and tables over paragraphs.
 3. **Include examples** — API docs should include request/response examples.
@@ -107,6 +119,33 @@ Planned enhancements.
 ```
 
 ---
+
+## Context File Requirements
+
+Per `Rules_Expectations.md` Section 6, the `.docs/` directory must maintain:
+
+- Project overview
+- Features
+- Architecture
+- Folder structure
+- Environment variables
+- Database schema
+- API list
+- Known limitations
+
+These must be updated after every major feature.
+
+## AI Usage Documentation
+
+Per `Rules_Expectations.md` Section 7, every major implementation must include an AI usage report documenting:
+
+- What was implemented
+- Files modified
+- Decisions made
+- Risks or technical debt introduced
+- Follow-up work
+
+Store AI usage reports in `.docs/ai-reports/`.
 
 ## When NOT to Document
 

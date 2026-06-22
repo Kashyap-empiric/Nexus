@@ -2,6 +2,7 @@
 
 > **Mandatory:** Every feature must pass Self-QA before it can be marked ready for human review.
 > QA artifacts live in the `.qa/` directory.
+> Aligns with `Rules_Expectations.md` Section 4 (Self QA Before Review).
 
 ---
 

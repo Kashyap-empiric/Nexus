@@ -14,6 +14,7 @@
 
 Before any feature work, read the following policy files in order:
 
+0. **`Rules_Expectations.md`** (project root) — Top-level TL-authored rules covering daily updates, git workflow, branching, self-QA, documentation requirements, AI usage policy, development order, and completion criteria. All other agent policy files derive from this.
 1. **`AGENT_RULES.md`** — Coding standards, architecture, security requirements, migration rules
 2. **`DEVELOPMENT_WORKFLOW.md`** — Mandatory 8-step feature lifecycle (must be followed for every feature)
 3. **`DOCUMENTATION_POLICY.md`** — What must be documented and when
@@ -71,6 +72,7 @@ Read Context → Analyze → Plan → Implement → Document → QA → Self-Tes
 
 | Source | Purpose |
 |--------|---------|
+| `Rules_Expectations.md` | Top-level TL-authored project development rules |
 | `.docs/PROJECT_CONTEXT.md` | Current system state, implementation status |
 | `.docs/ARCHITECTURE.md` | System architecture, data flow, module structure |
 | `.docs/DATABASE.md` | Database schema, models, enums |
@@ -103,7 +105,7 @@ When the user says "log progress" or "update daily logs":
 1. Read `work/logs/logging-instructions.txt` for the exact format specification.
 2. Open `work/logs/daily-logs.md`.
 3. Append a new section at the bottom.
-4. Use the format from `logging-instructions.txt`:
+4. Use the format below (from `Rules_Expectations.md` Section 1):
 
 ```
 Date: <>
@@ -122,15 +124,72 @@ Learning
 
 5. Describe what new functionality was added or fixed — do NOT write vague items like "updated docs" or "updated agents". Do NOT write actual function names, only describe features and fixes in plain language.
 
-## 6. Coding Standards
+## 7. AI Usage Policy
+
+Per `Rules_Expectations.md` Section 7:
+
+- **Understand** generated code before integrating it.
+- **Verify** generated code compiles, passes typechecks, and meets acceptance criteria.
+- **Test** generated code — include it in your self-QA scope.
+- **Document AI usage** — every major implementation must include an AI usage report (see `COMPLETION_POLICY.md` Section 6).
+
+Be ready to explain:
+- What the code does
+- Why it works
+- Alternative approaches considered
+
+## 8. Research Before Asking
+
+Per `Rules_Expectations.md` Section 8, before asking the user for help:
+
+1. Read the relevant documentation.
+2. Search for an existing solution (codebase, docs, web).
+3. Attempt an implementation.
+4. Note observations and error messages.
+5. Then ask for guidance with those observations included.
+
+> Do not stop at the first error. Debug sequentially.
+
+## 9. Development Order
+
+Per `Rules_Expectations.md` Section 9, project-level work should follow this order:
+
+1. Planning
+2. Database Design
+3. API Design
+4. Authentication
+5. Core Features
+6. Secondary Features
+7. Testing
+8. Documentation
+9. Demo
+
+The agent-facing 8-step lifecycle in `DEVELOPMENT_WORKFLOW.md` operates within these project phases.
+
+## 10. Completion Requirements
+
+Per `Rules_Expectations.md` Section 10, a feature or project is complete only when ALL of these are satisfied:
+
+- [ ] Features implemented
+- [ ] Code committed
+- [ ] Documentation completed
+- [ ] Self QA completed
+- [ ] Demo prepared
+- [ ] Architecture explained
+- [ ] AI usage report submitted
+- [ ] Known limitations documented
+
+See `COMPLETION_POLICY.md` for detailed criteria.
+
+## 11. Coding Standards
 - **REST APIs**: Extract data from wrappers correctly (e.g. `const { data } = await api.get()`). If the backend returns `{ data: T }`, handle the wrapper properly in the frontend API client so components receive clean types.
 - **Frontend**: Keep App Router layout/page files to a minimum. Extract all meaningful logic into module components. Do not use `flex-col-reverse` for chat interfaces.
 - **Database**: Use UUIDv7 for all new IDs. See `AGENT_RULES.md` for detailed rules.
 - **Socket**: Use constants from `SOCKET_EVENTS`. Use `socket.dispatcher.ts`. Never emit from controllers.
 
-## 7. Agent Workflow
+## 12. Agent Workflow
 - Validate assumptions before committing code (check `package.json`, inspect schema, read existing files).
 - If something breaks, inspect actual terminal logs rather than guessing.
 - When implementing, read related files thoroughly before making edits.
 
-> **Last Updated:** 2026-06-19 — Added notes on socket dispatcher patterns, AlertDialog migration, forgot/reset password flow, and ManageChannelMembersModal.
+> **Last Updated:** 2026-06-22 — Added Sections 7-10 aligning with Rules_Expectations.md.

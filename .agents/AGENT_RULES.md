@@ -77,7 +77,35 @@
 
 ---
 
-## 3. Review Requirements
+## 3. AI Usage Policy
+
+Per `Rules_Expectations.md` Section 7, all AI-generated code must be treated as a draft, not a final output:
+
+- **Understand** what the generated code does before accepting it. Run it mentally or trace the logic.
+- **Verify** the code compiles, passes typechecks, and meets the acceptance criteria.
+- **Test** the code — include it in self-QA scope. Do not assume it works because it was generated.
+- **Document AI usage** — every major implementation must include an AI usage report.
+
+Be ready to explain:
+- What the code does and why it works
+- Alternative approaches that were considered and rejected
+- Any tradeoffs introduced by the chosen approach
+
+## 4. Research Before Asking
+
+Per `Rules_Expectations.md` Section 8, before escalating to the user:
+
+1. Read the relevant documentation (`.docs/`, `.agents/`, `docs/modules/`).
+2. Search the codebase for existing patterns, types, and APIs.
+3. Attempt an implementation or fix.
+4. Note observations, error messages, and what was tried.
+5. Then ask for guidance with that context included.
+
+> Do not stop at the first error. Debug sequentially and exhaust the available context.
+
+## 5. Review Requirements
+
+### Mandatory Review Gates
 
 ### Mandatory Review Gates
 - **Every feature implementation** must be reviewed by a peer (human or AI).
@@ -102,6 +130,8 @@
 - [ ] Forgot/reset password flow must handle `PASSWORD_RECOVERY` Supabase event with 10-second link expiry timeout
 
 ### Performance Review Requirements
+
+Per `Rules_Expectations.md` Section 4, self-QA must pass before submitting for review.
 - [ ] Heavy components (emoji picker, markdown, modals) use `dynamic(() => import(...))` — not eagerly imported
 - [ ] React.memo applied to list items that render frequently (MessageGroupItem, sidebar items, channel items)
 - [ ] Socket event handlers use targeted `setQueryData` instead of broad `invalidateQueries` for status/presence updates
@@ -114,7 +144,7 @@
 
 ---
 
-## 4. File Organization Rules
+## 6. File Organization Rules
 
 - One component per file. Named exports preferred.
 - Test files co-located with implementation: `ComponentName.test.tsx`.
@@ -124,7 +154,7 @@
 
 ---
 
-## 5. Migration Rules
+## 7. Migration Rules
 
 - All migrations must be **purely additive**: `CREATE TABLE` / `ADD COLUMN` / `CREATE INDEX` — no destructive operations.
 - Use `@@unique([field1, field2])` instead of composite `@@id` when backward compatibility is required.
@@ -133,7 +163,18 @@
 
 ---
 
-## 6. Security Requirements
+## 8. Security Requirements
+
+Per `Rules_Expectations.md` Section 4, verify security requirements during self-QA:
+
+- [ ] Functionality verified
+- [ ] Positive scenarios tested
+- [ ] Negative scenarios tested
+- [ ] Console errors checked
+- [ ] API errors checked
+- [ ] Database updates verified
+- [ ] Responsive UI verified
+
 
 - **Channel access control**: Private channels require explicit `ConversationMember` records. Workspace members can access non-private channels via `checkConversationAccess`.
 - **Workspace roles**: OWNER and ADMIN can manage members and channels. MEMBER has read/write access to public channels.

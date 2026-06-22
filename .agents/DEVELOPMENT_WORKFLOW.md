@@ -2,6 +2,7 @@
 
 > **This is the default workflow for every feature implementation.**
 > Agents must follow these steps in order. No step may be skipped.
+> Aligns with `Rules_Expectations.md` Section 9 (Development Order).
 
 ---
 

@@ -7,3 +7,7 @@ work.zip
 AGENTS.md
 Nexus_Evaluation_and_Rules.md
 Rules_Expectations.md
+
+# .agents/ — only context.md is tracked; the rest are local-only policy references
+.agents/*
+!.agents/context.md

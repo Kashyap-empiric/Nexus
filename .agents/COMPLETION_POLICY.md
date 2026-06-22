@@ -1,5 +1,7 @@
 # Project Completion Policy (Mandatory)
 
+> Aligns with `Rules_Expectations.md` Section 10 (Final Submission Requirements).
+
 A task, feature, module, or project MUST NOT be considered complete merely because the code compiles or the functionality appears to work.
 
 Completion requires all of the following criteria to be satisfied.
