@@ -2,6 +2,7 @@ import "dotenv/config";
 import express, { type Request, type Response } from "express";
 import type { AuthRequest } from "./types/shared.js";
 import cors from "cors";
+import helmet from "helmet";
 import morgan from "morgan";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import { authMiddleware } from "./middlewares/auth.js";
@@ -13,6 +14,7 @@ import workspacesRoutes from "./modules/workspaces/workspaces.routes.js";
 import notificationsRoutes from "./modules/notifications/notifications.routes.js";
 import onboardingRoutes from "./modules/onboarding/onboarding.routes.js";
 import messagesSearchRoutes from "./modules/messages/messages.search.routes.js";
+import resetPasswordRoutes from "./modules/auth/reset-password.routes.js";
 
 import { ENV } from "./config/env.js";
 import * as usersRepo from "./modules/users/users.repository.js";
@@ -21,12 +23,14 @@ const app = express();
 
 const allowedOrigins = ENV.ALLOWED_ORIGINS;
 app.use(cors({ origin: allowedOrigins }));
+app.use(helmet());
 app.use(express.json());
 app.use(morgan("dev"));
 app.get("/health", (req: Request, res: Response) => {
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+// Per-instance rate limiter (not shared across replicas)
 app.use("/api", generalLimiter);
 
 app.get("/api/me", authMiddleware, async (req: AuthRequest, res: Response) => {
@@ -51,6 +55,7 @@ app.use("/api/workspaces", workspacesRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/onboarding", onboardingRoutes);
 app.use("/api/messages/search", messagesSearchRoutes);
+app.use("/api", resetPasswordRoutes);
 app.use(errorHandler);
 
 export default app;

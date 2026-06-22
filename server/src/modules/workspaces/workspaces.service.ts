@@ -1,3 +1,4 @@
+import { NotFoundError, ForbiddenError, BadRequestError, ConflictError } from "@/lib/app-error.js";
 import * as workspacesRepo from "./workspaces.repository.js";
 import * as conversationsRepo from "../conversations/conversations.repository.js";
 import { runTransaction } from "@/lib/transaction.js";
@@ -51,20 +52,20 @@ export const getUserWorkspaces = async (userId: string) => {
 
 export const getWorkspaceDetails = async (userId: string, slugOrId: string) => {
   const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(slugOrId);
-  if (!workspace) throw new Error("Workspace not found");
+  if (!workspace) throw new NotFoundError("Workspace not found");
 
   const isMember = await isWorkspaceMember(userId, workspace.id);
-  if (!isMember) throw new Error("Forbidden: Not a member of this workspace");
+  if (!isMember) throw new ForbiddenError("Not a member of this workspace");
 
   return workspace;
 };
 
 export const getWorkspaceChannels = async (userId: string, slugOrId: string) => {
   const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(slugOrId);
-  if (!workspace) throw new Error("Workspace not found");
+  if (!workspace) throw new NotFoundError("Workspace not found");
 
   const isMember = await isWorkspaceMember(userId, workspace.id);
-  if (!isMember) throw new Error("Forbidden: Not a member of this workspace");
+  if (!isMember) throw new ForbiddenError("Not a member of this workspace");
 
   const member = workspace.members.find(m => m.userId === userId);
   const ownedWorkspaceIds = member?.role === WorkspaceRole.OWNER
@@ -86,12 +87,12 @@ export const getWorkspaceChannels = async (userId: string, slugOrId: string) => 
 
 export const createWorkspace = async (userId: string, name: string, slug: string, imageUrl?: string, description?: string, iconPath?: string) => {
   if (!/^[a-z0-9-]+$/.test(slug)) {
-    throw new Error("Invalid slug format");
+    throw new BadRequestError("Invalid slug format");
   }
 
   const existing = await workspacesRepo.findWorkspaceByIdOrSlug(slug);
   if (existing) {
-    throw new Error("Slug already taken");
+    throw new ConflictError("Slug already taken");
   }
 
   return runTransaction(async (tx) => {
@@ -133,10 +134,10 @@ export const createWorkspace = async (userId: string, name: string, slug: string
  */
 export const createChannel = async (slugOrId: string, name: string, visibility: "PUBLIC" | "PRIVATE", userId: string) => {
   const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(slugOrId);
-  if (!workspace) throw new Error("Workspace not found");
+  if (!workspace) throw new NotFoundError("Workspace not found");
 
   const isMember = await isWorkspaceMember(userId, workspace.id);
-  if (!isMember) throw new Error("Forbidden: Not a member of this workspace");
+  if (!isMember) throw new ForbiddenError("Not a member of this workspace");
 
   const channelId = uuidv7();
   
@@ -160,18 +161,18 @@ export const createChannel = async (slugOrId: string, name: string, visibility: 
 
 export const updateWorkspace = async (slugOrId: string, data: { name?: string; slug?: string; imageUrl?: string; iconPath?: string; description?: string }, userId: string) => {
   const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(slugOrId);
-  if (!workspace) throw new Error("Workspace not found");
+  if (!workspace) throw new NotFoundError("Workspace not found");
 
   const member = workspace.members.find(m => m.userId === userId);
-  if (!member) throw new Error("Forbidden: Not a member of this workspace");
+  if (!member) throw new ForbiddenError("Not a member of this workspace");
   if (member.role !== WorkspaceRole.OWNER && member.role !== WorkspaceRole.ADMIN) {
-    throw new Error("Forbidden: Only owners and admins can update workspace settings");
+    throw new ForbiddenError("Only owners and admins can update workspace settings");
   }
 
   if (data.slug && data.slug !== workspace.slug) {
     const existing = await workspacesRepo.findWorkspaceByIdOrSlug(data.slug);
     if (existing && existing.id !== workspace.id) {
-      throw new Error("Slug already taken");
+      throw new ConflictError("Slug already taken");
     }
   }
 
@@ -187,12 +188,12 @@ export const updateWorkspace = async (slugOrId: string, data: { name?: string; s
 
 export const deleteWorkspace = async (slugOrId: string, userId: string) => {
   const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(slugOrId);
-  if (!workspace) throw new Error("Workspace not found");
+  if (!workspace) throw new NotFoundError("Workspace not found");
 
   const member = workspace.members.find(m => m.userId === userId);
-  if (!member) throw new Error("Forbidden: Not a member of this workspace");
+  if (!member) throw new ForbiddenError("Not a member of this workspace");
   if (member.role !== WorkspaceRole.OWNER) {
-    throw new Error("Forbidden: Only the workspace owner can delete the workspace");
+    throw new ForbiddenError("Only the workspace owner can delete the workspace");
   }
 
   return workspacesRepo.deleteWorkspace(workspace.id);
@@ -200,15 +201,15 @@ export const deleteWorkspace = async (slugOrId: string, userId: string) => {
 
 export const leaveWorkspace = async (slugOrId: string, userId: string) => {
   const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(slugOrId);
-  if (!workspace) throw new Error("Workspace not found");
+  if (!workspace) throw new NotFoundError("Workspace not found");
 
   const member = workspace.members.find(m => m.userId === userId);
-  if (!member) throw new Error("Forbidden: Not a member of this workspace");
+  if (!member) throw new ForbiddenError("Not a member of this workspace");
 
   if (member.role === WorkspaceRole.OWNER) {
     const ownerCount = await workspacesRepo.countWorkspaceOwners(workspace.id);
     if (ownerCount <= 1) {
-      throw new Error("Forbidden: Cannot leave workspace as the last owner. Transfer ownership or delete the workspace.");
+      throw new ForbiddenError("Cannot leave workspace as the last owner. Transfer ownership or delete the workspace.");
     }
   }
 
@@ -218,20 +219,20 @@ export const leaveWorkspace = async (slugOrId: string, userId: string) => {
 
 export const updateChannel = async (slugOrId: string, channelId: string, data: { name?: string; description?: string; visibility?: "PUBLIC" | "PRIVATE" }, userId: string) => {
   const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(slugOrId);
-  if (!workspace) throw new Error("Workspace not found");
+  if (!workspace) throw new NotFoundError("Workspace not found");
 
   const member = workspace.members.find(m => m.userId === userId);
-  if (!member) throw new Error("Forbidden: Not a member of this workspace");
+  if (!member) throw new ForbiddenError("Not a member of this workspace");
 
   const channel = workspace.channels.find(c => c.id === channelId);
-  if (!channel) throw new Error("Channel not found in this workspace");
+  if (!channel) throw new NotFoundError("Channel not found in this workspace");
 
   if (data.name && !canManageChannel(member.role, channel, userId)) {
-    throw new Error("Forbidden: Only owners, admins, and the channel creator can rename channels");
+    throw new ForbiddenError("Only owners, admins, and the channel creator can rename channels");
   }
 
   if (data.visibility && member.role !== WorkspaceRole.OWNER && member.role !== WorkspaceRole.ADMIN) {
-    throw new Error("Forbidden: Only owners and admins can change channel visibility");
+    throw new ForbiddenError("Only owners and admins can change channel visibility");
   }
 
   const updateData: Record<string, unknown> = {};
@@ -247,20 +248,20 @@ export const updateChannel = async (slugOrId: string, channelId: string, data: {
 
 export const deleteChannel = async (slugOrId: string, channelId: string, userId: string) => {
   const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(slugOrId);
-  if (!workspace) throw new Error("Workspace not found");
+  if (!workspace) throw new NotFoundError("Workspace not found");
 
   const member = workspace.members.find(m => m.userId === userId);
-  if (!member) throw new Error("Forbidden: Not a member of this workspace");
+  if (!member) throw new ForbiddenError("Not a member of this workspace");
 
   if (member.role !== WorkspaceRole.OWNER && member.role !== WorkspaceRole.ADMIN) {
-    throw new Error("Forbidden: Only owners and admins can delete channels");
+    throw new ForbiddenError("Only owners and admins can delete channels");
   }
 
   const channel = workspace.channels.find(c => c.id === channelId);
-  if (!channel) throw new Error("Channel not found in this workspace");
+  if (!channel) throw new NotFoundError("Channel not found in this workspace");
 
   if (channel.name === "general") {
-    throw new Error("Forbidden: The general channel cannot be deleted");
+    throw new ForbiddenError("The general channel cannot be deleted");
   }
 
   return workspacesRepo.deleteConversation(channelId);
@@ -268,29 +269,29 @@ export const deleteChannel = async (slugOrId: string, channelId: string, userId:
 
 export const getWorkspaceMembers = async (slugOrId: string, userId: string) => {
   const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(slugOrId);
-  if (!workspace) throw new Error("Workspace not found");
+  if (!workspace) throw new NotFoundError("Workspace not found");
 
   const isMember = workspace.members.some(m => m.userId === userId);
-  if (!isMember) throw new Error("Forbidden: Not a member of this workspace");
+  if (!isMember) throw new ForbiddenError("Not a member of this workspace");
 
   return workspace.members;
 };
 
 export const updateMemberRole = async (slugOrId: string, memberUserId: string, role: WorkspaceRole, userId: string) => {
   const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(slugOrId);
-  if (!workspace) throw new Error("Workspace not found");
+  if (!workspace) throw new NotFoundError("Workspace not found");
 
   const currentUserMember = workspace.members.find(m => m.userId === userId);
   if (!currentUserMember || currentUserMember.role !== WorkspaceRole.OWNER) {
-    throw new Error("Forbidden: Only workspace owners can manage roles");
+    throw new ForbiddenError("Only workspace owners can manage roles");
   }
 
   if (memberUserId === userId) {
-    throw new Error("Forbidden: Owners cannot change their own role");
+    throw new ForbiddenError("Owners cannot change their own role");
   }
 
   const targetMember = workspace.members.find(m => m.userId === memberUserId);
-  if (!targetMember) throw new Error("Member not found in this workspace");
+  if (!targetMember) throw new NotFoundError("Member not found in this workspace");
 
   return workspacesRepo.updateWorkspaceMemberRole(workspace.id, memberUserId, role);
 };
@@ -303,14 +304,14 @@ function canManageChannel(workspaceRole: WorkspaceRole | undefined, channel: { c
 
 export const getChannelMembers = async (workspaceId: string, channelId: string, callerUserId: string) => {
   const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(workspaceId);
-  if (!workspace) throw new Error("Workspace not found");
+  if (!workspace) throw new NotFoundError("Workspace not found");
 
   const isMember = workspace.members.some(m => m.userId === callerUserId);
-  if (!isMember) throw new Error("Forbidden: Not a member of this workspace");
+  if (!isMember) throw new ForbiddenError("Not a member of this workspace");
 
   const channel = workspace.channels.find(c => c.id === channelId);
-  if (!channel) throw new Error("Channel not found in this workspace");
-  if (channel.type !== "CHANNEL") throw new Error("Bad Request: Not a channel");
+  if (!channel) throw new NotFoundError("Channel not found in this workspace");
+  if (channel.type !== "CHANNEL") throw new BadRequestError("Not a channel");
 
   const channelMember = await workspacesRepo.getChannelMembers(channelId);
   return channelMember;
@@ -318,17 +319,17 @@ export const getChannelMembers = async (workspaceId: string, channelId: string, 
 
 export const addMembersToChannel = async (workspaceId: string, channelId: string, callerUserId: string, targetUserIds: string[]) => {
   const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(workspaceId);
-  if (!workspace) throw new Error("Workspace not found");
+  if (!workspace) throw new NotFoundError("Workspace not found");
 
   const callerMember = workspace.members.find(m => m.userId === callerUserId);
-  if (!callerMember) throw new Error("Forbidden: Not a member of this workspace");
+  if (!callerMember) throw new ForbiddenError("Not a member of this workspace");
 
   const channel = workspace.channels.find(c => c.id === channelId);
-  if (!channel) throw new Error("Channel not found in this workspace");
-  if (channel.type !== "CHANNEL") throw new Error("Bad Request: Not a channel");
+  if (!channel) throw new NotFoundError("Channel not found in this workspace");
+  if (channel.type !== "CHANNEL") throw new BadRequestError("Not a channel");
 
   if (!canManageChannel(callerMember.role, channel, callerUserId)) {
-    throw new Error("Forbidden: You don't have permission to manage channel members");
+    throw new ForbiddenError("You don't have permission to manage channel members");
   }
 
   const existingMembers = await workspacesRepo.getChannelMembers(channelId);
@@ -341,7 +342,7 @@ export const addMembersToChannel = async (workspaceId: string, channelId: string
   );
 
   if (validNewUserIds.length === 0) {
-    throw new Error("No valid users to add (all are already members or not workspace members)");
+    throw new BadRequestError("No valid users to add (all are already members or not workspace members)");
   }
 
   const added = await workspacesRepo.addChannelMembers(channelId, validNewUserIds);
@@ -360,23 +361,23 @@ export const addMembersToChannel = async (workspaceId: string, channelId: string
 
 export const removeMemberFromChannel = async (workspaceId: string, channelId: string, callerUserId: string, targetUserId: string) => {
   const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(workspaceId);
-  if (!workspace) throw new Error("Workspace not found");
+  if (!workspace) throw new NotFoundError("Workspace not found");
 
   const callerMember = workspace.members.find(m => m.userId === callerUserId);
-  if (!callerMember) throw new Error("Forbidden: Not a member of this workspace");
+  if (!callerMember) throw new ForbiddenError("Not a member of this workspace");
 
   const channel = workspace.channels.find(c => c.id === channelId);
-  if (!channel) throw new Error("Channel not found in this workspace");
-  if (channel.type !== "CHANNEL") throw new Error("Bad Request: Not a channel");
+  if (!channel) throw new NotFoundError("Channel not found in this workspace");
+  if (channel.type !== "CHANNEL") throw new BadRequestError("Not a channel");
 
   const isSelfRemoval = callerUserId === targetUserId;
   if (!isSelfRemoval && !canManageChannel(callerMember.role, channel, callerUserId)) {
-    throw new Error("Forbidden: You don't have permission to manage channel members");
+    throw new ForbiddenError("You don't have permission to manage channel members");
   }
 
   const channelMembers = await workspacesRepo.getChannelMembers(channelId);
   const targetChannelMember = channelMembers.find(m => m.userId === targetUserId);
-  if (!targetChannelMember) throw new Error("Member not found in this channel");
+  if (!targetChannelMember) throw new NotFoundError("Member not found in this channel");
 
   const managers = channelMembers.filter(m => {
     const wsMember = workspace.members.find(wm => wm.userId === m.userId);
@@ -386,15 +387,15 @@ export const removeMemberFromChannel = async (workspaceId: string, channelId: st
   const isTargetManager = managers.some(m => m.userId === targetUserId);
 
   if (isSelfRemoval && isTargetManager && managers.length <= 1) {
-    throw new Error("Forbidden: Cannot remove yourself as the last manager in the channel");
+    throw new ForbiddenError("Cannot remove yourself as the last manager in the channel");
   }
 
   if (isSelfRemoval && !isTargetManager && managers.length === 0) {
-    throw new Error("Forbidden: Cannot remove yourself as there are no managers left in this channel");
+    throw new ForbiddenError("Cannot remove yourself as there are no managers left in this channel");
   }
 
   if (!isSelfRemoval && isTargetManager && managers.length <= 1) {
-    throw new Error("Forbidden: Cannot remove the last member with manage permission from the channel");
+    throw new ForbiddenError("Cannot remove the last member with manage permission from the channel");
   }
 
   await workspacesRepo.removeChannelMember(channelId, targetUserId);
@@ -404,20 +405,20 @@ export const removeMemberFromChannel = async (workspaceId: string, channelId: st
 
 export const removeMember = async (slugOrId: string, memberUserId: string, userId: string) => {
   const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(slugOrId);
-  if (!workspace) throw new Error("Workspace not found");
+  if (!workspace) throw new NotFoundError("Workspace not found");
 
   const currentUserMember = workspace.members.find(m => m.userId === userId);
-  if (!currentUserMember) throw new Error("Forbidden: Not a member of this workspace");
+  if (!currentUserMember) throw new ForbiddenError("Not a member of this workspace");
 
   if (memberUserId === userId) {
-    throw new Error("Forbidden: Cannot remove yourself from the workspace");
+    throw new ForbiddenError("Cannot remove yourself from the workspace");
   }
 
   const targetMember = workspace.members.find(m => m.userId === memberUserId);
-  if (!targetMember) throw new Error("Member not found in this workspace");
+  if (!targetMember) throw new NotFoundError("Member not found in this workspace");
 
   if (targetMember.role === WorkspaceRole.OWNER) {
-    throw new Error("Forbidden: Cannot remove the workspace owner");
+    throw new ForbiddenError("Cannot remove the workspace owner");
   }
 
   const canRemove =
@@ -425,7 +426,7 @@ export const removeMember = async (slugOrId: string, memberUserId: string, userI
     (currentUserMember.role === WorkspaceRole.ADMIN && targetMember.role === WorkspaceRole.MEMBER);
 
   if (!canRemove) {
-    throw new Error("Forbidden: You don't have permission to remove this member");
+    throw new ForbiddenError("You don't have permission to remove this member");
   }
 
   await workspacesRepo.removeWorkspaceMember(workspace.id, memberUserId);

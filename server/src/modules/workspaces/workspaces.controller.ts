@@ -1,5 +1,7 @@
-import type { Response } from "express";
+import type { Response, NextFunction } from "express";
 import type { AuthRequest } from "@/types/shared.js";
+import { AppError } from "@/lib/app-error.js";
+import { NotFoundError, ForbiddenError, ConflictError } from "@/lib/app-error.js";
 import { ENV } from "@/config/env.js";
 import * as workspacesService from "./workspaces.service.js";
 import * as workspacesRepo from "./workspaces.repository.js";
@@ -10,6 +12,9 @@ import { generateInviteService, revokeInviteByToken } from "../invites/invites.s
 import { sendWorkspaceInviteEmail } from "../../lib/email.js";
 import { findChannelIdsByWorkspaceId } from "../conversations/conversations.repository.js";
 import { getIO } from "@/socket/socket.js";
+import { dispatchChannelUpdate, dispatchMemberUpdate, dispatchChannelMemberUpdate, dispatchWorkspaceUpdate } from "@/socket/socket.dispatcher.js";
+import { WorkspaceRole } from "@prisma/client";
+import { addChannelMembersSchema } from "./workspaces.schema.js";
 
 export const getUserWorkspaces = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -22,7 +27,7 @@ export const getUserWorkspaces = async (req: AuthRequest, res: Response): Promis
   }
 };
 
-export const getWorkspaceDetails = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getWorkspaceDetails = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id: workspaceId } = req.params as { id: string };
@@ -31,17 +36,17 @@ export const getWorkspaceDetails = async (req: AuthRequest, res: Response): Prom
     const channels = await workspacesService.getWorkspaceChannels(userId, workspaceId);
 
     res.json({ data: { workspace, channels } });
-  } catch (error: any) {
-    console.error("Error fetching workspace details:", error);
-    if (error?.message?.startsWith("Forbidden")) {
-      res.status(403).json({ error: error.message });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
       return;
     }
+    console.error("Error fetching workspace details:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const getWorkspaceChannels = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getWorkspaceChannels = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id: workspaceId } = req.params as { id: string };
@@ -49,17 +54,17 @@ export const getWorkspaceChannels = async (req: AuthRequest, res: Response): Pro
     const channels = await workspacesService.getWorkspaceChannels(userId, workspaceId);
 
     res.json({ data: channels });
-  } catch (error: any) {
-    console.error("Error fetching workspace channels:", error);
-    if (error?.message?.startsWith("Forbidden")) {
-      res.status(403).json({ error: error.message });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
       return;
     }
+    console.error("Error fetching workspace channels:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const updateWorkspace = async (req: AuthRequest, res: Response): Promise<void> => {
+export const updateWorkspace = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id: workspaceId } = req.params as { id: string };
@@ -70,29 +75,23 @@ export const updateWorkspace = async (req: AuthRequest, res: Response): Promise<
     dispatchWorkspaceUpdate(workspaceId, { action: "UPDATED", workspace });
 
     res.json({ data: workspace });
-  } catch (error: unknown) {
-    console.error("Error updating workspace:", error);
-    if (error instanceof Error) {
-      if (error.message.startsWith("Forbidden")) {
-        res.status(403).json({ error: error.message });
-        return;
-      }
-      if (error.message === "Slug already taken") {
-        res.status(409).json({ error: "Slug already taken" });
-        return;
-      }
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
+      return;
     }
+    console.error("Error updating workspace:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const deleteWorkspace = async (req: AuthRequest, res: Response): Promise<void> => {
+export const deleteWorkspace = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id: workspaceId } = req.params as { id: string };
 
     const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(workspaceId);
-    if (!workspace) throw new Error("Workspace not found");
+    if (!workspace) throw new NotFoundError("Workspace not found");
 
     const memberUserIds = workspace.members.map(m => m.userId);
     const workspaceName = workspace.name;
@@ -143,17 +142,17 @@ export const deleteWorkspace = async (req: AuthRequest, res: Response): Promise<
     }
 
     res.json({ data: { id: workspaceId } });
-  } catch (error: any) {
-    console.error("Error deleting workspace:", error);
-    if (error?.message?.startsWith("Forbidden")) {
-      res.status(403).json({ error: error.message });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
       return;
     }
+    console.error("Error deleting workspace:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const leaveWorkspace = async (req: AuthRequest, res: Response): Promise<void> => {
+export const leaveWorkspace = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id: workspaceId } = req.params as { id: string };
@@ -161,17 +160,17 @@ export const leaveWorkspace = async (req: AuthRequest, res: Response): Promise<v
     const result = await workspacesService.leaveWorkspace(workspaceId, userId);
 
     res.json({ data: result });
-  } catch (error: any) {
-    console.error("Error leaving workspace:", error);
-    if (error?.message?.startsWith("Forbidden")) {
-      res.status(403).json({ error: error.message });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
       return;
     }
+    console.error("Error leaving workspace:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const createWorkspace = async (req: AuthRequest, res: Response): Promise<void> => {
+export const createWorkspace = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { name, slug, imageUrl, description, iconPath } = req.body as { name: string; slug: string; imageUrl?: string; description?: string; iconPath?: string };
@@ -179,20 +178,20 @@ export const createWorkspace = async (req: AuthRequest, res: Response): Promise<
     const workspace = await workspacesService.createWorkspace(userId, name, slug, imageUrl, description, iconPath);
     res.status(201).json({ data: workspace });
   } catch (error: unknown) {
-    console.error("Error creating workspace:", error);
-    if (error instanceof Error && error.message === "Slug already taken") {
-      res.status(409).json({ error: "Slug already taken. Please choose a different slug." });
+    if (error instanceof AppError) {
+      next(error);
       return;
     }
     if (error instanceof Error && "code" in error && (error as Record<string, unknown>).code === "P2002") {
       res.status(409).json({ error: "Slug already taken. Please choose a different slug." });
       return;
     }
+    console.error("Error creating workspace:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const createChannel = async (req: AuthRequest, res: Response): Promise<void> => {
+export const createChannel = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id: workspaceId } = req.params as { id: string };
@@ -231,21 +230,17 @@ export const createChannel = async (req: AuthRequest, res: Response): Promise<vo
     }
 
     res.status(201).json({ data: channel });
-  } catch (error: any) {
-    console.error("Error creating channel:", error);
-    if (error?.message?.startsWith("Forbidden")) {
-      res.status(403).json({ error: error.message });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
       return;
     }
+    console.error("Error creating channel:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-import { dispatchChannelUpdate, dispatchMemberUpdate, dispatchChannelMemberUpdate, dispatchWorkspaceUpdate } from "@/socket/socket.dispatcher.js";
-import { WorkspaceRole } from "@prisma/client";
-import { addChannelMembersSchema } from "./workspaces.schema.js";
-
-export const updateChannel = async (req: AuthRequest, res: Response): Promise<void> => {
+export const updateChannel = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id: workspaceId, channelId } = req.params as { id: string; channelId: string };
@@ -256,17 +251,17 @@ export const updateChannel = async (req: AuthRequest, res: Response): Promise<vo
     dispatchChannelUpdate(workspaceId, { action: "UPDATED", channel });
 
     res.json({ data: channel });
-  } catch (error: any) {
-    console.error("Error updating channel:", error);
-    if (error?.message?.startsWith("Forbidden")) {
-      res.status(403).json({ error: error.message });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
       return;
     }
+    console.error("Error updating channel:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const deleteChannel = async (req: AuthRequest, res: Response): Promise<void> => {
+export const deleteChannel = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id: workspaceId, channelId } = req.params as { id: string; channelId: string };
@@ -276,12 +271,12 @@ export const deleteChannel = async (req: AuthRequest, res: Response): Promise<vo
     dispatchChannelUpdate(workspaceId, { action: "DELETED", channel: { id: channelId } });
 
     res.json({ data: { id: channelId } });
-  } catch (error: any) {
-    console.error("Error deleting channel:", error);
-    if (error?.message?.startsWith("Forbidden")) {
-      res.status(403).json({ error: error.message });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
       return;
     }
+    console.error("Error deleting channel:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -345,7 +340,7 @@ async function sendWorkspaceInvite(
  * Invite a user to a workspace by username or email.
  * Creates an INVITE_RECEIVED notification for the target user with a proper invite token.
  */
-export const inviteMemberByUsername = async (req: AuthRequest, res: Response): Promise<void> => {
+export const inviteMemberByUsername = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id: workspaceId } = req.params as { id: string };
@@ -388,12 +383,12 @@ export const inviteMemberByUsername = async (req: AuthRequest, res: Response): P
     );
 
     res.status(200).json({ success: true });
-  } catch (error: any) {
-    console.error("Error inviting member:", error);
-    if (error?.message?.startsWith("Forbidden")) {
-      res.status(403).json({ error: error.message });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
       return;
     }
+    console.error("Error inviting member:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -403,7 +398,7 @@ export const inviteMemberByUsername = async (req: AuthRequest, res: Response): P
  * Batch invite multiple users to a workspace by their user IDs.
  * Each user gets a separate invite token and INVITE_RECEIVED notification.
  */
-export const inviteMembers = async (req: AuthRequest, res: Response): Promise<void> => {
+export const inviteMembers = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id: workspaceId } = req.params as { id: string };
@@ -460,12 +455,12 @@ export const inviteMembers = async (req: AuthRequest, res: Response): Promise<vo
       invited,
       skipped,
     });
-  } catch (error: any) {
-    console.error("Error inviting members:", error);
-    if (error?.message?.startsWith("Forbidden")) {
-      res.status(403).json({ error: error.message });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
       return;
     }
+    console.error("Error inviting members:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -478,7 +473,7 @@ export const inviteMembers = async (req: AuthRequest, res: Response): Promise<vo
  *   - Recipient has an account:  invite + in-app notification + email (optional, best-effort)
  *   - Recipient has NO account:  invite + email (MANDATORY — if email fails, invite is revoked)
  */
-export const inviteByEmail = async (req: AuthRequest, res: Response): Promise<void> => {
+export const inviteByEmail = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id: workspaceId } = req.params as { id: string };
@@ -586,17 +581,17 @@ export const inviteByEmail = async (req: AuthRequest, res: Response): Promise<vo
       invited: email,
       emailSent,
     });
-  } catch (error: any) {
-    console.error("Error inviting by email:", error);
-    if (error?.message?.startsWith("Forbidden")) {
-      res.status(403).json({ error: error.message });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
       return;
     }
+    console.error("Error inviting by email:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const getChannelMembers = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getChannelMembers = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id: workspaceId, channelId } = req.params as { id: string; channelId: string };
@@ -604,21 +599,17 @@ export const getChannelMembers = async (req: AuthRequest, res: Response): Promis
     const members = await workspacesService.getChannelMembers(workspaceId, channelId, userId);
 
     res.json({ data: members });
-  } catch (error: any) {
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
+      return;
+    }
     console.error("Error fetching channel members:", error);
-    if (error?.message?.startsWith("Forbidden")) {
-      res.status(403).json({ error: error.message });
-      return;
-    }
-    if (error?.message?.startsWith("Bad Request")) {
-      res.status(400).json({ error: error.message });
-      return;
-    }
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const addChannelMembers = async (req: AuthRequest, res: Response): Promise<void> => {
+export const addChannelMembers = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id: workspaceId, channelId } = req.params as { id: string; channelId: string };
@@ -664,21 +655,17 @@ export const addChannelMembers = async (req: AuthRequest, res: Response): Promis
     }
 
     res.status(201).json({ data: { added: result.added } });
-  } catch (error: any) {
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
+      return;
+    }
     console.error("Error adding channel members:", error);
-    if (error?.message?.startsWith("Forbidden")) {
-      res.status(403).json({ error: error.message });
-      return;
-    }
-    if (error?.message?.startsWith("Bad Request")) {
-      res.status(400).json({ error: error.message });
-      return;
-    }
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const removeChannelMember = async (req: AuthRequest, res: Response): Promise<void> => {
+export const removeChannelMember = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id: workspaceId, channelId, userId: targetUserId } = req.params as { id: string; channelId: string; userId: string };
@@ -713,21 +700,17 @@ export const removeChannelMember = async (req: AuthRequest, res: Response): Prom
     }
 
     res.json({ data: result });
-  } catch (error: any) {
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
+      return;
+    }
     console.error("Error removing channel member:", error);
-    if (error?.message?.startsWith("Forbidden")) {
-      res.status(403).json({ error: error.message });
-      return;
-    }
-    if (error?.message?.startsWith("Bad Request")) {
-      res.status(400).json({ error: error.message });
-      return;
-    }
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const getWorkspaceMembers = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getWorkspaceMembers = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id: workspaceId } = req.params as { id: string };
@@ -735,17 +718,17 @@ export const getWorkspaceMembers = async (req: AuthRequest, res: Response): Prom
     const members = await workspacesService.getWorkspaceMembers(workspaceId, userId);
 
     res.json({ data: members });
-  } catch (error: any) {
-    console.error("Error fetching workspace members:", error);
-    if (error?.message?.startsWith("Forbidden")) {
-      res.status(403).json({ error: error.message });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
       return;
     }
+    console.error("Error fetching workspace members:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const updateMemberRole = async (req: AuthRequest, res: Response): Promise<void> => {
+export const updateMemberRole = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id: workspaceId, userId: memberUserId } = req.params as { id: string; userId: string };
@@ -778,17 +761,17 @@ export const updateMemberRole = async (req: AuthRequest, res: Response): Promise
     }
 
     res.json({ data: updatedMember });
-  } catch (error: any) {
-    console.error("Error updating member role:", error);
-    if (error?.message?.startsWith("Forbidden")) {
-      res.status(403).json({ error: error.message });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
       return;
     }
+    console.error("Error updating member role:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const removeWorkspaceMember = async (req: AuthRequest, res: Response): Promise<void> => {
+export const removeWorkspaceMember = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id: workspaceId, userId: memberUserId } = req.params as { id: string; userId: string };
@@ -819,7 +802,6 @@ export const removeWorkspaceMember = async (req: AuthRequest, res: Response): Pr
         type: "MEMBER_REMOVED",
         title: "Removed from workspace",
         body: `You have been removed from ${workspace.name} by ${currentUser?.username || "a workspace admin"}`,
-        link: "/",
         metadata: {
           workspaceId,
           workspaceName: workspace.name,
@@ -832,12 +814,12 @@ export const removeWorkspaceMember = async (req: AuthRequest, res: Response): Pr
     }
 
     res.json({ data: result });
-  } catch (error: any) {
-    console.error("Error removing workspace member:", error);
-    if (error?.message?.startsWith("Forbidden")) {
-      res.status(403).json({ error: error.message });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
       return;
     }
+    console.error("Error removing workspace member:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
