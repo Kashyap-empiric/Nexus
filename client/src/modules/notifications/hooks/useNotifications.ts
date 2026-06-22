@@ -26,8 +26,8 @@ export const useMarkAsRead = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => notificationsApi.markAsRead(id),
-    onMutate: async (id: string) => {
+    mutationFn: (markId: string) => notificationsApi.markAsRead(markId),
+    onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: queryKeys.unreadCount });
 
       const previousCount = queryClient.getQueryData<number>(queryKeys.unreadCount);
@@ -39,7 +39,7 @@ export const useMarkAsRead = () => {
 
       return { previousCount };
     },
-    onError: (_err, _id, context) => {
+    onError: (_err, _markId, context) => {
       if (context?.previousCount !== undefined) {
         queryClient.setQueryData(queryKeys.unreadCount, context.previousCount);
       }
@@ -83,7 +83,11 @@ export const useNotificationPreferences = () => {
   const preferencesQuery = useQuery({
     queryKey: queryKeys.notificationPreferences,
     queryFn: () => notificationsApi.getPreferences(),
+    staleTime: Infinity,
+    gcTime: Infinity,
   });
+
+  const hasCachedData = queryClient.getQueryData(queryKeys.notificationPreferences) !== undefined;
 
   const updateMutation = useMutation({
     mutationFn: (prefs: Partial<NotificationPreference>) => notificationsApi.updatePreferences(prefs),
@@ -104,14 +108,11 @@ export const useNotificationPreferences = () => {
         queryClient.setQueryData(queryKeys.notificationPreferences, context.previousPrefs);
       }
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.notificationPreferences });
-    },
   });
 
   return {
     preferences: preferencesQuery.data,
-    isLoading: preferencesQuery.isLoading,
+    isLoading: preferencesQuery.isPending && !hasCachedData,
     update: updateMutation.mutate,
     updateAsync: updateMutation.mutateAsync,
     isUpdating: updateMutation.isPending,

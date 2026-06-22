@@ -28,7 +28,7 @@ interface MessageListProps {
 }
 
 export function MessageList({ conversationId, currentUserId, myLastReadMessageId, partnerLastReadMessageId, members, isChannel, otherMember, onReply, highlightMessageId, canPin = true }: MessageListProps) {
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, error } = useMessagesInfiniteQuery(conversationId);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } = useMessagesInfiniteQuery(conversationId);
   const { mutate: markRead } = useMarkConversationReadMutation();
 
   const latestMessage = data?.pages?.[0]?.data?.[0];
@@ -102,8 +102,7 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
   if (isError) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-destructive p-4">
-        <p className="font-bold">Error fetching messages:</p>
-        <pre className="text-sm bg-destructive/10 p-2 mt-2 rounded">{(error as Error)?.message || "Unknown error"}</pre>
+        <p className="text-sm text-center">Failed to load messages. Check your connection and try again.</p>
       </div>
     );
   }

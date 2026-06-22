@@ -11,7 +11,7 @@ interface LazyMarkdownProps {
 
 export function LazyMarkdown({ content }: LazyMarkdownProps) {
   const components: Partial<Components> = {
-    a: ({ node: _node, children, ...props }) => (
+    a: ({ children, ...props }) => (
       <a
         {...props}
         target="_blank"
@@ -21,12 +21,12 @@ export function LazyMarkdown({ content }: LazyMarkdownProps) {
         {children}
       </a>
     ),
-    p: ({ node: _node, children, ...props }) => (
+    p: ({ children, ...props }) => (
       <p {...props} className="whitespace-pre-wrap m-0 inline-block w-full [&:not(:last-child)]:mb-1 last:inline">
         {children}
       </p>
     ),
-    code: ({ node: _node, className, children, ...props }) => {
+    code: ({ className, children, ...props }) => {
       const isInline = !className?.includes("language-");
       if (isInline) {
         return (
@@ -44,7 +44,7 @@ export function LazyMarkdown({ content }: LazyMarkdownProps) {
         </code>
       );
     },
-    pre: ({ node: _node, children, ...props }) => (
+    pre: ({ children, ...props }) => (
       <pre
         {...props}
         className="bg-zinc-950 dark:bg-zinc-900/50 text-zinc-50 border border-border/50 rounded-md p-3 my-2 overflow-x-auto text-[13px] leading-relaxed block"
@@ -52,22 +52,22 @@ export function LazyMarkdown({ content }: LazyMarkdownProps) {
         {children}
       </pre>
     ),
-    strong: ({ node: _node, children, ...props }) => (
+    strong: ({ children, ...props }) => (
       <strong {...props} className="font-bold text-foreground">
         {children}
       </strong>
     ),
-    em: ({ node: _node, children, ...props }) => (
+    em: ({ children, ...props }) => (
       <em {...props} className="italic">
         {children}
       </em>
     ),
-    del: ({ node: _node, children, ...props }) => (
+    del: ({ children, ...props }) => (
       <del {...props} className="line-through opacity-70">
         {children}
       </del>
     ),
-    blockquote: ({ node: _node, children, ...props }) => (
+    blockquote: ({ children, ...props }) => (
       <blockquote
         {...props}
         className="border-l-4 border-primary/50 pl-3 my-2 italic text-muted-foreground block"
@@ -75,17 +75,17 @@ export function LazyMarkdown({ content }: LazyMarkdownProps) {
         {children}
       </blockquote>
     ),
-    ul: ({ node: _node, children, ...props }) => (
+    ul: ({ children, ...props }) => (
       <ul {...props} className="list-disc list-outside ml-4 my-1 space-y-1 block">
         {children}
       </ul>
     ),
-    ol: ({ node: _node, children, ...props }) => (
+    ol: ({ children, ...props }) => (
       <ol {...props} className="list-decimal list-outside ml-4 my-1 space-y-1 block">
         {children}
       </ol>
     ),
-    li: ({ node: _node, children, ...props }) => (
+    li: ({ children, ...props }) => (
       <li {...props} className="pl-1">
         {children}
       </li>

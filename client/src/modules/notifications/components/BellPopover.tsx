@@ -10,6 +10,7 @@ import { useNotifications, useUnreadCount, useMarkAllAsRead, useMarkAsRead } fro
 import { timeAgo, formatNotificationTime, NotificationIcon } from "../utils/notifications-ui";
 import { cn } from "@/shared/lib/utils";
 import { toast } from "sonner";
+import { friendlyError } from "@/shared/lib/friendly-error";
 import type { Notification } from "../types/notification";
 import { presetNavigationFromLink } from "@/shared/lib/navigation";
 
@@ -24,13 +25,16 @@ function NotificationItem({
 }) {
   const router = useRouter();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [isDeclined, setIsDeclined] = useState(false);
 
   const isInvite = notification.type === "INVITE_RECEIVED";
   const inviteToken = isInvite
     ? (notification.metadata as Record<string, unknown> | null)?.token as string | undefined
     : undefined;
+  const isAccepted = isInvite && (notification.metadata as Record<string, unknown> | null)?.accepted === true;
 
   const handleClick = () => {
+    if (isAccepted || isDeclined) return;
     if (!notification.read) {
       onMarkRead(notification.id);
     }
@@ -54,9 +58,8 @@ function NotificationItem({
       if (res.data.redirectUrl) {
         router.push(res.data.redirectUrl);
       }
-    } catch (err: any) {
-      const errorMsg = err?.response?.data?.error || "Failed to accept invite";
-      toast.error(errorMsg);
+    } catch (err: unknown) {
+      toast.error(friendlyError(err, "Failed to accept invite"));
     } finally {
       setActionLoading(null);
     }
@@ -70,10 +73,10 @@ function NotificationItem({
     try {
       await api.post(API_ROUTES.INVITES.DECLINE, { token: inviteToken });
       if (!notification.read) onMarkRead(notification.id);
+      setIsDeclined(true);
       toast.success("Invite declined");
-    } catch (err: any) {
-      const errorMsg = err?.response?.data?.error || "Failed to decline invite";
-      toast.error(errorMsg);
+    } catch (err: unknown) {
+      toast.error(friendlyError(err, "Failed to decline invite"));
     } finally {
       setActionLoading(null);
     }
@@ -84,12 +87,21 @@ function NotificationItem({
   return (
     <div
       className={cn(
-        "w-full text-left px-3 py-2.5 transition-colors hover:bg-muted/50",
+        "w-full text-left px-3 py-2.5 transition-colors",
         !notification.read && (isReply ? "bg-brand/10" : "bg-brand/5"),
-        isReply && !notification.read && "border-l-2 border-brand"
+        isReply && !notification.read && "border-l-2 border-brand",
+        !isAccepted && !isDeclined && "hover:bg-muted/50",
+        (isAccepted || isDeclined) && "opacity-60"
       )}
     >
-      <button onClick={handleClick} className="w-full text-left flex items-start gap-2">
+      <button
+        onClick={handleClick}
+        disabled={isAccepted || isDeclined}
+        className={cn(
+          "w-full text-left flex items-start gap-2",
+          (isAccepted || isDeclined) && "cursor-default"
+        )}
+      >
         <NotificationIcon type={notification.type} />
         <div className="flex-1 min-w-0">
           <p className={cn("text-sm truncate", !notification.read && "font-semibold")}>
@@ -111,7 +123,7 @@ function NotificationItem({
         )}
       </button>
 
-      {isInvite && inviteToken && (
+      {isInvite && inviteToken && !isAccepted && (
         <div className="flex items-center gap-2 mt-2 ml-8">
           <button
             onClick={handleAccept}
@@ -137,6 +149,22 @@ function NotificationItem({
             )}
             Decline
           </button>
+        </div>
+      )}
+      {isInvite && isAccepted && (
+        <div className="flex items-center gap-2 mt-2 ml-8">
+          <span className="flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+            <Check className="h-3 w-3" />
+            Accepted
+          </span>
+        </div>
+      )}
+      {isInvite && isDeclined && (
+        <div className="flex items-center gap-2 mt-2 ml-8">
+          <span className="flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md bg-destructive/10 text-destructive dark:bg-destructive/20">
+            <X className="h-3 w-3" />
+            Declined
+          </span>
         </div>
       )}
     </div>
@@ -182,7 +210,7 @@ export function BellPopover() {
   const [activeTab, setActiveTab] = useState<Tab>("invites");
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const INVITE_TYPES = "INVITE_RECEIVED,INVITE_ACCEPTED,MEMBER_JOINED,CHANNEL_CREATED,CHANNEL_MEMBER_ADDED,CHANNEL_MEMBER_REMOVED,MEMBER_REMOVED,ROLE_CHANGED,WORKSPACE_DELETED";
+  const INVITE_TYPES = "INVITE_RECEIVED,INVITE_ACCEPTED,INVITE_DECLINED,MEMBER_JOINED,CHANNEL_CREATED,CHANNEL_MEMBER_ADDED,CHANNEL_MEMBER_REMOVED,MEMBER_REMOVED,ROLE_CHANGED,WORKSPACE_DELETED";
 
   const { data: unreadCount = 0 } = useUnreadCount();
   const {
@@ -190,12 +218,14 @@ export function BellPopover() {
     fetchNextPage: fetchMoreReplies,
     hasNextPage: hasMoreReplies,
     isFetchingNextPage: isLoadingMoreReplies,
+    isError: isRepliesError,
   } = useNotifications("MESSAGE_REPLIED");
   const {
     data: invitesData,
     fetchNextPage: fetchMoreInvites,
     hasNextPage: hasMoreInvites,
     isFetchingNextPage: isLoadingMoreInvites,
+    isError: isInvitesError,
   } = useNotifications(INVITE_TYPES);
   const markAsRead = useMarkAsRead();
   const markAllAsRead = useMarkAllAsRead();
@@ -231,6 +261,7 @@ export function BellPopover() {
   const activeFetchMore = fetchMoreMap[activeTab];
   const activeHasMore = hasMoreMap[activeTab];
   const activeIsLoadingMore = isLoadingMoreMap[activeTab];
+  const isError = activeTab === "replies" ? isRepliesError : isInvitesError;
 
   const repliesUnread = useMemo(
     () => replies.filter((n) => !n.read).length,
@@ -323,7 +354,12 @@ export function BellPopover() {
 
           {}
           <div className="max-h-80 overflow-y-auto">
-            {activeNotifications.length === 0 ? (
+            {isError && (
+              <div className="px-3 py-2 text-xs text-destructive bg-destructive/10">
+                Failed to load notifications.
+              </div>
+            )}
+            {!isError && activeNotifications.length === 0 ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
                 {activeTab === "replies"
                   ? "No replies yet"

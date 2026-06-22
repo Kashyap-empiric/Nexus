@@ -2,6 +2,7 @@
 
 import { useSocketStore } from "@/socket/socketStore";
 import { cn } from "@/shared/lib/utils";
+import { useEffect, useState } from "react";
 
 const TYPING_EXPIRY_MS = 4000;
 
@@ -15,10 +16,15 @@ export function TypingIndicator({ conversationId, currentUserId, className }: Ty
   const conversationTyping = useSocketStore(
     (state) => state.typingUsers.get(conversationId)
   );
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   if (!conversationTyping || conversationTyping.size === 0) return null;
 
-  const now = Date.now();
   const activeTypers = Array.from(conversationTyping.values()).filter(
     (u) => u.userId !== currentUserId && now - u.timestamp < TYPING_EXPIRY_MS
   );

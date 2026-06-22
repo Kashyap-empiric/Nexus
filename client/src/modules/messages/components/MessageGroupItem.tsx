@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import Link from "next/link";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import type { MessageGroup } from "@/modules/chat/utils/groupMessages";
@@ -122,6 +121,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
   const clearLongPress = () => {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
+      /* eslint-disable-next-line react-hooks/immutability */
       longPressTimerRef.current = null;
     }
     touchStartPosRef.current = null;
@@ -131,6 +131,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
     if (isDel) return;
     const touch = e.touches[0];
     touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+    /* eslint-disable-next-line react-hooks/immutability */
     longPressTimerRef.current = setTimeout(() => {
       if (touchStartPosRef.current) {
         setContextMenuPos({ x: touchStartPosRef.current.x, y: touchStartPosRef.current.y });

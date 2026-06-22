@@ -26,7 +26,7 @@ export function MessageSearchPopover() {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
 
-  const { data: results, isLoading } = useMessageSearchQuery(debouncedQuery, open);
+  const { data: results, isLoading, isError } = useMessageSearchQuery(debouncedQuery, open);
 
   const handleResultClick = (result: MessageSearchResult) => {
     setOpen(false);
@@ -113,7 +113,13 @@ export function MessageSearchPopover() {
               </div>
             )}
 
-            {!isLoading && debouncedQuery && results?.length === 0 && (
+            {!isLoading && isError && (
+              <div className="py-8 text-center text-sm text-destructive">
+                Search failed. Try again.
+              </div>
+            )}
+
+            {!isLoading && !isError && debouncedQuery && results?.length === 0 && (
               <div className="py-8 text-center text-sm text-muted-foreground">
                 No messages found
               </div>

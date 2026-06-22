@@ -7,9 +7,18 @@ import type { User, Conversation } from "@/modules/conversations/types/conversat
 import type { Message, MessagePage } from "../types/message";
 import type { SocketResponse, MessageSendPayload } from "@/modules/chat/types/socket";
 import type { InfiniteData } from "@tanstack/react-query";
-import { toast } from "sonner";
 import React from "react";
 import { AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
+import { friendlyError } from "@/shared/lib/friendly-error";
+
+const COMMON_ERROR_MAP: Record<string, string> = {
+  unauthorized: "You don't have permission to do that.",
+  forbidden: "You don't have permission to do that.",
+  not_found: "That message wasn't found. It may have been deleted.",
+  "too quickly": "You're sending messages too quickly. Please slow down.",
+};
+
 
 export const useMessagesInfiniteQuery = (conversationId: string) => {
   return useInfiniteQuery({
@@ -46,7 +55,6 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
 
       const userId = currentUser?.id || "me";
       const username = currentUser?.username || "Me";
-      const avatarUrl = currentUser?.avatarUrl || null;
 
       const previousMessages = queryClient.getQueryData(queryKeys.messages(conversationId));
 
@@ -125,8 +133,11 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
       if (context?.previousMessages) {
         queryClient.setQueryData(queryKeys.messages(conversationId), context.previousMessages);
       }
-      const errorMessage = err instanceof Error ? err.message : "Failed to send message";
-      if (errorMessage.includes("too quickly")) {
+      const rawMessage = err instanceof Error ? err.message : "";
+      const lower = rawMessage.toLowerCase();
+      const matched = Object.entries(COMMON_ERROR_MAP).find(([key]) => lower.includes(key));
+      const errorMessage = matched ? matched[1] : rawMessage || "Failed to send message";
+      if (lower.includes("too quickly")) {
         toast.error(errorMessage, {
           style: { backgroundColor: "#ef4444", color: "white", borderColor: "#ef4444" },
           icon: React.createElement(AlertTriangle, { color: "#fde047", size: 18 }),
@@ -200,7 +211,7 @@ export const useEditMessageMutation = (conversationId: string) => {
       if (context?.previousMessages) {
         queryClient.setQueryData(queryKeys.messages(conversationId), context.previousMessages);
       }
-      toast.error(err instanceof Error ? err.message : "Failed to edit message");
+      toast.error(friendlyError(err, "Failed to edit message"));
     },
   });
 };
@@ -268,7 +279,7 @@ export const useDeleteMessageMutation = (conversationId: string) => {
       if (context?.previousMessages) {
         queryClient.setQueryData(queryKeys.messages(conversationId), context.previousMessages);
       }
-      toast.error(err instanceof Error ? err.message : "Failed to delete message");
+      toast.error(friendlyError(err, "Failed to delete message"));
     },
   });
 };

@@ -7,5 +7,6 @@ export const useMessageSearchQuery = (query: string, isOpen: boolean) => {
     queryKey: queryKeys.messagesSearch(query),
     queryFn: () => messagesApi.searchMessages(query),
     enabled: isOpen && query.length > 0,
+    retry: false,
   });
 };

@@ -1,6 +1,7 @@
 export type NotificationType =
   | "INVITE_RECEIVED"
   | "INVITE_ACCEPTED"
+  | "INVITE_DECLINED"
   | "MEMBER_JOINED"
   | "CHANNEL_CREATED"
   | "CHANNEL_MEMBER_ADDED"
@@ -28,4 +29,7 @@ export interface NotificationPreference {
   dmNotifications: boolean;
   mentionNotifications: boolean;
   channelNotifications: boolean;
+  inviteNotifications: boolean;
+  replyNotifications: boolean;
+  workspaceActivityNotifications: boolean;
 }

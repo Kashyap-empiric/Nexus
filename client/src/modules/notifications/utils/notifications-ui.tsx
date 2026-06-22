@@ -1,4 +1,4 @@
-import { Mail, CheckCircle, UserPlus, Hash, Bell, UserMinus, MessageSquareReply, UserCheck, ShieldAlert, Trash2 } from "lucide-react";
+import { Mail, CheckCircle, UserPlus, Hash, Bell, UserMinus, MessageSquareReply, UserCheck, ShieldAlert, Trash2, X } from "lucide-react";
 
 export function timeAgo(dateStr: string): string {
   const now = Date.now();
@@ -54,6 +54,7 @@ export function NotificationIcon({ type }: { type: string }) {
   const iconMap: Record<string, React.ReactNode> = {
     INVITE_RECEIVED: <Mail className="h-4 w-4 text-amber-500" />,
     INVITE_ACCEPTED: <CheckCircle className="h-4 w-4 text-green-500" />,
+    INVITE_DECLINED: <X className="h-4 w-4 text-destructive" />,
     MEMBER_JOINED: <UserPlus className="h-4 w-4 text-brand" />,
     CHANNEL_CREATED: <Hash className="h-4 w-4 text-muted-foreground" />,
     CHANNEL_MEMBER_ADDED: <UserCheck className="h-4 w-4 text-brand" />,

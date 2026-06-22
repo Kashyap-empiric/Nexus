@@ -34,6 +34,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
 
   const isTypingRef = useRef(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tempIdCounterRef = useRef(0);
   const TYPING_STOP_TIMEOUT_MS = 1500;
 
   const emitTypingStart = useCallback(() => {
@@ -74,14 +75,16 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
   const submitMessage = () => {
     if (!editor) return;
     
-    // @ts-ignore - tiptap-markdown doesn't provide strong types for storage by default
+    // @ts-expect-error - tiptap-markdown storage type not available
     const markdownContent = editor.storage.markdown.getMarkdown();
     
     if (!markdownContent.trim()) return;
 
     emitTypingStop();
 
-    const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    tempIdCounterRef.current += 1;
+    /* eslint-disable-next-line react-hooks/purity */
+    const tempId = `temp-${Date.now()}-${tempIdCounterRef.current}`;
     sendMessage({ conversationId, content: markdownContent.trim(), tempId, replyToId: replyingTo?.id || null });
     
     editor.commands.clearContent(false);
@@ -193,7 +196,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
     submitMessage();
   };
 
-  const onEmojiClick = (emojiData: any) => {
+  const onEmojiClick = (emojiData: { emoji: string }) => {
     if (editor) {
       editor.chain().focus().insertContent(emojiData.emoji).run();
     }

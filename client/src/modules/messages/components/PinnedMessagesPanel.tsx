@@ -8,6 +8,7 @@ import { MarkdownRenderer } from "./MarkdownRenderer";
 import { useLayoutUI } from "@/shared/components/layout/AppLayoutShell";
 import { scrollToMessage } from "@/shared/lib/dom";
 import { useMediaQuery } from "@/shared/hooks/use-media-query";
+import { useRouter } from "next/navigation";
 import { cn } from "@/shared/lib/utils";
 
 interface PinnedMessagesPanelProps {
@@ -20,7 +21,8 @@ export function PinnedMessagesPanel({ conversationId }: PinnedMessagesPanelProps
   const { data: pins, isLoading, isError } = usePinnedMessages(conversationId);
   const unpinMutation = useUnpinMessage(conversationId);
   const { closeInfoPanel } = useLayoutUI();
-  const isMobile = useMediaQuery("(max-width: 767px)")
+  const isMobile = useMediaQuery("(max-width: 767px)");
+  const router = useRouter();
 
   if (isLoading) {
     return (
@@ -59,11 +61,19 @@ export function PinnedMessagesPanel({ conversationId }: PinnedMessagesPanelProps
           tabIndex={0}
           onClick={() => {
             if (pin.message.deletedAt) return;
-            if (isMobile) {
-              closeInfoPanel();
-              setTimeout(() => scrollToMessage(pin.messageId), 300);
+            const el = document.getElementById(`msg-${pin.messageId}`);
+            if (el) {
+              if (isMobile) {
+                closeInfoPanel();
+                setTimeout(() => scrollToMessage(pin.messageId), 300);
+              } else {
+                scrollToMessage(pin.messageId);
+              }
             } else {
-              scrollToMessage(pin.messageId);
+              if (isMobile) closeInfoPanel();
+              const url = new URL(window.location.href);
+              url.searchParams.set("highlight", pin.messageId);
+              router.replace(url.toString());
             }
           }}
           onTouchStart={(e) => {
@@ -73,22 +83,38 @@ export function PinnedMessagesPanel({ conversationId }: PinnedMessagesPanelProps
           onTouchEnd={(e) => {
             if (pin.message.deletedAt) return;
             e.preventDefault();
-            if (isMobile) {
-              closeInfoPanel();
-              setTimeout(() => scrollToMessage(pin.messageId), 300);
+            const el = document.getElementById(`msg-${pin.messageId}`);
+            if (el) {
+              if (isMobile) {
+                closeInfoPanel();
+                setTimeout(() => scrollToMessage(pin.messageId), 300);
+              } else {
+                scrollToMessage(pin.messageId);
+              }
             } else {
-              scrollToMessage(pin.messageId);
+              if (isMobile) closeInfoPanel();
+              const url = new URL(window.location.href);
+              url.searchParams.set("highlight", pin.messageId);
+              router.replace(url.toString());
             }
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
               if (pin.message.deletedAt) return;
-              if (isMobile) {
-                closeInfoPanel();
-                setTimeout(() => scrollToMessage(pin.messageId), 300);
+              const el = document.getElementById(`msg-${pin.messageId}`);
+              if (el) {
+                if (isMobile) {
+                  closeInfoPanel();
+                  setTimeout(() => scrollToMessage(pin.messageId), 300);
+                } else {
+                  scrollToMessage(pin.messageId);
+                }
               } else {
-                scrollToMessage(pin.messageId);
+                if (isMobile) closeInfoPanel();
+                const url = new URL(window.location.href);
+                url.searchParams.set("highlight", pin.messageId);
+                router.replace(url.toString());
               }
             }
           }}

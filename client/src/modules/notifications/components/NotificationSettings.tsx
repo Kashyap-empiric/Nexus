@@ -3,28 +3,32 @@
 import { useState, useEffect } from "react";
 import { useNotificationPreferences } from "@/modules/notifications/hooks/useNotifications";
 import { subscribeToPush, unsubscribeFromPush } from "@/shared/lib/push";
+import type { NotificationPreference } from "../types/notification";
 
 export function NotificationSettings() {
   const { preferences, isLoading, update, updateAsync, isUpdating } = useNotificationPreferences();
   const [actualPushEnabled, setActualPushEnabled] = useState(false);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
+    let cancelled = false;
     if (preferences?.pushEnabled && typeof window !== "undefined" && "serviceWorker" in navigator) {
       navigator.serviceWorker.ready.then(reg => {
         reg.pushManager.getSubscription().then(sub => {
-          if (sub && Notification.permission === "granted") {
-            setActualPushEnabled(true);
-          } else {
-            setActualPushEnabled(false);
-          }
-        }).catch(() => setActualPushEnabled(false));
+          if (cancelled) return;
+          setActualPushEnabled(!!(sub && Notification.permission === "granted"));
+        }).catch(() => {
+          if (!cancelled) setActualPushEnabled(false);
+        });
       });
     } else {
       setActualPushEnabled(false);
     }
+    return () => { cancelled = true; };
   }, [preferences?.pushEnabled]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  const handleToggle = async (key: "pushEnabled" | "dmNotifications" | "mentionNotifications" | "channelNotifications") => {
+  const handleToggle = async (key: keyof NotificationPreference) => {
     if (!preferences) return;
 
     if (key !== "pushEnabled") {
@@ -47,8 +51,39 @@ export function NotificationSettings() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center h-full">
-        <div className="animate-pulse w-8 h-8 rounded-full bg-primary/20" />
+      <div className="space-y-6 animate-pulse">
+        <div>
+          <div className="h-6 w-32 bg-primary/10 rounded mb-2"></div>
+          <div className="h-4 w-64 bg-primary/10 rounded"></div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="h-4 w-40 bg-primary/10 rounded"></div>
+          <div className="border rounded-lg divide-y bg-card">
+            <div className="flex items-center justify-between px-4 py-3">
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-48 bg-primary/10 rounded"></div>
+                <div className="h-3 w-64 bg-primary/10 rounded"></div>
+              </div>
+              <div className="h-5 w-9 bg-primary/10 rounded-full shrink-0"></div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="h-4 w-40 bg-primary/10 rounded"></div>
+          <div className="border rounded-lg divide-y bg-card">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center justify-between px-4 py-3">
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-32 bg-primary/10 rounded"></div>
+                  <div className="h-3 w-56 bg-primary/10 rounded"></div>
+                </div>
+                <div className="h-5 w-9 bg-primary/10 rounded-full shrink-0"></div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -106,6 +141,27 @@ export function NotificationSettings() {
               checked={preferences?.channelNotifications ?? false}
               disabled={isUpdating}
               onChange={() => handleToggle("channelNotifications")}
+            />
+            <ToggleRow
+              label="Invites"
+              description="Notify me when I receive or accept invitations"
+              checked={preferences?.inviteNotifications ?? true}
+              disabled={isUpdating}
+              onChange={() => handleToggle("inviteNotifications")}
+            />
+            <ToggleRow
+              label="Replies"
+              description="Notify me when someone replies to my messages"
+              checked={preferences?.replyNotifications ?? true}
+              disabled={isUpdating}
+              onChange={() => handleToggle("replyNotifications")}
+            />
+            <ToggleRow
+              label="Workspace Activity"
+              description="Notify me about member joins, role changes, and workspace updates"
+              checked={preferences?.workspaceActivityNotifications ?? true}
+              disabled={isUpdating}
+              onChange={() => handleToggle("workspaceActivityNotifications")}
             />
           </div>
         </div>
