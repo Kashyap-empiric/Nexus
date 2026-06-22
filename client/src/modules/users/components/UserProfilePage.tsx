@@ -9,6 +9,7 @@ import { MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/modules/auth/store/useAuthStore";
 import { api } from "@/shared/lib/api";
+import { toast } from "sonner";
 
 export function UserProfilePage({ userId }: { userId: string }) {
   const router = useRouter();
@@ -26,8 +27,8 @@ export function UserProfilePage({ userId }: { userId: string }) {
         userIds: [userId],
       });
       router.push(`/conversations/${response.data.data.id}`);
-    } catch (error) {
-      console.error("Failed to start conversation:", error);
+    } catch {
+      toast.error("Failed to start conversation. Please try again.");
     }
   };
 

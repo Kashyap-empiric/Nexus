@@ -95,8 +95,9 @@ export function ManageChannelMembersModal({ workspaceId, channelId, open, onOpen
         setSearchQuery("");
         setSelectedIds(new Set());
       },
-      onError: (err: any) => {
-        const errorMsg = err?.response?.data?.error || err?.message || "Failed to add members";
+      onError: (err: unknown) => {
+        const errObj = err && typeof err === "object" ? err as { response?: { data?: { error?: string } }; message?: string } : {};
+        const errorMsg = errObj.response?.data?.error || errObj.message || "Failed to add members";
         toast.error(errorMsg);
       },
     });

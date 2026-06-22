@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { APP_ROUTES } from '@/config/url';
 
 export default function OnboardingError({
-  error,
   reset,
 }: {
   error: Error & { digest?: string };
@@ -20,7 +19,7 @@ export default function OnboardingError({
         <div className="space-y-1">
           <h3 className="font-semibold text-foreground">Something went wrong</h3>
           <p className="text-sm text-muted-foreground">
-            We couldn't complete the setup. Please try again.
+            We couldn&apos;t complete the setup. Please try again.
           </p>
         </div>
         <div className="flex flex-col gap-2 pt-2">

@@ -11,7 +11,7 @@ import { APP_ROUTES } from "@/config/url";
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const isInitialized = useAuthInitialized();
   const user = useUser();
-  const { data: profile, isLoading: isProfileLoading } = useProfile();
+  const { data: profile } = useProfile();
   const pathname = usePathname();
   const router = useRouter();
   

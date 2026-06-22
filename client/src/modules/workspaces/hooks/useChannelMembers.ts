@@ -2,11 +2,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getChannelMembers, addChannelMembers, removeChannelMember } from "../api/workspaces.api";
 
 export const useChannelMembersQuery = (workspaceId: string | null, channelId: string | null) => {
-  return useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["workspaces", workspaceId, "channels", channelId, "members"],
     queryFn: () => getChannelMembers(workspaceId!, channelId!),
     enabled: !!workspaceId && !!channelId,
+    retry: false,
   });
+  return { data, isLoading, isError, error };
 };
 
 export const useAddChannelMembersMutation = () => {

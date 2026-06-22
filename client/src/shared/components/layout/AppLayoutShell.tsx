@@ -10,15 +10,16 @@ import { useChatStore } from "@/modules/chat/store/chatStore";
 import { useWorkspaceMembersQuery } from "@/modules/workspaces/hooks/useWorkspaces";
 import { cn } from "@/shared/lib/utils";
 import { presetNavigationFromLink } from "@/shared/lib/navigation";
-import { Menu, Hash, Users, X, ArrowLeft } from "lucide-react";
+import { Hash, Users, ArrowLeft } from "lucide-react";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { PresenceIndicator } from "@/modules/chat/components/PresenceIndicator";
-import Link from "next/link";
 import { APP_ROUTES } from "@/config/url";
 import { InviteModalProvider, useInviteModalContext } from "@/modules/invites/context/InviteModalContext";
-import { InviteModal } from "@/modules/invites/components/InviteModal";
-import { SharedSettingsModal, SettingsView } from "@/modules/settings/components/SharedSettingsModal";
-import { WorkspaceSettingsModal } from "@/modules/workspaces/components/WorkspaceSettingsModal";
+import dynamic from "next/dynamic";
+
+const InviteModal = dynamic(() => import("@/modules/invites").then(mod => mod.InviteModal), { ssr: false });
+const SharedSettingsModal = dynamic(() => import("@/modules/settings").then(mod => mod.SharedSettingsModal), { ssr: false });
+const WorkspaceSettingsModal = dynamic(() => import("@/modules/workspaces").then(mod => mod.WorkspaceSettingsModal), { ssr: false });
 import { Info } from "lucide-react";
 import React, { createContext, useContext } from "react";
 import { useSocketStore } from "@/socket/socketStore";
@@ -80,7 +81,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
   const [infoPanelOpen, setInfoPanelOpen] = useState(false);
   const [infoPanelView, setInfoPanelView] = useState<InfoPanelView>('about');
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsView, setSettingsView] = useState<SettingsView>('profile');
+  const [settingsView, setSettingsView] = useState<'profile' | 'appearance' | 'notifications' | 'about'>('profile');
   const [workspaceSettingsOpen, setWorkspaceSettingsOpen] = useState(false);
 
   const isContentActive =
@@ -114,7 +115,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
   const inviteModal = useInviteModalContext();
   const closeMobileSidebar = useCallback(() => setMobileSidebarOpen(false), []);
 
-  const openSettings = (view: SettingsView) => {
+  const openSettings = (view: 'profile' | 'appearance' | 'notifications' | 'about') => {
     setSettingsView(view);
     setSettingsOpen(true);
   };

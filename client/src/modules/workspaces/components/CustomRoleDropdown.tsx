@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Shield, ShieldCheck, User as UserIcon, UserX } from "lucide-react";
+import { ChevronDown, Shield, ShieldCheck, User as UserIcon } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import type { WorkspaceRole } from "../types/workspace";
 
@@ -48,6 +48,7 @@ export function CustomRoleDropdown({
   const panelRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; right: number } | null>(null);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!isOpen) {
       setPosition(null);
@@ -72,6 +73,7 @@ export function CustomRoleDropdown({
       window.removeEventListener("resize", measure);
     };
   }, [isOpen]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!isOpen) return;

@@ -20,11 +20,10 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import { MoreVertical, Shield, ShieldCheck, UserIcon, UserX } from "lucide-react";
-import { cn } from "@/shared/lib/utils";
 import { toast } from "sonner";
+import { friendlyError } from "@/shared/lib/friendly-error";
 import type { WorkspaceMember, WorkspaceRole } from "../types/workspace";
 import type { ConversationMember } from "@/modules/conversations/types/conversation";
-import { ROLE_BADGE_STYLES } from "./CustomRoleDropdown";
 
 interface MemberListPanelProps {
   workspaceId: string;
@@ -82,8 +81,8 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
       });
       toast.success(`${memberToRemove.user?.username || "User"} removed from workspace`);
       setMemberToRemove(null);
-    } catch (err: any) {
-      const errorMsg = err?.response?.data?.error || err?.message || "Failed to remove member";
+    } catch (err: unknown) {
+      const errorMsg = friendlyError(err, "Failed to remove member");
       toast.error(errorMsg);
     } finally {
       setIsRemoving(false);
@@ -103,15 +102,14 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
   const onlineMembers = members.filter(m => onlineUsers.has(m.userId));
   const offlineMembers = members.filter(m => !onlineUsers.has(m.userId));
 
-  const renderMember = (member: any) => {
+  const renderMember = (member: WorkspaceMember | ConversationMember) => {
     const isSelf = member.userId === currentUser?.id;
-    const wsMember = isChannelView ? (wsMembers as WorkspaceMember[] | undefined)?.find(w => w.userId === member.userId) : member;
+    const wsMember: WorkspaceMember | undefined = isChannelView
+      ? (wsMembers as WorkspaceMember[] | undefined)?.find(w => w.userId === member.userId)
+      : (member as WorkspaceMember);
     const role = (wsMember?.role || "MEMBER") as WorkspaceRole;
-    
-    const RoleIcon: React.ComponentType<{ className?: string }> = 
-      role === "OWNER" ? ShieldCheck : role === "ADMIN" ? Shield : UserIcon;
 
-    const showMenu = !isChannelView && !isSelf && wsMember && canManage(wsMember);
+    const showMenu = !isChannelView && !isSelf && !!wsMember && canManage(wsMember);
 
     return (
       <div key={member.userId} className="group flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-muted/50 cursor-default">
@@ -123,10 +121,10 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
               className="h-8 w-8"
               fallbackClassName="text-[10px]"
             />
-            <PresenceIndicator 
-              userId={member.userId} 
-              status={member.user?.status as string | undefined}
-              className="-bottom-0.5 -right-0.5" 
+            <PresenceIndicator
+              userId={member.userId}
+              status={(member as WorkspaceMember).user?.status as string | undefined}
+              className="-bottom-0.5 -right-0.5"
             />
           </div>
           <div className="flex flex-col min-w-0 flex-1 justify-center">
@@ -153,7 +151,7 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
 
         {showMenu && (
           <MemberActionsMenu
-            member={member}
+            member={member as WorkspaceMember}
             isOwner={isOwner}
             onPromote={setMemberToPromote}
             onRoleChange={handleRoleChange}

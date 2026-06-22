@@ -20,14 +20,17 @@ import { useUser } from "@/modules/auth/store/useAuthStore";
 
 export const useProfile = () => {
   const user = useUser();
-  return useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["users", "me"],
     queryFn: async () => {
       const { data } = await api.get<ProfileResponse>("/users/me");
       return data.data;
     },
     enabled: !!user,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
+  return { data, isLoading, isError, error };
 };
 
 type UpdateProfileData = {

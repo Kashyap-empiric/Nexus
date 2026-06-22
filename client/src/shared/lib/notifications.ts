@@ -70,8 +70,9 @@ export function showNotification(options: NotificationOptions): boolean {
     setTimeout(() => notification.close(), 8000);
 
     return true;
-  } catch (error: any) {
-    if (error.name === 'TypeError' && 'serviceWorker' in navigator) {
+  } catch (error: unknown) {
+    const err = error && typeof error === "object" ? error as { name?: string } : {};
+    if (err.name === 'TypeError' && 'serviceWorker' in navigator) {
       navigator.serviceWorker.ready.then(registration => {
         registration.showNotification(options.title, {
           body: options.body,
@@ -102,13 +103,12 @@ export function showMessageNotification(
     ? content.substring(0, maxLength) + "…"
     : content;
 
-  const title = senderName;
-  const body = conversationName
-    ? `${conversationName}: ${truncatedContent}`
-    : truncatedContent;
+  const body = conversationName?.startsWith("#")
+    ? `${conversationName}\n\n${senderName}: ${truncatedContent}`
+    : `${senderName}: ${truncatedContent}`;
 
   return showNotification({
-    title,
+    title: "Nexus",
     body,
     tag: conversationId,
     conversationId,

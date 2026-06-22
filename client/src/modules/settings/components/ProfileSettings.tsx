@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/incompatible-library */
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,7 +25,7 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export const ProfileSettings = () => {
-  const { data: profile, isLoading } = useProfile();
+  const { data: profile, isLoading, isError } = useProfile();
   const { mutateAsync: updateProfile, isPending } = useUpdateProfile();
   const { mutateAsync: updateAvatar } = useUpdateAvatar();
   const { inviteUrl, isLoading: isInviteLoading, generate } = useInviteLink();
@@ -92,11 +93,12 @@ export const ProfileSettings = () => {
       setAvatarPreview(null);
       setIsAvatarRemoved(false);
       reset({ ...data, fullName: data.fullName || "", bio: data.bio || "" }); 
-    } catch (error: any) {
-      if (error.status === 409) {
+    } catch (error: unknown) {
+      const errObj = error && typeof error === "object" ? error as { status?: number; message?: string } : {};
+      if (errObj.status === 409) {
         toast.error("Username is already taken. Please choose another one.");
       } else {
-        toast.error(error.message || "Failed to update profile");
+        toast.error(errObj.message || "Failed to update profile");
       }
     } finally {
       setIsUploading(false);
@@ -127,6 +129,15 @@ export const ProfileSettings = () => {
     setAvatarPreview(null);
     setIsAvatarRemoved(true);
   };
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-destructive">
+        <p className="font-medium">Failed to load profile</p>
+        <p className="text-sm text-muted-foreground mt-1">Please try refreshing the page.</p>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

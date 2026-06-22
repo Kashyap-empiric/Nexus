@@ -36,7 +36,7 @@ export function StatusSelector() {
     try {
       await updateStatus({ status: statusValue, statusText: profile.statusText });
       toast.success(`Status updated to ${STATUS_OPTIONS.find(s => s.value === statusValue)?.label}`);
-    } catch (error) {
+    } catch {
       toast.error("Failed to update status");
     }
   };
@@ -47,7 +47,7 @@ export function StatusSelector() {
       await updateStatus({ status: profile.status as "AVAILABLE" | "AWAY" | "DND" | "INVISIBLE", statusText: statusText || null });
       toast.success("Status text updated");
       setIsOpen(false);
-    } catch (error) {
+    } catch {
       toast.error("Failed to update status text");
     }
   };

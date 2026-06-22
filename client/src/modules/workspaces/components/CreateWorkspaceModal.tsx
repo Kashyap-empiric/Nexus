@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useState, useRef } from "react";
 import { Camera } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
@@ -12,6 +14,7 @@ import { useChatStore } from "@/modules/chat/store/chatStore";
 import { uploadWorkspaceIcon } from "@/shared/lib/upload";
 import { toast } from "sonner";
 import type { AxiosError } from "axios";
+import { friendlyError } from "@/shared/lib/friendly-error";
 
 interface CreateWorkspaceModalProps {
   isOpen: boolean;
@@ -67,7 +70,7 @@ export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalPr
       setActiveWorkspaceId(workspace.slug);
     } catch (error: unknown) {
       const axiosError = error as AxiosError<{ error?: string }>;
-      const message = axiosError?.response?.data?.error || (error instanceof Error ? error.message : "Failed to create workspace");
+      const message = friendlyError(axiosError?.response?.data?.error || error, "Failed to create workspace");
       toast.error(message);
     }
   };

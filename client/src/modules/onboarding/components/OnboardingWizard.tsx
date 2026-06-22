@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { friendlyError } from "@/shared/lib/friendly-error";
 import { useUser } from "@/modules/auth/store/useAuthStore";
 import { completeOnboarding } from "../api/onboarding.api";
 import { STEPS, type OnboardingCompleteResponse } from "../types/onboarding";
@@ -28,13 +29,16 @@ export function OnboardingWizard() {
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [completionData, setCompletionData] = useState<OnboardingCompleteResponse | null>(null);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (user?.user_metadata?.full_name && !profileData.fullName) {
       setProfileData(prev => ({ ...prev, fullName: user.user_metadata.full_name }));
     }
-  }, [user]);
+  }, [user, profileData.fullName]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleProfileContinue = (data: { fullName: string; bio: string; avatarFile: File | null }) => {
     setProfileData(data);
@@ -88,9 +92,9 @@ export function OnboardingWizard() {
       } else {
         router.push("/onboarding?step=3");
       }
-    } catch (error: any) {
-      console.error("Onboarding failed:", error);
-      toast.error(error.response?.data?.error || "Failed to create workspace. Please try again.");
+    } catch (err: unknown) {
+      console.error("Onboarding failed:", err);
+      setError(friendlyError(err, "Failed to create workspace. Please try again."));
     } finally {
       setIsSubmitting(false);
     }
@@ -111,11 +115,24 @@ export function OnboardingWizard() {
         )}
         
         {currentStep === 2 && (
-          <CreateWorkspaceStep 
-            onCreate={handleWorkspaceCreate} 
-            isLoading={isSubmitting}
-            defaultFullName={profileData.fullName}
-          />
+          <>
+            {error && (
+              <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md text-sm text-destructive flex items-center justify-between">
+                <span>{error}</span>
+                <button
+                  onClick={() => setError(null)}
+                  className="ml-2 underline whitespace-nowrap"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+            <CreateWorkspaceStep 
+              onCreate={handleWorkspaceCreate} 
+              isLoading={isSubmitting}
+              defaultFullName={profileData.fullName}
+            />
+          </>
         )}
         
         {currentStep === 3 && completionData && (

@@ -1,12 +1,12 @@
+/* eslint-disable @next/next/no-img-element */
+
 import { useState, useRef } from "react";
-import { Camera, Loader2, Upload } from "lucide-react";
+import { Camera, Upload } from "lucide-react";
 import { useUser } from "@/modules/auth/store/useAuthStore";
-import { uploadAvatar } from "@/shared/lib/upload";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { Label } from "@/shared/components/ui/label";
-import { UserAvatar } from "@/shared/components/ui/user-avatar";
 
 interface SetupProfileStepProps {
   onContinue: (data: { fullName: string; bio: string; avatarFile: File | null }) => void;
@@ -40,7 +40,7 @@ export function SetupProfileStep({ onContinue, initialData }: SetupProfileStepPr
     <form onSubmit={handleSubmit} className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4">
       <div className="text-center space-y-2">
         <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">Set up your profile</h2>
-        <p className="text-muted-foreground text-sm sm:text-base">Welcome to Nexus! Let's get to know you better.</p>
+        <p className="text-muted-foreground text-sm sm:text-base">Welcome to Nexus! Let&apos;s get to know you better.</p>
       </div>
 
       <div className="bg-card border shadow-sm rounded-xl p-6 space-y-6">

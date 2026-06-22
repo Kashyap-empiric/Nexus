@@ -1,3 +1,5 @@
+/* eslint-disable @next/next/no-img-element */
+
 import { useState, useEffect, useRef } from "react";
 import { Loader2, Hash, Camera } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
@@ -23,6 +25,7 @@ export function CreateWorkspaceStep({ onCreate, isLoading, initialName, defaultF
   const [isSkipping, setIsSkipping] = useState(false);
   const iconInputRef = useRef<HTMLInputElement>(null);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!slugEdited) {
       const generatedSlug = workspaceName
@@ -32,6 +35,7 @@ export function CreateWorkspaceStep({ onCreate, isLoading, initialName, defaultF
       setWorkspaceSlug(generatedSlug);
     }
   }, [workspaceName, slugEdited]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleIconSelect = (file: File) => {
     if (file.size > 5 * 1024 * 1024) {
@@ -104,7 +108,7 @@ export function CreateWorkspaceStep({ onCreate, isLoading, initialName, defaultF
                 disabled={isLoading}
               />
             </div>
-            <p className="text-xs text-muted-foreground">This will be your workspace's unique address.</p>
+            <p className="text-xs text-muted-foreground">This will be your workspace&apos;s unique address.</p>
           </div>
 
           <div className="space-y-2">
@@ -166,7 +170,7 @@ export function CreateWorkspaceStep({ onCreate, isLoading, initialName, defaultF
             <Hash className="w-4 h-4 text-brand" />
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            We'll automatically create a <span className="font-medium text-foreground">#general</span> channel for your team to get started.
+            We&apos;ll automatically create a <span className="font-medium text-foreground">#general</span> channel for your team to get started.
           </p>
         </div>
       </div>

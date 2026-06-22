@@ -20,7 +20,7 @@ export function OnboardingCompleteStep({ workspaceSlug, generalChannelId }: Onbo
         <div className="w-20 h-20 bg-brand/10 rounded-full flex items-center justify-center mx-auto mb-6">
           <CheckCircle className="w-10 h-10 text-brand" />
         </div>
-        <h2 className="text-3xl font-semibold tracking-tight text-foreground">You're All Set!</h2>
+        <h2 className="text-3xl font-semibold tracking-tight text-foreground">You&apos;re All Set!</h2>
         <p className="text-muted-foreground">Your profile is created and your workspace is ready.</p>
       </div>
 

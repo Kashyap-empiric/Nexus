@@ -5,3 +5,4 @@ export * from "./types/workspace";
 export * from "./components/WorkspaceHeader";
 export * from "./components/CreateWorkspaceModal";
 export * from "./components/CreateChannelModal";
+export * from "./components/WorkspaceSettingsModal";

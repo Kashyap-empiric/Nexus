@@ -2,10 +2,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchUserWorkspaces, fetchWorkspaceDetails, createWorkspace, createChannel } from "../api/workspaces.api";
 
 export const useWorkspaces = () => {
-  return useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["workspaces"],
     queryFn: fetchUserWorkspaces,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
+  return { data, isLoading, isError, error };
 };
 
 export const useWorkspaceDetails = (workspaceId: string | null) => {
@@ -13,6 +16,7 @@ export const useWorkspaceDetails = (workspaceId: string | null) => {
     queryKey: ["workspaces", workspaceId],
     queryFn: () => fetchWorkspaceDetails(workspaceId as string),
     enabled: !!workspaceId,
+    retry: false,
   });
 };
 
@@ -66,6 +70,7 @@ export const useWorkspaceMembersQuery = (workspaceId: string | null) => {
     queryKey: ["workspace-members", workspaceId],
     queryFn: () => fetchWorkspaceMembers(workspaceId as string),
     enabled: !!workspaceId,
+    retry: false,
   });
 };
 

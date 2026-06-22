@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element, react-hooks/incompatible-library */
+
 import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,6 +22,7 @@ import { cn } from "@/shared/lib/utils";
 import type { WorkspaceRole, WorkspaceMember } from "../types/workspace";
 import { useChatStore } from "@/modules/chat/store/chatStore";
 import { uploadWorkspaceIcon, getPublicUrl, deleteFile } from "@/shared/lib/upload";
+import { friendlyError } from "@/shared/lib/friendly-error";
 import { CustomRoleDropdown, ROLE_BADGE_STYLES } from "./CustomRoleDropdown";
 
 const workspaceSchema = z.object({
@@ -201,10 +204,9 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
   function getErrorMessage(error: unknown, fallback: string): string {
     if (error && typeof error === "object" && "response" in error) {
       const resp = (error as { response?: { data?: { error?: string } } }).response;
-      return resp?.data?.error || fallback;
+      return friendlyError(resp?.data?.error || error, fallback);
     }
-    if (error instanceof Error) return error.message;
-    return fallback;
+    return friendlyError(error, fallback);
   }
 
   if (!isOpen) return null;

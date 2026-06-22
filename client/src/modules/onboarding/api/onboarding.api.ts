@@ -1,6 +1,6 @@
 import { api } from "@/shared/lib/api";
 import { API_ROUTES } from "@/config/url";
-import type { OnboardingData, OnboardingCompleteResponse } from "../types/onboarding";
+import type { OnboardingCompleteResponse } from "../types/onboarding";
 
 export interface CompleteOnboardingPayload {
   fullName: string;

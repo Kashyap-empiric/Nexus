@@ -58,19 +58,21 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
 
   const [workspaceMemberIds, setWorkspaceMemberIds] = useState<Set<string>>(new Set());
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (isOpen && type === "WORKSPACE" && entityId) {
       import("../../workspaces/api/workspaces.api").then(({ fetchWorkspaceMembers }) => {
         fetchWorkspaceMembers(entityId).then((members) => {
           setWorkspaceMemberIds(new Set(members.map((m) => m.userId)));
         }).catch(() => {
-          
+          toast.error("Failed to load workspace members");
         });
       });
     } else {
       setWorkspaceMemberIds(new Set());
     }
   }, [isOpen, type, entityId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const filteredResults = searchResults?.filter(
     (u) =>
@@ -125,8 +127,9 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
       if (result.skipped.length === 0) {
         onClose();
       }
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || "Failed to send invites");
+    } catch (err: unknown) {
+      const errObj = err && typeof err === "object" ? err as { response?: { data?: { error?: string } } } : {};
+      toast.error(errObj.response?.data?.error || "Failed to send invites");
     } finally {
       setIsInviting(false);
     }
@@ -152,8 +155,9 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
 
       setEmailInviteInput("");
       onClose();
-    } catch (err: any) {
-      const errorMsg = err?.response?.data?.error || "Failed to send invitation";
+    } catch (err: unknown) {
+      const errObj = err && typeof err === "object" ? err as { response?: { data?: { error?: string } } } : {};
+      const errorMsg = errObj.response?.data?.error || "Failed to send invitation";
       toast.error(errorMsg);
     } finally {
       setIsSendingEmail(false);

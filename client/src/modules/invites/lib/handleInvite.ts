@@ -1,12 +1,12 @@
 import { api } from "@/shared/lib/api";
 import { API_ROUTES } from "@/config/url";
 import { toast } from "sonner";
+import { friendlyError } from "@/shared/lib/friendly-error";
 import { safeRedirect } from "@/shared/lib/utils";
 
 let isResolving = false;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const handleInviteContinuation = async (router: any) => {
+export const handleInviteContinuation = async (router: { push: (url: string) => void }) => {
   if (isResolving) return false;
   
   const inviteData = sessionStorage.getItem("nexus_invite");
@@ -39,11 +39,10 @@ export const handleInviteContinuation = async (router: any) => {
       return true;
     }
     return false;
-  } catch (error: any) {
+  } catch (err: unknown) {
     sessionStorage.removeItem("nexus_invite");
-    const errorMsg = error?.response?.data?.error || error?.message || "Failed to accept invite";
-    console.error("Invite resolution failed:", errorMsg);
-    toast.error(errorMsg);
+    console.error("Invite resolution failed:", err);
+    toast.error(friendlyError(err, "Failed to accept invite"), { id: "invite-error", duration: Infinity });
     return false;
   } finally {
     isResolving = false;

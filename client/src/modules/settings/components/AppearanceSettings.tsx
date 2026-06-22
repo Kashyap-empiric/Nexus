@@ -2,18 +2,12 @@
 
 import { useTheme } from "next-themes";
 import { Monitor, Moon, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
 import { cn } from "@/shared/lib/utils";
 
 export const AppearanceSettings = () => {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
+  if (!theme) return null;
 
   const options = [
     { label: "Light", value: "light", icon: Sun },
