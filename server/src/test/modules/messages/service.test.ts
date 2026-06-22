@@ -187,7 +187,7 @@ describe("messages service", () => {
 
       await expect(
         messagesService.editMessage("msg-1", "conv-1", "user-1", "Edit")
-      ).rejects.toThrow("403 Forbidden");
+      ).rejects.toThrow("Forbidden");
     });
   });
 
@@ -252,7 +252,7 @@ describe("messages service", () => {
 
       await expect(
         messagesService.deleteMessage("msg-1", "conv-1", "user-1")
-      ).rejects.toThrow("403 Forbidden");
+      ).rejects.toThrow("Forbidden");
     });
   });
 
@@ -365,23 +365,24 @@ describe("messages service", () => {
 
       mockPrisma.conversation.findUnique.mockResolvedValueOnce(conv);
 
-      mockPrisma.user.findUnique
-        .mockResolvedValueOnce({
+      mockPrisma.user.findMany.mockResolvedValueOnce([
+        {
           id: "user-2",
           pushNotificationsEnabled: true,
           dmNotifications: true,
           channelNotifications: false,
           mentionNotifications: true,
           username: "bob",
-        })
-        .mockResolvedValueOnce({
+        },
+        {
           id: "user-3",
           pushNotificationsEnabled: false,
           dmNotifications: true,
           channelNotifications: false,
           mentionNotifications: true,
           username: "charlie",
-        });
+        },
+      ]);
 
       const { sendPushNotification } = await import("@/services/push.service.js");
 
@@ -389,8 +390,8 @@ describe("messages service", () => {
 
       expect(sendPushNotification).toHaveBeenCalledTimes(1);
       expect(sendPushNotification).toHaveBeenCalledWith("user-2", expect.objectContaining({
-        title: "alice",
-        body: "Hello!",
+        title: "Nexus",
+        body: "alice: Hello!",
       }));
     });
   });

@@ -4,8 +4,45 @@ import { vi } from "vitest";
  * Creates a mock Prisma client with all models stubbed.
  * Each model method returns a mock function that can be configured per test.
  */
-export function createMockPrisma() {
-  const mockModel = () => ({
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type MockFn = any;
+
+interface MockModel {
+  findUnique: MockFn;
+  findFirst: MockFn;
+  findMany: MockFn;
+  create: MockFn;
+  update: MockFn;
+  delete: MockFn;
+  upsert: MockFn;
+  count: MockFn;
+  createMany: MockFn;
+  updateMany: MockFn;
+  deleteMany: MockFn;
+  aggregate: MockFn;
+  groupBy: MockFn;
+}
+
+interface MockPrismaClient {
+  user: MockModel;
+  conversation: MockModel;
+  conversationMember: MockModel;
+  message: MockModel;
+  pinnedMessage: MockModel;
+  workspace: MockModel;
+  workspaceMember: MockModel;
+  invite: MockModel;
+  notification: MockModel;
+  passwordResetToken: MockModel;
+  pushSubscription: MockModel;
+  $transaction: MockFn;
+  $queryRaw: MockFn;
+  $connect: MockFn;
+  $disconnect: MockFn;
+}
+
+export function createMockPrisma(): MockPrismaClient {
+  const mockModel = (): MockModel => ({
     findUnique: vi.fn(),
     findFirst: vi.fn(),
     findMany: vi.fn(),
@@ -31,6 +68,7 @@ export function createMockPrisma() {
     workspaceMember: mockModel(),
     invite: mockModel(),
     notification: mockModel(),
+    passwordResetToken: mockModel(),
     pushSubscription: mockModel(),
     $transaction: vi.fn((fn: any) => fn(mockPrisma)),
     $queryRaw: vi.fn(),
@@ -39,7 +77,7 @@ export function createMockPrisma() {
   };
 }
 
-export const mockPrisma = createMockPrisma();
+export const mockPrisma: MockPrismaClient = createMockPrisma();
 
 /**
  * Replaces the prisma module with our mock.

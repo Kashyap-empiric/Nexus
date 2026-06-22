@@ -7,6 +7,7 @@ process.env.CLIENT_URL = process.env.CLIENT_URL || "http://localhost:3000";
 process.env.VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "test-vapid-public-key";
 process.env.VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "test-vapid-private-key";
 process.env.VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:test@nexus.app";
+process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test-service-role-key";
 
 beforeAll(() => {
 });
