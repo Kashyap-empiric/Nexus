@@ -38,6 +38,15 @@
 - [ ] Empty state
 - [ ] Error state
 - [ ] Dark mode
+- [ ] No browser console errors (check DevTools console)
+
+## Error Verification
+- [ ] API 400 errors show user-friendly message
+- [ ] API 403 errors show permission denied message
+- [ ] API 404 errors show not found message
+- [ ] API 500 errors show generic error (no stack trace leaked)
+- [ ] Network failures handled gracefully (timeout, offline)
+- [ ] Rate limit responses show retry-after information
 
 ## Performance Verification
 - [ ] Bundle size: Check for any new heavy imports (emoji picker, markdown, etc.) — use dynamic imports if needed
@@ -48,6 +57,67 @@
 - [ ] Stale time: Verify appropriate `staleTime` configured for infrequently changing data
 - [ ] Console: Verify no debug console.log in production request paths
 - [ ] Bundle analyzer: Run `ANALYZE=true npm run build` for client to verify bundle impact
+
+## Agent Self QA
+Status: PASS | FAIL
+
+## Human QA
+Status: PENDING | PASS | FAIL
+
+## Demo Preparation
+
+### Demo Flow
+1. <Step-by-step demonstration scenario>
+2. <Expected outcome>
+
+### Test Accounts
+- <Required accounts, permissions, setup>
+
+### Expected Results
+- <Expected outcome for each demo step>
+
+## Architecture Explanation
+
+### Design Decisions
+- <Key architectural choices>
+
+### Data Flow
+- <Client → API → Server → DB → Socket → Client>
+
+### API Flow
+- <Endpoints used>
+
+### Database Interactions
+- <Tables affected, key queries>
+
+### Permission Model
+- <Who can do what>
+
+### Tradeoffs
+- <What was traded off and why>
+
+## Known Limitations
+
+| Limitation | Reason Deferred | Introduced |
+|---|---|---|
+| <Issue> | <Why deferred> | <Date> |
+
+## AI Usage Report
+
+### Scope
+- <What was implemented>
+
+### Files Modified
+- <List of affected files>
+
+### Decisions Made
+- <Important implementation decisions>
+
+### Risks
+- <Potential concerns or technical debt>
+
+### Follow-up Work
+- <Future improvements or recommended next steps>
 
 ## Agent Self QA
 Status: PASS | FAIL

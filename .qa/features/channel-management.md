@@ -40,6 +40,84 @@
 - [ ] Empty state (no members to add)
 - [ ] Error state
 - [ ] Dark mode
+- [ ] No browser console errors (check DevTools console)
+
+## Error Verification
+- [ ] API 400 errors show user-friendly message
+- [ ] API 403 errors show permission denied
+- [ ] API 404 errors show not found
+- [ ] AlertDialog confirmation shows before member removal
+
+## Demo Preparation
+
+### Demo Flow
+1. Open Manage Members modal for a channel
+2. Search for a workspace member
+3. Add member to channel — list updates
+4. Remove member — AlertDialog confirmation
+5. Verify socket event updates other clients
+
+### Test Accounts
+- ADMIN or OWNER account for managing members
+- MEMBER account that cannot manage
+
+### Expected Results
+- Members added appear in real-time
+- Members removed lose channel access
+- Non-admins cannot access member management
+
+## Architecture Explanation
+
+### Design Decisions
+- Channel membership tracked via ConversationMember table
+- Socket room membership updated dynamically on add/remove (no reconnect needed)
+- AlertDialog used for destructive actions (replaced window.confirm)
+
+### Data Flow
+Client → REST API → Controller → Service → Repository → ConversationMember table + Socket dispatcher broadcast
+
+### API Flow
+- `POST .../channels/:channelId/members` — add members
+- `DELETE .../channels/:channelId/members/:userId` — remove member
+
+### Database Interactions
+- `ConversationMember` rows created/deleted
+- Private channel access controlled by membership
+
+### Permission Model
+- ADMIN/OWNER can manage channel members
+- MEMBER cannot manage members
+- Channel creator retains access after removal
+
+### Tradeoffs
+- No batch remove — removes one member at a time
+- No transfer of ownership for channels
+
+## Known Limitations
+
+| Limitation | Reason Deferred | Introduced |
+|---|---|---|
+| No batch member removal | Single user at a time via modal | 2026-06-19 |
+
+## AI Usage Report
+
+### Scope
+Channel member management — add, remove, permission enforcement
+
+### Files Modified
+- ManageChannelMembersModal (client)
+- Channel member routes and service (server)
+
+### Decisions Made
+- Socket rooms joined dynamically on invite acceptance
+- AlertDialog replaces window.confirm for consistency
+
+### Risks
+- Removing self from channel may lose access permanently
+
+### Follow-up Work
+- Add batch member add/remove
+- Add channel ownership transfer
 
 ## Agent Self QA
 Status: PENDING

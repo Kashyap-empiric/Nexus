@@ -42,6 +42,93 @@
 - [ ] Error state
 - [ ] Dark mode
 - [ ] Animation on new notification
+- [ ] No browser console errors (check DevTools console)
+
+## Error Verification
+- [ ] API 400 errors show user-friendly message
+- [ ] API 403 errors show permission denied
+- [ ] Unauthorized push subscription rejected
+- [ ] Invalid push endpoint handled gracefully
+
+## Demo Preparation
+
+### Demo Flow
+1. Trigger a notification (e.g., invite sent to user)
+2. Bell icon shows unread badge count
+3. Open BellPopover — notification listed with type-specific icon
+4. Mark one as read — badge count decrements
+5. Mark all as read — badge disappears
+6. Open full notifications page — infinite scroll loads history
+
+### Test Accounts
+- User with pending invites and channel notifications
+- User with no notifications (for empty state)
+
+### Expected Results
+- Bell badge updates in real-time via socket
+- BellPopover shows recent notifications with correct icons
+- Marking read updates state and persists
+- Notifications page loads paginated history
+
+## Architecture Explanation
+
+### Design Decisions
+- Dual-delivery: notifications persisted to DB AND delivered via Socket.io for instant UI update
+- Push notifications use VAPID protocol (no vendor lock-in to FCM/APNs)
+- Notification preferences stored as JSON in PushSubscription model
+
+### Data Flow
+Server event → NotificationService.createNotification() → DB insert + Socket.io emit + Push delivery (if subscribed and applicable)
+
+### API Flow
+- `GET /api/notifications` — paginated list
+- `PATCH .../notifications/:id/read` — mark one read
+- `PATCH .../notifications/read-all` — mark all read
+- `POST .../push/subscribe` — subscribe to push
+- `PUT .../notifications/preferences` — update preferences
+
+### Database Interactions
+- `Notification` table: indexed on `(userId, read, createdAt)` for unread queries
+- `PushSubscription` table: unique on `endpoint`, indexed on `userId`
+
+### Permission Model
+- Users can only read their own notifications
+- Push subscriptions scoped to user
+
+### Tradeoffs
+- Push notifications are synchronous in the request path (50–150ms added to message send)
+- N+1 query pattern for push delivery — queries each member individually
+
+## Known Limitations
+
+| Limitation | Reason Deferred | Introduced |
+|---|---|---|
+| Push notifications block the request path | Should be background job | 2026-06-15 |
+| N+1 push queries per message send | Batch with WHERE userId IN (...) | 2026-06-15 |
+| No pushsubscriptionchange handler | Subscriptions may go stale | 2026-06-15 |
+
+## AI Usage Report
+
+### Scope
+Notifications — in-app notifications, push notifications, preferences
+
+### Files Modified
+- Notification components, hooks, utils (client)
+- Notification routes, controller, service, schema (server)
+- Push notification service (server)
+
+### Decisions Made
+- VAPID over FCM for vendor independence
+- In-app + push parallel delivery
+
+### Risks
+- Synchronous push adds latency to message send
+- N+1 queries in push delivery
+
+### Follow-up Work
+- Decouple push into background job queue
+- Batch push queries with WHERE IN
+- Add pushsubscriptionchange handler in service worker
 
 ## Agent Self QA
 Status: PENDING
