@@ -7,6 +7,19 @@ import { api } from "@/shared/lib/api";
 import { APP_ROUTES, API_ROUTES } from "@/config/url";
 import type { LoginFormData, RegisterFormData } from "../schemas/auth";
 
+export function friendlyAuthError(err: unknown): string {
+  if (!(err instanceof Error)) return "Something went wrong. Please try again.";
+  const msg = err.message.toLowerCase();
+  if (msg.includes("invalid login credentials")) return "Invalid email or password.";
+  if (msg.includes("email not confirmed")) return "Please confirm your email address before signing in.";
+  if (msg.includes("user already registered")) return "An account with this email already exists.";
+  if (msg.includes("password should be at least")) return "Password must be at least 6 characters.";
+  if (msg.includes("rate limit")) return "Too many attempts. Please wait a moment and try again.";
+  if (msg.includes("email address not authorized")) return "This email is not authorized. Contact your admin.";
+  if (msg.includes("popup") || msg.includes("blocked") || msg.includes("pop-up")) return "Popup was blocked. Please allow popups for this site.";
+  return "Something went wrong. Please try again.";
+}
+
 export const useAuth = () => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -37,8 +50,7 @@ export const useAuth = () => {
 
       router.replace(APP_ROUTES.CONVERSATIONS.INDEX);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "An error occurred during login.";
-      setError(message);
+      setError(friendlyAuthError(err));
     } finally {
       setIsLoading(false);
     }
@@ -66,8 +78,7 @@ export const useAuth = () => {
         router.replace(APP_ROUTES.CONVERSATIONS.INDEX);
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "An error occurred during registration.";
-      setError(message);
+      setError(friendlyAuthError(err));
     } finally {
       setIsLoading(false);
     }
@@ -95,8 +106,7 @@ export const useAuth = () => {
       }
       setIsLoading(false);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "An error occurred during GitHub login.";
-      setError(message);
+      setError(friendlyAuthError(err));
       setIsLoading(false);
     }
   };
@@ -108,8 +118,7 @@ export const useAuth = () => {
       const { error: authError } = await supabase.auth.signOut();
       if (authError) throw authError;
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "An error occurred during sign out.";
-      setError(message);
+      setError(friendlyAuthError(err));
     } finally {
       setIsLoading(false);
     }

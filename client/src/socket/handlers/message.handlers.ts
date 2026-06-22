@@ -99,7 +99,7 @@ export const handleMessageNew = (queryClient: QueryClient) => {
         }
       }
     } catch (err) {
-      console.error("Failed to parse incoming message", err);
+      console.warn("[Socket] Failed to parse incoming message:new", err);
     }
   };
 };
@@ -156,7 +156,7 @@ export const handleMessageUpdate = (queryClient: QueryClient) => {
         }));
       });
     } catch (err) {
-      console.error("Failed to parse incoming message:update", err);
+      console.warn("[Socket] Failed to parse incoming message:update", err);
     }
   };
 };
@@ -213,7 +213,7 @@ export const handleMessageDelete = (queryClient: QueryClient) => {
         }));
       });
     } catch (err) {
-      console.error("Failed to parse incoming message:delete", err);
+      console.warn("[Socket] Failed to parse incoming message:delete", err);
     }
   };
 };

@@ -25,6 +25,7 @@ export const useGlobalSocket = () => {
     [SOCKET_EVENTS.MESSAGE_PIN]: router.messagePin,
     [SOCKET_EVENTS.MESSAGE_UNPIN]: router.messageUnpin,
     [SOCKET_EVENTS.NOTIFICATION_NEW]: router.notificationNew,
+    [SOCKET_EVENTS.NOTIFICATION_UPDATE]: router.notificationUpdate,
   }), [router]);
 
   useSocketEvents(events);

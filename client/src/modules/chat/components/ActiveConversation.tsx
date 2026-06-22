@@ -9,8 +9,6 @@ import { useUser } from "@/modules/auth/store/useAuthStore";
 import { useChatStore } from "../store/chatStore";
 import { MessageListSkeleton } from "@/modules/messages/components/MessageListSkeleton";
 import { useWorkspaceDetails } from "@/modules/workspaces/hooks/useWorkspaces";
-import { MemberListPanel } from "@/modules/workspaces/components/MemberListPanel";
-import { X } from "lucide-react";
 import { useLayoutUI } from "@/shared/components/layout/AppLayoutShell";
 import { InfoPanel } from "./InfoPanel";
 
@@ -32,8 +30,6 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
   const handleClearReply = useCallback(() => {
     setReplyingTo(null);
   }, []);
-  const memberPanelOpen = useChatStore((state) => state.headerInfo?.memberPanelOpen ?? false);
-  const isChannelFromStore = useChatStore((state) => state.headerInfo?.isChannel ?? false);
   const { infoPanelOpen, infoPanelView, setInfoPanelView, closeInfoPanel } = useLayoutUI();
 
   const { data: conversation, isLoading } = useConversationDetailsQuery(conversationId);

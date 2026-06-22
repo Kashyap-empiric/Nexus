@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { socket } from "@/socket/socketClient";
 import { SOCKET_EVENTS, type InitialPresencePayload, type MemberUpdatePayload } from "@/socket/socket-events";
 import { useSocketEvents } from "@/socket/useSocketEvent";
@@ -19,17 +19,26 @@ export function SocketProvider() {
   const queryClient = useQueryClient();
   const router = useRouter();
   const pathname = usePathname();
+  const disconnectNotified = useRef(false);
 
   useEffect(() => {
     requestNotificationPermission();
   }, []);
 
   const events = useMemo(() => {
-    const onConnect = () => setSocketStatus("connected");
-    const onDisconnect = () => setSocketStatus("disconnected");
-    const onConnectError = (error: Error) => {
+    const onConnect = () => {
+      setSocketStatus("connected");
+      disconnectNotified.current = false;
+    };
+    const onDisconnect = () => {
       setSocketStatus("disconnected");
-      toast.error(`Connection lost: ${error.message}`);
+    };
+    const onConnectError = () => {
+      setSocketStatus("disconnected");
+      if (!disconnectNotified.current) {
+        disconnectNotified.current = true;
+        toast.error("Connection lost. Reconnecting...");
+      }
     };
 
     const handleInitialPresence = (payload: InitialPresencePayload) => {
@@ -54,7 +63,7 @@ export function SocketProvider() {
       if (payload.action === "DELETED" && payload.workspace?.id) {
         const currentWorkspaceId = useChatStore.getState().activeWorkspaceId;
         if (currentWorkspaceId === payload.workspace.id) {
-          toast.error("The workspace you were viewing has been deleted.");
+          toast.error("The workspace you were viewing has been deleted.", { duration: Infinity });
           useChatStore.getState().setMode("DM");
           useChatStore.getState().setActiveWorkspaceId(null);
           useChatStore.getState().setActiveConversationId(null);
@@ -68,7 +77,7 @@ export function SocketProvider() {
       if (payload.action === "REMOVED" && payload.member?.userId === user?.id) {
         const currentWorkspaceId = useChatStore.getState().activeWorkspaceId;
         if (currentWorkspaceId === payload.workspaceId) {
-          toast.error("You are no longer in this workspace.", { id: `removed-ws-${payload.workspaceId}` });
+          toast.error("You are no longer in this workspace.", { id: `removed-ws-${payload.workspaceId}`, duration: Infinity });
           useChatStore.getState().setMode("DM");
           useChatStore.getState().setActiveWorkspaceId(null);
           useChatStore.getState().setActiveConversationId(null);

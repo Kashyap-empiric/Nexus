@@ -1,4 +1,4 @@
-import type { QueryClient } from "@tanstack/react-query";
+import type { QueryClient, InfiniteData } from "@tanstack/react-query";
 import { queryKeys } from "@/shared/constants/queryKeys";
 import type { Notification } from "@/modules/notifications/types/notification";
 import { showNotification } from "@/shared/lib/notifications";
@@ -44,7 +44,33 @@ export const handleNotificationNew = (queryClient: QueryClient) => {
         }
       }
     } catch (err) {
-      console.error("Failed to handle incoming notification", err);
+      console.warn("[Socket] Failed to handle incoming notification", err);
+    }
+  };
+};
+
+export const handleNotificationUpdate = (queryClient: QueryClient) => {
+  return (notification: Notification) => {
+    try {
+      if (!notification || !notification.id) return;
+
+      queryClient.setQueriesData<InfiniteData<{ data: Notification[]; nextCursor: string | null }>>(
+        { queryKey: queryKeys.notifications },
+        (oldData) => {
+          if (!oldData?.pages) return oldData;
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page) => ({
+              ...page,
+              data: page.data.map((n) =>
+                n.id === notification.id ? { ...n, ...notification } : n
+              ),
+            })),
+          };
+        }
+      );
+    } catch (err) {
+      console.warn("[Socket] Failed to handle notification:update", err);
     }
   };
 };

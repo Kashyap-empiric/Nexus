@@ -17,7 +17,8 @@ export const handleWorkspaceUpdate = (queryClient: QueryClient) => {
       queryClient.removeQueries({ queryKey: ["workspace-channels"] });
 
       toast.error(`"${payload.workspace?.name || "Workspace"}" was deleted`, {
-        duration: 5000,
+        duration: Infinity,
+        id: "workspace-deleted",
       });
 
       setTimeout(() => {
@@ -72,7 +73,7 @@ export const handleMemberUpdate = (queryClient: QueryClient) => {
           isRedirectingFromRemoval = false;
         }, 10_000);
 
-        toast.error("You have been removed from the workspace");
+        toast.error("You have been removed from the workspace", { duration: Infinity, id: "workspace-removed" });
         setTimeout(() => {
           window.location.href = APP_ROUTES.CONVERSATIONS.INDEX;
         }, 1500);
@@ -145,7 +146,7 @@ export const handleChannelMemberRemoved = (queryClient: QueryClient) => {
         }
       );
 
-      toast.error("You have been removed from the channel");
+      toast.error("You have been removed from the channel", { duration: Infinity, id: "channel-removed" });
       setTimeout(() => {
         const channels = queryClient.getQueryData<Conversation[]>(["workspace-channels", payload.workspaceId]);
         const generalChannel = channels?.find((ch) => ch.name === "general");

@@ -6,10 +6,13 @@ import type { Conversation } from "../types/conversation";
 export type { Conversation };
 
 export const useConversationsQuery = () => {
-  return useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: queryKeys.conversations,
     queryFn: conversationsApi.getConversations,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
+  return { data, isLoading, isError, error };
 };
 
 export const useConversationDetailsQuery = (id: string) => {

@@ -15,9 +15,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
-import { supabase } from "@/shared/lib/supabase";
+import { api } from "@/shared/lib/api";
+import { friendlyAuthError } from "../hooks/useAuth";
 import Link from "next/link";
-import { APP_ROUTES } from "@/config/url";
+import { APP_ROUTES, API_ROUTES } from "@/config/url";
 
 const forgotPasswordSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -28,6 +29,7 @@ type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 export const ForgotPasswordForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const {
     register,
@@ -40,14 +42,15 @@ export const ForgotPasswordForm = () => {
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
     setIsLoading(true);
+    setError(null);
     try {
-      await supabase.auth.resetPasswordForEmail(data.email, {
-        redirectTo: `${window.location.origin}${APP_ROUTES.AUTH.RESET_PASSWORD}`,
-      });
-    } catch {
+      await api.post(API_ROUTES.AUTH.FORGOT_PASSWORD, { email: data.email });
+      setSent(true);
+    } catch (err) {
+      setError(friendlyAuthError(err));
+    } finally {
+      setIsLoading(false);
     }
-    setSent(true);
-    setIsLoading(false);
   };
 
   return (
@@ -64,6 +67,11 @@ export const ForgotPasswordForm = () => {
         </CardHeader>
 
         <CardContent className="space-y-5 px-6 sm:px-8">
+          {error && (
+            <div className="p-4 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md dark:text-red-300 dark:bg-red-950/30 dark:border-red-800">
+              {error}
+            </div>
+          )}
           {sent ? (
             <div className="p-4 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-md dark:text-green-300 dark:bg-green-950/30 dark:border-green-800 text-center">
               ✓ Reset link sent to <strong>{getValues("email")}</strong>. Check

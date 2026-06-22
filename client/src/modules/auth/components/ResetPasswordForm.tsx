@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { supabase } from "@/shared/lib/supabase";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -19,7 +18,8 @@ import {
 } from "@/shared/components/ui/card";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import { APP_ROUTES } from "@/config/url";
+import { APP_ROUTES, API_ROUTES } from "@/config/url";
+import { api } from "@/shared/lib/api";
 
 const resetPasswordSchema = z
   .object({
@@ -36,16 +36,23 @@ const resetPasswordSchema = z
 
 type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
+type VerifyState =
+  | { status: "loading" }
+  | { status: "valid"; email: string | null }
+  | { status: "expired" }
+  | { status: "error"; message: string };
+
 export const ResetPasswordForm = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
+
+  const [verifyState, setVerifyState] = useState<VerifyState>({ status: "loading" });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isReady, setIsReady] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [linkExpired, setLinkExpired] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const recoveryHandled = useRef(false);
 
   const {
     register,
@@ -55,61 +62,172 @@ export const ResetPasswordForm = () => {
     resolver: zodResolver(resetPasswordSchema),
   });
 
+  // Verify the token on mount
   useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY" && !recoveryHandled.current) {
-        recoveryHandled.current = true;
-        setIsReady(true);
-      }
-    });
+    if (!token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setVerifyState({ status: "expired" });
+      return;
+    }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session && !recoveryHandled.current) {
-        recoveryHandled.current = true;
-        setIsReady(true);
-      }
-    });
+    let cancelled = false;
 
-    const timeout = setTimeout(() => {
-      if (!recoveryHandled.current) {
-        setLinkExpired(true);
+    const verify = async () => {
+      try {
+        const { data } = await api.get<{ valid: boolean; email?: string | null }>(
+          `${API_ROUTES.AUTH.RESET_PASSWORD_VERIFY}?token=${encodeURIComponent(token)}`,
+        );
+
+        if (cancelled) return;
+
+        if (data.valid) {
+          setVerifyState({ status: "valid", email: data.email ?? null });
+        } else {
+          setVerifyState({ status: "expired" });
+        }
+      } catch {
+        if (!cancelled) {
+          setVerifyState({
+            status: "error",
+            message: "Something went wrong validating your reset link. Please try again.",
+          });
+        }
       }
-    }, 10000);
+    };
+
+    verify();
 
     return () => {
-      subscription.unsubscribe();
-      clearTimeout(timeout);
+      cancelled = true;
     };
-  }, []);
+  }, [token]);
 
   const onSubmit = async (data: ResetPasswordFormData) => {
+    if (!token) return;
+
     setIsLoading(true);
     setError(null);
     try {
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: data.password,
+      await api.post(API_ROUTES.AUTH.RESET_PASSWORD_COMPLETE, {
+        token,
+        newPassword: data.password,
       });
-      if (updateError) throw updateError;
 
       setSuccess(true);
-
-      await supabase.auth.signOut();
 
       setTimeout(() => {
         router.push(`${APP_ROUTES.AUTH.LOGIN}?passwordReset=true`);
       }, 1500);
     } catch (err: unknown) {
+      // Axios errors have the server message in response.data.error
       const message =
-        err instanceof Error ? err.message : "Something went wrong. Please try again.";
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (err as any)?.response?.data?.error ||
+        (err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setError(message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (linkExpired) {
+  // State: no token in URL
+  if (!token) {
+    return (
+      <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <Card className="border border-border/40 shadow-lg bg-card/50 backdrop-blur-xl sm:rounded-2xl relative overflow-hidden">
+          <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-brand to-transparent opacity-50" />
+          <CardHeader className="space-y-2 pb-6 pt-8 sm:pt-10 px-6 sm:px-8">
+            <CardTitle className="text-2xl sm:text-3xl font-heading font-bold tracking-tight text-center text-foreground">
+              Invalid link
+            </CardTitle>
+            <CardDescription className="text-center text-muted-foreground text-sm sm:text-base">
+              No reset token found in the URL. Use the link from your email.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center px-6 sm:px-8 pb-6">
+            <Link
+              href={APP_ROUTES.AUTH.FORGOT_PASSWORD}
+              className="inline-flex items-center justify-center w-full h-11 px-4 py-2 text-sm font-medium text-white bg-brand hover:bg-brand/90 rounded-lg transition-colors shadow-sm"
+            >
+              Request new link
+            </Link>
+          </CardContent>
+          <CardFooter className="flex justify-center border-t border-border/40 p-5 sm:p-6 bg-muted/20">
+            <p className="text-sm text-muted-foreground">
+              <Link
+                href={APP_ROUTES.AUTH.LOGIN}
+                className="font-semibold text-brand hover:text-brand-muted hover:underline transition-colors"
+              >
+                Back to sign in
+              </Link>
+            </p>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
+  // State: verifying token
+  if (verifyState.status === "loading") {
+    return (
+      <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <Card className="border border-border/40 shadow-lg bg-card/50 backdrop-blur-xl sm:rounded-2xl relative overflow-hidden">
+          <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-brand to-transparent opacity-50" />
+          <CardHeader className="space-y-2 pb-6 pt-8 sm:pt-10 px-6 sm:px-8">
+            <CardTitle className="text-2xl sm:text-3xl font-heading font-bold tracking-tight text-center text-foreground">
+              Reset your password
+            </CardTitle>
+            <CardDescription className="text-center text-muted-foreground text-sm sm:text-base">
+              Validating your reset link...
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center py-8 px-6 sm:px-8">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // State: verification error
+  if (verifyState.status === "error") {
+    return (
+      <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <Card className="border border-border/40 shadow-lg bg-card/50 backdrop-blur-xl sm:rounded-2xl relative overflow-hidden">
+          <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-brand to-transparent opacity-50" />
+          <CardHeader className="space-y-2 pb-6 pt-8 sm:pt-10 px-6 sm:px-8">
+            <CardTitle className="text-2xl sm:text-3xl font-heading font-bold tracking-tight text-center text-foreground">
+              Something went wrong
+            </CardTitle>
+            <CardDescription className="text-center text-muted-foreground text-sm sm:text-base">
+              {verifyState.message}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center px-6 sm:px-8 pb-6">
+            <Link
+              href={APP_ROUTES.AUTH.FORGOT_PASSWORD}
+              className="inline-flex items-center justify-center w-full h-11 px-4 py-2 text-sm font-medium text-white bg-brand hover:bg-brand/90 rounded-lg transition-colors shadow-sm"
+            >
+              Request new link
+            </Link>
+          </CardContent>
+          <CardFooter className="flex justify-center border-t border-border/40 p-5 sm:p-6 bg-muted/20">
+            <p className="text-sm text-muted-foreground">
+              <Link
+                href={APP_ROUTES.AUTH.LOGIN}
+                className="font-semibold text-brand hover:text-brand-muted hover:underline transition-colors"
+              >
+                Back to sign in
+              </Link>
+            </p>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
+  // State: token expired or invalid
+  if (verifyState.status === "expired") {
     return (
       <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
         <Card className="border border-border/40 shadow-lg bg-card/50 backdrop-blur-xl sm:rounded-2xl relative overflow-hidden">
@@ -145,27 +263,7 @@ export const ResetPasswordForm = () => {
     );
   }
 
-  if (!isReady) {
-    return (
-      <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <Card className="border border-border/40 shadow-lg bg-card/50 backdrop-blur-xl sm:rounded-2xl relative overflow-hidden">
-          <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-brand to-transparent opacity-50" />
-          <CardHeader className="space-y-2 pb-6 pt-8 sm:pt-10 px-6 sm:px-8">
-            <CardTitle className="text-2xl sm:text-3xl font-heading font-bold tracking-tight text-center text-foreground">
-              Reset your password
-            </CardTitle>
-            <CardDescription className="text-center text-muted-foreground text-sm sm:text-base">
-              Validating your reset link...
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center py-8 px-6 sm:px-8">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
+  // State: valid token — show password form
   return (
     <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
       <Card className="border border-border/40 shadow-lg bg-card/50 backdrop-blur-xl sm:rounded-2xl relative overflow-hidden">
@@ -174,9 +272,11 @@ export const ResetPasswordForm = () => {
           <CardTitle className="text-2xl sm:text-3xl font-heading font-bold tracking-tight text-center text-foreground">
             Reset your password
           </CardTitle>
-          <CardDescription className="text-center text-muted-foreground text-sm sm:text-base">
-            Enter your new password below.
-          </CardDescription>
+          {verifyState.email && (
+            <CardDescription className="text-center text-muted-foreground text-sm sm:text-base">
+              For <strong>{verifyState.email}</strong>
+            </CardDescription>
+          )}
         </CardHeader>
 
         <CardContent className="space-y-5 px-6 sm:px-8">

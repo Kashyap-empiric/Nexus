@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { MessageSquare } from "lucide-react";
+
 
 export function AuthSidebar() {
   return (

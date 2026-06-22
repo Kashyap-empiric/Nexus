@@ -2,7 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { handleMessageNew, handleMessageUpdate, handleMessageDelete, handlePinEvent } from "./handlers/message.handlers";
 import { handleMessageRead, handleConversationNew, handleConversationUpdate } from "./handlers/conversation.handlers";
 import { handleWorkspaceUpdate, handleChannelUpdate, handleMemberUpdate, handleChannelMemberAdded, handleChannelMemberRemoved } from "./handlers/workspace.handlers";
-import { handleNotificationNew } from "./handlers/notification.handlers";
+import { handleNotificationNew, handleNotificationUpdate } from "./handlers/notification.handlers";
 
 export const createChatEventRouter = (queryClient: QueryClient) => {
   return {
@@ -20,5 +20,6 @@ export const createChatEventRouter = (queryClient: QueryClient) => {
     messagePin: handlePinEvent(queryClient),
     messageUnpin: handlePinEvent(queryClient),
     notificationNew: handleNotificationNew(queryClient),
+    notificationUpdate: handleNotificationUpdate(queryClient),
   };
 };

@@ -17,6 +17,7 @@ export const SOCKET_EVENTS = {
   CHANNEL_UPDATE: "channel:update",
   MEMBER_UPDATE: "member:update",
   NOTIFICATION_NEW: "notification:new",
+  NOTIFICATION_UPDATE: "notification:update",
   USER_STATUS_UPDATE: "user:status:update",
   USER_UPDATE: "user:update",
   CHANNEL_MEMBER_ADDED: "channel:member-added",

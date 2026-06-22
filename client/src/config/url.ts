@@ -1,6 +1,11 @@
 // 📌 AGENT INSTRUCTION: If you are adding, modifying, or removing
 
 export const API_ROUTES = {
+  AUTH: {
+    FORGOT_PASSWORD: '/auth/forgot-password',
+    RESET_PASSWORD_VERIFY: '/auth/reset-password/verify',
+    RESET_PASSWORD_COMPLETE: '/auth/reset-password/complete',
+  },
   USERS: {
     SEARCH: (query: string) => `/users/search?q=${encodeURIComponent(query)}`,
     ME: '/users/me',

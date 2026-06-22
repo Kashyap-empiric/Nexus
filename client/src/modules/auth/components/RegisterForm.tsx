@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/incompatible-library */
 
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -21,7 +22,12 @@ export const RegisterForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<RegisterFormData>({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
   });
 

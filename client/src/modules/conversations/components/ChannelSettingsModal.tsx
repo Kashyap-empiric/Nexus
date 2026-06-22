@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/incompatible-library */
 
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -73,8 +74,9 @@ export function ChannelSettingsModal({ isOpen, workspaceId, channel, onClose }: 
     try {
       await updateChannel({ workspaceId, channelId: channel.id, data });
       toast.success("Channel updated");
-    } catch (error: any) {
-      toast.error(error?.response?.data?.error || "Failed to update channel");
+    } catch (error: unknown) {
+      const errObj = error && typeof error === "object" ? error as { response?: { data?: { error?: string } } } : {};
+      toast.error(errObj.response?.data?.error || "Failed to update channel");
     }
   };
 
@@ -85,8 +87,9 @@ export function ChannelSettingsModal({ isOpen, workspaceId, channel, onClose }: 
       toast.success("Channel deleted");
       setShowDeleteConfirm(false);
       onClose();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.error || "Failed to delete channel");
+    } catch (error: unknown) {
+      const errObj = error && typeof error === "object" ? error as { response?: { data?: { error?: string } } } : {};
+      toast.error(errObj.response?.data?.error || "Failed to delete channel");
     }
   };
 

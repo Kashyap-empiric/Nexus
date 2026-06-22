@@ -1,5 +1,3 @@
-import type { Message } from "@/modules/messages/types/message";
-
 export interface User {
   id: string;
   username: string;

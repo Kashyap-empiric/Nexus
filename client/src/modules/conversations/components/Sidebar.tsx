@@ -7,7 +7,7 @@ import { PresenceIndicator } from "@/modules/chat/components/PresenceIndicator";
 import dynamic from "next/dynamic";
 import { useConversationsQuery } from "../hooks/useConversations";
 import { useWorkspaceChannelsQuery } from "@/modules/workspaces/hooks/useWorkspaceChannels";
-import type { ConversationMember } from "../types/conversation";
+import type { Conversation, ConversationMember } from "../types/conversation";
 import { useAuth } from "@/modules/auth";
 import { Input } from "@/shared/components/ui/input";
 import Link from "next/link";
@@ -16,8 +16,7 @@ import { useEffect, useRef } from "react";
 import { useGlobalSocket } from "@/modules/chat/hooks/useGlobalSocket";
 import { useChatStore } from "@/modules/chat/store/chatStore";
 import { useSocketStore } from "@/socket/socketStore";
-import { cn, stripMarkdown } from "@/shared/lib/utils";
-import { toast } from "sonner";
+import { stripMarkdown } from "@/shared/lib/utils";
 import { APP_ROUTES } from "@/config/url";
 import { useUser } from "@/modules/auth/store/useAuthStore";
 import { useInviteModal } from "@/modules/invites/hooks/useInviteModal";
@@ -58,7 +57,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
   useGlobalSocket();
   const { logout } = useAuth();
   const queryClient = useQueryClient();
-  const { data: conversations, isLoading } = useConversationsQuery();
+  const { data: conversations, isLoading, isError: isConvError } = useConversationsQuery();
 
   const mode = useChatStore((state) => state.mode);
   const activeWorkspaceId = useChatStore((state) => state.activeWorkspaceId);
@@ -109,7 +108,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
         }
       }
     }
-  }, [mode, activeWorkspaceId, activeId, workspaceChannels, lastVisitedChannels, router]);
+  }, [mode, activeWorkspaceId, activeId, workspaceChannels, lastVisitedChannels, pathname, router]);
 
   const { data: dbProfile } = useProfile();
 
@@ -203,6 +202,11 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
 
         {}
         <div className="flex-1 overflow-y-auto px-2 py-3 space-y-6">
+          {isConvError && (
+            <div className="px-3 py-2 mx-2 mb-2 text-xs text-destructive bg-destructive/10 rounded-md border border-destructive/20">
+              Failed to load conversations. <button onClick={() => queryClient.invalidateQueries({ queryKey: ["conversations"] })} className="underline font-medium">Retry</button>
+            </div>
+          )}
           <div>
             <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2 mt-2">
               <span>{mode === "DM" ? "Direct Messages" : "Public Channels"}</span>
@@ -326,7 +330,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
                     return (
                       <WorkspaceChannelItem
                         key={chat.id}
-                        channel={chat as any}
+                        channel={chat as unknown as Conversation}
                         isActive={isActive}
                         workspaceId={activeWorkspaceId!}
                         canManage={canManage}
@@ -353,7 +357,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
                         return (
                           <WorkspaceChannelItem
                             key={chat.id}
-                            channel={chat as any}
+                            channel={chat as unknown as Conversation}
                             isActive={isActive}
                             workspaceId={activeWorkspaceId!}
                             canManage={canManage}

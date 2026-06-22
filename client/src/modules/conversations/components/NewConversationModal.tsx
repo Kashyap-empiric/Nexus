@@ -16,6 +16,7 @@ import {
   DialogBody,
 } from "@/shared/components/ui/dialog";
 import { toast } from "sonner";
+import { friendlyError } from "@/shared/lib/friendly-error";
 
 interface NewConversationModalProps {
   isOpen: boolean;
@@ -45,8 +46,7 @@ export function NewConversationModal({ isOpen, onClose }: NewConversationModalPr
       },
       onError: (error) => {
         console.error("Failed to create conversation:", error);
-        // @ts-expect-error : error property is not officially typed but provided by the API
-        toast.error(`Failed to create conversation: ${error?.response?.data?.error || error.message}`);
+        toast.error(friendlyError(error, "Failed to create conversation"));
       }
     });
   };

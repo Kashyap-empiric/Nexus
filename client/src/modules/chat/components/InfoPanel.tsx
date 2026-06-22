@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { X, CalendarDays, Pin, Hash, Globe, Lock } from "lucide-react";
+import { X, CalendarDays, Hash, Globe, Lock } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { InfoPanelView } from "@/shared/components/layout/AppLayoutShell";
 import { MemberListPanel } from "@/modules/workspaces/components/MemberListPanel";
@@ -10,8 +10,6 @@ import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { PresenceIndicator } from "@/modules/chat/components/PresenceIndicator";
 import { getPublicProfile } from "@/modules/users/api/users.api";
 import Link from "next/link";
-import { useUser } from "@/modules/auth/store/useAuthStore";
-
 interface InfoPanelProps {
   conversationId: string;
   workspaceId?: string;
@@ -34,12 +32,10 @@ const STATUS_LABELS: Record<string, { label: string; dotClass: string }> = {
 };
 
 export function InfoPanel({ conversationId, workspaceId, channelId, userId, channelName, description, visibility, createdAt, view, setInfoPanelView, onClose }: InfoPanelProps) {
-  const user = useUser();
-  const currentUserId = user?.id || null;
   const isChannel = !!workspaceId;
   const isDM = !!userId;
 
-  const { data: userProfile } = useQuery({
+  const { data: userProfile, isError: isProfileError } = useQuery({
     queryKey: ["users", "profile", userId],
     queryFn: () => getPublicProfile(userId!),
     enabled: isDM,
@@ -146,7 +142,11 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
           </div>
         )}
 
-        {view === 'about' && isDM && !userProfile && (
+        {view === 'about' && isDM && isProfileError && (
+          <div className="p-4 text-sm text-destructive">Failed to load profile. Try again later.</div>
+        )}
+
+        {view === 'about' && isDM && !userProfile && !isProfileError && (
           <div className="p-4 text-sm text-muted-foreground text-center mt-4 animate-pulse">
             Loading profile...
           </div>
