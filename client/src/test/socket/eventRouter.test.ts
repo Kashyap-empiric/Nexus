@@ -33,7 +33,7 @@ describe("createChatEventRouter", () => {
     const router = createChatEventRouter(queryClient);
 
     for (const key of Object.keys(router)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      
       expect(typeof (router as any)[key]).toBe("function");
     }
   });

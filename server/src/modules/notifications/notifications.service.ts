@@ -61,10 +61,7 @@ const shouldReceiveNotification = (
 };
 
 
-/**
- * Fetch paginated notifications for a user.
- * Returns newest-first with cursor-based pagination.
- */
+
 export const getUserNotifications = async (
   userId: string,
   params: PaginationParams = {}
@@ -73,10 +70,7 @@ export const getUserNotifications = async (
   return notificationsRepo.findByUserId(userId, cursor, limit, type);
 };
 
-/**
- * Get the count of unread notifications for a user.
- * Used by the bell badge on the client.
- */
+
 export const getUnreadCount = async (
   userId: string
 ): Promise<{ count: number }> => {
@@ -84,24 +78,17 @@ export const getUnreadCount = async (
   return { count };
 };
 
-/**
- * Mark a single notification as read.
- */
+
 export const markAsRead = async (id: string, userId: string) => {
   return notificationsRepo.markAsRead(id, userId);
 };
 
-/**
- * Mark all notifications as read for a user.
- */
+
 export const markAllAsRead = async (userId: string) => {
   return notificationsRepo.markAllAsRead(userId);
 };
 
-/**
- * Create a notification and emit it via socket to the user's room.
- * This is the central function used by all notification-producing flows.
- */
+
 export const createAndDispatch = async (input: CreateNotificationInput) => {
   const type = input.type as NotificationType;
   

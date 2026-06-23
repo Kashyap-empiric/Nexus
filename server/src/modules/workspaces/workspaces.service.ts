@@ -129,9 +129,7 @@ export const createWorkspace = async (userId: string, name: string, slug: string
   });
 };
 
-/**
- * Schema Invariant: Workspace Channels must ALWAYS have a valid workspaceId.
- */
+
 export const createChannel = async (slugOrId: string, name: string, visibility: "PUBLIC" | "PRIVATE", userId: string) => {
   const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(slugOrId);
   if (!workspace) throw new NotFoundError("Workspace not found");

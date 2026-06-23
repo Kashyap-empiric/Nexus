@@ -11,7 +11,7 @@ import { createAndDispatch } from "../notifications/notifications.service.js";
 import { generateInviteService, revokeInviteByToken } from "../invites/invites.service.js";
 import { sendWorkspaceInviteEmail } from "../../lib/email.js";
 import { emailQueue, notificationQueue } from "../../jobs/queues.js";
-import type { SendWorkspaceInviteData } from "../../jobs/types.js";
+import type { BatchInviteJob, SendWorkspaceInviteData } from "../../jobs/types.js";
 import { findChannelIdsByWorkspaceId } from "../conversations/conversations.repository.js";
 import { getIO } from "@/socket/socket.js";
 import { dispatchChannelUpdate, dispatchMemberUpdate, dispatchChannelMemberUpdate, dispatchWorkspaceUpdate } from "@/socket/socket.dispatcher.js";
@@ -302,10 +302,7 @@ export const deleteChannel = async (req: AuthRequest, res: Response, next: NextF
   }
 };
 
-/**
- * Helper to send an invite to a single user.
- * Generates an invite token via the invite service and creates an INVITE_RECEIVED notification.
- */
+
 async function sendWorkspaceInvite(
   workspaceId: string,
   targetUserId: string,
@@ -369,11 +366,7 @@ async function sendWorkspaceInvite(
   }
 }
 
-/**
- * POST /workspaces/:id/invite
- * Invite a user to a workspace by username or email.
- * Creates an INVITE_RECEIVED notification for the target user with a proper invite token.
- */
+
 export const inviteMemberByUsername = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
@@ -427,11 +420,7 @@ export const inviteMemberByUsername = async (req: AuthRequest, res: Response, ne
   }
 };
 
-/**
- * POST /workspaces/:id/invite-multiple
- * Batch invite multiple users to a workspace by their user IDs.
- * Each user gets a separate invite token and INVITE_RECEIVED notification.
- */
+
 export const inviteMembers = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;
@@ -453,40 +442,65 @@ export const inviteMembers = async (req: AuthRequest, res: Response, next: NextF
     const inviterName = currentUser?.username || "Unknown";
     const workspaceImageUrl = (workspace as any).imageUrl;
 
-    const invited: { userId: string }[] = [];
+    // Pre-filter skipped users (self-invite, already members) synchronously
+    const memberUserIds = new Set(workspace.members.map((m: any) => m.userId));
+    const validUserIds: string[] = [];
     const skipped: { userId: string; reason: string }[] = [];
 
     for (const targetUserId of userIds) {
       if (targetUserId === userId) {
         skipped.push({ userId: targetUserId, reason: "Cannot invite yourself" });
-        continue;
-      }
-
-      const isAlreadyMember = workspace.members.some((m: any) => m.userId === targetUserId);
-      if (isAlreadyMember) {
+      } else if (memberUserIds.has(targetUserId)) {
         skipped.push({ userId: targetUserId, reason: "Already a member" });
-        continue;
+      } else {
+        validUserIds.push(targetUserId);
       }
+    }
 
-      try {
-        await sendWorkspaceInvite(
-          workspaceId,
-          targetUserId,
-          userId,
-          workspace.name,
-          inviterName,
-          workspaceImageUrl,
-        );
-        invited.push({ userId: targetUserId });
-      } catch (err: any) {
-        console.error(`[inviteMembers] Failed to invite user ${targetUserId}:`, err);
-        skipped.push({ userId: targetUserId, reason: err.message || "Failed to send invite" });
+    if (validUserIds.length === 0) {
+      res.status(200).json({
+        success: true,
+        invited: [],
+        skipped,
+      });
+      return;
+    }
+
+    // Enqueue a batch-invite job for async processing
+    if (notificationQueue) {
+      const jobData: BatchInviteJob = {
+        workspaceId,
+        inviterId: userId,
+        inviterName,
+        workspaceName: workspace.name,
+        workspaceImageUrl,
+        userIds: validUserIds,
+      };
+      await notificationQueue.add("batch-invite", jobData);
+    } else {
+      // Fallback: process synchronously when Redis is unavailable
+      for (const targetUserId of validUserIds) {
+        try {
+          await sendWorkspaceInvite(
+            workspaceId,
+            targetUserId,
+            userId,
+            workspace.name,
+            inviterName,
+            workspaceImageUrl,
+          );
+        } catch (err: any) {
+          console.error(`[inviteMembers] Fallback failed for user ${targetUserId}:`, err);
+          skipped.push({ userId: targetUserId, reason: err.message || "Failed to send invite" });
+        }
       }
     }
 
     res.status(200).json({
       success: true,
-      invited,
+      queued: !!notificationQueue,
+      total: userIds.length,
+      invitedCount: validUserIds.length,
       skipped,
     });
   } catch (error) {
@@ -499,14 +513,7 @@ export const inviteMembers = async (req: AuthRequest, res: Response, next: NextF
   }
 };
 
-/**
- * POST /workspaces/:id/invite-email
- * Invite someone to a workspace by email address.
- *
- * Two modes:
- *   - Recipient has an account:  invite + in-app notification + email (optional, best-effort)
- *   - Recipient has NO account:  invite + email (MANDATORY — if email fails, invite is revoked)
- */
+
 export const inviteByEmail = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user!.id;

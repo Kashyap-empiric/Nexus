@@ -268,16 +268,23 @@ function MemberActionsMenu({ member, isOwner, onPromote, onRoleChange, onRemove 
       return;
     }
 
+    let ticking = false;
     const measure = () => {
-      requestAnimationFrame(() => {
-        if (triggerRef.current) {
-          const rect = triggerRef.current.getBoundingClientRect();
-          setPosition({
-            top: rect.bottom + 2,
-            right: window.innerWidth - rect.right,
-          });
-        }
-      });
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          if (triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            setPosition((prev) => {
+              const newTop = rect.bottom + 2;
+              const newRight = window.innerWidth - rect.right;
+              if (prev && prev.top === newTop && prev.right === newRight) return prev;
+              return { top: newTop, right: newRight };
+            });
+          }
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
 
     measure();

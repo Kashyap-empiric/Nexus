@@ -43,13 +43,13 @@ interface SharedSettingsModalProps {
 export const SharedSettingsModal = ({ isOpen, currentTab, setTab, closeSettings }: SharedSettingsModalProps) => {
   const [showMobileMenu, setShowMobileMenu] = useState(true);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
+  
   useEffect(() => {
     if (isOpen) {
       setShowMobileMenu(true);
     }
   }, [isOpen]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {

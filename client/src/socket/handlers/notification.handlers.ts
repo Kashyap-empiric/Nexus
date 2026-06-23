@@ -3,10 +3,7 @@ import { queryKeys } from "@/shared/constants/queryKeys";
 import type { Notification } from "@/modules/notifications/types/notification";
 import { showNotification } from "@/shared/lib/notifications";
 
-/**
- * Notification types that should NOT trigger a desktop notification
- * because the message:new handler already shows one for the same event.
- */
+
 const SUPPRESS_DESKTOP_TYPES = new Set(["MESSAGE_REPLIED"]);
 
 export const handleNotificationNew = (queryClient: QueryClient) => {
@@ -21,8 +18,8 @@ export const handleNotificationNew = (queryClient: QueryClient) => {
         (oldCount) => (oldCount ?? 0) + 1
       );
 
-      // Skip desktop notification for types that are already covered
-      // by the message:new handler (e.g. MESSAGE_REPLIED) to avoid duplicates.
+      
+      
       if (SUPPRESS_DESKTOP_TYPES.has(notification.type)) return;
 
       if (

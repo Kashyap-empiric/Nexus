@@ -32,13 +32,13 @@ export function OnboardingWizard() {
   const [error, setError] = useState<string | null>(null);
   const [completionData, setCompletionData] = useState<OnboardingCompleteResponse | null>(null);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
+  
   useEffect(() => {
     if (user?.user_metadata?.full_name && !profileData.fullName) {
       setProfileData(prev => ({ ...prev, fullName: user.user_metadata.full_name }));
     }
   }, [user, profileData.fullName]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  
 
   const handleProfileContinue = (data: { fullName: string; bio: string; avatarFile: File | null }) => {
     setProfileData(data);

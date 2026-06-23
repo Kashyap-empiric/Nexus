@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
+
 
 import { MessagesSquare, Plus, Settings } from "lucide-react";
 import { APP_ROUTES } from "@/config/url";

@@ -216,15 +216,7 @@ interface UnreadCountRow {
   count: number;
 }
 
-/**
- * Count unread messages for multiple conversations in a single query.
- * Uses an INNER JOIN with ConversationMember so only conversations where the
- * user has a membership record are included.
- *
- * - No membership record → excluded (caller treats as 0)
- * - Has membership, lastReadMessageId is NULL → counts all messages (never read)
- * - Has membership, lastReadMessageId is set → counts messages with id > lastRead
- */
+
 export const countUnreadByConversations = async (
   userId: string,
   conversationIds: string[]

@@ -44,7 +44,7 @@ export const workspaceInviteResolver: InviteResolver = {
       });
 
       if (joiner) {
-        // Notify admins/owners only (excluding the joiner)
+        
         const adminMembers = await tx.workspaceMember.findMany({
           where: {
             workspaceId,
@@ -54,7 +54,7 @@ export const workspaceInviteResolver: InviteResolver = {
           select: { userId: true },
         });
 
-        // Include the inviter if they sent the invite and aren't already targeted
+        
         const targetIds = new Set(adminMembers.map(m => m.userId));
         if (invite.createdBy && invite.createdBy !== actorId) {
           targetIds.add(invite.createdBy);

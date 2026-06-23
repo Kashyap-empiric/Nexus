@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { APP_ROUTES } from "@/config/url";
 
-// ─── Animation Variants ────────────────────────────────────────────────────
+
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -28,11 +28,11 @@ const fadeUp = {
   }),
 };
 
-// ─── UI Mockup Components ──────────────────────────────────────────────────
+
 
 const ApplicationMockup = () => (
   <div className="relative w-full max-w-5xl mx-auto rounded-xl overflow-hidden border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/50">
-    {/* Window Header */}
+    {}
     <div className="h-10 border-b border-zinc-800 flex items-center px-4 bg-zinc-950">
       <div className="flex gap-1.5">
         <div className="w-3 h-3 rounded-full bg-zinc-800" />
@@ -44,9 +44,9 @@ const ApplicationMockup = () => (
       </div>
     </div>
     
-    {/* App Body */}
+    {}
     <div className="flex h-[400px] md:h-[500px]">
-      {/* Server Sidebar */}
+      {}
       <div className="w-16 bg-zinc-950 border-r border-zinc-800 flex flex-col items-center py-4 gap-3">
         <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center">
           <Image src="/images/Logo.png" alt="Logo" width={20} height={20} className="w-5 h-5 opacity-80" />
@@ -59,7 +59,7 @@ const ApplicationMockup = () => (
         <div className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800" />
       </div>
 
-      {/* Channels Sidebar */}
+      {}
       <div className="hidden md:flex w-60 bg-zinc-900/50 border-r border-zinc-800 flex-col py-3">
         <div className="px-4 mb-4 flex items-center justify-between">
           <span className="font-semibold text-zinc-100">Militech Corp</span>
@@ -88,7 +88,7 @@ const ApplicationMockup = () => (
         </div>
       </div>
 
-      {/* Main Chat Area */}
+      {}
       <div className="flex-1 bg-zinc-950 flex flex-col">
         <div className="h-12 border-b border-zinc-800 flex items-center px-4 justify-between">
           <div className="flex items-center gap-2 text-zinc-100 font-semibold">
@@ -128,13 +128,13 @@ const ApplicationMockup = () => (
   </div>
 );
 
-// ─── Main Landing Page ─────────────────────────────────────────────────────
+
 
 export const LandingPage = () => {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-emerald-500/30">
       
-      {/* ── Navigation ─────────────────────────────────────────────────── */}
+      {}
       <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-zinc-950/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
@@ -158,7 +158,7 @@ export const LandingPage = () => {
       </header>
 
       <main>
-        {/* ── Hero Section ───────────────────────────────────────────────── */}
+        {}
         <section className="relative pt-24 pb-20 md:pt-32 md:pb-32 px-6 overflow-hidden">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
           
@@ -189,11 +189,11 @@ export const LandingPage = () => {
         </section>
 
 
-        {/* ── Alternating Features ───────────────────────────────────────── */}
+        {}
         <section id="features" className="py-32 px-6">
           <div className="max-w-6xl mx-auto space-y-32">
             
-            {/* Feature 1 */}
+            {}
             <div className="flex flex-col lg:flex-row items-center gap-16">
               <div className="flex-1 space-y-6">
                 <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center">
@@ -213,7 +213,7 @@ export const LandingPage = () => {
               </div>
               <div className="flex-1 w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
                  <div className="absolute right-0 top-0 w-32 h-32 bg-emerald-500/10 blur-3xl" />
-                 {/* Mini Mockup */}
+                 {}
                  <div className="space-y-4">
                    <div className="flex gap-3">
                      <div className="w-8 h-8 rounded-full bg-zinc-800" />
@@ -232,7 +232,7 @@ export const LandingPage = () => {
               </div>
             </div>
 
-            {/* Feature 2 */}
+            {}
             <div className="flex flex-col lg:flex-row-reverse items-center gap-16">
               <div className="flex-1 space-y-6">
                 <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center">
@@ -264,7 +264,7 @@ export const LandingPage = () => {
               </div>
             </div>
 
-            {/* Feature 3 */}
+            {}
             <div className="flex flex-col lg:flex-row items-center gap-16">
               <div className="flex-1 space-y-6">
                 <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center">
@@ -303,7 +303,7 @@ USING (
           </div>
         </section>
 
-        {/* ── Comparison Section ─────────────────────────────────────────── */}
+        {}
         <section className="py-24 px-6 bg-zinc-900/30 border-y border-zinc-800/50">
           <div className="max-w-5xl mx-auto text-center">
             <h2 className="text-3xl font-bold tracking-tight mb-16">Why switch to Nexus?</h2>
@@ -328,7 +328,7 @@ USING (
           </div>
         </section>
 
-        {/* ── Pricing Preview ────────────────────────────────────────────── */}
+        {}
         <section id="pricing" className="py-32 px-6">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-16">
@@ -337,7 +337,7 @@ USING (
             </div>
             
             <div className="grid md:grid-cols-3 gap-8">
-              {/* Free */}
+              {}
               <div className="p-8 rounded-2xl border border-zinc-800 bg-zinc-950 flex flex-col">
                 <h3 className="text-xl font-semibold mb-2">Starter</h3>
                 <div className="text-4xl font-bold mb-6">$0<span className="text-base font-normal text-zinc-500">/mo</span></div>
@@ -350,7 +350,7 @@ USING (
                 <Link href={APP_ROUTES.AUTH.REGISTER} className="w-full h-10 flex items-center justify-center rounded-lg border border-zinc-700 hover:bg-zinc-800 transition-colors font-medium">Get Started</Link>
               </div>
               
-              {/* Pro */}
+              {}
               <div className="p-8 rounded-2xl border border-emerald-500 bg-zinc-900 relative shadow-2xl shadow-emerald-500/10 flex flex-col">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-emerald-500 text-zinc-950 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Recommended</div>
                 <h3 className="text-xl font-semibold mb-2">Pro</h3>
@@ -365,7 +365,7 @@ USING (
                 <Link href={APP_ROUTES.AUTH.REGISTER} className="w-full h-10 flex items-center justify-center rounded-lg bg-emerald-500 text-zinc-950 hover:bg-emerald-400 transition-colors font-semibold">Start Free Trial</Link>
               </div>
 
-              {/* Enterprise */}
+              {}
               <div className="p-8 rounded-2xl border border-zinc-800 bg-zinc-950 flex flex-col">
                 <h3 className="text-xl font-semibold mb-2">Enterprise</h3>
                 <div className="text-4xl font-bold mb-6">Custom</div>
@@ -381,7 +381,7 @@ USING (
           </div>
         </section>
 
-        {/* ── Final CTA ──────────────────────────────────────────────────── */}
+        {}
         <section className="py-24 px-6 border-t border-zinc-800/50">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">Ready to bring your team together?</h2>
@@ -394,7 +394,7 @@ USING (
 
       </main>
 
-      {/* ── Footer ──────────────────────────────────────────────────────── */}
+      {}
       <footer className="w-full py-12 px-6 border-t border-zinc-800/50 bg-zinc-950 text-zinc-500 text-sm">
         <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
           <div>

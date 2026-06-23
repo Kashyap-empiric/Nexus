@@ -48,20 +48,29 @@ export function CustomRoleDropdown({
   const panelRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; right: number } | null>(null);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
+  
   useEffect(() => {
     if (!isOpen) {
       setPosition(null);
       return;
     }
 
+    let ticking = false;
     const measure = () => {
-      if (triggerRef.current) {
-        const rect = triggerRef.current.getBoundingClientRect();
-        setPosition({
-          top: rect.bottom + 4,
-          right: window.innerWidth - rect.right,
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          if (triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            setPosition((prev) => {
+              const newTop = rect.bottom + 4;
+              const newRight = window.innerWidth - rect.right;
+              if (prev && prev.top === newTop && prev.right === newRight) return prev;
+              return { top: newTop, right: newRight };
+            });
+          }
+          ticking = false;
         });
+        ticking = true;
       }
     };
 
@@ -73,7 +82,7 @@ export function CustomRoleDropdown({
       window.removeEventListener("resize", measure);
     };
   }, [isOpen]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  
 
   useEffect(() => {
     if (!isOpen) return;

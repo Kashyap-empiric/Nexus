@@ -88,7 +88,7 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
 
         dispatchMessageEvent("NEW", payload.conversationId, message, conversationMetadata);
 
-        // Skip push for the reply parent — they already got one via createAndDispatch
+        
         sendMessageNotifications(
           payload.conversationId,
           userId,

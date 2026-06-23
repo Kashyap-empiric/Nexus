@@ -11,16 +11,7 @@ export interface ChannelAccessResult {
   workspaceId: string | null;
 }
 
-/**
- * Verifies a user has access to a specific channel/conversation.
- *
- * Access rules:
- * - DM or Private Channel → must be a ConversationMember
- * - Public Channel → must be a WorkspaceMember
- *
- * Returns detailed info about the channel and access status.
- * Throws an Error with a descriptive message if access is denied or channel not found.
- */
+
 export const verifyChannelAccess = async (
   userId: string,
   channelId: string
@@ -80,11 +71,7 @@ export const verifyChannelAccess = async (
   };
 };
 
-/**
- * Verifies a user is a member of a workspace.
- * Throws an Error if the user is not a member.
- * Delegates to the existing isWorkspaceMember to avoid duplicating the Prisma query.
- */
+
 export const verifyWorkspaceMember = async (
   userId: string,
   workspaceId: string

@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
+
 
 import { useState, useEffect, useRef } from "react";
 import { Loader2, Hash, Camera } from "lucide-react";
@@ -25,7 +25,7 @@ export function CreateWorkspaceStep({ onCreate, isLoading, initialName, defaultF
   const [isSkipping, setIsSkipping] = useState(false);
   const iconInputRef = useRef<HTMLInputElement>(null);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
+  
   useEffect(() => {
     if (!slugEdited) {
       const generatedSlug = workspaceName
@@ -35,7 +35,7 @@ export function CreateWorkspaceStep({ onCreate, isLoading, initialName, defaultF
       setWorkspaceSlug(generatedSlug);
     }
   }, [workspaceName, slugEdited]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  
 
   const handleIconSelect = (file: File) => {
     if (file.size > 5 * 1024 * 1024) {

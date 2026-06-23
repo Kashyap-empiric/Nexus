@@ -5,11 +5,7 @@ import { savePushSubscription, deletePushSubscription } from "./notifications.re
 import { pushSubscriptionSchema, unsubscribePushSchema } from "./notifications.schema.js";
 import { prisma } from "@/lib/db.js";
 
-/**
- * GET /notifications
- * Returns paginated notifications for the authenticated user.
- * Query params: cursor, limit, type (comma-separated NotificationType values)
- */
+
 export const getNotifications = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
@@ -28,10 +24,7 @@ export const getNotifications = async (req: AuthRequest, res: Response): Promise
   }
 };
 
-/**
- * GET /notifications/unread-count
- * Returns the count of unread notifications for the user.
- */
+
 export const getUnreadCount = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
@@ -43,10 +36,7 @@ export const getUnreadCount = async (req: AuthRequest, res: Response): Promise<v
   }
 };
 
-/**
- * PATCH /notifications/:id/read
- * Mark a single notification as read.
- */
+
 export const markAsRead = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
@@ -60,10 +50,7 @@ export const markAsRead = async (req: AuthRequest, res: Response): Promise<void>
   }
 };
 
-/**
- * PATCH /notifications/read-all
- * Mark all notifications as read for the user.
- */
+
 export const markAllAsRead = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
@@ -75,10 +62,7 @@ export const markAllAsRead = async (req: AuthRequest, res: Response): Promise<vo
   }
 };
 
-/**
- * POST /notifications/push/subscribe
- * Save a push subscription for the user.
- */
+
 export const subscribePush = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
@@ -103,10 +87,7 @@ export const subscribePush = async (req: AuthRequest, res: Response): Promise<vo
   }
 };
 
-/**
- * DELETE /notifications/push/subscribe
- * Delete a push subscription.
- */
+
 export const unsubscribePush = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
@@ -121,10 +102,7 @@ export const unsubscribePush = async (req: AuthRequest, res: Response): Promise<
   }
 };
 
-/**
- * GET /notifications/preferences
- * Returns notification preferences.
- */
+
 export const getPreferences = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
@@ -156,11 +134,7 @@ export const getPreferences = async (req: AuthRequest, res: Response): Promise<v
   }
 };
 
-/**
- * PUT /notifications/preferences
- * Updates notification preferences.
- * Body is validated by the validate middleware using updatePreferencesSchema.
- */
+
 export const updatePreferences = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;

@@ -63,13 +63,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           break;
 
         case "PASSWORD_RECOVERY":
-          // Old-style Supabase recovery links (#access_token in hash) may still fire this event.
-          // Our custom flow uses server-side tokens (?token= in query params) instead.
-          // If the user lands on the reset page via an old link, redirect them to request a new one.
+          
+          
+          
           if (pathnameRef.current === APP_ROUTES.AUTH.RESET_PASSWORD) {
             routerRef.current.push(APP_ROUTES.AUTH.FORGOT_PASSWORD);
-            // Sign out the stale Supabase session that was created by the old link
-            // supabase.auth.signOut() could be called here, but we let it expire naturally
+            
+            
           }
           break;
 

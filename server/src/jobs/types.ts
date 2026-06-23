@@ -50,6 +50,15 @@ export type FanOutNotificationJob = {
   };
 };
 
+export type BatchInviteJob = {
+  workspaceId: string;
+  inviterId: string;
+  inviterName: string;
+  workspaceName: string;
+  workspaceImageUrl: string | null | undefined;
+  userIds: string[];
+};
+
 export type CleanupJobData = {
   type: "expired-invites" | "expired-reset-tokens" | "soft-deleted-messages";
 };
@@ -60,4 +69,5 @@ export type JobData =
   | SendEmailJob
   | RevokeInviteJob
   | FanOutNotificationJob
+  | BatchInviteJob
   | CleanupJobData;

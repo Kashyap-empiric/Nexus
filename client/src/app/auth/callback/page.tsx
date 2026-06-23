@@ -35,7 +35,7 @@ export default function AuthCallback() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, []);
 
   return (

@@ -121,7 +121,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
   const clearLongPress = () => {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
-      /* eslint-disable-next-line react-hooks/immutability */
+      
       longPressTimerRef.current = null;
     }
     touchStartPosRef.current = null;
@@ -131,7 +131,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
     if (isDel) return;
     const touch = e.touches[0];
     touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
-    /* eslint-disable-next-line react-hooks/immutability */
+    
     longPressTimerRef.current = setTimeout(() => {
       if (touchStartPosRef.current) {
         setContextMenuPos({ x: touchStartPosRef.current.x, y: touchStartPosRef.current.y });
@@ -244,7 +244,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                 )}
 
                 <div className="text-[15px] text-foreground whitespace-pre-wrap break-words leading-relaxed group/msg relative min-h-[22px]">
-                  {/* !isDeleted prevents stuck edit states during concurrent multi-device deletions or rapid click race conditions */}
+                  {}
                   {editingMessageId === msg.id && !isDeleted ? (
                     <div className="flex flex-col gap-2 w-full mt-1 mb-2">
                       <textarea
@@ -573,11 +573,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
   );
 }
 
-/**
- * Count how many channel members (excluding the current user) have read a message.
- * A member is considered to have read the message if their lastReadMessageId
- * is greater than or equal to the message's ID (messages use UUIDv7 which sorts chronologically).
- */
+
 function computeReadCount(
   messageId: string,
   currentUserId: string | null | undefined,

@@ -80,7 +80,7 @@ describe("handleMessageRead", () => {
   it("does nothing when conversationId is missing", () => {
     queryClient.setQueryData(["conversations"], [createConv()]);
     const handler = handleMessageRead(queryClient);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    
     handler({ conversationId: "", userId: "user-2", lastReadMessageId: "msg-5" } as any);
     const updated = queryClient.getQueryData<Conversation[]>(["conversations"]);
     expect(updated).toHaveLength(1);
@@ -89,7 +89,7 @@ describe("handleMessageRead", () => {
   it("does nothing when userId is missing", () => {
     queryClient.setQueryData(["conversations"], [createConv()]);
     const handler = handleMessageRead(queryClient);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    
     handler({ conversationId: "conv-1", userId: "", lastReadMessageId: "msg-5" } as any);
     const updated = queryClient.getQueryData<Conversation[]>(["conversations"]);
     expect(updated![0].members).toHaveLength(0);
@@ -158,7 +158,7 @@ describe("handleConversationNew", () => {
   it("does nothing for invalid payload", () => {
     queryClient.setQueryData(["conversations"], [createConv()]);
     const handler = handleConversationNew(queryClient);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    
     handler({} as any);
     const updated = queryClient.getQueryData<Conversation[]>(["conversations"]);
     expect(updated).toHaveLength(1);
@@ -236,7 +236,7 @@ describe("handleConversationUpdate", () => {
   it("does nothing for missing id", () => {
     queryClient.setQueryData(["conversations"], [createConv()]);
     const handler = handleConversationUpdate(queryClient);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    
     handler({ conversation: { id: "", name: null, updatedAt: "", latestMessageId: null, latestMessage: null } } as any);
     const updated = queryClient.getQueryData<Conversation[]>(["conversations"]);
     expect(updated).toHaveLength(1);

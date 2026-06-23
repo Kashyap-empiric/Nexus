@@ -18,15 +18,10 @@ const completeResetSchema = z.object({
   newPassword: z.string().min(8).max(128),
 });
 
-/**
- * POST /api/auth/forgot-password
- *
- * Accepts an email, generates a reset token, and sends a password reset email.
- * Always returns 200 to prevent email enumeration.
- */
+
 router.post(
   "/auth/forgot-password",
-  // Note: generalLimiter is already applied globally in app.ts
+  
   async (req: Request, res: Response): Promise<void> => {
     const parsed = forgotPasswordSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -58,7 +53,7 @@ router.post(
         }
       }
 
-      // Always return the same message regardless of whether the user exists
+      
       res.status(200).json({
         message: "If that email exists, a reset link has been sent.",
       });
@@ -71,12 +66,7 @@ router.post(
   },
 );
 
-/**
- * GET /api/auth/reset-password/verify?token=xxx
- *
- * Validates a password reset token.
- * Returns { valid: true, email } if the token is valid, or { valid: false } otherwise.
- */
+
 router.get(
   "/auth/reset-password/verify",
   async (req: Request, res: Response): Promise<void> => {
@@ -95,7 +85,7 @@ router.get(
         return;
       }
 
-      // Look up the user's email for display purposes
+      
       const user = await prisma.user.findUnique({
         where: { id: result.userId },
         select: { email: true },
@@ -109,12 +99,7 @@ router.get(
   },
 );
 
-/**
- * POST /api/auth/reset-password/complete
- *
- * Accepts a token and new password, updates the password via Supabase Admin API,
- * and invalidates the token.
- */
+
 router.post(
   "/auth/reset-password/complete",
   async (req: Request, res: Response): Promise<void> => {

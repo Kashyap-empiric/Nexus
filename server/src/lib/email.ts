@@ -206,9 +206,7 @@ function buildPasswordResetHtml(resetUrl: string): string {
 </html>`;
 }
 
-/**
- * Send a password reset email with a secure reset link.
- */
+
 export async function sendPasswordResetEmail(
   params: PasswordResetEmailParams,
 ): Promise<void> {

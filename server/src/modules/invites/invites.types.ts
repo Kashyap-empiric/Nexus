@@ -22,11 +22,7 @@ export interface ResolveInviteResult {
   consumed?: boolean;
   alreadyMember?: boolean;
   events?: DomainEvent[];
-  /**
-   * Notifications to dispatch after the invite transaction commits.
-   * These are collected during resolution but dispatched outside the transaction
-   * to prevent phantom notifications on rollback (C1).
-   */
+  
   pendingNotifications?: CreateNotificationInput[];
 }
 
@@ -34,7 +30,7 @@ export interface GenerateInviteParams {
   type: InviteType;
   entityId?: string;
   userId: string;
-  /** When true, skip the 24-hour rotation policy and always generate a fresh token. */
+  
   forceNew?: boolean;
 }
 

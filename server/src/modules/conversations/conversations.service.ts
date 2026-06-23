@@ -53,9 +53,7 @@ export const getDMByUsers = async (userIdA: string, userIdB: string, tx?: Prisma
     return conversationsRepo.findDMByPair(dmPair);
 }
 
-/**
- * Schema Invariant: DMs must ALWAYS have a null workspaceId.
- */
+
 export const createDM = async (userIdA: string, userIdB: string, tx?: Prisma.TransactionClient) => {
     const dmPair = buildDmPair(userIdA, userIdB);
     const data = {

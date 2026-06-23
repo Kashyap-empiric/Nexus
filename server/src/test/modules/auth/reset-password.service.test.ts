@@ -6,8 +6,8 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
 
 setupPrismaMock();
 
-// Shared mock for the Admin API — defined at top level so all createClient() calls
-// return an object sharing the same mocked updateUserById.
+
+
 const mockUpdateUserById = vi.fn();
 
 vi.mock("@supabase/supabase-js", () => ({
@@ -46,10 +46,10 @@ describe("reset-password service", () => {
 
       const rawToken = await resetPasswordService.generateResetToken("user-1");
 
-      // Returns a 64-character hex string (32 bytes)
+      
       expect(rawToken).toMatch(/^[a-f0-9]{64}$/);
 
-      // Verifies it was stored with the correct shape
+      
       expect(mockPrisma.passwordResetToken.create).toHaveBeenCalledWith({
         data: {
           userId: "user-1",
@@ -113,7 +113,7 @@ describe("reset-password service", () => {
         "used-token",
       );
 
-      // The query filters by usedAt: null, so the record won't be found
+      
       expect(result).toBeNull();
       expect(mockPrisma.passwordResetToken.findFirst).toHaveBeenCalledWith({
         where: { tokenHash: expect.any(String), usedAt: null },
@@ -136,7 +136,7 @@ describe("reset-password service", () => {
         record as any,
       );
 
-      // The shared mock — all createClient() calls share the same function
+      
       mockUpdateUserById.mockResolvedValueOnce({ error: null });
 
       mockPrisma.passwordResetToken.update.mockResolvedValueOnce({
@@ -149,12 +149,12 @@ describe("reset-password service", () => {
         "new-password-123",
       );
 
-      // Admin API was called with correct userId and password
+      
       expect(mockUpdateUserById).toHaveBeenCalledWith("user-1", {
         password: "new-password-123",
       });
 
-      // Token was invalidated
+      
       expect(mockPrisma.passwordResetToken.update).toHaveBeenCalledWith({
         where: { id: "record-1" },
         data: { usedAt: expect.any(Date) },

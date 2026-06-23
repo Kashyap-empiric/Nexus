@@ -1,7 +1,4 @@
-/**
- * Browser Notification API utilities for desktop push notifications.
- * Falls back gracefully if the API is unavailable or permission is denied.
- */
+
 
 const isSupported = (): boolean => {
   return typeof window !== "undefined" && "Notification" in window;
@@ -116,9 +113,7 @@ export function showMessageNotification(
   });
 }
 
-/**
- * Returns the current notification permission status.
- */
+
 export function getNotificationPermission(): NotificationPermission | "unsupported" {
   if (!isSupported()) return "unsupported";
   return Notification.permission;

@@ -58,7 +58,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
 
   const [workspaceMemberIds, setWorkspaceMemberIds] = useState<Set<string>>(new Set());
 
-  /* eslint-disable react-hooks/set-state-in-effect */
+  
   useEffect(() => {
     if (isOpen && type === "WORKSPACE" && entityId) {
       import("../../workspaces/api/workspaces.api").then(({ fetchWorkspaceMembers }) => {
@@ -72,7 +72,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
       setWorkspaceMemberIds(new Set());
     }
   }, [isOpen, type, entityId]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  
 
   const filteredResults = searchResults?.filter(
     (u) =>
@@ -168,7 +168,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
     if (isOpen && type && !inviteUrl && !isLoading && !error) {
       generate(type, entityId);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [isOpen, type, entityId]);
 
   useEffect(() => {

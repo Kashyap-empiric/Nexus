@@ -8,11 +8,7 @@ export interface MessageGroup {
   messages: Message[];
 }
 
-/**
- * Transforms a chronological array of messages into render groups.
- * Messages are grouped if they are from the same user, consecutive, 
- * and sent within 1 minute of the previous message in the group.
- */
+
 export function groupMessages(messages: Message[]): MessageGroup[] {
   const groups: MessageGroup[] = [];
   

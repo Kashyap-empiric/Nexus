@@ -12,7 +12,7 @@ export interface TypingUser {
 interface SocketState {
   socketStatus: SocketStatus;
   onlineUsers: Set<string>;
-  /** Map of conversationId -> Map of userId -> TypingUser */
+  
   typingUsers: Map<string, Map<string, TypingUser>>;
   setSocketStatus: (status: SocketStatus) => void;
   setInitialOnlineUsers: (users: string[]) => void;

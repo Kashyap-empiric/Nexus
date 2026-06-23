@@ -5,10 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-/**
- * Navigate to a URL, falling back to window.location if router.push throws.
- * This handles edge cases where router.push fails during page transitions.
- */
+
 export function safeRedirect(router: { push: (url: string) => void }, url: string) {
   try {
     router.push(url);
@@ -17,11 +14,7 @@ export function safeRedirect(router: { push: (url: string) => void }, url: strin
   }
 }
 
-/**
- * Strip common markdown formatting from text for use in previews/sidebars.
- * Converts *italic*, **bold**, `code`, ~~strikethrough~~, and links to plain text.
- * Strips heading markers, blockquotes, list markers, and thematic breaks.
- */
+
 export function stripMarkdown(text: string): string {
   return text
     .replace(/!\[(.*?)\]\(.*?\)/g, "$1")

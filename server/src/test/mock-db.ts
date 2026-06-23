@@ -1,10 +1,7 @@
 import { vi } from "vitest";
 
-/**
- * Creates a mock Prisma client with all models stubbed.
- * Each model method returns a mock function that can be configured per test.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+
 type MockFn = any;
 
 interface MockModel {
@@ -79,19 +76,14 @@ export function createMockPrisma(): MockPrismaClient {
 
 export const mockPrisma: MockPrismaClient = createMockPrisma();
 
-/**
- * Replaces the prisma module with our mock.
- * Call this in test files before importing services that use prisma.
- */
+
 export function setupPrismaMock() {
   vi.mock("@/lib/db.js", () => ({
     prisma: mockPrisma,
   }));
 }
 
-/**
- * Resets all mock call counts and implementations between tests.
- */
+
 export function resetPrismaMock() {
   for (const model of Object.values(mockPrisma)) {
     if (typeof model === "function") {

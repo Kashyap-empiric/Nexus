@@ -8,11 +8,7 @@ import { dispatchPinEvent } from "@/socket/socket.dispatcher.js";
 import { prisma } from "@/lib/db.js";
 import { findWorkspaceMember } from "../auth/auth.repository.js";
 
-/**
- * Enqueue push notifications for conversation members.
- * The actual member fetch, preference check, and webpush delivery
- * happens in the background via the BullMQ worker.
- */
+
 export const sendMessageNotifications = async (
   conversationId: string,
   senderId: string,

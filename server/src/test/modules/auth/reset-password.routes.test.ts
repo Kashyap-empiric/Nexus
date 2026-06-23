@@ -10,14 +10,14 @@ process.env.SENDGRID_API_KEY = "test-sendgrid-key";
 
 setupPrismaMock();
 
-// Mock the service functions to isolate route logic
+
 vi.mock("@/modules/auth/reset-password.service.js", () => ({
   generateResetToken: vi.fn(),
   verifyResetToken: vi.fn(),
   completePasswordReset: vi.fn(),
 }));
 
-// Mock the email service
+
 vi.mock("@/lib/email.js", () => ({
   sendPasswordResetEmail: vi.fn(),
 }));

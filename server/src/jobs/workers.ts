@@ -4,6 +4,7 @@ import { processPushToMembers, processPushToUser } from "./processors/pushNotifi
 import { processSendEmail } from "./processors/sendEmail.processor.js";
 import { processRevokeInvite } from "./processors/revokeInvite.processor.js";
 import { processFanOutNotification } from "./processors/fanOutNotification.processor.js";
+import { processBatchInvite } from "./processors/batchInvite.processor.js";
 import { processCleanup } from "./processors/cleanup.processor.js";
 import { cleanupQueue } from "./queues.js";
 import type {
@@ -11,6 +12,7 @@ import type {
   PushNotificationJob,
   RevokeInviteJob,
   FanOutNotificationJob,
+  BatchInviteJob,
   SendEmailJob,
   CleanupJobData,
 } from "./types.js";
@@ -35,6 +37,8 @@ export function startWorkers() {
           return processRevokeInvite(job.data as RevokeInviteJob);
         case "fan-out-notification":
           return processFanOutNotification(job.data as FanOutNotificationJob);
+        case "batch-invite":
+          return processBatchInvite(job.data as BatchInviteJob);
         default:
           throw new Error(`Unknown notification job: ${job.name}`);
       }

@@ -43,19 +43,27 @@ export function useMessageScroll({
     });
   }, []);
 
+  const isTicking = useRef(false);
+
   const handleScroll = useCallback(() => {
     if (isProgrammaticScroll.current) return;
 
-    const container = scrollContainerRef.current;
-    if (!container) return;
+    if (!isTicking.current) {
+      requestAnimationFrame(() => {
+        const container = scrollContainerRef.current;
+        if (container) {
+          const { scrollTop, scrollHeight, clientHeight } = container;
+          const atBottom = scrollHeight - scrollTop - clientHeight < 100;
 
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    const atBottom = scrollHeight - scrollTop - clientHeight < 100;
-
-    setIsAtBottom(atBottom);
-    isAtBottomRef.current = atBottom;
-    if (atBottom) {
-      setHasNewMessages(false);
+          setIsAtBottom(atBottom);
+          isAtBottomRef.current = atBottom;
+          if (atBottom) {
+            setHasNewMessages(false);
+          }
+        }
+        isTicking.current = false;
+      });
+      isTicking.current = true;
     }
   }, []);
 
@@ -74,7 +82,7 @@ export function useMessageScroll({
     }
 
     if (isLatestMessageMine) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      
       scrollToBottom("smooth");
       return;
     }

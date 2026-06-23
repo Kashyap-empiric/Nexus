@@ -16,7 +16,7 @@ export function useInviteLink() {
       const { invitePath, expiresAt: expiration } = await generateInvite({ type, entityId });
       setInviteUrl(`${window.location.origin}${invitePath}`);
       setExpiresAt(expiration);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    
     } catch (err: any) {
       setError(err?.response?.data?.error || "Failed to generate invite link");
       toast.error("Could not generate invite link");

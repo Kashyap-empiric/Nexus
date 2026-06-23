@@ -1,6 +1,6 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element, react-hooks/incompatible-library */
+
 
 import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";

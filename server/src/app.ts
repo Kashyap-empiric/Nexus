@@ -33,7 +33,7 @@ app.get("/health", (req: Request, res: Response) => {
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// Per-instance rate limiter (not shared across replicas)
+
 app.use("/api", generalLimiter);
 
 app.get("/api/me", authMiddleware, async (req: AuthRequest, res: Response) => {
@@ -60,7 +60,7 @@ app.use("/api/onboarding", onboardingRoutes);
 app.use("/api/messages/search", messagesSearchRoutes);
 app.use("/api", resetPasswordRoutes);
 
-// Bull Board: lazy init so it doesn't block server startup
+
 if (ENV.NODE_ENV === "development") {
   import("./jobs/queues.js").then(({ notificationQueue, emailQueue, cleanupQueue }) => {
     const bullQueues = [notificationQueue, emailQueue, cleanupQueue]

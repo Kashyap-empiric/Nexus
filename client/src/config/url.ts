@@ -1,4 +1,4 @@
-// 📌 AGENT INSTRUCTION: If you are adding, modifying, or removing
+
 
 export const API_ROUTES = {
   AUTH: {

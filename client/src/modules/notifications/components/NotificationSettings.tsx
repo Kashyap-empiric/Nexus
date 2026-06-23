@@ -9,7 +9,7 @@ export function NotificationSettings() {
   const { preferences, isLoading, update, updateAsync, isUpdating } = useNotificationPreferences();
   const [actualPushEnabled, setActualPushEnabled] = useState(false);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
+  
   useEffect(() => {
     let cancelled = false;
     if (preferences?.pushEnabled && typeof window !== "undefined" && "serviceWorker" in navigator) {
@@ -26,7 +26,7 @@ export function NotificationSettings() {
     }
     return () => { cancelled = true; };
   }, [preferences?.pushEnabled]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  
 
   const handleToggle = async (key: keyof NotificationPreference) => {
     if (!preferences) return;

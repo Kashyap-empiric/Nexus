@@ -1,19 +1,8 @@
 import { redis } from "../lib/redis.js";
 
-/**
- * Presence store — Redis-first, in-memory-fallback.
- *
- * **Always dual-writes** to both Redis and the in-memory Map so the
- * fallback is always consistent, even if Redis becomes unavailable
- * between an addSocket and the corresponding removeSocket.
- *
- * **Reads** prefer Redis when available; fall back to memory.
- *
- * Multi-tab handling: a user only goes offline when ALL their sockets
- * disconnect.
- */
+
 class PresenceStore {
-  /** userId → Set of active socket IDs (always kept in sync) */
+  
   private memoryStore = new Map<string, Set<string>>();
 
   private get redisAvailable(): boolean {
@@ -25,10 +14,7 @@ class PresenceStore {
   }
 
 
-  /**
-   * Register a socket for a user.
-   * Returns `true` if this is the user's *first* active socket.
-   */
+  
   async addSocket(userId: string, socketId: string): Promise<boolean> {
     const isFirst = this.memoryAddSocket(userId, socketId);
 
@@ -44,10 +30,7 @@ class PresenceStore {
     return isFirst;
   }
 
-  /**
-   * Remove a socket for a user.
-   * Returns `true` if the user has no more active sockets.
-   */
+  
   async removeSocket(userId: string, socketId: string): Promise<boolean> {
     const isNowOffline = this.memoryRemoveSocket(userId, socketId);
 
@@ -67,7 +50,7 @@ class PresenceStore {
     return isNowOffline;
   }
 
-  /** Return all currently-online user IDs. */
+  
   async getOnlineUsers(): Promise<string[]> {
     if (this.redisAvailable) {
       try {
@@ -78,7 +61,7 @@ class PresenceStore {
     return Array.from(this.memoryStore.keys());
   }
 
-  /** Check if a specific user has any active socket. */
+  
   async isOnline(userId: string): Promise<boolean> {
     if (this.redisAvailable) {
       try {
@@ -91,7 +74,7 @@ class PresenceStore {
     return !!sockets && sockets.size > 0;
   }
 
-  /** Clear all state. */
+  
   clear(): void {
     this.memoryStore.clear();
   }
@@ -120,5 +103,5 @@ class PresenceStore {
   }
 }
 
-/** Singleton instance shared across the socket module. */
+
 export const presenceStore = new PresenceStore();

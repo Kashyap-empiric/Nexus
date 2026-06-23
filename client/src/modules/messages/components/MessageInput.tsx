@@ -75,15 +75,15 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
   const submitMessage = () => {
     if (!editor) return;
     
-    // @ts-expect-error - tiptap-markdown storage type not available
-    const markdownContent = editor.storage.markdown.getMarkdown();
+    
+    const markdownContent = (editor.storage as any).markdown.getMarkdown();
     
     if (!markdownContent.trim()) return;
 
     emitTypingStop();
 
     tempIdCounterRef.current += 1;
-    /* eslint-disable-next-line react-hooks/purity */
+    
     const tempId = `temp-${Date.now()}-${tempIdCounterRef.current}`;
     sendMessage({ conversationId, content: markdownContent.trim(), tempId, replyToId: replyingTo?.id || null });
     

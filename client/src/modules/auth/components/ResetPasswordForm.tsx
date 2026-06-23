@@ -62,10 +62,10 @@ export const ResetPasswordForm = () => {
     resolver: zodResolver(resetPasswordSchema),
   });
 
-  // Verify the token on mount
+  
   useEffect(() => {
     if (!token) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      
       setVerifyState({ status: "expired" });
       return;
     }
@@ -119,9 +119,9 @@ export const ResetPasswordForm = () => {
         router.push(`${APP_ROUTES.AUTH.LOGIN}?passwordReset=true`);
       }, 1500);
     } catch (err: unknown) {
-      // Axios errors have the server message in response.data.error
+      
       const message =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        
         (err as any)?.response?.data?.error ||
         (err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setError(message);
@@ -130,7 +130,7 @@ export const ResetPasswordForm = () => {
     }
   };
 
-  // State: no token in URL
+  
   if (!token) {
     return (
       <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -167,7 +167,7 @@ export const ResetPasswordForm = () => {
     );
   }
 
-  // State: verifying token
+  
   if (verifyState.status === "loading") {
     return (
       <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -189,7 +189,7 @@ export const ResetPasswordForm = () => {
     );
   }
 
-  // State: verification error
+  
   if (verifyState.status === "error") {
     return (
       <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -226,7 +226,7 @@ export const ResetPasswordForm = () => {
     );
   }
 
-  // State: token expired or invalid
+  
   if (verifyState.status === "expired") {
     return (
       <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -263,7 +263,7 @@ export const ResetPasswordForm = () => {
     );
   }
 
-  // State: valid token — show password form
+  
   return (
     <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
       <Card className="border border-border/40 shadow-lg bg-card/50 backdrop-blur-xl sm:rounded-2xl relative overflow-hidden">
