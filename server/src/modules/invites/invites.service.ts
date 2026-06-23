@@ -15,6 +15,7 @@ import * as conversationsRepo from "../conversations/conversations.repository.js
 import * as workspacesService from "../workspaces/workspaces.service.js";
 import * as workspacesRepo from "../workspaces/workspaces.repository.js";
 import * as usersRepo from "../users/users.repository.js";
+import { notificationQueue } from "../../jobs/queues.js";
 
 import * as authRepo from "../auth/auth.repository.js";
 
@@ -99,13 +100,29 @@ export const resolveInviteService = async ({ token, userId }: ResolveInviteParam
     }
 
     if (pendingNotifications.length > 0) {
-      await Promise.allSettled(
-        pendingNotifications.map(notif =>
-          createAndDispatch(notif).catch(err => {
-            console.error("[resolveInviteService] Failed to dispatch pending notification:", err);
-          })
-        )
-      );
+      const userIds = pendingNotifications.map((n) => n.userId);
+      const first = pendingNotifications[0];
+
+      if (notificationQueue) {
+        await notificationQueue.add("fan-out-notification", {
+          type: first.type,
+          userIds,
+          template: {
+            title: first.title,
+            body: first.body,
+            link: first.link,
+            metadata: first.metadata,
+          },
+        });
+      } else {
+        await Promise.allSettled(
+          pendingNotifications.map((notif) =>
+            createAndDispatch(notif).catch((err) => {
+              console.error("[resolveInviteService] Failed to dispatch pending notification:", err);
+            }),
+          ),
+        );
+      }
     }
   } catch (error) {
     if (error instanceof AppError) throw error;
