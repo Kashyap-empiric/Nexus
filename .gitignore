@@ -8,6 +8,9 @@ AGENTS.md
 Nexus_Evaluation_and_Rules.md
 Rules_Expectations.md
 
+# Personal AI context
+CURRENT_PROJECT_STATE.md
+
 # .agents/ — only context.md is tracked; the rest are local-only policy references
 .agents/*
 !.agents/context.md

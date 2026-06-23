@@ -20,6 +20,7 @@ const envSchema = z.object({
   PUSH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
   SENDGRID_API_KEY: z.string().optional(),
   SENDGRID_FROM_EMAIL: z.string().optional(),
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 });
 
 function loadEnv() {

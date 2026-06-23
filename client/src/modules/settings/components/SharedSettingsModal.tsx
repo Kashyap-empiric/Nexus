@@ -66,7 +66,7 @@ export const SharedSettingsModal = ({ isOpen, currentTab, setTab, closeSettings 
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent fullscreenMobile size="xl" className="sm:h-[80vh] p-0 bg-background md:flex-row overflow-hidden">
+      <DialogContent fullscreenMobile size="2xl" className="w-[90vw] md:!w-[800px] lg:!w-[1000px] sm:h-[80vh] p-0 bg-background md:flex-row overflow-hidden">
         <DialogHeader className="sr-only">
           <DialogTitle>Settings</DialogTitle>
           <DialogDescription>Manage your account settings</DialogDescription>
@@ -126,7 +126,7 @@ export const SharedSettingsModal = ({ isOpen, currentTab, setTab, closeSettings 
             !showMobileMenu ? "block" : "hidden md:block"
           )}
         >
-          <div className="max-w-2xl w-full mx-auto md:mx-0">
+          <div className="max-w-4xl w-full mx-auto md:mx-0">
             <button 
               onClick={() => setShowMobileMenu(true)} 
               className="md:hidden flex items-center gap-2 mb-6 text-muted-foreground hover:text-foreground -ml-2 p-2 rounded-md transition-colors"

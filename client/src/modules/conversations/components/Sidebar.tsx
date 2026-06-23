@@ -278,7 +278,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
                       onClick={() => onNavigate?.()}
                       className={`flex items-center gap-3 px-2 py-2 rounded-md transition-colors ${
                         isActive
-                          ? "bg-brand/10 text-brand dark:bg-brand/10 dark:text-brand"
+                          ? "bg-brand/10 text-brand"
                           : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                         }`}
                     >
@@ -309,7 +309,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
                       </div>
 
                       {isUnread && !isActive && (
-                          <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-white text-[12px] font-bold shrink-0 leading-none">
+                          <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[12px] font-bold shrink-0 leading-none">
                             {unreadCount > 99 ? '99+' : unreadCount}
                           </div>
                         )}

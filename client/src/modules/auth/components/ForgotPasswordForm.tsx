@@ -68,12 +68,12 @@ export const ForgotPasswordForm = () => {
 
         <CardContent className="space-y-5 px-6 sm:px-8">
           {error && (
-            <div className="p-4 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md dark:text-red-300 dark:bg-red-950/30 dark:border-red-800">
+            <div className="p-4 text-sm font-medium text-destructive bg-destructive/10 border-destructive/20 rounded-md">
               {error}
             </div>
           )}
           {sent ? (
-            <div className="p-4 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-md dark:text-green-300 dark:bg-green-950/30 dark:border-green-800 text-center">
+            <div className="p-4 text-sm font-medium text-brand bg-brand/10 border border-brand/20 rounded-md text-center">
               ✓ Reset link sent to <strong>{getValues("email")}</strong>. Check
               your inbox (and spam folder).
             </div>

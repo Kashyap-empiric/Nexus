@@ -82,7 +82,7 @@ function InviteLandingPage({
   };
 
   return (
-    <div className="flex items-center justify-center min-h-dvh bg-zinc-950 text-foreground relative overflow-hidden selection:bg-brand/30">
+    <div className="flex items-center justify-center min-h-dvh bg-background text-foreground relative overflow-hidden selection:bg-brand/30">
       <div className="absolute inset-0 z-0 pointer-events-none">
         <img
           src="/images/auth-bg.png"
@@ -102,10 +102,10 @@ function InviteLandingPage({
         />
       </div>
 
-      <div className="relative z-10 w-full max-w-md px-8 py-10 bg-zinc-900/60 backdrop-blur-2xl border border-white/5 shadow-lg rounded-3xl m-4 animate-in fade-in slide-in-from-bottom-8 duration-700">
+      <div className="relative z-10 w-full max-w-md px-8 py-10 bg-card/60 backdrop-blur-2xl border border-border/50 shadow-lg rounded-3xl m-4 animate-in fade-in slide-in-from-bottom-8 duration-700">
 
         <div className="flex flex-col items-center text-center">
-          <div className="w-20 h-20 mb-8 rounded-2xl bg-zinc-800/50 shadow-md flex items-center justify-center ring-1 ring-white/10 hover:scale-105 transition-transform duration-300">
+          <div className="w-20 h-20 mb-8 rounded-2xl bg-muted/50 shadow-md flex items-center justify-center ring-1 ring-border hover:scale-105 transition-transform duration-300">
             <img
               src="/images/Logo.png"
               alt="Nexus"
@@ -120,10 +120,10 @@ function InviteLandingPage({
           </h2>
 
           <p className="text-muted-foreground text-base mb-3">
-            <span className="text-white font-semibold">{info.inviterName}</span> {renderActionText()}
+            <span className="text-foreground font-semibold">{info.inviterName}</span> {renderActionText()}
           </p>
 
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white mb-10 tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-10 tracking-tight">
             {info.entityName}
           </h1>
 
@@ -155,7 +155,7 @@ function InviteLandingPage({
                 <Link
                   href={APP_ROUTES.AUTH.REGISTER}
                   onClick={handleRegister}
-                  className="w-full py-3.5 px-6 text-sm font-semibold rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all duration-200 flex items-center justify-center"
+                  className="w-full py-3.5 px-6 text-sm font-semibold rounded-xl bg-primary/10 hover:bg-primary/20 text-primary transition-all duration-200 flex items-center justify-center"
                 >
                   Create New Account
                 </Link>
@@ -192,15 +192,15 @@ function friendlyInviteError(err: unknown): string {
 
 function InviteErrorPage({ message }: { message: string }) {
   return (
-    <div className="flex items-center justify-center min-h-dvh bg-zinc-950 text-foreground relative overflow-hidden">
+    <div className="flex items-center justify-center min-h-dvh bg-background text-foreground relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-destructive/20 via-background to-background" />
-      <div className="relative z-10 text-center max-w-md px-6 py-8 bg-zinc-900/60 backdrop-blur-xl border border-white/5 shadow-2xl rounded-3xl m-4">
+      <div className="relative z-10 text-center max-w-md px-6 py-8 bg-card/60 backdrop-blur-xl border border-border/50 shadow-2xl rounded-3xl m-4">
         <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-destructive/10 flex items-center justify-center border border-destructive/20">
           <svg className="w-8 h-8 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </div>
-        <h2 className="text-2xl font-bold mb-2 tracking-tight text-white">Invite Error</h2>
+        <h2 className="text-2xl font-bold mb-2 tracking-tight text-foreground">Invite Error</h2>
         <p className="text-muted-foreground text-sm mb-8 leading-relaxed">{message}</p>
         <Link
           href={APP_ROUTES.HOME}
@@ -275,14 +275,14 @@ export function InviteProcessor() {
 
   if (isLoading || !infoLoaded) {
     return (
-      <div className="flex items-center justify-center min-h-dvh bg-zinc-950 text-foreground relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-dvh bg-background text-foreground relative overflow-hidden">
         <div className="absolute inset-0 z-0 pointer-events-none">
           <img src="/images/auth-bg.png" alt="" className="w-full h-full object-cover opacity-60 mix-blend-screen" />
           <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/80 via-zinc-950/20 to-zinc-950/80"></div>
         </div>
         <div className="flex flex-col items-center gap-4 relative z-10">
           <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-sm text-zinc-400 font-medium animate-pulse">Loading invite...</p>
+          <p className="text-sm text-muted-foreground font-medium animate-pulse">Loading invite...</p>
         </div>
       </div>
     );
@@ -290,13 +290,13 @@ export function InviteProcessor() {
 
   if (!token) {
     return (
-      <div className="flex items-center justify-center min-h-dvh bg-zinc-950 text-foreground relative overflow-hidden">
+      <div className="flex items-center justify-center min-h-dvh bg-background text-foreground relative overflow-hidden">
         <div className="absolute inset-0 z-0 pointer-events-none">
           <img src="/images/auth-bg.png" alt="" className="w-full h-full object-cover opacity-60 mix-blend-screen" />
           <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/80 via-zinc-950/20 to-zinc-950/80"></div>
         </div>
-        <div className="relative z-10 text-center max-w-md px-6 py-8 bg-zinc-900/60 backdrop-blur-xl border border-white/5 shadow-2xl rounded-3xl m-4">
-          <p className="text-sm text-zinc-400">No invite token found.</p>
+        <div className="relative z-10 text-center max-w-md px-6 py-8 bg-card/60 backdrop-blur-xl border border-border/50 shadow-2xl rounded-3xl m-4">
+          <p className="text-sm text-muted-foreground">No invite token found.</p>
         </div>
       </div>
     );

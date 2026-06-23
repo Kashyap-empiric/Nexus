@@ -189,7 +189,7 @@ export function ManageChannelMembersModal({ workspaceId, channelId, open, onOpen
                         <button
                           onClick={() => setPendingRemove({ userId: member.userId, username: member.user?.username || "User" })}
                           disabled={isRemoving}
-                          className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 transition-opacity"
+                          className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/10 text-destructive transition-opacity"
                           title="Remove from channel"
                         >
                           <UserMinus className="h-4 w-4" />

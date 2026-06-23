@@ -127,7 +127,7 @@ export const RegisterForm = () => {
                   <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
                 )}
                 {!checkingUsername && usernameAvailable === true && watchedUsername?.length >= 3 && (
-                  <Check className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+                  <Check className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand" />
                 )}
                 {!checkingUsername && usernameAvailable === false && (
                   <X className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-destructive" />

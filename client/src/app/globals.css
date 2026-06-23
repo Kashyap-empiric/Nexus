@@ -54,6 +54,29 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  --color-workspace-rail: var(--workspace-rail);
+  --color-workspace-rail-foreground: var(--workspace-rail-foreground);
+  --color-details-panel: var(--details-panel);
+  --color-composer-surface: var(--composer-surface);
+  --color-message-hover: var(--message-hover);
+  --color-message-selected: var(--message-selected);
+  --color-scrim: var(--scrim);
+  --color-role-owner: var(--role-owner);
+  --color-role-owner-fg: var(--role-owner);
+  --color-role-owner-bg: var(--role-owner-bg);
+  --color-role-admin: var(--role-admin);
+  --color-role-admin-fg: var(--role-admin);
+  --color-role-admin-bg: var(--role-admin-bg);
+  --color-presence-online: var(--presence-online);
+  --color-presence-away: var(--presence-away);
+  --color-presence-dnd: var(--presence-dnd);
+  --color-presence-offline: var(--presence-offline);
+  --color-message-read: var(--message-read);
+  --color-message-pinned: var(--message-pinned);
+  --color-alert-success: var(--alert-success);
+  --color-alert-warning: var(--alert-warning);
+  --color-alert-error: var(--alert-error);
 }
 
 :root {
@@ -103,6 +126,32 @@
   --status-away: oklch(0.78 0.18 85);
   --status-dnd: oklch(0.58 0.23 25);
   --status-offline: oklch(0.56 0 0);
+
+  /* Theme Contract (Light Base) */
+  --workspace-rail: var(--sidebar);
+  --workspace-rail-foreground: var(--sidebar-foreground);
+  --details-panel: var(--background);
+  --composer-surface: var(--background);
+  
+  --message-hover: oklch(0 0 0 / 0.04);
+  --message-selected: oklch(0 0 0 / 0.08);
+  --scrim: oklch(0 0 0 / 0.45);
+  
+  --role-owner-color: oklch(0.63 0.19 145);
+  --role-owner-bg-color: oklch(0.63 0.19 145 / 0.1);
+  --role-admin-color: oklch(0.60 0.15 250);
+  --role-admin-bg-color: oklch(0.60 0.15 250 / 0.1);
+  
+  --presence-online: var(--status-online);
+  --presence-away: var(--status-away);
+  --presence-dnd: var(--status-dnd);
+  --presence-offline: var(--status-offline);
+  
+  --message-read: var(--brand);
+  --message-pinned: oklch(0.75 0.18 55);
+  --alert-success: oklch(0.62 0.17 145);
+  --alert-warning: oklch(0.75 0.18 55);
+  --alert-error: var(--destructive);
 }
 
 .dark {
@@ -153,7 +202,35 @@
   --status-away: oklch(0.78 0.18 85);
   --status-dnd: oklch(0.58 0.23 25);
   --status-offline: oklch(0.50 0 0);
+
+  /* Theme Contract (Dark Base) */
+  --workspace-rail: var(--sidebar);
+  --workspace-rail-foreground: var(--sidebar-foreground);
+  --details-panel: var(--background);
+  --composer-surface: oklch(1 0 0 / 0.02);
+  
+  --message-hover: oklch(1 1 1 / 0.04);
+  --message-selected: oklch(1 1 1 / 0.08);
+  --scrim: oklch(0 0 0 / 0.65);
+  
+  --role-owner-color: oklch(0.72 0.17 145);
+  --role-owner-bg-color: oklch(0.72 0.17 145 / 0.1);
+  --role-admin-color: oklch(0.68 0.15 250);
+  --role-admin-bg-color: oklch(0.68 0.15 250 / 0.1);
+  
+  --presence-online: var(--status-online);
+  --presence-away: var(--status-away);
+  --presence-dnd: var(--status-dnd);
+  --presence-offline: var(--status-offline);
+  
+  --message-read: var(--brand);
+  --message-pinned: oklch(0.80 0.18 55);
+  --alert-success: oklch(0.72 0.17 145);
+  --alert-warning: oklch(0.80 0.18 55);
+  --alert-error: var(--destructive);
 }
+
+
 
 @layer base {
   * {

@@ -47,7 +47,7 @@ export function LazyMarkdown({ content }: LazyMarkdownProps) {
     pre: ({ children, ...props }) => (
       <pre
         {...props}
-        className="bg-zinc-950 dark:bg-zinc-900/50 text-zinc-50 border border-border/50 rounded-md p-3 my-2 overflow-x-auto text-[13px] leading-relaxed block"
+        className="bg-muted text-foreground border border-border/50 rounded-md p-3 my-2 overflow-x-auto text-[13px] leading-relaxed block"
       >
         {children}
       </pre>

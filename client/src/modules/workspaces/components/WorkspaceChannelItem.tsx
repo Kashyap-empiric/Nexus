@@ -186,7 +186,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
         }}
         className={`group flex items-center justify-between px-2 py-2 rounded-md transition-colors cursor-pointer ${
           isActive
-            ? "bg-brand/10 text-brand dark:bg-brand/10 dark:text-brand"
+            ? "bg-brand/10 text-brand"
             : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
         }`}
       >
@@ -209,7 +209,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
           onPointerDown={(e) => e.stopPropagation()}
         >
           {isUnread && !isActive && (
-            <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-white text-[12px] font-bold leading-none">
+            <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[12px] font-bold leading-none">
               {unreadCount > 99 ? "99+" : unreadCount}
             </div>
           )}
@@ -219,7 +219,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
               render={
                 <button
                   ref={triggerRef}
-                  className={`p-1 rounded transition-opacity focus-visible:outline-none hover:bg-black/10 dark:hover:bg-white/10 ${
+                  className={`p-1 rounded transition-opacity focus-visible:outline-none hover:bg-muted ${
                     isActive ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"
                   }`}
                 />

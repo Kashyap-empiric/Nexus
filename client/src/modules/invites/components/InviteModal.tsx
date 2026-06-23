@@ -448,7 +448,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
           )}
 
           {!type ? (
-            <div className="text-center py-4 text-sm text-amber-500 bg-amber-500/10 rounded-md border border-amber-500/20">
+            <div className="text-center py-4 text-sm text-foreground bg-muted rounded-md border border-border">
               Please select a target to invite someone to.
               <br />
               (General workspace invites coming soon)
@@ -480,7 +480,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
                 >
                   {isCopied ? (
                     <>
-                      <Check className="h-4 w-4 mr-2 text-green-500" />
+                      <Check className="h-4 w-4 mr-2 text-brand" />
                       Copied
                     </>
                   ) : (

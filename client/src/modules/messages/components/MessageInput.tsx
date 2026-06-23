@@ -120,7 +120,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
         },
         codeBlock: {
           HTMLAttributes: {
-            class: 'bg-zinc-950 dark:bg-zinc-900/50 text-zinc-50 border border-border/50 rounded-md p-3 my-2 overflow-x-auto text-[13px] font-mono',
+            class: 'bg-muted text-foreground border border-border/50 rounded-md p-3 my-2 overflow-x-auto text-[13px] font-mono',
           },
         },
         code: {
@@ -247,7 +247,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
   };
 
   const isEmpty = editor.isEmpty;
-  const activeClass = "bg-primary/20 text-primary dark:bg-primary/25 dark:text-primary ring-1 ring-primary/30";
+  const activeClass = "bg-primary/20 text-primary ring-1 ring-primary/30";
 
   return (
     <form onSubmit={handleSubmit} className="px-4 md:px-6 xl:px-8 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:pb-6 pt-2 bg-background shrink-0 w-full">
@@ -271,7 +271,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
         </div>
       )}
 
-      <div className="w-full flex flex-col bg-card dark:bg-card border border-border/60 rounded-xl shadow-sm transition-colors focus-within:ring-1 focus-within:ring-brand/30 focus-within:border-brand/40 overflow-hidden">
+      <div className="w-full flex flex-col bg-composer-surface border border-border/60 rounded-xl shadow-sm transition-colors focus-within:ring-1 focus-within:ring-brand/30 focus-within:border-brand/40 overflow-hidden">
         
         {}
         <div className="flex items-center gap-1 px-4 pt-3 pb-1 text-muted-foreground">

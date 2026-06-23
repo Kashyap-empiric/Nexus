@@ -47,7 +47,7 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
   };
 
   return (
-    <div className="flex flex-col w-80 bg-background shadow-xl border-l h-full shrink-0">
+    <div className="flex flex-col w-80 bg-details-panel shadow-xl border-l h-full shrink-0">
       <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
         <h2 className="font-semibold text-lg text-foreground">Details</h2>
         <button 
@@ -165,8 +165,8 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
                 className={cn(
                   "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border",
                   visibility === "PRIVATE"
-                    ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                    : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                    ? "bg-muted text-muted-foreground border-border"
+                    : "bg-primary/10 text-primary border-primary/20"
                 )}
               >
                 {visibility === "PRIVATE" ? (

@@ -7,8 +7,8 @@ function StatusDot({ connected }: { connected: boolean }) {
   if (connected) {
     return (
       <span className="relative flex h-2 w-2">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-presence-online opacity-75" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-presence-online" />
       </span>
     );
   }
@@ -41,7 +41,7 @@ export function AboutSettings() {
             <span className="text-sm text-muted-foreground">Environment</span>
             <span className={cn(
               "text-sm font-medium px-2 py-0.5 rounded",
-              process.env.NODE_ENV === "development" ? "bg-amber-500/10 text-amber-600" : "bg-emerald-500/10 text-emerald-600"
+              process.env.NODE_ENV === "development" ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"
             )}>
               {process.env.NODE_ENV || "unknown"}
             </span>
@@ -59,7 +59,7 @@ export function AboutSettings() {
               <StatusDot connected={socketStatus === "connected"} />
               <span className={cn(
                 "text-sm font-medium capitalize",
-                socketStatus === "connected" ? "text-emerald-600" : "text-destructive"
+                socketStatus === "connected" ? "text-presence-online" : "text-destructive"
               )}>
                 {socketStatus}
               </span>

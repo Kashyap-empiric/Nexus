@@ -164,7 +164,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
               >
                 <ArrowLeft className="h-5 w-5" />
                 {headerInfo.totalUnreadCount > 0 && (
-                  <span className="absolute bottom-0 right-0 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] leading-none font-bold text-white shadow-sm ring-2 ring-background">
+                  <span className="absolute bottom-0 right-0 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] leading-none font-bold text-destructive-foreground shadow-sm ring-2 ring-background">
                     {headerInfo.totalUnreadCount > 99 ? '99+' : headerInfo.totalUnreadCount}
                   </span>
                 )}

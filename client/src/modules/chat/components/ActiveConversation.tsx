@@ -83,7 +83,7 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
       <div className="flex-1 flex flex-col h-full bg-background">
         <MessageListSkeleton />
         <div className="px-4 md:px-6 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-2 bg-background shrink-0 w-full">
-          <div className="w-full flex items-end gap-2 bg-background dark:bg-zinc-950 border rounded-xl px-3 py-2 shadow-sm opacity-50">
+          <div className="w-full flex items-end gap-2 bg-background border rounded-xl px-3 py-2 shadow-sm opacity-50">
             <div className="flex-1 min-w-0 flex items-center">
               <div className="w-full bg-transparent border-0 p-2 text-base min-h-[44px]" />
             </div>
@@ -170,7 +170,7 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
           </div>
           {}
           <div 
-            className="md:hidden fixed inset-0 z-40 bg-black/50 transition-opacity"
+            className="md:hidden fixed inset-0 z-40 bg-scrim transition-opacity"
             onClick={closeInfoPanel}
           />
         </>

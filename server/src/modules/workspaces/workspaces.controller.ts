@@ -164,6 +164,19 @@ export const leaveWorkspace = async (req: AuthRequest, res: Response, next: Next
 
     const result = await workspacesService.leaveWorkspace(workspaceId, userId);
 
+    try {
+      const io = getIO();
+      const channels = await findChannelIdsByWorkspaceId(workspaceId);
+      const userSockets = await io.in(`user:${userId}`).fetchSockets();
+      for (const socket of userSockets) {
+        for (const channel of channels) {
+          socket.leave(`conversation:${channel.id}`);
+        }
+      }
+    } catch (socketErr) {
+      console.error("[Socket.io] Failed to leave rooms on workspace leave:", socketErr);
+    }
+
     res.json({ data: result });
   } catch (error) {
     if (error instanceof AppError) {

@@ -60,24 +60,26 @@ app.use("/api/onboarding", onboardingRoutes);
 app.use("/api/messages/search", messagesSearchRoutes);
 app.use("/api", resetPasswordRoutes);
 
-const { notificationQueue, emailQueue, cleanupQueue } = await import("./jobs/queues.js");
-const bullQueues = [
-  notificationQueue,
-  emailQueue,
-  cleanupQueue,
-].filter(Boolean).map((q) => new BullMQAdapter(q!));
+// Bull Board: lazy init so it doesn't block server startup
+if (ENV.NODE_ENV === "development") {
+  import("./jobs/queues.js").then(({ notificationQueue, emailQueue, cleanupQueue }) => {
+    const bullQueues = [notificationQueue, emailQueue, cleanupQueue]
+      .filter(Boolean)
+      .map((q) => new BullMQAdapter(q!));
 
-if (bullQueues.length > 0) {
-  const serverAdapter = new ExpressAdapter();
-  serverAdapter.setBasePath("/admin/queues");
+    if (bullQueues.length > 0) {
+      const serverAdapter = new ExpressAdapter();
+      serverAdapter.setBasePath("/admin/queues");
 
-  createBullBoard({
-    queues: bullQueues,
-    serverAdapter,
+      createBullBoard({
+        queues: bullQueues,
+        serverAdapter,
+      });
+
+      app.use("/admin/queues", serverAdapter.getRouter());
+      console.log(`[BullMQ] Dashboard at /admin/queues`);
+    }
   });
-
-  app.use("/admin/queues", serverAdapter.getRouter());
-  console.log(`[BullMQ] Dashboard at /admin/queues`);
 }
 
 app.use(errorHandler);

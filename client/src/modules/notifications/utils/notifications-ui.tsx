@@ -52,8 +52,8 @@ export function formatNotificationTime(dateStr: string): string {
 
 export function NotificationIcon({ type }: { type: string }) {
   const iconMap: Record<string, React.ReactNode> = {
-    INVITE_RECEIVED: <Mail className="h-4 w-4 text-amber-500" />,
-    INVITE_ACCEPTED: <CheckCircle className="h-4 w-4 text-green-500" />,
+    INVITE_RECEIVED: <Mail className="h-4 w-4 text-foreground" />,
+    INVITE_ACCEPTED: <CheckCircle className="h-4 w-4 text-brand" />,
     INVITE_DECLINED: <X className="h-4 w-4 text-destructive" />,
     MEMBER_JOINED: <UserPlus className="h-4 w-4 text-brand" />,
     CHANNEL_CREATED: <Hash className="h-4 w-4 text-muted-foreground" />,
@@ -61,7 +61,7 @@ export function NotificationIcon({ type }: { type: string }) {
     CHANNEL_MEMBER_REMOVED: <UserMinus className="h-4 w-4 text-destructive" />,
     MEMBER_REMOVED: <UserMinus className="h-4 w-4 text-destructive" />,
     MESSAGE_REPLIED: <MessageSquareReply className="h-4 w-4 text-brand" />,
-    ROLE_CHANGED: <ShieldAlert className="h-4 w-4 text-amber-500" />,
+    ROLE_CHANGED: <ShieldAlert className="h-4 w-4 text-brand" />,
     WORKSPACE_DELETED: <Trash2 className="h-4 w-4 text-destructive" />,
   };
   return <div className="mr-3 shrink-0 flex items-center justify-center mt-0.5 text-muted-foreground">{iconMap[type] || <Bell className="h-4 w-4" />}</div>;

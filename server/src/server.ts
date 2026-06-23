@@ -6,6 +6,7 @@ import { ENV } from "./config/env.js";
 import { connectRedis } from "./lib/redis.js";
 import { initPushService } from "./services/push.service.js";
 import { startWorkers } from "./jobs/workers.js";
+import { prisma } from "./lib/db.js";
 
 const PORT = ENV.PORT;
 
@@ -21,6 +22,12 @@ if (ENV.SENDGRID_API_KEY) {
 }
 
 startWorkers();
+
+prisma.$connect().then(() => {
+  console.log("[db] Prisma connected");
+}).catch((err) => {
+  console.error("[db] Prisma connection failed:", err);
+});
 
 const httpServer = http.createServer(app);
 

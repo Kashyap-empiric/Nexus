@@ -183,7 +183,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
             <div
               key={msg.id}
               id={`msg-${msg.id}`}
-              className={`group/row flex hover:bg-black/[0.06] dark:hover:bg-white/[0.06] px-4 md:px-6 animate-in fade-in slide-in-from-bottom-1 duration-300 ease-out ${isFirst ? "pt-2.5 pb-0.5" : "py-0.5"} ${msg.optimistic || msg.pending ? "opacity-70" : ""}`}
+              className={`group/row flex hover:bg-message-hover px-4 md:px-6 animate-in fade-in slide-in-from-bottom-1 duration-300 ease-out ${isFirst ? "pt-2.5 pb-0.5" : "py-0.5"} ${msg.optimistic || msg.pending ? "opacity-70" : ""}`}
               style={!isDeleted ? { WebkitTouchCallout: "none" } : undefined}
               onTouchStart={(e) => handleTouchStart(e, msg.id, isDeleted, isMyMessage, isPinned, msg.content, user?.username || "Unknown")}
               onTouchEnd={handleTouchEnd}
@@ -238,7 +238,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                       {time}
                     </span>
                     {isPinned && (
-                      <Pin className="h-3 w-3 text-amber-500 fill-amber-500 ml-1" />
+                      <Pin className="h-3 w-3 text-message-pinned fill-message-pinned ml-1" />
                     )}
                   </div>
                 )}
@@ -397,7 +397,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                   <>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => isPinned ? unpinMutation.mutate(msg.id) : pinMutation.mutate(msg.id)}>
-                                      <Pin className={`h-4 w-4 mr-2 ${isPinned ? "text-amber-500" : ""}`} /> <span className="pt-[1px]">{isPinned ? "Unpin message" : "Pin message"}</span>
+                                      <Pin className={`h-4 w-4 mr-2 ${isPinned ? "text-message-pinned" : ""}`} /> <span className="pt-[1px]">{isPinned ? "Unpin message" : "Pin message"}</span>
                                     </DropdownMenuItem>
                                   </>
                                 )}
@@ -435,7 +435,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                   <>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => isPinned ? unpinMutation.mutate(msg.id) : pinMutation.mutate(msg.id)}>
-                                      <Pin className={`h-4 w-4 mr-2 ${isPinned ? "text-amber-500" : ""}`} /> <span className="pt-[1px]">{isPinned ? "Unpin message" : "Pin message"}</span>
+                                      <Pin className={`h-4 w-4 mr-2 ${isPinned ? "text-message-pinned" : ""}`} /> <span className="pt-[1px]">{isPinned ? "Unpin message" : "Pin message"}</span>
                                     </DropdownMenuItem>
                                   </>
                                 )}
@@ -541,7 +541,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                   setOpenMenuId(null);
                   setContextMenuTarget(null);
                 }}>
-                  <Pin className={`h-4 w-4 mr-2 ${contextMenuTarget.isPinned ? "text-amber-500" : ""}`} />
+                  <Pin className={`h-4 w-4 mr-2 ${contextMenuTarget.isPinned ? "text-message-pinned" : ""}`} />
                   {contextMenuTarget.isPinned ? "Unpin message" : "Pin message"}
                 </DropdownMenuItem>
               </>

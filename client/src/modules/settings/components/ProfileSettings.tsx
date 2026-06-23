@@ -172,7 +172,7 @@ export const ProfileSettings = () => {
             type="button"
             onClick={handleAvatarClick}
             disabled={isUploading}
-            className="absolute inset-0 flex items-center justify-center bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity rounded-full disabled:opacity-50"
+            className="absolute inset-0 flex items-center justify-center bg-foreground/50 text-background opacity-0 group-hover:opacity-100 transition-opacity rounded-full disabled:opacity-50"
           >
             {isUploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Camera className="h-6 w-6" />}
           </button>
@@ -279,7 +279,7 @@ export const ProfileSettings = () => {
                   }}
                 >
                   {isInviteCopied ? (
-                    <><Check className="h-4 w-4 mr-2 text-green-500" />Copied</>
+                    <><Check className="h-4 w-4 mr-2 text-brand" />Copied</>
                   ) : (
                     <><Copy className="h-4 w-4 mr-2" />Copy</>
                   )}

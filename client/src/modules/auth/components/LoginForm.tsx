@@ -80,7 +80,7 @@ export const LoginForm = () => {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             {registered && (
               <div className={`p-3 text-sm font-medium rounded-lg border ${needsConfirmation
-                ? "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-300 dark:bg-blue-950/30 dark:border-blue-800"
+                ? "text-muted-foreground bg-muted border-border"
                 : "text-brand bg-brand/10 border-brand/20"
                 }`}>
                 {needsConfirmation

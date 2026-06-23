@@ -4,7 +4,7 @@ import Image from "next/image";
 
 export function AuthSidebar() {
   return (
-    <div className="hidden lg:flex w-1/2 flex-col justify-between p-12 bg-zinc-950 text-white relative overflow-hidden border-r border-zinc-800">
+    <div className="hidden lg:flex w-1/2 flex-col justify-between p-12 bg-sidebar text-sidebar-foreground relative overflow-hidden border-r border-border">
       {}
       <div className="absolute inset-0 z-0">
         <Image 

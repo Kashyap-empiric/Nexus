@@ -153,7 +153,7 @@ function NotificationItem({
       )}
       {isInvite && isAccepted && (
         <div className="flex items-center gap-2 mt-2 ml-8">
-          <span className="flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+          <span className="flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md bg-brand/10 text-brand">
             <Check className="h-3 w-3" />
             Accepted
           </span>
@@ -161,7 +161,7 @@ function NotificationItem({
       )}
       {isInvite && isDeclined && (
         <div className="flex items-center gap-2 mt-2 ml-8">
-          <span className="flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md bg-destructive/10 text-destructive dark:bg-destructive/20">
+          <span className="flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md bg-destructive/10 text-destructive">
             <X className="h-3 w-3" />
             Declined
           </span>
@@ -307,7 +307,7 @@ export function BellPopover() {
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 bg-destructive text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+          <span className="absolute -top-0.5 -right-0.5 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}

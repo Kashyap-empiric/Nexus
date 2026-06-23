@@ -27,12 +27,12 @@ export function PinButton({ conversationId, messageId, isPinned, canPin = true }
     <Button
       variant="ghost"
       size="icon"
-      className={`h-8 w-8 rounded-none text-muted-foreground hover:bg-accent/60 hover:text-foreground ${isPinned ? "text-amber-500 hover:text-amber-600" : ""}`}
+      className={`h-8 w-8 rounded-none text-muted-foreground hover:bg-accent/60 hover:text-foreground ${isPinned ? "text-message-pinned" : ""}`}
       onClick={handleClick}
       title={isPinned ? "Unpin message" : "Pin message"}
       disabled={pinMutation.isPending || unpinMutation.isPending}
     >
-      <Pin className={`h-3.5 w-3.5 ${isPinned ? "fill-amber-500" : ""}`} />
+      <Pin className={`h-3.5 w-3.5 ${isPinned ? "fill-message-pinned" : ""}`} />
     </Button>
   );
 }

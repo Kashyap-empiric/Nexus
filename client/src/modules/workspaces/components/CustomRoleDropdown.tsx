@@ -9,8 +9,8 @@ import type { WorkspaceRole } from "../types/workspace";
 
 
 export const ROLE_BADGE_STYLES: Record<WorkspaceRole, string> = {
-  OWNER: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  ADMIN: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+  OWNER: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+  ADMIN: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
   MEMBER: "bg-muted text-muted-foreground",
 };
 

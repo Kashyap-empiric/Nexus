@@ -21,7 +21,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isInitialized && user && profile) {
       if (!profile.isOnboarded && !isOnboardingRoute) {
-        router.push('/onboarding');
+        handleInviteContinuation(router).then((resolved) => {
+          if (!resolved) router.push('/onboarding');
+        });
       } else if (profile.isOnboarded) {
         handleInviteContinuation(router);
       }

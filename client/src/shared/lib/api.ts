@@ -7,6 +7,7 @@ import { AlertTriangle } from "lucide-react";
 
 export const api = axios.create({
   baseURL: ENV.API_URL,
+  timeout: 30_000,
 });
 
 api.interceptors.request.use(async (config) => {

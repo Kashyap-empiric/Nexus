@@ -29,7 +29,7 @@ export function NavigationRail({ openSettings }: NavigationRailProps) {
 
   return (
     <>
-      <aside className="w-[60px] border-r flex flex-col items-center justify-between shrink-0 bg-sidebar py-3 gap-3 overflow-y-auto hide-scrollbar">
+      <aside className="w-[60px] border-r flex flex-col items-center justify-between shrink-0 bg-workspace-rail py-3 gap-3 overflow-y-auto hide-scrollbar">
         <div className="flex flex-col items-center gap-3 w-full">
           <Link
             href={dmHref}
@@ -45,7 +45,7 @@ export function NavigationRail({ openSettings }: NavigationRailProps) {
           >
             <MessagesSquare size={20} />
             {dmUnreadCount > 0 && mode !== "DM" && (
-              <div className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-white text-[10px] font-bold leading-none border-2 border-sidebar shadow-sm z-10 pointer-events-none">
+              <div className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none border-2 border-workspace-rail shadow-sm z-10 pointer-events-none">
                 {dmUnreadCount > 99 ? '99+' : dmUnreadCount}
               </div>
             )}
@@ -85,7 +85,7 @@ export function NavigationRail({ openSettings }: NavigationRailProps) {
                 )}
 
                 {unreadCount > 0 && !isActive && (
-                  <div className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-white text-[10px] font-bold leading-none border-2 border-sidebar shadow-sm z-10">
+                  <div className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none border-2 border-workspace-rail shadow-sm z-10">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </div>
                 )}

@@ -53,8 +53,8 @@ export function SetupProfileStep({ onContinue, initialData }: SetupProfileStepPr
                 <Camera className="w-8 h-8 text-muted-foreground group-hover:scale-110 transition-transform" />
               )}
             </div>
-            <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-              <Upload className="w-6 h-6 text-white" />
+            <div className="absolute inset-0 bg-foreground/40 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+              <Upload className="w-6 h-6 text-background" />
             </div>
             <input
               type="file"
