@@ -309,7 +309,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
                       </div>
 
                       {isUnread && !isActive && (
-                          <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[12px] font-bold shrink-0 leading-none">
+                          <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-white text-[12px] font-bold shrink-0 leading-none">
                             {unreadCount > 99 ? '99+' : unreadCount}
                           </div>
                         )}
