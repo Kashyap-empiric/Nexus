@@ -9,20 +9,17 @@ import { toast } from "sonner";
 let isRedirectingFromRemoval = false;
 let isRedirectingFromChannelRemoval = false;
 
-export const handleWorkspaceUpdate = (queryClient: QueryClient) => {
+export const handleWorkspaceUpdate = (queryClient: QueryClient, replace?: (url: string) => void) => {
   return (payload?: { action?: string; workspace?: { id?: string; name?: string } }) => {
     if (payload?.action === "DELETED") {
       queryClient.removeQueries({ queryKey: ["workspaces"] });
       queryClient.removeQueries({ queryKey: ["workspace-members"] });
       queryClient.removeQueries({ queryKey: ["workspace-channels"] });
 
-      toast.error(`"${payload.workspace?.name || "Workspace"}" was deleted`, {
-        duration: Infinity,
-        id: "workspace-deleted",
-      });
+        toast.error(`"${payload.workspace?.name || "Workspace"}" was deleted`);
 
       setTimeout(() => {
-        window.location.href = APP_ROUTES.CONVERSATIONS.INDEX;
+        (replace ?? window.location.assign)(APP_ROUTES.CONVERSATIONS.INDEX);
       }, 1500);
       return;
     }
@@ -57,7 +54,7 @@ export const handleChannelUpdate = (queryClient: QueryClient) => {
   };
 };
 
-export const handleMemberUpdate = (queryClient: QueryClient) => {
+export const handleMemberUpdate = (queryClient: QueryClient, replace?: (url: string) => void) => {
   return (payload: MemberUpdatePayload) => {
     if (!payload?.member) return;
 
@@ -73,9 +70,9 @@ export const handleMemberUpdate = (queryClient: QueryClient) => {
           isRedirectingFromRemoval = false;
         }, 10_000);
 
-        toast.error("You have been removed from the workspace", { duration: Infinity, id: "workspace-removed" });
+        toast.error("You have been removed from the workspace");
         setTimeout(() => {
-          window.location.href = APP_ROUTES.CONVERSATIONS.INDEX;
+          (replace ?? window.location.assign)(APP_ROUTES.CONVERSATIONS.INDEX);
         }, 1500);
         return;
       }
@@ -121,7 +118,7 @@ export const handleChannelMemberAdded = (queryClient: QueryClient) => {
   };
 };
 
-export const handleChannelMemberRemoved = (queryClient: QueryClient) => {
+export const handleChannelMemberRemoved = (queryClient: QueryClient, replace?: (url: string) => void) => {
   return (payload: ChannelMemberRemovedPayload) => {
     if (!payload?.workspaceId || !payload?.channelId || !payload?.removedUserId) return;
 
@@ -146,15 +143,15 @@ export const handleChannelMemberRemoved = (queryClient: QueryClient) => {
         }
       );
 
-      toast.error("You have been removed from the channel", { duration: Infinity, id: "channel-removed" });
+      toast.error("You have been removed from the channel");
       setTimeout(() => {
         const channels = queryClient.getQueryData<Conversation[]>(["workspace-channels", payload.workspaceId]);
         const generalChannel = channels?.find((ch) => ch.name === "general");
         if (generalChannel) {
           const dest = `/workspaces/${payload.workspaceId}/channels/${generalChannel.id}`;
-          window.location.href = dest;
+          (replace ?? window.location.assign)(dest);
         } else {
-          window.location.href = APP_ROUTES.CONVERSATIONS.INDEX;
+          (replace ?? window.location.assign)(APP_ROUTES.CONVERSATIONS.INDEX);
         }
       }, 1500);
     }
