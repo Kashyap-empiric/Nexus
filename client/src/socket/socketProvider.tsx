@@ -67,7 +67,7 @@ export function SocketProvider() {
           useChatStore.getState().setMode("DM");
           useChatStore.getState().setActiveWorkspaceId(null);
           useChatStore.getState().setActiveConversationId(null);
-          router.push("/conversations");
+          router.replace("/conversations");
         }
       }
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
@@ -81,7 +81,7 @@ export function SocketProvider() {
           useChatStore.getState().setMode("DM");
           useChatStore.getState().setActiveWorkspaceId(null);
           useChatStore.getState().setActiveConversationId(null);
-          router.push("/conversations");
+          router.replace("/conversations");
         }
       }
       queryClient.invalidateQueries({ queryKey: ["workspace-members"] });
@@ -99,7 +99,7 @@ export function SocketProvider() {
         if (pathname.includes(`/channels/${payload.channelId}`)) {
           toast.error("You have been removed from this channel.", { id: `removed-${payload.channelId}` });
           const workspacePath = pathname.split('/channels/')[0];
-          router.push(workspacePath || '/');
+          router.replace(workspacePath || '/');
         }
       }
       

@@ -252,10 +252,11 @@ export const dispatchMemberUpdate = (
 ): void => {
   try {
     const io = getIO();
-    io.to(`workspace:${workspaceId}`).emit(SOCKET_EVENTS.MEMBER_UPDATE, payload);
+    const enriched = { ...payload, workspaceId };
+    io.to(`workspace:${workspaceId}`).emit(SOCKET_EVENTS.MEMBER_UPDATE, enriched);
 
     if (payload.action === "REMOVED" && payload.member?.userId) {
-      io.to(`user:${payload.member.userId}`).emit(SOCKET_EVENTS.MEMBER_UPDATE, payload);
+      io.to(`user:${payload.member.userId}`).emit(SOCKET_EVENTS.MEMBER_UPDATE, enriched);
     }
 
     if (payload.action === "ADDED" && payload.member?.userId) {

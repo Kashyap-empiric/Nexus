@@ -2,13 +2,15 @@
 
 import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { SOCKET_EVENTS } from "@/socket/socket-events";
 import { useSocketEvents } from "@/socket/useSocketEvent";
 import { createChatEventRouter } from "@/socket/eventRouter";
 
 export const useGlobalSocket = () => {
   const queryClient = useQueryClient();
-  const router = useMemo(() => createChatEventRouter(queryClient), [queryClient]);
+  const nextRouter = useRouter();
+  const router = useMemo(() => createChatEventRouter(queryClient, nextRouter.replace), [queryClient, nextRouter]);
 
   const events = useMemo(() => ({
     [SOCKET_EVENTS.MESSAGE_NEW]: router.messageNew,
