@@ -1,3 +1,11 @@
+export type PushToMembersJob = {
+  conversationId: string;
+  senderId: string;
+  senderUsername: string;
+  content: string;
+  excludeUserId: string | null;
+};
+
 export type PushNotificationJob = {
   userId: string;
   payload: {
@@ -9,15 +17,26 @@ export type PushNotificationJob = {
   force?: boolean;
 };
 
-export type SendEmailJob = {
-  type: "workspace_invite" | "password_reset";
+export type SendWorkspaceInviteData = {
+  type: "workspace_invite";
   to: string;
-  data: Record<string, unknown>;
+  inviteToken: string;
+  workspaceName: string;
+  inviterName: string;
+  inviteUrl: string;
+  expiresAt: string | null;
 };
+
+export type SendPasswordResetData = {
+  type: "password_reset";
+  to: string;
+  resetUrl: string;
+};
+
+export type SendEmailJob = SendWorkspaceInviteData | SendPasswordResetData;
 
 export type RevokeInviteJob = {
   inviteToken: string;
-  reason: "email_failed";
 };
 
 export type FanOutNotificationJob = {
@@ -36,6 +55,7 @@ export type CleanupJobData = {
 };
 
 export type JobData =
+  | PushToMembersJob
   | PushNotificationJob
   | SendEmailJob
   | RevokeInviteJob

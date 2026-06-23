@@ -19,8 +19,12 @@ vi.mock("@/modules/notifications/notifications.service.js", () => ({
   createAndDispatch: vi.fn(),
 }));
 
-vi.mock("@/services/push.service.js", () => ({
-  sendPushNotification: vi.fn(),
+vi.mock("@/jobs/queues.js", () => ({
+  notificationQueue: {
+    add: vi.fn(),
+  },
+  emailQueue: null,
+  cleanupQueue: null,
 }));
 
 vi.mock("@/modules/auth/auth.repository.js", () => ({
@@ -351,48 +355,20 @@ describe("messages service", () => {
 
 
   describe("sendMessageNotifications", () => {
-    it("sends push to DM members with notifications enabled", async () => {
-      const conv: any = {
-        id: "conv-1",
-        type: "DM",
-        name: null,
-        members: [
-          { userId: "user-1" }, 
-          { userId: "user-2" },
-          { userId: "user-3" },
-        ],
-      };
-
-      mockPrisma.conversation.findUnique.mockResolvedValueOnce(conv);
-
-      mockPrisma.user.findMany.mockResolvedValueOnce([
-        {
-          id: "user-2",
-          pushNotificationsEnabled: true,
-          dmNotifications: true,
-          channelNotifications: false,
-          mentionNotifications: true,
-          username: "bob",
-        },
-        {
-          id: "user-3",
-          pushNotificationsEnabled: false,
-          dmNotifications: true,
-          channelNotifications: false,
-          mentionNotifications: true,
-          username: "charlie",
-        },
-      ]);
-
-      const { sendPushNotification } = await import("@/services/push.service.js");
+    it("enqueues a push-to-members job", async () => {
+      const { notificationQueue } = await import("@/jobs/queues.js");
+      const add = notificationQueue!.add as ReturnType<typeof vi.fn>;
 
       await messagesService.sendMessageNotifications("conv-1", "user-1", "alice", "Hello!");
 
-      expect(sendPushNotification).toHaveBeenCalledTimes(1);
-      expect(sendPushNotification).toHaveBeenCalledWith("user-2", expect.objectContaining({
-        title: "Nexus",
-        body: "alice: Hello!",
-      }));
+      expect(add).toHaveBeenCalledTimes(1);
+      expect(add).toHaveBeenCalledWith("push-to-members", {
+        conversationId: "conv-1",
+        senderId: "user-1",
+        senderUsername: "alice",
+        content: "Hello!",
+        excludeUserId: null,
+      });
     });
   });
 });

@@ -2,88 +2,32 @@ import { uuidv7 } from "uuidv7";
 import { NotFoundError, ForbiddenError, BadRequestError, ConflictError } from "@/lib/app-error.js";
 import * as messagesRepo from "./messages.repository.js";
 import * as conversationsRepo from "../conversations/conversations.repository.js";
-import { sendPushNotification } from "@/services/push.service.js";
 import { createAndDispatch } from "../notifications/notifications.service.js";
+import { notificationQueue } from "@/jobs/queues.js";
 import { dispatchPinEvent } from "@/socket/socket.dispatcher.js";
 import { prisma } from "@/lib/db.js";
 import { findWorkspaceMember } from "../auth/auth.repository.js";
 
 /**
- * Send push notifications to conversation members for a new message.
- * Checks each member's notification preferences (DM, channel, mention).
- * This is shared between the socket handler and HTTP endpoint.
- * Note: In-app notifications for message events (MENTION, DIRECT_MESSAGE, CHANNEL_MESSAGE)
- * are not created yet — those features are in a future milestone.
+ * Enqueue push notifications for conversation members.
+ * The actual member fetch, preference check, and webpush delivery
+ * happens in the background via the BullMQ worker.
  */
 export const sendMessageNotifications = async (
   conversationId: string,
   senderId: string,
   senderUsername: string,
   content: string,
-  /** User ID to skip — used when the user already received a reply notification */
   excludeUserId?: string | null
 ): Promise<void> => {
-  try {
-    const conv = await conversationsRepo.findById(conversationId);
-    if (!conv) return;
-
-    const notificationLink = conv.type === "CHANNEL" && conv.workspaceId
-      ? `/workspaces/${conv.workspaceId}/channels/${conversationId}?highlight=latest`
-      : `/conversations/${conversationId}`;
-
-    const targetMembers = conv.members.filter(
-      m => m.userId !== senderId && m.userId !== excludeUserId
-    );
-
-    if (targetMembers.length === 0) return;
-
-    const memberIds = targetMembers.map(m => m.userId);
-    const memberUsers = await prisma.user.findMany({
-      where: { id: { in: memberIds } },
-      select: {
-        id: true,
-        pushNotificationsEnabled: true,
-        dmNotifications: true,
-        channelNotifications: true,
-        mentionNotifications: true,
-        username: true,
-      },
-    });
-
-    const userPrefsMap = new Map(memberUsers.map(u => [u.id, u]));
-
-    const notificationPromises = targetMembers.map(async (member) => {
-      const memberUser = userPrefsMap.get(member.userId);
-      if (!memberUser || !memberUser.pushNotificationsEnabled) return;
-
-      const isMentioned = new RegExp(`@${escapeRegex(memberUser.username)}\\b`).test(content);
-      let shouldNotify = false;
-
-      if (conv.type === "DM" && memberUser.dmNotifications) {
-        shouldNotify = true;
-      } else if (conv.type === "CHANNEL") {
-        if (memberUser.mentionNotifications && isMentioned) {
-          shouldNotify = true;
-        } else if (memberUser.channelNotifications) {
-          shouldNotify = true;
-        }
-      }
-
-      if (shouldNotify) {
-        const prefix = conv.type === "CHANNEL" && conv.name ? `#${conv.name}\n\n${senderUsername}` : senderUsername;
-        await sendPushNotification(member.userId, {
-          title: "Nexus",
-          body: `${prefix}: ${content}`,
-          url: notificationLink,
-          tag: conversationId,
-        });
-      }
-    });
-
-    await Promise.all(notificationPromises);
-  } catch (err) {
-    console.error("[Message Notifications] Failed to send notifications:", err);
-  }
+  if (!notificationQueue) return;
+  await notificationQueue.add("push-to-members", {
+    conversationId,
+    senderId,
+    senderUsername,
+    content,
+    excludeUserId: excludeUserId ?? null,
+  });
 };
 
 export const getMessages = async (conversationId: string, cursor: string | undefined, limit: number) => {
@@ -328,7 +272,3 @@ export const deleteMessage = async (messageId: string, conversationId: string, u
 };
 
 import { runTransaction as prismaTransaction } from "@/lib/transaction.js";
-
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}

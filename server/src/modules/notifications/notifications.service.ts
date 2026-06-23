@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db.js";
-import { sendPushNotification } from "@/services/push.service.js";
 import * as notificationsRepo from "./notifications.repository.js";
+import { notificationQueue } from "@/jobs/queues.js";
 import type { CreateNotificationInput, PaginationParams } from "./notifications.types.js";
 import { getIO } from "@/socket/socket.js";
 import { SOCKET_EVENTS } from "@/shared/socket-events.js";
@@ -148,16 +148,21 @@ export const createAndDispatch = async (input: CreateNotificationInput) => {
     console.error("[Notification Dispatch] Failed to emit notification:new socket event:", err);
   }
 
-  console.log(`[Notification Dispatch] Triggering Web Push delivery for user ${input.userId}...`);
-  const pushBody = notification.body
-    ? `${notification.title}: ${notification.body}`
-    : notification.title;
-  sendPushNotification(input.userId, {
-    title: "Nexus",
-    body: pushBody,
-    url: notification.link || undefined,
-    tag: notification.id,
-  }, isCritical).catch(err => console.error("[Notification Dispatch] Push send failed:", err));
+  if (notificationQueue) {
+    const pushBody = notification.body
+      ? `${notification.title}: ${notification.body}`
+      : notification.title;
+    await notificationQueue.add("push-to-user", {
+      userId: input.userId,
+      payload: {
+        title: "Nexus",
+        body: pushBody,
+        url: notification.link || undefined,
+        tag: notification.id,
+      },
+      force: isCritical,
+    });
+  }
 
   return notification;
 };
