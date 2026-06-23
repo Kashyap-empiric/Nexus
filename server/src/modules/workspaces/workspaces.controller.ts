@@ -10,6 +10,8 @@ import { dispatchConversationNew } from "@/socket/socket.dispatcher.js";
 import { createAndDispatch } from "../notifications/notifications.service.js";
 import { generateInviteService, revokeInviteByToken } from "../invites/invites.service.js";
 import { sendWorkspaceInviteEmail } from "../../lib/email.js";
+import { emailQueue, notificationQueue } from "../../jobs/queues.js";
+import type { SendWorkspaceInviteData } from "../../jobs/types.js";
 import { findChannelIdsByWorkspaceId } from "../conversations/conversations.repository.js";
 import { getIO } from "@/socket/socket.js";
 import { dispatchChannelUpdate, dispatchMemberUpdate, dispatchChannelMemberUpdate, dispatchWorkspaceUpdate } from "@/socket/socket.dispatcher.js";
@@ -121,19 +123,22 @@ export const deleteWorkspace = async (req: AuthRequest, res: Response, next: Nex
 
     try {
       const currentUser = await usersRepo.findUserById(userId);
-      for (const memberUserId of memberUserIds) {
-        if (memberUserId === userId) continue; 
-        await createAndDispatch({
-          userId: memberUserId,
+      const otherUserIds = memberUserIds.filter((id) => id !== userId);
+
+      if (notificationQueue && otherUserIds.length > 0) {
+        await notificationQueue.add("fan-out-notification", {
           type: "WORKSPACE_DELETED",
-          title: "Workspace deleted",
-          body: `${workspaceName} was deleted by ${currentUser?.username || "the workspace owner"}`,
-          link: "/",
-          metadata: {
-            workspaceId: workspace.id,
-            workspaceName,
-            deletedBy: userId,
-            deletedByUsername: currentUser?.username,
+          userIds: otherUserIds,
+          template: {
+            title: "Workspace deleted",
+            body: `${workspaceName} was deleted by ${currentUser?.username || "the workspace owner"}`,
+            link: "/",
+            metadata: {
+              workspaceId: workspace.id,
+              workspaceName,
+              deletedBy: userId,
+              deletedByUsername: currentUser?.username,
+            },
           },
         });
       }
@@ -202,15 +207,18 @@ export const createChannel = async (req: AuthRequest, res: Response, next: NextF
     dispatchConversationNew(channel as any);
 
     try {
-      if (channel && channel.members) {
+      if (channel && channel.members && notificationQueue) {
         const workspace = await workspacesService.getWorkspaceDetails(userId, workspaceId);
         const workspaceName = workspace.name;
-        
-        for (const member of channel.members) {
-          if (member.userId !== userId) {
-            await createAndDispatch({
-              userId: member.userId,
-              type: "CHANNEL_CREATED",
+        const otherUserIds = channel.members
+          .map((m: any) => m.userId)
+          .filter((id: string) => id !== userId);
+
+        if (otherUserIds.length > 0) {
+          await notificationQueue.add("fan-out-notification", {
+            type: "CHANNEL_CREATED",
+            userIds: otherUserIds,
+            template: {
               title: "New channel",
               body: `#${name} was created in ${workspaceName}`,
               link: `/workspaces/${workspaceId}/channels/${channel.id}`,
@@ -221,8 +229,8 @@ export const createChannel = async (req: AuthRequest, res: Response, next: NextF
                 workspaceName,
                 creatorId: userId,
               },
-            });
-          }
+            },
+          });
         }
       }
     } catch (err) {
@@ -300,7 +308,7 @@ async function sendWorkspaceInvite(
     forceNew: true,
   });
 
-  await createAndDispatch({
+  createAndDispatch({
     userId: targetUserId,
     type: "INVITE_RECEIVED",
     title: "Workspace invite",
@@ -314,7 +322,7 @@ async function sendWorkspaceInvite(
       inviterName,
       token: invite.token,
     },
-  });
+  }).catch((err) => console.error(`[sendWorkspaceInvite] Failed to dispatch INVITE_RECEIVED for ${targetUserId}:`, err));
 
   try {
     const targetUser = await usersRepo.findUserById(targetUserId);
@@ -322,13 +330,26 @@ async function sendWorkspaceInvite(
       const baseUrl = ENV.CLIENT_URL || "http://localhost:3000";
       const inviteUrl = `${baseUrl}/invite?token=${invite.token}`;
 
-      await sendWorkspaceInviteEmail({
-        to: targetUser.email,
-        workspaceName,
-        inviterName,
-        inviteUrl,
-        expiresAt: invite.expiresAt ? new Date(invite.expiresAt) : null,
-      });
+      if (emailQueue) {
+        const jobData: SendWorkspaceInviteData = {
+          type: "workspace_invite",
+          to: targetUser.email,
+          inviteToken: invite.token,
+          workspaceName,
+          inviterName,
+          inviteUrl,
+        expiresAt: invite.expiresAt || null,
+        };
+        await emailQueue.add("send-email", jobData);
+      } else {
+        await sendWorkspaceInviteEmail({
+          to: targetUser.email,
+          workspaceName,
+          inviterName,
+          inviteUrl,
+          expiresAt: invite.expiresAt ? new Date(invite.expiresAt) : null,
+        });
+      }
     }
   } catch (emailErr) {
     console.error(`[sendWorkspaceInvite] Email failed for ${targetUserId}:`, emailErr);
@@ -508,68 +529,93 @@ export const inviteByEmail = async (req: AuthRequest, res: Response, next: NextF
     const inviteUrl = `${baseUrl}${invite.invitePath}`;
 
     let emailSent = false;
-    try {
-      await sendWorkspaceInviteEmail({
+
+    if (emailQueue) {
+      const jobData: SendWorkspaceInviteData = {
+        type: "workspace_invite",
         to: email,
+        inviteToken: invite.token,
         workspaceName: workspace.name,
         inviterName,
         inviteUrl,
-        expiresAt: invite.expiresAt ? new Date(invite.expiresAt) : null,
-      });
+        expiresAt: invite.expiresAt || null,
+      };
+      await emailQueue.add("send-email", jobData);
       emailSent = true;
-    } catch (emailErr) {
-      const message =
-        emailErr instanceof Error ? emailErr.message : "EMAIL_SEND_FAILED";
 
       if (!existingUser) {
-        console.error(
-          `[inviteByEmail] ✗ Revoking invite  to=${email}  reason=${message}`,
-        );
+        const expiresAt = invite.expiresAt ? new Date(invite.expiresAt) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        const delay = expiresAt.getTime() - Date.now();
 
-        await revokeInviteByToken(invite.token).catch((revokeErr) =>
-          console.error("[inviteByEmail] Failed to revoke orphan invite:", revokeErr)
+        await notificationQueue!.add(
+          "revoke-invite",
+          { inviteToken: invite.token },
+          {
+            delay: Math.max(delay, 0),
+            jobId: `revoke-invite:${invite.token}`,
+          },
         );
+      }
+    } else {
+      try {
+        await sendWorkspaceInviteEmail({
+          to: email,
+          workspaceName: workspace.name,
+          inviterName,
+          inviteUrl,
+          expiresAt: invite.expiresAt ? new Date(invite.expiresAt) : null,
+        });
+        emailSent = true;
+      } catch (emailErr) {
+        const message =
+          emailErr instanceof Error ? emailErr.message : "EMAIL_SEND_FAILED";
 
-        if (message === "EMAIL_NOT_CONFIGURED") {
+        if (!existingUser) {
+          console.error(
+            `[inviteByEmail] ✗ Revoking invite  to=${email}  reason=${message}`,
+          );
+
+          await revokeInviteByToken(invite.token).catch((revokeErr) =>
+            console.error("[inviteByEmail] Failed to revoke orphan invite:", revokeErr)
+          );
+
+          if (message === "EMAIL_NOT_CONFIGURED") {
+            res.status(500).json({
+              success: false,
+              emailSent: false,
+              error: "Email service is not configured. Please set SENDGRID_API_KEY and SENDGRID_FROM_EMAIL.",
+            });
+            return;
+          }
+
           res.status(500).json({
             success: false,
             emailSent: false,
-            error: "Email service is not configured. Please set SENDGRID_API_KEY and SENDGRID_FROM_EMAIL.",
+            error: "Unable to deliver invitation email. Please check the email address and try again.",
           });
           return;
         }
 
-        res.status(500).json({
-          success: false,
-          emailSent: false,
-          error: "Unable to deliver invitation email. Please check the email address and try again.",
-        });
-        return;
+        console.error(`[inviteByEmail] ✗ Email failed  to=${email}  reason=${message}  notificationSent=true`);
       }
-
-      console.error(`[inviteByEmail] ✗ Email failed  to=${email}  reason=${message}  notificationSent=true`);
     }
 
     if (existingUser) {
-      try {
-        await createAndDispatch({
-          userId: existingUser.id,
-          type: "INVITE_RECEIVED",
-          title: "Workspace invite",
-          body: `You've been invited to ${workspace.name} by ${inviterName}`,
-          link: invite.invitePath,
-          imageUrl: (workspace as any).imageUrl || undefined,
-          metadata: {
-            workspaceId,
-            workspaceName: workspace.name,
-            inviterId: userId,
-            inviterName,
-            token: invite.token,
-          },
-        });
-      } catch (notifErr) {
-        console.error("[inviteByEmail] Failed to send in-app notification:", notifErr);
-      }
+      createAndDispatch({
+        userId: existingUser.id,
+        type: "INVITE_RECEIVED",
+        title: "Workspace invite",
+        body: `You've been invited to ${workspace.name} by ${inviterName}`,
+        link: invite.invitePath,
+        imageUrl: (workspace as any).imageUrl || undefined,
+        metadata: {
+          workspaceId,
+          workspaceName: workspace.name,
+          inviterId: userId,
+          inviterName,
+          token: invite.token,
+        },
+      }).catch((err) => console.error("[inviteByEmail] Failed to send in-app notification:", err));
     }
 
     console.log(
@@ -625,16 +671,19 @@ export const addChannelMembers = async (req: AuthRequest, res: Response, next: N
     dispatchChannelMemberUpdate(workspaceId, channelId, "ADDED", { addedMembers: result.addedUsers });
 
     try {
-      if (result.addedUsers && result.addedUsers.length > 0) {
+      if (result.addedUsers && result.addedUsers.length > 0 && notificationQueue) {
         const workspace = await workspacesService.getWorkspaceDetails(userId, workspaceId);
         const currentUser = await usersRepo.findUserById(userId);
         const channel = await workspacesService.getWorkspaceChannels(userId, workspaceId).then(channels => channels.find(c => c.id === channelId));
-        
-        for (const addedUser of result.addedUsers) {
-          if (addedUser.id !== userId) {
-            await createAndDispatch({
-              userId: addedUser.id,
-              type: "CHANNEL_MEMBER_ADDED",
+        const otherUserIds = result.addedUsers
+          .map((u: any) => u.id)
+          .filter((id: string) => id !== userId);
+
+        if (otherUserIds.length > 0) {
+          await notificationQueue.add("fan-out-notification", {
+            type: "CHANNEL_MEMBER_ADDED",
+            userIds: otherUserIds,
+            template: {
               title: "Added to channel",
               body: `You were added to #${channel?.name || "a channel"} in ${workspace.name} by ${currentUser?.username || "a member"}`,
               link: `/workspaces/${workspaceId}/channels/${channelId}`,
@@ -646,8 +695,8 @@ export const addChannelMembers = async (req: AuthRequest, res: Response, next: N
                 addedBy: userId,
                 addedByUsername: currentUser?.username,
               },
-            });
-          }
+            },
+          });
         }
       }
     } catch (err) {
@@ -674,30 +723,26 @@ export const removeChannelMember = async (req: AuthRequest, res: Response, next:
 
     dispatchChannelMemberUpdate(workspaceId, channelId, "REMOVED", { removedUserId: targetUserId });
 
-    try {
-      const currentUser = await usersRepo.findUserById(userId);
-      const workspace = await workspacesService.getWorkspaceDetails(userId, workspaceId);
-      const channels = await workspacesService.getWorkspaceChannels(userId, workspaceId);
-      const channel = channels.find(c => c.id === channelId);
+    const currentUser = await usersRepo.findUserById(userId);
+    const workspace = await workspacesService.getWorkspaceDetails(userId, workspaceId);
+    const channels = await workspacesService.getWorkspaceChannels(userId, workspaceId);
+    const channel = channels.find(c => c.id === channelId);
 
-      await createAndDispatch({
-        userId: targetUserId,
-        type: "CHANNEL_MEMBER_REMOVED",
-        title: "Removed from channel",
-        body: `You were removed from #${channel?.name || channelId} in ${workspace.name} by ${currentUser?.username || "a member"}`,
-        link: `/workspaces/${workspaceId}/channels`,
-        metadata: {
-          workspaceId,
-          channelId,
-          channelName: channel?.name,
-          workspaceName: workspace.name,
-          removedBy: userId,
-          removedByUsername: currentUser?.username,
-        },
-      });
-    } catch (notifError) {
-      console.error("[Notifications] Failed to create CHANNEL_MEMBER_REMOVED notification:", notifError);
-    }
+    createAndDispatch({
+      userId: targetUserId,
+      type: "CHANNEL_MEMBER_REMOVED",
+      title: "Removed from channel",
+      body: `You were removed from #${channel?.name || channelId} in ${workspace.name} by ${currentUser?.username || "a member"}`,
+      link: `/workspaces/${workspaceId}/channels`,
+      metadata: {
+        workspaceId,
+        channelId,
+        channelName: channel?.name,
+        workspaceName: workspace.name,
+        removedBy: userId,
+        removedByUsername: currentUser?.username,
+      },
+    }).catch((err) => console.error("[Notifications] Failed to create CHANNEL_MEMBER_REMOVED notification:", err));
 
     res.json({ data: result });
   } catch (error) {
@@ -738,27 +783,23 @@ export const updateMemberRole = async (req: AuthRequest, res: Response, next: Ne
     
     dispatchMemberUpdate(workspaceId, { action: "ROLE_UPDATED", member: updatedMember });
 
-    try {
-      const currentUser = await usersRepo.findUserById(userId);
-      const workspace = await workspacesService.getWorkspaceDetails(userId, workspaceId);
+    const currentUser = await usersRepo.findUserById(userId);
+    const workspace = await workspacesService.getWorkspaceDetails(userId, workspaceId);
 
-      await createAndDispatch({
-        userId: memberUserId,
-        type: "ROLE_CHANGED",
-        title: "Role changed",
-        body: `Your role in ${workspace.name} has been changed to ${role}`,
-        link: `/workspaces/${workspaceId}/channels`,
-        metadata: {
-          workspaceId,
-          workspaceName: workspace.name,
-          changedBy: userId,
-          changedByUsername: currentUser?.username,
-          newRole: role,
-        },
-      });
-    } catch (notifError) {
-      console.error("[Notifications] Failed to create ROLE_CHANGED notification:", notifError);
-    }
+    createAndDispatch({
+      userId: memberUserId,
+      type: "ROLE_CHANGED",
+      title: "Role changed",
+      body: `Your role in ${workspace.name} has been changed to ${role}`,
+      link: `/workspaces/${workspaceId}/channels`,
+      metadata: {
+        workspaceId,
+        workspaceName: workspace.name,
+        changedBy: userId,
+        changedByUsername: currentUser?.username,
+        newRole: role,
+      },
+    }).catch((err) => console.error("[Notifications] Failed to create ROLE_CHANGED notification:", err));
 
     res.json({ data: updatedMember });
   } catch (error) {
@@ -793,25 +834,21 @@ export const removeWorkspaceMember = async (req: AuthRequest, res: Response, nex
       console.error("[Socket.io] Failed to leave rooms on workspace member removal:", socketErr);
     }
 
-    try {
-      const currentUser = await usersRepo.findUserById(userId);
-      const workspace = await workspacesService.getWorkspaceDetails(userId, workspaceId);
+    const currentUser = await usersRepo.findUserById(userId);
+    const workspace = await workspacesService.getWorkspaceDetails(userId, workspaceId);
 
-      await createAndDispatch({
-        userId: memberUserId,
-        type: "MEMBER_REMOVED",
-        title: "Removed from workspace",
-        body: `You have been removed from ${workspace.name} by ${currentUser?.username || "a workspace admin"}`,
-        metadata: {
-          workspaceId,
-          workspaceName: workspace.name,
-          removedBy: userId,
-          removedByUsername: currentUser?.username,
-        },
-      });
-    } catch (notifError) {
-      console.error("[Notifications] Failed to create MEMBER_REMOVED notification:", notifError);
-    }
+    createAndDispatch({
+      userId: memberUserId,
+      type: "MEMBER_REMOVED",
+      title: "Removed from workspace",
+      body: `You have been removed from ${workspace.name} by ${currentUser?.username || "a workspace admin"}`,
+      metadata: {
+        workspaceId,
+        workspaceName: workspace.name,
+        removedBy: userId,
+        removedByUsername: currentUser?.username,
+      },
+    }).catch((err) => console.error("[Notifications] Failed to create MEMBER_REMOVED notification:", err));
 
     res.json({ data: result });
   } catch (error) {

@@ -8,6 +8,7 @@ import { dispatchConversationNew, dispatchMemberUpdate } from "../../socket/sock
 import { getIO } from "../../socket/socket.js";
 import { SOCKET_EVENTS } from "../../shared/socket-events.js";
 import { prisma } from "@/lib/db.js";
+import { notificationQueue } from "../../jobs/queues.js";
 
 export const resolveInvite = async (req: AuthRequest, res: Response, next: NextFunction): Promise<any> => {
   const { token } = req.body;
@@ -55,6 +56,7 @@ export const resolveInvite = async (req: AuthRequest, res: Response, next: NextF
       }
     }
 
+    notificationQueue?.remove(`revoke-invite:${token}`).catch(() => {});
     res.json({ redirectUrl, alreadyMember: alreadyMember || undefined });
   } catch (error) {
     if (error instanceof AppError) {
@@ -115,6 +117,7 @@ export const declineInvite = async (req: AuthRequest, res: Response): Promise<an
       }).catch(err => console.error("[declineInvite] Failed to dispatch INVITE_DECLINED:", err));
     }
 
+    notificationQueue?.remove(`revoke-invite:${token}`).catch(() => {});
     console.log(`[declineInvite] ✓ Invite declined  token=${token.substring(0, 8)}...  userId=${userId}`);
     res.json({ success: true });
   } catch (error) {

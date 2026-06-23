@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db.js";
 import { ENV } from "@/config/env.js";
 import { generateResetToken, verifyResetToken, completePasswordReset } from "./reset-password.service.js";
 import { sendPasswordResetEmail } from "@/lib/email.js";
+import { emailQueue } from "@/jobs/queues.js";
+import type { SendPasswordResetData } from "@/jobs/types.js";
 
 const router = Router();
 
@@ -41,10 +43,19 @@ router.post(
         const rawToken = await generateResetToken(user.id);
         const resetUrl = `${ENV.CLIENT_URL}/reset-password?token=${rawToken}`;
 
-        await sendPasswordResetEmail({
-          to: email,
-          resetUrl,
-        });
+        if (emailQueue) {
+          const jobData: SendPasswordResetData = {
+            type: "password_reset",
+            to: email,
+            resetUrl,
+          };
+          await emailQueue.add("send-email", jobData);
+        } else {
+          await sendPasswordResetEmail({
+            to: email,
+            resetUrl,
+          });
+        }
       }
 
       // Always return the same message regardless of whether the user exists
