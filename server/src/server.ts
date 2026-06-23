@@ -5,6 +5,7 @@ import { initSocket } from "./socket/socket.js";
 import { ENV } from "./config/env.js";
 import { connectRedis } from "./lib/redis.js";
 import { initPushService } from "./services/push.service.js";
+import { startWorkers } from "./jobs/workers.js";
 
 const PORT = ENV.PORT;
 
@@ -18,6 +19,8 @@ if (ENV.SENDGRID_API_KEY) {
 } else {
   console.warn("[email] ✗ SENDGRID_API_KEY not set — email invites will fail");
 }
+
+startWorkers();
 
 const httpServer = http.createServer(app);
 

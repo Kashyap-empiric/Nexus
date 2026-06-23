@@ -16,6 +16,9 @@ import onboardingRoutes from "./modules/onboarding/onboarding.routes.js";
 import messagesSearchRoutes from "./modules/messages/messages.search.routes.js";
 import resetPasswordRoutes from "./modules/auth/reset-password.routes.js";
 
+import { ExpressAdapter } from "@bull-board/express";
+import { createBullBoard } from "@bull-board/api";
+import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ENV } from "./config/env.js";
 import * as usersRepo from "./modules/users/users.repository.js";
 
@@ -56,6 +59,27 @@ app.use("/api/notifications", notificationsRoutes);
 app.use("/api/onboarding", onboardingRoutes);
 app.use("/api/messages/search", messagesSearchRoutes);
 app.use("/api", resetPasswordRoutes);
+
+const { notificationQueue, emailQueue, cleanupQueue } = await import("./jobs/queues.js");
+const bullQueues = [
+  notificationQueue,
+  emailQueue,
+  cleanupQueue,
+].filter(Boolean).map((q) => new BullMQAdapter(q!));
+
+if (bullQueues.length > 0) {
+  const serverAdapter = new ExpressAdapter();
+  serverAdapter.setBasePath("/admin/queues");
+
+  createBullBoard({
+    queues: bullQueues,
+    serverAdapter,
+  });
+
+  app.use("/admin/queues", serverAdapter.getRouter());
+  console.log(`[BullMQ] Dashboard at /admin/queues`);
+}
+
 app.use(errorHandler);
 
 export default app;
