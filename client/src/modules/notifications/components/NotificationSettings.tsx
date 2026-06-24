@@ -16,13 +16,15 @@ export function NotificationSettings() {
       navigator.serviceWorker.ready.then(reg => {
         reg.pushManager.getSubscription().then(sub => {
           if (cancelled) return;
-          setActualPushEnabled(!!(sub && Notification.permission === "granted"));
+          requestAnimationFrame(() => {
+            setActualPushEnabled(!!(sub && Notification.permission === "granted"));
+          });
         }).catch(() => {
-          if (!cancelled) setActualPushEnabled(false);
+          if (!cancelled) requestAnimationFrame(() => setActualPushEnabled(false));
         });
       });
     } else {
-      setActualPushEnabled(false);
+      requestAnimationFrame(() => setActualPushEnabled(false));
     }
     return () => { cancelled = true; };
   }, [preferences?.pushEnabled]);

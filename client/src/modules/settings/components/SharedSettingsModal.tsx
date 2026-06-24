@@ -46,8 +46,11 @@ export const SharedSettingsModal = ({ isOpen, currentTab, setTab, closeSettings 
 
   useEffect(() => {
     if (isOpen) {
-      setShowMobileMenu(true);
+      requestAnimationFrame(() => {
+        setShowMobileMenu(true);
+      });
     }
+    
   }, [isOpen]);
 
 

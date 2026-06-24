@@ -27,6 +27,9 @@ const NOTIFICATION_CATEGORY_MAP: Record<NotificationType, NotificationCategory> 
   CHANNEL_MEMBER_ADDED: NotificationCategory.WORKSPACE_ACTIVITY,
   MEMBER_REMOVED: NotificationCategory.SYSTEM_CRITICAL,
   CHANNEL_MEMBER_REMOVED: NotificationCategory.SYSTEM_CRITICAL,
+
+  MENTIONED_IN_MESSAGE: NotificationCategory.REPLIES,
+  THREAD_REPLY: NotificationCategory.REPLIES,
 };
 
 const CATEGORY_PREFERENCE_MAP = {

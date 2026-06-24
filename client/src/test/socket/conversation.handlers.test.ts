@@ -81,7 +81,7 @@ describe("handleMessageRead", () => {
     queryClient.setQueryData(["conversations"], [createConv()]);
     const handler = handleMessageRead(queryClient);
     
-    handler({ conversationId: "", userId: "user-2", lastReadMessageId: "msg-5" } as any);
+    handler({ conversationId: "", userId: "user-2", lastReadMessageId: "msg-5" } as { conversationId: string; userId: string; lastReadMessageId: string });
     const updated = queryClient.getQueryData<Conversation[]>(["conversations"]);
     expect(updated).toHaveLength(1);
   });
@@ -90,7 +90,7 @@ describe("handleMessageRead", () => {
     queryClient.setQueryData(["conversations"], [createConv()]);
     const handler = handleMessageRead(queryClient);
     
-    handler({ conversationId: "conv-1", userId: "", lastReadMessageId: "msg-5" } as any);
+    handler({ conversationId: "conv-1", userId: "", lastReadMessageId: "msg-5" } as { conversationId: string; userId: string; lastReadMessageId: string });
     const updated = queryClient.getQueryData<Conversation[]>(["conversations"]);
     expect(updated![0].members).toHaveLength(0);
   });
@@ -159,7 +159,7 @@ describe("handleConversationNew", () => {
     queryClient.setQueryData(["conversations"], [createConv()]);
     const handler = handleConversationNew(queryClient);
     
-    handler({} as any);
+    handler({} as { conversationId: string; userId: string; lastReadMessageId: string });
     const updated = queryClient.getQueryData<Conversation[]>(["conversations"]);
     expect(updated).toHaveLength(1);
   });
@@ -237,7 +237,7 @@ describe("handleConversationUpdate", () => {
     queryClient.setQueryData(["conversations"], [createConv()]);
     const handler = handleConversationUpdate(queryClient);
     
-    handler({ conversation: { id: "", name: null, updatedAt: "", latestMessageId: null, latestMessage: null } } as any);
+    handler({ conversation: { id: "", name: null, updatedAt: "", latestMessageId: null, latestMessage: null } } as { conversation: { id: string; name: string | null; updatedAt: string; latestMessageId: string | null; latestMessage: null } });
     const updated = queryClient.getQueryData<Conversation[]>(["conversations"]);
     expect(updated).toHaveLength(1);
   });

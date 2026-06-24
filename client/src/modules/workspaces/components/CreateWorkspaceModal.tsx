@@ -12,7 +12,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { useCreateWorkspace } from "../hooks/useWorkspaces";
 import { uploadWorkspaceIcon } from "@/shared/lib/upload";
 import { toast } from "sonner";
-import type { AxiosError } from "axios";
 import { friendlyError } from "@/shared/lib/friendly-error";
 
 interface CreateWorkspaceModalProps {
@@ -49,7 +48,7 @@ export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalPr
         iconPath = await uploadWorkspaceIcon(slug.trim() || name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-"), iconFile);
       }
 
-      const workspace = await createWorkspace({
+      await createWorkspace({
         name: name.trim(),
         slug: slug.trim(),
         description: description.trim() || undefined,
@@ -64,7 +63,7 @@ export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalPr
       setIconPreview(null);
       onClose();
     } catch (error: unknown) {
-      const axiosError = error as AxiosError<{ error?: string }>;
+      const axiosError = error as { response?: { data?: { error?: string } } };
       const message = friendlyError(axiosError?.response?.data?.error || error, "Failed to create workspace");
       toast.error(message);
     }

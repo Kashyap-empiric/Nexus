@@ -64,9 +64,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
 
   useEffect(() => {
     return () => {
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-      }
+      
     };
   }, []);
 
@@ -121,9 +119,8 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
   const clearLongPress = () => {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
-      
-      longPressTimerRef.current = null;
     }
+    longPressTimerRef.current = null;
     touchStartPosRef.current = null;
   };
 

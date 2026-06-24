@@ -11,14 +11,12 @@ import type { Conversation, ConversationMember } from "../types/conversation";
 import { useAuth } from "@/modules/auth";
 import { Input } from "@/shared/components/ui/input";
 import Link from "next/link";
-import { useParams, useRouter, usePathname } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useGlobalSocket } from "@/modules/chat/hooks/useGlobalSocket";
 import { useChatStore } from "@/modules/chat/store/chatStore";
 import { useRouteState } from "@/shared/hooks/useRouteState";
-import { useSocketStore } from "@/socket/socketStore";
 import { stripMarkdown } from "@/shared/lib/utils";
-import { APP_ROUTES } from "@/config/url";
 import { useUser } from "@/modules/auth/store/useAuthStore";
 import { useInviteModal } from "@/modules/invites/hooks/useInviteModal";
 import {
@@ -40,7 +38,6 @@ import {
 import { MessageSquarePlus, UserPlus } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { socket } from "@/socket/socketClient";
-import { useProfile } from "@/modules/users/hooks/useProfile";
 import { WorkspaceHeader } from "@/modules/workspaces/components/WorkspaceHeader";
 import { useWorkspaceDetails } from "@/modules/workspaces/hooks/useWorkspaces";
 
@@ -71,9 +68,9 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
   const [searchQuery, setSearchQuery] = useState("");
   const params = useParams();
   const router = useRouter();
-  const pathname = usePathname();
+  
   const activeId = (params?.channelId as string) || (params?.id as string);
-  const lastVisitedChannels = useChatStore((state) => state.lastVisitedChannels);
+  
   const setLastVisitedChannel = useChatStore((state) => state.setLastVisitedChannel);
   const pendingRedirect = useRef<string | null>(null);
 
@@ -88,10 +85,6 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
   }, [mode, activeWorkspaceId, activeId, workspaceChannels, setLastVisitedChannel]);
 
 
-
-  const { data: dbProfile } = useProfile();
-
-  const socketStatus = useSocketStore((state) => state.socketStatus);
 
   const displayList = mode === "DM"
     ? [...(conversations || [])]

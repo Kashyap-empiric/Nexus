@@ -48,13 +48,16 @@ export function ChannelSettingsModal({ isOpen, workspaceId, channel, onClose }: 
     register,
     handleSubmit,
     reset,
-    watch,
     setValue,
     formState: { errors, isDirty },
   } = useForm<ChannelFormValues>({
     resolver: zodResolver(channelSchema),
     defaultValues: { name: "", description: "", visibility: "PUBLIC" },
   });
+
+  const [currentVisibility, setCurrentVisibility] = useState<"PUBLIC" | "PRIVATE">("PUBLIC");
+  const [descriptionLength, setDescriptionLength] = useState(0);
+  const isChangingToPrivate = currentVisibility === "PRIVATE" && channel?.visibility === "PUBLIC";
 
   useEffect(() => {
     if (channel) {
@@ -65,9 +68,6 @@ export function ChannelSettingsModal({ isOpen, workspaceId, channel, onClose }: 
       });
     }
   }, [channel, reset]);
-
-  const currentVisibility = watch("visibility");
-  const isChangingToPrivate = currentVisibility === "PRIVATE" && channel?.visibility === "PUBLIC";
 
   const onSubmit = async (data: ChannelFormValues) => {
     if (!workspaceId || !channel) return;
@@ -129,8 +129,10 @@ export function ChannelSettingsModal({ isOpen, workspaceId, channel, onClose }: 
 
               <div className="space-y-2">
                 <Label htmlFor="ch-description">Description</Label>
-                <Textarea id="ch-description" {...register("description")} className="resize-none" rows={3} />
-                <p className="text-xs text-muted-foreground text-right">{watch("description")?.length || 0} / 500</p>
+                <Textarea id="ch-description" {...register("description", {
+                  onChange: (e) => setDescriptionLength(e.target.value.length),
+                })} className="resize-none" rows={3} />
+                <p className="text-xs text-muted-foreground text-right">{descriptionLength} / 500</p>
               </div>
 
               <div className="space-y-3">
@@ -148,7 +150,11 @@ export function ChannelSettingsModal({ isOpen, workspaceId, channel, onClose }: 
                   </div>
                   <Switch
                     checked={currentVisibility === "PRIVATE"}
-                    onCheckedChange={(checked) => setValue("visibility", checked ? "PRIVATE" : "PUBLIC", { shouldDirty: true })}
+                    onCheckedChange={(checked) => {
+                      const vis = checked ? "PRIVATE" : "PUBLIC";
+                      setValue("visibility", vis, { shouldDirty: true });
+                      setCurrentVisibility(vis);
+                    }}
                   />
                 </div>
                 {isChangingToPrivate && (

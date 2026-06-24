@@ -2,7 +2,7 @@
 
 
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -20,8 +20,6 @@ import { useParams, useRouter } from "next/navigation";
 import { Camera, ArrowLeftFromLine, Trash, Shield, ShieldCheck, User as UserIcon, Settings, Users, ChevronRight, ArrowLeft, UserMinus } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import type { WorkspaceRole, WorkspaceMember } from "../types/workspace";
-import { useChatStore } from "@/modules/chat/store/chatStore";
-import { useRouteState } from "@/shared/hooks/useRouteState";
 import { uploadWorkspaceIcon, getPublicUrl, deleteFile } from "@/shared/lib/upload";
 import { friendlyError } from "@/shared/lib/friendly-error";
 import { CustomRoleDropdown, ROLE_BADGE_STYLES } from "./CustomRoleDropdown";
@@ -74,16 +72,21 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
     register,
     handleSubmit,
     reset,
-    watch,
     formState: { errors, isDirty },
   } = useForm<WorkspaceFormValues>({
     resolver: zodResolver(workspaceSchema),
     defaultValues: { name: "", slug: "", description: "" },
   });
 
+  const [previewName, setPreviewName] = useState("");
+  const [descLength, setDescLength] = useState(0);
+  const [currentSlug, setCurrentSlug] = useState("");
+
   useEffect(() => {
     if (isOpen) {
-      setShowMobileMenu(true);
+      requestAnimationFrame(() => {
+        setShowMobileMenu(true);
+      });
     }
   }, [isOpen]);
 
@@ -93,6 +96,11 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
         name: workspace.name || "",
         slug: workspace.slug || "",
         description: workspace.description || "",
+      });
+      requestAnimationFrame(() => {
+        setPreviewName(workspace.name || "");
+        setCurrentSlug(workspace.slug || "");
+        setDescLength(workspace.description?.length || 0);
       });
     }
   }, [workspace, reset]);
@@ -165,7 +173,7 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
   const [pendingOwnerPromotion, setPendingOwnerPromotion] = useState<{ userId: string; username: string } | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<{ userId: string; username: string } | null>(null);
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
-
+  
   const handleRoleChange = async (userId: string, role: WorkspaceRole) => {
     if (!workspaceId) return;
     try {
@@ -189,14 +197,24 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
   const authUser = useUser();
   const currentUser = (members || []).find((m: WorkspaceMember) => m.userId === authUser?.id);
   const params = useParams();
-  const { activeWorkspaceId } = useRouteState();
+  
   const router = useRouter();
-  const isSlugManuallyEdited = useRef(false);
+  
   const iconInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUploadingIcon, setIsUploadingIcon] = useState(false);
   const [iconFile, setIconFile] = useState<File | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
+
+  const handleIconBrowse = useCallback(() => {
+    iconInputRef.current?.click();
+  }, []);
+
+  const handleIconKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      iconInputRef.current?.click();
+    }
+  }, []);
 
   const handleIconSelect = (file: File) => {
     if (file.size > 5 * 1024 * 1024) {
@@ -308,7 +326,7 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
             ) : activeTab === "general" ? (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 <p className="text-sm text-muted-foreground">
-                  Preview: <span className="font-medium text-foreground">{watch("name") || "Untitled"}</span>
+                  Preview: <span className="font-medium text-foreground">{previewName || "Untitled"}</span>
                 </p>
 
                 { }
@@ -327,8 +345,8 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                         const file = e.dataTransfer.files?.[0];
                         if (file) handleIconSelect(file);
                       }}
-                      onClick={() => iconInputRef.current?.click()}
-                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") iconInputRef.current?.click(); }}
+                      onClick={handleIconBrowse}
+                      onKeyDown={handleIconKeyDown}
                       className={cn(
                         "relative h-20 w-20 rounded-xl border-2 border-dashed flex items-center justify-center cursor-pointer transition-colors",
                         isDragOver ? "border-brand bg-brand/5" : "border-muted-foreground/25 hover:border-muted-foreground/50"
@@ -369,23 +387,29 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="ws-name">Name</Label>
-                      <Input id="ws-name" {...register("name")} />
+                      <Input id="ws-name" {...register("name", {
+                        onChange: (e) => setPreviewName(e.target.value),
+                      })} />
                       {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="ws-slug">Slug</Label>
-                      <Input id="ws-slug" {...register("slug", { onChange: () => { isSlugManuallyEdited.current = true; } })} className="font-mono text-sm" />
+                      <Input id="ws-slug" {...register("slug", {
+                        onChange: (e) => setCurrentSlug(e.target.value),
+                      })} className="font-mono text-sm" />
                       {errors.slug && <p className="text-sm text-destructive">{errors.slug.message}</p>}
-                      {watch("slug") && (
+                      {currentSlug && (
                         <p className="font-mono text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
-                          nexus.app/workspace/{watch("slug")}
+                          nexus.app/workspace/{currentSlug}
                         </p>
                       )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="ws-description">Description</Label>
-                      <Textarea id="ws-description" {...register("description")} className="resize-none" rows={3} />
-                      <p className="text-xs text-muted-foreground text-right">{watch("description")?.length || 0} / 500</p>
+                      <Textarea id="ws-description" {...register("description", {
+                        onChange: (e) => setDescLength(e.target.value.length),
+                      })} className="resize-none" rows={3} />
+                      <p className="text-xs text-muted-foreground text-right">{descLength} / 500</p>
                     </div>
                   </div>
                 </div>
@@ -511,7 +535,7 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                 <AlertDialog open={!!pendingOwnerPromotion} onOpenChange={(open) => { if (!open) setPendingOwnerPromotion(null); }}>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogMedia><ShieldCheck className="size-5 text-emerald-600 dark:text-emerald-400" /></AlertDialogMedia>
+                      <AlertDialogMedia><ShieldCheck className="size-5" style={{ color: 'var(--color-role-owner, #059669)' }} /></AlertDialogMedia>
                       <AlertDialogTitle>Promote to Owner</AlertDialogTitle>
                       <AlertDialogDescription>
                         Are you sure you want to make <strong>{pendingOwnerPromotion?.username}</strong> an owner?

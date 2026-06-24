@@ -76,7 +76,8 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
     if (!editor) return;
     
     
-    const markdownContent = (editor.storage as any).markdown.getMarkdown();
+    const markdownStorage = editor.storage as { markdown: { getMarkdown: () => string } };
+    const markdownContent = markdownStorage.markdown.getMarkdown();
     
     if (!markdownContent.trim()) return;
 
@@ -84,7 +85,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
 
     tempIdCounterRef.current += 1;
     
-    const tempId = `temp-${Date.now()}-${tempIdCounterRef.current}`;
+    const tempId = `temp-${crypto.randomUUID()}-${tempIdCounterRef.current}`;
     sendMessage({ conversationId, content: markdownContent.trim(), tempId, replyToId: replyingTo?.id || null });
     
     editor.commands.clearContent(false);

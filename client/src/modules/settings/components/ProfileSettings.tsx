@@ -37,11 +37,12 @@ export const ProfileSettings = () => {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isAvatarRemoved, setIsAvatarRemoved] = useState(false);
 
+  const [bioLength, setBioLength] = useState(0);
+
   const {
     register,
     handleSubmit,
     reset,
-    watch,
     formState: { errors, isDirty },
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -243,7 +244,9 @@ export const ProfileSettings = () => {
               id="bio"
               placeholder="Tell us a little bit about yourself"
               className="resize-none"
-              {...register("bio")}
+              {...register("bio", {
+                onChange: (e) => setBioLength(e.target.value.length),
+              })}
             />
             {errors.bio && (
               <p className="text-sm text-destructive">
@@ -251,7 +254,7 @@ export const ProfileSettings = () => {
               </p>
             )}
             <p className="text-xs text-muted-foreground text-right">
-              {watch("bio")?.length || 0} / 160
+              {bioLength} / 160
             </p>
           </div>
 

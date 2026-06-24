@@ -10,8 +10,6 @@ import { toast } from "sonner";
 import { requestNotificationPermission } from "@/shared/lib/notifications";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, usePathname } from "next/navigation";
-import { useChatStore } from "@/modules/chat/store/chatStore";
-
 export function SocketProvider() {
   const setSocketStatus = useSocketStore((state) => state.setSocketStatus);
   const isAuthInitialized = useAuthInitialized();
@@ -61,7 +59,7 @@ export function SocketProvider() {
 
     const handleWorkspaceUpdate = (payload: { action: "UPDATED" | "DELETED"; workspace: { id: string; name?: string } }) => {
       if (payload.action === "DELETED" && payload.workspace?.id) {
-        const workspaces = queryClient.getQueryData<any[]>(["workspaces"]);
+        const workspaces = queryClient.getQueryData(["workspaces"]) as Array<{ id: string; slug?: string }> | undefined;
         const workspace = workspaces?.find(w => w.id === payload.workspace?.id);
         const isCurrentWorkspace = workspace && pathname?.startsWith(`/workspaces/${workspace.slug}`);
 
@@ -80,7 +78,7 @@ export function SocketProvider() {
 
     const handleMemberUpdate = (payload: MemberUpdatePayload & { workspaceId?: string }) => {
       if (payload.action === "REMOVED" && payload.member?.userId === user?.id) {
-        const workspaces = queryClient.getQueryData<any[]>(["workspaces"]);
+        const workspaces = queryClient.getQueryData(["workspaces"]) as Array<{ id: string; slug?: string }> | undefined;
         const workspace = workspaces?.find(w => w.id === payload.workspaceId);
         const isCurrentWorkspace = workspace && pathname?.startsWith(`/workspaces/${workspace.slug}`);
 

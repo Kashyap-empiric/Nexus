@@ -134,13 +134,13 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
               </span>
               {role === "OWNER" && (
                 <span className="inline-flex items-center" title="Workspace Owner">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <ShieldCheck className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--color-role-owner, #059669)' }} />
                   <span className="sr-only">Workspace Owner</span>
                 </span>
               )}
               {role === "ADMIN" && (
                 <span className="inline-flex items-center" title="Workspace Admin">
-                  <Shield className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <Shield className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--color-role-admin, #2563eb)' }} />
                   <span className="sr-only">Workspace Admin</span>
                 </span>
               )}
@@ -191,7 +191,7 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogMedia>
-                <ShieldCheck className="size-5 text-emerald-600 dark:text-emerald-400" />
+                <ShieldCheck className="size-5 shrink-0" style={{ color: 'var(--color-role-owner, #059669)' }} />
               </AlertDialogMedia>
               <AlertDialogTitle>Promote to Owner</AlertDialogTitle>
               <AlertDialogDescription>

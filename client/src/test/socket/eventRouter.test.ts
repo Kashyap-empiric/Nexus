@@ -34,7 +34,7 @@ describe("createChatEventRouter", () => {
 
     for (const key of Object.keys(router)) {
       
-      expect(typeof (router as any)[key]).toBe("function");
+      expect(typeof (router as Record<string, unknown>)[key]).toBe("function");
     }
   });
 });

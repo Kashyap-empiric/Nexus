@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { ActiveConversation } from "@/modules/chat";
 

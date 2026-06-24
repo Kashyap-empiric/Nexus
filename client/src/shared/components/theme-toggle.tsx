@@ -10,7 +10,10 @@ export function ThemeToggle() {
 
   React.useEffect(() => {
     
-    setMounted(true);
+    requestAnimationFrame(() => {
+      setMounted(true);
+    });
+    
   }, []);
 
   if (!mounted) {

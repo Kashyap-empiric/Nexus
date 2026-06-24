@@ -58,19 +58,27 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
 
   const [workspaceMemberIds, setWorkspaceMemberIds] = useState<Set<string>>(new Set());
 
-
   useEffect(() => {
-    if (isOpen && type === "WORKSPACE" && entityId) {
-      import("../../workspaces/api/workspaces.api").then(({ fetchWorkspaceMembers }) => {
-        fetchWorkspaceMembers(entityId).then((members) => {
-          setWorkspaceMemberIds(new Set(members.map((m) => m.userId)));
-        }).catch(() => {
-          toast.error("Failed to load workspace members");
-        });
-      });
-    } else {
-      setWorkspaceMemberIds(new Set());
+    if (!isOpen || type !== "WORKSPACE" || !entityId) {
+      requestAnimationFrame(() => setWorkspaceMemberIds(new Set()));
+      return;
     }
+
+    let cancelled = false;
+
+    import("../../workspaces/api/workspaces.api").then(({ fetchWorkspaceMembers }) => {
+      fetchWorkspaceMembers(entityId).then((members) => {
+        if (!cancelled) {
+          setWorkspaceMemberIds(new Set(members.map((m) => m.userId)));
+        }
+      }).catch(() => {
+        if (!cancelled) {
+          toast.error("Failed to load workspace members");
+        }
+      });
+    });
+
+    return () => { cancelled = true; };
   }, [isOpen, type, entityId]);
 
 
@@ -182,7 +190,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
         setDebouncedQuery("");
       }, 300);
     }
-  }, [isOpen, reset]);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;

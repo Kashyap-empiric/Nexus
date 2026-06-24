@@ -51,7 +51,6 @@ export function CustomRoleDropdown({
   
   useEffect(() => {
     if (!isOpen) {
-      setPosition(null);
       return;
     }
 

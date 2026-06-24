@@ -17,7 +17,6 @@ import { useLeaveWorkspaceMutation } from "../hooks/useWorkspaces";
 import { toast } from "sonner";
 import { friendlyError } from "@/shared/lib/friendly-error";
 import { useRouter } from "next/navigation";
-import { useChatStore } from "@/modules/chat/store/chatStore";
 import {
   DropdownMenu,
   DropdownMenuContent,
