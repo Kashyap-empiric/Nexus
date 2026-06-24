@@ -146,7 +146,11 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
           "flex-1 lg:flex-initial",
           isContentActive ? "flex" : "flex flex-1 min-w-0 lg:w-auto"
         )}>
-          <Sidebar onNavigate={closeMobileSidebar} onOpenWorkspaceSettings={() => setWorkspaceSettingsOpen(true)} />
+          <Sidebar 
+            onNavigate={closeMobileSidebar} 
+            onOpenWorkspaceSettings={() => setWorkspaceSettingsOpen(true)} 
+            openSettings={openSettings}
+          />
         </div>
       </div>
 

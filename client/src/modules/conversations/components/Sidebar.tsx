@@ -47,14 +47,15 @@ import { useWorkspaceDetails } from "@/modules/workspaces/hooks/useWorkspaces";
 const NewConversationModal = dynamic(() => import("./NewConversationModal").then((m) => m.NewConversationModal), { ssr: false });
 const CreateChannelModal = dynamic(() => import("@/modules/workspaces/components/CreateChannelModal").then((m) => m.CreateChannelModal), { ssr: false });
 import { WorkspaceChannelItem } from "@/modules/workspaces/components/WorkspaceChannelItem";
-import { StatusSelector } from "@/modules/users/components/StatusSelector";
+import { UserFooterMenu } from "@/modules/users/components/UserFooterMenu";
 
 interface SidebarProps {
   onNavigate?: () => void;
   onOpenWorkspaceSettings?: () => void;
+  openSettings?: (view: 'profile' | 'appearance' | 'notifications' | 'about') => void;
 }
 
-export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
+export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: SidebarProps) {
   useGlobalSocket();
   const { logout } = useAuth();
   const queryClient = useQueryClient();
@@ -91,10 +92,6 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
   const { data: dbProfile } = useProfile();
 
   const socketStatus = useSocketStore((state) => state.socketStatus);
-  const statusStr = dbProfile?.status;
-  const statusLabel = socketStatus === "connected"
-    ? (dbProfile?.statusText || (statusStr === "AWAY" ? "Away" : statusStr === "DND" ? "Do Not Disturb" : statusStr === "INVISIBLE" ? "Offline" : "Online"))
-    : socketStatus === "connecting" ? "Connecting..." : "Offline";
 
   const displayList = mode === "DM"
     ? [...(conversations || [])]
@@ -352,30 +349,14 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
           </div>
         </div>
 
-        {}
-        <div className="p-4 border-t bg-sidebar shrink-0 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="relative shrink-0 flex items-center">
-              <UserAvatar
-                name={dbProfile?.username || currentAuthUser?.user_metadata?.username || "ME"}
-                src={dbProfile?.avatarUrl || currentAuthUser?.user_metadata?.avatar_url || currentAuthUser?.user_metadata?.avatarUrl}
-                className="h-8 w-8 shrink-0"
-                fallbackClassName="text-xs"
-              />
-              <div className="absolute -bottom-0.5 -right-0.5">
-                <StatusSelector />
-              </div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate mb-1 leading-none">
-                {dbProfile?.username || currentAuthUser?.user_metadata?.username || "My Account"}
-              </p>
-              <p className="text-xs text-muted-foreground leading-none truncate">{statusLabel}</p>
-            </div>
+        {/* User Footer */}
+        <div className="flex items-stretch border-t bg-sidebar shrink-0">
+          <div className="flex-1 min-w-0">
+            <UserFooterMenu openSettings={openSettings || (() => {})} />
           </div>
           <button
             onClick={() => setIsLogoutModalOpen(true)}
-            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            className="p-4 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors shrink-0 flex items-center justify-center border-l"
             title="Sign out"
           >
             <LogOut className="h-4 w-4" />
