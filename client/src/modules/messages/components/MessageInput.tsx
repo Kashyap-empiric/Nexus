@@ -76,7 +76,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
     if (!editor) return;
     
     
-    const markdownStorage = editor.storage as { markdown: { getMarkdown: () => string } };
+    const markdownStorage = (editor.storage as unknown) as { markdown: { getMarkdown: () => string } };
     const markdownContent = markdownStorage.markdown.getMarkdown();
     
     if (!markdownContent.trim()) return;

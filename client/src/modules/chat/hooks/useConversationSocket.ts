@@ -9,6 +9,7 @@ import { queryKeys } from "@/shared/constants/queryKeys";
 import type { Message, MessagePage } from "@/modules/messages/types/message";
 import type { Conversation } from "@/modules/conversations/types/conversation";
 import type { MessageReadPayload } from "../types/socket";
+import type { ThreadData } from "@/modules/threads/store/threadStore";
 import { InfiniteData } from "@tanstack/react-query";
 import { getAuthUser } from "@/modules/auth/store/useAuthStore";
 
@@ -16,7 +17,7 @@ export const useConversationSocket = (conversationId: string) => {
   const queryClient = useQueryClient();
 
   const events = useMemo(() => {
-    if (!conversationId) return {} as SocketHandlerMap;
+    if (!conversationId) return {} as Record<string, (payload: never) => void>;
 
     const addTypingUser = useSocketStore.getState().addTypingUser;
     const removeTypingUser = useSocketStore.getState().removeTypingUser;
@@ -39,34 +40,65 @@ export const useConversationSocket = (conversationId: string) => {
         const currentUser = getAuthUser();
         if (currentUser && message.userId === currentUser.id) return;
 
-        queryClient.setQueryData<InfiniteData<MessagePage>>(
-          queryKeys.messages(conversationId),
-          (oldData) => {
-            if (!oldData || !oldData.pages) return oldData;
+        if (message.threadRootId) {
+          queryClient.setQueryData(
+            [...queryKeys.messages(conversationId), "thread", message.threadRootId],
+            (old: ThreadData | undefined) => {
+              if (!old || !old.replies) return old;
+              const exists = old.replies.some((m: Message) => m.id === message.id);
+              if (exists) return old;
+              return {
+                ...old,
+                replies: [...old.replies, message],
+              };
+            }
+          );
+          queryClient.setQueryData<InfiniteData<MessagePage>>(queryKeys.messages(conversationId), (old) => {
+            if (!old || !old.pages) return old;
+            return {
+              ...old,
+              pages: old.pages.map(page => ({
+                ...page,
+                data: page.data.map(m => m.id === message.threadRootId ? {
+                  ...m,
+                  threadReplyCount: (m.threadReplyCount || 0) + 1,
+                  lastThreadReplyAt: message.createdAt
+                } : m)
+              }))
+            };
+          });
+        }
+        
+        if (!message.threadRootId || message.isThreadBroadcast) {
+          queryClient.setQueryData<InfiniteData<MessagePage>>(
+            queryKeys.messages(conversationId),
+            (oldData) => {
+              if (!oldData || !oldData.pages) return oldData;
 
-            const updatedPages = oldData.pages.map((page, index) => {
-              if (index === 0) {
-                const exists = page.data.some((m) => m.id === message.id);
-                if (exists) {
+              const updatedPages = oldData.pages.map((page, index) => {
+                if (index === 0) {
+                  const exists = page.data.some((m) => m.id === message.id);
+                  if (exists) {
+                    return {
+                      ...page,
+                      data: page.data.map((m) => (m.id === message.id ? message : m)),
+                    };
+                  }
                   return {
                     ...page,
-                    data: page.data.map((m) => (m.id === message.id ? message : m)),
+                    data: [message, ...page.data],
                   };
                 }
-                return {
-                  ...page,
-                  data: [message, ...page.data],
-                };
-              }
-              return page;
-            });
+                return page;
+              });
 
-            return {
-              ...oldData,
-              pages: updatedPages,
-            };
-          }
-        );
+              return {
+                ...oldData,
+                pages: updatedPages,
+              };
+            }
+          );
+        }
       } catch (err) {
         console.warn("[Socket] Failed to parse incoming message:new", err);
       }
@@ -114,22 +146,37 @@ export const useConversationSocket = (conversationId: string) => {
       try {
         if (!message || !message.id || message.conversationId !== conversationId) return;
 
-        queryClient.setQueryData<InfiniteData<MessagePage>>(
-          queryKeys.messages(conversationId),
-          (oldData) => {
-            if (!oldData || !oldData.pages) return oldData;
+        if (message.threadRootId) {
+          queryClient.setQueryData(
+            [...queryKeys.messages(conversationId), "thread", message.threadRootId],
+            (old: ThreadData | undefined) => {
+              if (!old || !old.replies) return old;
+              return {
+                ...old,
+                replies: old.replies.map((m: Message) => (m.id === message.id ? { ...m, ...message } : m)),
+              };
+            }
+          );
+        }
+        
+        if (!message.threadRootId || message.isThreadBroadcast) {
+          queryClient.setQueryData<InfiniteData<MessagePage>>(
+            queryKeys.messages(conversationId),
+            (oldData) => {
+              if (!oldData || !oldData.pages) return oldData;
 
-            const updatedPages = oldData.pages.map((page) => ({
-              ...page,
-              data: page.data.map((m) => (m.id === message.id ? { ...m, ...message } : m)),
-            }));
+              const updatedPages = oldData.pages.map((page) => ({
+                ...page,
+                data: page.data.map((m) => (m.id === message.id ? { ...m, ...message } : m)),
+              }));
 
-            return {
-              ...oldData,
-              pages: updatedPages,
-            };
-          }
-        );
+              return {
+                ...oldData,
+                pages: updatedPages,
+              };
+            }
+          );
+        }
       } catch (err) {
         console.warn("[Socket] Failed to parse incoming message:update", err);
       }
@@ -139,22 +186,66 @@ export const useConversationSocket = (conversationId: string) => {
       try {
         if (!message || !message.id || message.conversationId !== conversationId) return;
 
-        queryClient.setQueryData<InfiniteData<MessagePage>>(
-          queryKeys.messages(conversationId),
-          (oldData) => {
-            if (!oldData || !oldData.pages) return oldData;
+        if (message.threadRootId) {
+          queryClient.setQueryData(
+            [...queryKeys.messages(conversationId), "thread", message.threadRootId],
+            (old: ThreadData | undefined) => {
+              if (!old || !old.replies) return old;
+              return {
+                ...old,
+                replies: old.replies.map((m: Message) => (m.id === message.id ? message : m)),
+              };
+            }
+          );
+          queryClient.setQueryData<InfiniteData<MessagePage>>(
+            queryKeys.messages(conversationId),
+            (old) => {
+              if (!old || !old.pages) return old;
+              return {
+                ...old,
+                pages: old.pages.map((page) => ({
+                  ...page,
+                  data: page.data.map((m) =>
+                    m.id === message.threadRootId
+                      ? { ...m, threadReplyCount: Math.max(0, (m.threadReplyCount || 0) - 1) }
+                      : m
+                  ),
+                })),
+              };
+            }
+          );
+        }
+        
+        if (!message.threadRootId || message.isThreadBroadcast) {
+          queryClient.setQueryData<InfiniteData<MessagePage>>(
+            queryKeys.messages(conversationId),
+            (oldData) => {
+              if (!oldData || !oldData.pages) return oldData;
 
-            const updatedPages = oldData.pages.map((page) => ({
-              ...page,
-              data: page.data.map((m) => (m.id === message.id ? message : m)),
-            }));
+              const updatedPages = oldData.pages.map((page) => ({
+                ...page,
+                data: page.data.map((m) => (m.id === message.id ? message : m)),
+              }));
 
-            return {
-              ...oldData,
-              pages: updatedPages,
-            };
-          }
-        );
+              return {
+                ...oldData,
+                pages: updatedPages,
+              };
+            }
+          );
+          // Update thread root if it was a thread
+          queryClient.setQueryData(
+            [...queryKeys.messages(conversationId), "thread", message.id],
+            (old: ThreadData | undefined) => {
+              if (!old || !old.root) return old;
+              return {
+                ...old,
+                root: message,
+                replies: old.replies.map((r: Message) => ({ ...r, deletedAt: message.deletedAt })),
+              };
+            }
+          );
+        }
       } catch (err) {
         console.warn("[Socket] Failed to parse incoming message:delete", err);
       }

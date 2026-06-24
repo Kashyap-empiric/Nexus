@@ -25,6 +25,7 @@ model User {
   channelNotifications           Boolean              @default(false)
   inviteNotifications            Boolean              @default(true)
   replyNotifications             Boolean              @default(true)
+  threadNotifications            Boolean              @default(true)
   workspaceActivityNotifications Boolean              @default(true)
   createdConversations     Conversation[]       @relation("ConversationCreator")
   conversations            ConversationMember[]
@@ -93,6 +94,7 @@ model Message {
   threadReplies    Message[]            @relation("ThreadMessages")
   threadReplyCount Int                  @default(0)
   lastThreadReplyAt DateTime?
+  isThreadBroadcast Boolean             @default(false)
   
   mentions         MessageMention[]
   reactions        MessageReaction[]

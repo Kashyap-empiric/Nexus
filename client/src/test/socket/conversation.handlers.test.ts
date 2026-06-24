@@ -159,7 +159,7 @@ describe("handleConversationNew", () => {
     queryClient.setQueryData(["conversations"], [createConv()]);
     const handler = handleConversationNew(queryClient);
     
-    handler({} as { conversationId: string; userId: string; lastReadMessageId: string });
+    handler({} as unknown as Conversation);
     const updated = queryClient.getQueryData<Conversation[]>(["conversations"]);
     expect(updated).toHaveLength(1);
   });

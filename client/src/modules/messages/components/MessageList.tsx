@@ -23,11 +23,12 @@ interface MessageListProps {
   isChannel?: boolean;
   otherMember?: User;
   onReply?: (messageId: string, username: string, content: string) => void;
+  onOpenThread?: (messageId: string) => void;
   highlightMessageId?: string;
   canPin?: boolean;
 }
 
-export function MessageList({ conversationId, currentUserId, myLastReadMessageId, partnerLastReadMessageId, members, isChannel, otherMember, onReply, highlightMessageId, canPin = true }: MessageListProps) {
+export function MessageList({ conversationId, currentUserId, myLastReadMessageId, partnerLastReadMessageId, members, isChannel, otherMember, onReply, onOpenThread, highlightMessageId, canPin = true }: MessageListProps) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } = useMessagesInfiniteQuery(conversationId);
   const { mutate: markRead } = useMarkConversationReadMutation();
 
@@ -117,11 +118,11 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
   const pinnedMessageIds = new Set(data?.pages.flatMap((page) => page?.pinnedMessageIds || []) || []);
 
   return (
-    <div className="flex-1 relative min-h-0 flex flex-col bg-background">
+    <div className="flex-1 relative min-h-0 flex flex-col bg-background overflow-x-hidden">
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto pb-4"
+        className="flex-1 overflow-y-auto overflow-x-hidden pb-4"
       >
         <div className="w-full">
           <div ref={observerTarget} className="h-1 mt-1 w-full flex justify-center">
@@ -173,6 +174,7 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
                   members={members}
                   isChannel={isChannel}
                   onReply={onReply}
+                  onOpenThread={onOpenThread}
                   pinnedMessageIds={pinnedMessageIds}
                   canPin={canPin}
                 />

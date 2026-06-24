@@ -34,6 +34,7 @@ export interface MessageSendPayload {
   conversationId: string;
   content: string;
   replyToId?: string;
+  threadRootId?: string;
 }
 
 export interface TypingStartClientPayload {

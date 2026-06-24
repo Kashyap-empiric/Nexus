@@ -46,7 +46,7 @@ export const getMessages = async (conversationId: string, cursor: string | undef
   };
 };
 
-export const createMessage = async (conversationId: string, userId: string, content: string, replyToId?: string | null) => {
+export const createMessage = async (conversationId: string, userId: string, content: string, replyToId?: string | null, threadRootId?: string | null, isThreadBroadcast?: boolean) => {
   const messageId = uuidv7();
 
   let parentMessageUserId: string | null = null;
@@ -61,12 +61,30 @@ export const createMessage = async (conversationId: string, userId: string, cont
     parentMessageUserId = parentMessage.userId;
   }
 
+  if (threadRootId) {
+    const rootMessage = await messagesRepo.findById(threadRootId);
+    if (!rootMessage) {
+      throw new BadRequestError("Thread root message not found.");
+    }
+    if (rootMessage.conversationId !== conversationId) {
+      throw new BadRequestError("Thread root message does not belong to this conversation.");
+    }
+    if (rootMessage.deletedAt) {
+      throw new BadRequestError("Cannot reply to a deleted thread root message.");
+    }
+    if (rootMessage.threadRootId) {
+      throw new BadRequestError("Cannot nest threads. Thread root must be a top-level message.");
+    }
+  }
+
   const [message, conversation] = await messagesRepo.createMessageTransaction(
     conversationId,
     userId,
     content,
     messageId,
-    replyToId
+    replyToId,
+    threadRootId,
+    isThreadBroadcast
   );
 
   const conversationMetadata = {
@@ -112,7 +130,70 @@ export const createMessage = async (conversationId: string, userId: string, cont
     }
   }
 
+  if (threadRootId) {
+    try {
+      const notifiedUserIds = new Set<string>();
+
+      const rootMessage = await messagesRepo.findById(threadRootId);
+      if (rootMessage && rootMessage.userId !== userId) {
+        notifiedUserIds.add(rootMessage.userId);
+      }
+
+      const participants = await messagesRepo.findThreadParticipants(threadRootId);
+      for (const pid of participants) {
+        if (pid !== userId) {
+          notifiedUserIds.add(pid);
+        }
+      }
+
+      const conversation = await conversationsRepo.findById(conversationId);
+      const channelName = conversation?.name;
+      const isChannel = conversation?.type === "CHANNEL";
+      const notificationLink = isChannel && conversation?.workspaceId
+        ? `/workspaces/${conversation.workspaceId}/channels/${conversationId}?highlight=${message.id}`
+        : `/conversations/${conversationId}?highlight=${message.id}`;
+
+      for (const targetUserId of notifiedUserIds) {
+        try {
+          await createAndDispatch({
+            userId: targetUserId,
+            type: "THREAD_REPLY",
+            title: `Reply from ${message.user.username}`,
+            body: message.content,
+            link: notificationLink,
+            metadata: {
+              conversationId,
+              messageId: message.id,
+              threadRootId,
+              username: message.user.username,
+            },
+          });
+        } catch (err) {
+          console.error("[Thread Notification] Failed to create thread reply notification:", err);
+        }
+      }
+    } catch (err) {
+      console.error("[Thread Notification] Error processing thread notifications:", err);
+    }
+  }
+
   return { message, conversationMetadata, parentMessageUserId };
+};
+
+export const getThreadMessages = async (conversationId: string, messageId: string) => {
+  const root = await messagesRepo.findById(messageId);
+  if (!root) {
+    throw new NotFoundError("Message not found.");
+  }
+  if (root.conversationId !== conversationId) {
+    throw new BadRequestError("Message does not belong to this conversation.");
+  }
+  if (root.threadRootId) {
+    throw new BadRequestError("Message is not a thread root.");
+  }
+
+  const replies = await messagesRepo.findThreadMessages(messageId);
+  return { root, replies };
 };
 
 export const searchMessages = async (query: string, userId: string, limit: number) => {
@@ -248,6 +329,20 @@ export const deleteMessage = async (messageId: string, conversationId: string, u
     }
 
     const updatedMessage = await messagesRepo.softDeleteMessageInTransaction(tx, messageId);
+
+    if (message.threadRootId) {
+      await tx.message.update({
+        where: { id: message.threadRootId },
+        data: { threadReplyCount: { decrement: 1 } }
+      });
+    }
+
+    if (message.threadReplyCount > 0) {
+      await tx.message.updateMany({
+        where: { threadRootId: messageId, deletedAt: null },
+        data: { deletedAt: new Date() }
+      });
+    }
 
     await messagesRepo.deletePinInTransaction(tx, messageId);
 

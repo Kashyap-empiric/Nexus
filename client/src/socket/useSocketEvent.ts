@@ -23,7 +23,7 @@ export function useSocketEvent<E extends Record<string, unknown>>(
 }
 
 
-export function useSocketEvents<E extends Record<string, unknown>>(handlers: SocketHandlerMap<E>) {
+export function useSocketEvents(handlers: Record<string, (payload: never) => void>) {
   useEffect(() => {
     if (!socket) return;
 

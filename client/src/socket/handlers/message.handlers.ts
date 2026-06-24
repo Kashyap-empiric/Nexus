@@ -7,11 +7,61 @@ import type { Workspace } from "@/modules/workspaces/types/workspace";
 
 import { getAuthUser } from "@/modules/auth/store/useAuthStore";
 import { showMessageNotification } from "@/shared/lib/notifications";
+import { useThreadStore } from "@/modules/threads/store/threadStore";
 
 export const handleMessageNew = (queryClient: QueryClient) => {
   return (message: Message) => {
     try {
       if (!message || !message.id) throw new Error("Invalid payload");
+
+      const store = useThreadStore.getState();
+
+      if (message.threadRootId) {
+        const { activeThreadRootId, appendReply } = store;
+
+        if (activeThreadRootId === message.threadRootId) {
+          appendReply(message);
+        }
+
+        queryClient.setQueryData<InfiniteData<MessagesResponse>>(
+          queryKeys.messages(message.conversationId),
+          (oldData) => {
+            if (!oldData?.pages) return oldData;
+            return {
+              ...oldData,
+              pages: oldData.pages.map((page) => ({
+                ...page,
+                data: page.data.map((m) =>
+                  m.id === message.threadRootId
+                    ? {
+                        ...m,
+                        threadReplyCount: (m.threadReplyCount ?? 0) + 1,
+                        lastThreadReplyAt: message.createdAt,
+                      }
+                    : m
+                ),
+              })),
+            };
+          }
+        );
+
+        const currentUser = getAuthUser();
+        const isOwn = message.userId === currentUser?.id;
+        if (!isOwn && activeThreadRootId !== message.threadRootId) {
+          const titleMessage = `New reply in thread`;
+          const senderName = message.user?.username || "Someone";
+          if (typeof document !== "undefined" && !document.hasFocus()) {
+            showMessageNotification(
+              senderName,
+              message.content,
+              message.conversationId,
+              titleMessage,
+            );
+          }
+        }
+
+        return;
+      }
 
       queryClient.setQueryData<Conversation[]>(
         queryKeys.conversations,

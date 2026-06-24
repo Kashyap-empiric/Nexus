@@ -10,6 +10,10 @@ export const findMessages = async (
   return prisma.message.findMany({
     where: {
       conversationId,
+      OR: [
+        { threadRootId: null },
+        { isThreadBroadcast: true }
+      ],
       deletedAt: null,
     },
     take: limit + 1,
@@ -31,6 +35,9 @@ export const findById = async (messageId: string) => {
   return prisma.message.findUnique({
     where: { id: messageId },
     include: {
+      user: {
+        select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
+      },
       conversation: {
         select: {
           id: true,
@@ -135,20 +142,50 @@ export const createMessageTransaction = async (
   userId: string,
   content: string,
   messageId: string,
-  replyToId?: string | null
+  replyToId?: string | null,
+  threadRootId?: string | null,
+  isThreadBroadcast?: boolean
 ) => {
-  return prisma.$transaction([
-    prisma.message.create({
-      data: { id: messageId, conversationId, userId, content, replyToId: replyToId ?? undefined },
-      include: {
-        user: {
-          select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
+  const operations: any[] = [];
+
+  if (threadRootId) {
+    operations.push(
+      prisma.message.create({
+        data: { id: messageId, conversationId, userId, content, replyToId: replyToId ?? undefined, threadRootId, isThreadBroadcast: isThreadBroadcast ?? false },
+        include: {
+          user: {
+            select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
+          },
+          replyTo: {
+            select: { id: true, content: true, deletedAt: true, user: { select: { username: true } } },
+          },
         },
-        replyTo: {
-          select: { id: true, content: true, deletedAt: true, user: { select: { username: true } } },
+      }),
+      prisma.message.update({
+        where: { id: threadRootId },
+        data: {
+          threadReplyCount: { increment: 1 },
+          lastThreadReplyAt: new Date(),
         },
-      },
-    }),
+      }),
+    );
+  } else {
+    operations.push(
+      prisma.message.create({
+        data: { id: messageId, conversationId, userId, content, replyToId: replyToId ?? undefined, isThreadBroadcast: isThreadBroadcast ?? false },
+        include: {
+          user: {
+            select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
+          },
+          replyTo: {
+            select: { id: true, content: true, deletedAt: true, user: { select: { username: true } } },
+          },
+        },
+      }),
+    );
+  }
+
+  operations.push(
     prisma.conversation.update({
       where: { id: conversationId },
       data: {
@@ -169,7 +206,37 @@ export const createMessageTransaction = async (
       },
       data: { lastReadMessageId: messageId },
     }),
-  ]);
+  );
+
+  return prisma.$transaction(operations);
+};
+
+export const findThreadMessages = async (threadRootId: string) => {
+  const messages = await prisma.message.findMany({
+    where: {
+      threadRootId,
+      deletedAt: null,
+    },
+    orderBy: { createdAt: "asc" },
+    include: {
+      user: {
+        select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
+      },
+      replyTo: {
+        select: { id: true, content: true, deletedAt: true, user: { select: { username: true } } },
+      },
+    },
+  });
+  return messages;
+};
+
+export const findThreadParticipants = async (threadRootId: string): Promise<string[]> => {
+  const rows = await prisma.message.findMany({
+    where: { threadRootId },
+    select: { userId: true },
+    distinct: ["userId"],
+  });
+  return rows.map(r => r.userId);
 };
 
 export const updateMessage = async (

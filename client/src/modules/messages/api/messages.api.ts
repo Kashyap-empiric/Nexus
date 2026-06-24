@@ -38,8 +38,14 @@ export const getMessages = async (conversationId: string, cursor?: string | null
   return response.data;
 };
 
-export const createMessage = async (conversationId: string, content: string, replyToId?: string | null) => {
-  const response = await api.post<{ data: Message }>(API_ROUTES.CONVERSATIONS.MESSAGES(conversationId), { content, replyToId });
+export const getThreadMessages = async (conversationId: string, messageId: string) => {
+  const url = API_ROUTES.CONVERSATIONS.THREAD(conversationId, messageId);
+  const response = await api.get<{ data: { root: Message; replies: Message[] } }>(url);
+  return response.data.data;
+};
+
+export const createMessage = async (conversationId: string, content: string, replyToId?: string | null, threadRootId?: string | null) => {
+  const response = await api.post<{ data: Message }>(API_ROUTES.CONVERSATIONS.MESSAGES(conversationId), { content, replyToId, threadRootId });
   return response.data.data;
 };
 

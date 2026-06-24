@@ -4,7 +4,7 @@ import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import type { MessageGroup } from "@/modules/chat/utils/groupMessages";
 import type { ConversationMember } from "@/modules/conversations/types/conversation";
 import { MessageStatus } from "./MessageStatus";
-import { MoreHorizontal, Pencil, Trash, Ban, Copy, Reply, Text, Pin } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash, Ban, Copy, Reply, Text, Pin, MessageSquare } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,11 +37,12 @@ interface MessageGroupItemProps {
   members?: ConversationMember[];
   isChannel?: boolean;
   onReply?: (messageId: string, username: string, content: string) => void;
+  onOpenThread?: (messageId: string) => void;
   pinnedMessageIds?: Set<string>;
   canPin?: boolean;
 }
 
-export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageId, members, isChannel, onReply, pinnedMessageIds, canPin = true }: MessageGroupItemProps) {
+export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageId, members, isChannel, onReply, onOpenThread, pinnedMessageIds, canPin = true }: MessageGroupItemProps) {
   const { user, messages } = group;
   const conversationId = messages[0]?.conversationId;
 
@@ -64,7 +65,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
 
   useEffect(() => {
     return () => {
-      
+
     };
   }, []);
 
@@ -80,7 +81,12 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
 
   const handleEditSave = () => {
     if (editingMessageId && editContent.trim()) {
-      editMutation.mutate({ messageId: editingMessageId, content: editContent.trim() });
+      const msg = messages.find(m => m.id === editingMessageId);
+      editMutation.mutate({
+        messageId: editingMessageId,
+        content: editContent.trim(),
+        threadRootId: msg?.threadRootId || null
+      });
       setEditingMessageId(null);
       setEditContent("");
     }
@@ -99,7 +105,12 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
 
   const confirmDelete = () => {
     if (messageToDelete) {
-      deleteMutation.mutate({ messageId: messageToDelete });
+      const msg = messages.find(m => m.id === messageToDelete);
+      deleteMutation.mutate({
+        messageId: messageToDelete,
+        threadRootId: msg?.threadRootId || null,
+        isThreadRoot: !msg?.threadRootId
+      });
       setMessageToDelete(null);
     }
   };
@@ -128,7 +139,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
     if (isDel) return;
     const touch = e.touches[0];
     touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
-    
+
     longPressTimerRef.current = setTimeout(() => {
       if (touchStartPosRef.current) {
         setContextMenuPos({ x: touchStartPosRef.current.x, y: touchStartPosRef.current.y });
@@ -187,18 +198,39 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
               onTouchMove={handleTouchMove}
             >
               <div className="w-[36px] shrink-0 flex justify-center items-start relative select-none">
-                {isFirst ? (
-                  <UserAvatar
-                    name={user?.username}
-                    src={user?.avatarUrl}
-                    className="h-9 w-9 mt-0.5 absolute left-0"
-                    fallbackClassName="bg-primary/20 text-primary font-medium"
-                  />
-                ) : null}
+                {isFirst ? (() => {
+                  const hasReplyHeader = !isDeleted && (msg.replyTo || (msg.isThreadBroadcast && msg.threadRootId));
+                  return (
+                    <UserAvatar
+                      name={user?.username}
+                      src={user?.avatarUrl}
+                      className={`h-9 w-9 mt-0.5 absolute left-0 ${hasReplyHeader ? "top-[20px]" : "top-0"}`}
+                      fallbackClassName="bg-primary/20 text-primary font-medium"
+                    />
+                  );
+                })() : (
+                  <span className="text-[10px] text-muted-foreground/0 group-hover/row:text-muted-foreground transition-colors mt-1.5 absolute left-0 w-9 text-center">
+                    {new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(new Date(msg.createdAt))}
+                  </span>
+                )}
               </div>
 
               <div className="flex-1 min-w-0 ml-2">
-                {}
+                {/* Thread Broadcast Header */}
+                {isFirst && msg.isThreadBroadcast && msg.threadRootId && !isDeleted && (
+                  <button
+                    type="button"
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 hover:text-foreground transition-colors cursor-pointer w-fit group/thread-broadcast"
+                    onClick={() => onOpenThread?.(msg.threadRootId!)}
+                  >
+                    <MessageSquare className="h-3 w-3 shrink-0" />
+                    <span className="font-semibold truncate">
+                      Replied in thread
+                    </span>
+                  </button>
+                )}
+
+                {/* Reply Context */}
                 {isFirst && msg.replyTo && !isDeleted && (
                   <button
                     type="button"
@@ -241,7 +273,6 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                 )}
 
                 <div className="text-[15px] text-foreground whitespace-pre-wrap break-words leading-relaxed group/msg relative min-h-[22px]">
-                  {}
                   {editingMessageId === msg.id && !isDeleted ? (
                     <div className="flex flex-col gap-2 w-full mt-1 mb-2">
                       <textarea
@@ -281,7 +312,21 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                             <span className="italic text-muted-foreground">This message was deleted.</span>
                           ) : (
                             <>
-                              {}
+                              {/* Thread Broadcast Header */}
+                              {!isFirst && msg.isThreadBroadcast && msg.threadRootId && !isDeleted && (
+                                <button
+                                  type="button"
+                                  className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 hover:text-foreground transition-colors cursor-pointer w-fit group/thread-broadcast"
+                                  onClick={() => onOpenThread?.(msg.threadRootId!)}
+                                >
+                                  <MessageSquare className="h-3 w-3 shrink-0" />
+                                  <span className="font-semibold truncate">
+                                    Replied in thread
+                                  </span>
+                                </button>
+                              )}
+
+                              {/* Reply Context */}
                               {!isFirst && msg.replyTo && !isDeleted && (
                                 <button
                                   type="button"
@@ -326,18 +371,25 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                             </span>
                           )}
                         </span>
-
-                        {}
                         {!isDeleted && !msg.pending && !msg.optimistic && (
-                          <div className="hidden md:inline-flex opacity-0 scale-95 group-hover/row:opacity-100 group-hover/row:scale-100 transition-all duration-150 absolute top-0 right-2 md:right-auto md:ml-2 bg-card border border-border/60 shadow-md rounded-lg z-10 items-center overflow-hidden">
+                          <div className="hidden md:inline-flex opacity-0 scale-95 group-hover/row:opacity-100 group-hover/row:scale-100 transition-all duration-150 absolute top-0 right-2 md:right-auto md:ml-2 bg-card border border-border/60 shadow-md rounded-lg z-50 items-center overflow-hidden">
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-9 w-9 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60 hover:ring-1 hover:ring-ring"
+                              className="h-8 w-8 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60"
                               onClick={() => onReply?.(msg.id, user?.username || "Unknown", msg.content)}
                               title="Reply"
                             >
                               <Reply className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60"
+                              onClick={() => onOpenThread?.(msg.id)}
+                              title="Reply in Thread"
+                            >
+                              <MessageSquare className="h-3.5 w-3.5" />
                             </Button>
                             <PinButton
                               conversationId={conversationId}
@@ -348,7 +400,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-9 w-9 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60 hover:ring-1 hover:ring-ring"
+                              className="h-8 w-8 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60"
                               onClick={() => navigator.clipboard.writeText(msg.content)}
                               title="Copy"
                             >
@@ -359,7 +411,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-9 w-9 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60 hover:ring-1 hover:ring-ring"
+                                  className="h-8 w-8 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60"
                                   onClick={() => handleEditStart(msg.id, msg.content)}
                                 >
                                   <Pencil className="h-3.5 w-3.5" />
@@ -367,7 +419,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-9 w-9 rounded-none text-muted-foreground hover:text-destructive hover:bg-destructive/10 hover:ring-1 hover:ring-ring"
+                                  className="h-8 w-8 rounded-none text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                   onClick={() => setMessageToDelete(msg.id)}
                                 >
                                   <Trash className="h-3.5 w-3.5" />
@@ -376,13 +428,16 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                             )}
                             <DropdownMenu>
                               <DropdownMenuTrigger
-                                render={<Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" />}
+                                render={<Button variant="ghost" size="icon" className="h-8 w-8 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60" />}
                               >
                                 <MoreHorizontal className="h-4 w-4" />
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-40">
+                              <DropdownMenuContent align="end" className="w-44">
                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => onReply?.(msg.id, user?.username || "Unknown", msg.content)}>
                                   <Reply className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => onOpenThread?.(msg.id)}>
+                                  <MessageSquare className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply in Thread</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(msg.content)}>
                                   <Copy className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy</span>
@@ -413,7 +468,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
-                        )}                        {}
+                        )}                        { }
                         {!isDeleted && !msg.pending && !msg.optimistic && (
                           <div className="md:hidden">
                             <DropdownMenu>
@@ -421,6 +476,9 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                               <DropdownMenuContent align="end" side="bottom" sideOffset={4} className="w-48">
                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => onReply?.(msg.id, user?.username || "Unknown", msg.content)}>
                                   <Reply className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => onOpenThread?.(msg.id)}>
+                                  <MessageSquare className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply in Thread</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(msg.content)}>
                                   <Copy className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy</span>
@@ -453,6 +511,25 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                           </div>
                         )}
                       </div>
+                      {!isDeleted && (msg.threadReplyCount ?? 0) > 0 && (
+                        <div className="mt-1 relative flex items-center">
+                          <div className="absolute -left-[26px] top-[-14px] w-[22px] h-[20px] border-l-[2px] border-b-[2px] border-muted-foreground/40 rounded-bl-lg pointer-events-none" />
+                          <button
+                            type="button"
+                            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer leading-none z-10"
+                            onClick={() => onOpenThread?.(msg.id)}
+                          >
+                            <MessageSquare className="h-3 w-3" />
+                            <span className="font-medium">{msg.threadReplyCount} {msg.threadReplyCount === 1 ? "reply" : "replies"}</span>
+                            {msg.lastThreadReplyAt && (
+                              <>
+                                <span className="mx-1">•</span>
+                                <span>Last reply {formatRelativeTime(msg.lastThreadReplyAt)}</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -483,7 +560,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
         </AlertDialogContent>
       </AlertDialog>
 
-      {}
+      { }
       {openMenuId && contextMenuTarget && (
         <DropdownMenu
           open={true}
@@ -511,6 +588,13 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
               setContextMenuTarget(null);
             }}>
               <Reply className="h-4 w-4 mr-2" /> Reply
+            </DropdownMenuItem>
+            <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => {
+              onOpenThread?.(contextMenuTarget.msgId);
+              setOpenMenuId(null);
+              setContextMenuTarget(null);
+            }}>
+              <MessageSquare className="h-4 w-4 mr-2" /> Reply in Thread
             </DropdownMenuItem>
             <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => {
               navigator.clipboard.writeText(contextMenuTarget.content);
@@ -584,4 +668,18 @@ function computeReadCount(
       m.lastReadMessageId &&
       m.lastReadMessageId >= messageId
   ).length;
+}
+
+function formatRelativeTime(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffMs = now - then;
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHrs = Math.floor(diffMin / 60);
+  if (diffHrs < 24) return `${diffHrs}h ago`;
+  const diffDays = Math.floor(diffHrs / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return new Date(dateStr).toLocaleDateString();
 }

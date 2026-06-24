@@ -11,6 +11,7 @@ import { MessageListSkeleton } from "@/modules/messages/components/MessageListSk
 import { useWorkspaceDetails } from "@/modules/workspaces/hooks/useWorkspaces";
 import { useLayoutUI } from "@/shared/components/layout/AppLayoutShell";
 import { InfoPanel } from "./InfoPanel";
+import { useThreadStore } from "@/modules/threads/store/threadStore";
 
 interface ActiveConversationProps {
   conversationId: string;
@@ -30,7 +31,18 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
   const handleClearReply = useCallback(() => {
     setReplyingTo(null);
   }, []);
-  const { infoPanelOpen, infoPanelView, setInfoPanelView, closeInfoPanel } = useLayoutUI();
+  const { infoPanelOpen, setInfoPanelOpen, infoPanelView, setInfoPanelView, closeInfoPanel } = useLayoutUI();
+  const { openThread, closeThread } = useThreadStore();
+  const handleOpenThread = useCallback((messageId: string) => {
+    openThread(messageId);
+    setInfoPanelView('thread');
+    setInfoPanelOpen(true);
+  }, [openThread, setInfoPanelView, setInfoPanelOpen]);
+
+  const handleCloseInfoPanel = useCallback(() => {
+    closeThread();
+    closeInfoPanel();
+  }, [closeThread, closeInfoPanel]);
 
   const { data: conversation, isLoading } = useConversationDetailsQuery(conversationId);
   const { data: conversations } = useConversationsQuery();
@@ -120,6 +132,7 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
           otherMember={!isChannel && otherMember ? otherMember.user : undefined}
           isChannel={isChannel || undefined}
           onReply={handleReply}
+          onOpenThread={handleOpenThread}
           highlightMessageId={highlightMessageId}
           canPin={canPin}
         />
@@ -148,12 +161,12 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
               createdAt={isChannel ? conversation.createdAt : undefined}
               view={infoPanelView}
               setInfoPanelView={setInfoPanelView}
-              onClose={closeInfoPanel}
+              onClose={handleCloseInfoPanel}
             />
           </div>
           
-          {}
-          <div className="md:hidden flex flex-col fixed inset-y-0 right-0 z-50 transform transition-transform duration-300 ease-in-out translate-x-0">
+          {/* Mobile Overlay Panel */}
+          <div className="md:hidden flex flex-col fixed inset-y-0 right-0 w-full z-50 transform transition-transform duration-300 ease-in-out translate-x-0">
             <InfoPanel 
               conversationId={conversationId}
               workspaceId={isChannel ? conversation.workspaceId || undefined : undefined}
@@ -165,13 +178,13 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
               createdAt={isChannel ? conversation.createdAt : undefined}
               view={infoPanelView}
               setInfoPanelView={setInfoPanelView}
-              onClose={closeInfoPanel}
+              onClose={handleCloseInfoPanel}
             />
           </div>
           {}
           <div 
             className="md:hidden fixed inset-0 z-40 bg-scrim transition-opacity"
-            onClick={closeInfoPanel}
+            onClick={handleCloseInfoPanel}
           />
         </>
       )}

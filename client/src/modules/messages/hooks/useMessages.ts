@@ -5,6 +5,7 @@ import { socket } from "@/socket/socketClient";
 import { SOCKET_EVENTS } from "@/socket/socket-events";
 import type { User, Conversation } from "@/modules/conversations/types/conversation";
 import type { Message, MessagePage } from "../types/message";
+import type { ThreadData } from "@/modules/threads/store/threadStore";
 import type { SocketResponse, MessageSendPayload } from "@/modules/chat/types/socket";
 import type { InfiniteData } from "@tanstack/react-query";
 import React from "react";
@@ -34,9 +35,9 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ content, tempId, replyToId }: MessageSendPayload) => {
+    mutationFn: ({ content, tempId, replyToId, threadRootId, isThreadBroadcast }: MessageSendPayload) => {
       return new Promise<Message>((resolve, reject) => {
-        socket.emit(SOCKET_EVENTS.MESSAGE_SEND, { conversationId, content, tempId, replyToId }, (response: SocketResponse<Message>) => {
+        socket.emit(SOCKET_EVENTS.MESSAGE_SEND, { conversationId, content, tempId, replyToId, threadRootId, isThreadBroadcast }, (response: SocketResponse<Message>) => {
           if (response?.error) {
             const errorMsg = typeof response.error === 'string'
               ? response.error
@@ -50,7 +51,7 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
         });
       });
     },
-    onMutate: async ({ content, tempId }) => {
+    onMutate: async ({ content, tempId, threadRootId, isThreadBroadcast }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.messages(conversationId) });
 
       const userId = currentUser?.id || "me";
@@ -68,22 +69,56 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
         isEdited: false,
         deletedAt: null,
         pending: true,
+        isThreadBroadcast,
       };
 
-      queryClient.setQueryData<InfiniteData<MessagePage>>(queryKeys.messages(conversationId), (old) => {
-        if (!old || !old.pages || old.pages.length === 0) return old;
+      if (threadRootId) {
+        queryClient.setQueryData(
+          [...queryKeys.messages(conversationId), "thread", threadRootId],
+          (old: ThreadData | undefined) => {
+            if (!old) return old;
+            return {
+              ...old,
+              replies: [...old.replies, optimisticMessage],
+            };
+          }
+        );
+        queryClient.setQueryData<InfiniteData<MessagePage>>(queryKeys.messages(conversationId), (old) => {
+          if (!old || !old.pages) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              data: page.data.map((m) =>
+                m.id === threadRootId
+                  ? {
+                      ...m,
+                      threadReplyCount: (m.threadReplyCount || 0) + 1,
+                      lastThreadReplyAt: optimisticMessage.createdAt,
+                    }
+                  : m
+              ),
+            })),
+          };
+        });
+      }
+      
+      if (!threadRootId || isThreadBroadcast) {
+        queryClient.setQueryData<InfiniteData<MessagePage>>(queryKeys.messages(conversationId), (old) => {
+          if (!old || !old.pages || old.pages.length === 0) return old;
 
-        const newPages = [...old.pages];
-        newPages[0] = {
-          ...newPages[0],
-          data: [optimisticMessage, ...newPages[0].data],
-        };
+          const newPages = [...old.pages];
+          newPages[0] = {
+            ...newPages[0],
+            data: [optimisticMessage, ...newPages[0].data],
+          };
 
-        return {
-          ...old,
-          pages: newPages,
-        };
-      });
+          return {
+            ...old,
+            pages: newPages,
+          };
+        });
+      }
 
       queryClient.setQueryData<Conversation[]>(queryKeys.conversations, (old) => {
         if (!Array.isArray(old)) return old;
@@ -111,23 +146,41 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
       return { previousMessages, localId: tempId };
     },
     onSuccess: (realMessage, variables, context) => {
-      queryClient.setQueryData<InfiniteData<MessagePage>>(queryKeys.messages(conversationId), (old) => {
-        if (!old || !old.pages) return old;
+      if (variables.threadRootId) {
+        queryClient.setQueryData(
+          [...queryKeys.messages(conversationId), "thread", variables.threadRootId],
+          (old: ThreadData | undefined) => {
+            if (!old || !old.replies) return old;
+            const alreadyExists = old.replies.some((m: Message) => m.id === realMessage.id);
+            return {
+              ...old,
+              replies: alreadyExists
+                ? old.replies.filter((m: Message) => m.id !== context?.localId)
+                : old.replies.map((m: Message) => (m.id === context?.localId ? realMessage : m))
+            };
+          }
+        );
+      }
+      
+      if (!variables.threadRootId || variables.isThreadBroadcast) {
+        queryClient.setQueryData<InfiniteData<MessagePage>>(queryKeys.messages(conversationId), (old) => {
+          if (!old || !old.pages) return old;
 
-        const alreadyExists = old.pages.some(page => page.data.some(m => m.id === realMessage.id));
+          const alreadyExists = old.pages.some(page => page.data.some(m => m.id === realMessage.id));
 
-        const newPages = old.pages.map((page) => ({
-          ...page,
-          data: alreadyExists
-            ? page.data.filter((m) => m.id !== context?.localId)
-            : page.data.map((m) => (m.id === context?.localId ? realMessage : m))
-        }));
+          const newPages = old.pages.map((page) => ({
+            ...page,
+            data: alreadyExists
+              ? page.data.filter((m) => m.id !== context?.localId)
+              : page.data.map((m) => (m.id === context?.localId ? realMessage : m))
+          }));
 
-        return {
-          ...old,
-          pages: newPages,
-        };
-      });
+          return {
+            ...old,
+            pages: newPages,
+          };
+        });
+      }
     },
     onError: (err, variables, context) => {
       if (context?.previousMessages) {
@@ -154,58 +207,88 @@ export const useEditMessageMutation = (conversationId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ messageId, content }: { messageId: string; content: string }) => {
+    mutationFn: async ({ messageId, content }: { messageId: string; content: string; threadRootId?: string | null }) => {
       return messagesApi.editMessage(conversationId, messageId, content);
     },
-    onMutate: async ({ messageId, content }) => {
+    onMutate: async ({ messageId, content, threadRootId }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.messages(conversationId) });
 
       const previousMessages = queryClient.getQueryData<InfiniteData<MessagePage>>(
         queryKeys.messages(conversationId)
       );
 
-      queryClient.setQueryData<InfiniteData<MessagePage>>(
-        queryKeys.messages(conversationId),
-        (old) => {
-          if (!old || !old.pages) return old;
+      if (threadRootId) {
+        queryClient.setQueryData(
+          [...queryKeys.messages(conversationId), "thread", threadRootId],
+          (old: ThreadData | undefined) => {
+            if (!old || !old.replies) return old;
+            return {
+              ...old,
+              replies: old.replies.map((m: Message) =>
+                m.id === messageId ? { ...m, content, isEdited: true } : m
+              ),
+            };
+          }
+        );
+      } else {
+        queryClient.setQueryData<InfiniteData<MessagePage>>(
+          queryKeys.messages(conversationId),
+          (old) => {
+            if (!old || !old.pages) return old;
 
-          const updatedPages = old.pages.map((page) => ({
-            ...page,
-            data: page.data.map((m) =>
-              m.id === messageId
-                ? { ...m, content, isEdited: true }
-                : m
-            ),
-          }));
+            const updatedPages = old.pages.map((page) => ({
+              ...page,
+              data: page.data.map((m) =>
+                m.id === messageId
+                  ? { ...m, content, isEdited: true }
+                  : m
+              ),
+            }));
 
-          return {
-            ...old,
-            pages: updatedPages,
-          };
-        }
-      );
+            return {
+              ...old,
+              pages: updatedPages,
+            };
+          }
+        );
+      }
 
       return { previousMessages };
     },
-    onSuccess: (serverMessage) => {
-      queryClient.setQueryData<InfiniteData<MessagePage>>(
-        queryKeys.messages(conversationId),
-        (old) => {
-          if (!old || !old.pages) return old;
+    onSuccess: (serverMessage, variables) => {
+      if (variables.threadRootId) {
+        queryClient.setQueryData(
+          [...queryKeys.messages(conversationId), "thread", variables.threadRootId],
+          (old: ThreadData | undefined) => {
+            if (!old || !old.replies) return old;
+            return {
+              ...old,
+              replies: old.replies.map((m: Message) =>
+                m.id === serverMessage.id ? { ...m, ...serverMessage } : m
+              ),
+            };
+          }
+        );
+      } else {
+        queryClient.setQueryData<InfiniteData<MessagePage>>(
+          queryKeys.messages(conversationId),
+          (old) => {
+            if (!old || !old.pages) return old;
 
-          const updatedPages = old.pages.map((page) => ({
-            ...page,
-            data: page.data.map((m) =>
-              m.id === serverMessage.id ? { ...m, ...serverMessage } : m
-            ),
-          }));
+            const updatedPages = old.pages.map((page) => ({
+              ...page,
+              data: page.data.map((m) =>
+                m.id === serverMessage.id ? { ...m, ...serverMessage } : m
+              ),
+            }));
 
-          return {
-            ...old,
-            pages: updatedPages,
-          };
-        }
-      );
+            return {
+              ...old,
+              pages: updatedPages,
+            };
+          }
+        );
+      }
     },
     onError: (err, _variables, context) => {
       if (context?.previousMessages) {
@@ -220,60 +303,121 @@ export const useDeleteMessageMutation = (conversationId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ messageId }: { messageId: string }) => {
+    mutationFn: async ({ messageId }: { messageId: string; threadRootId?: string | null; isThreadRoot?: boolean }) => {
       return messagesApi.deleteMessage(conversationId, messageId);
     },
-    onMutate: async ({ messageId }) => {
+    onMutate: async ({ messageId, threadRootId, isThreadRoot }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.messages(conversationId) });
 
       const previousMessages = queryClient.getQueryData<InfiniteData<MessagePage>>(
         queryKeys.messages(conversationId)
       );
 
-      queryClient.setQueryData<InfiniteData<MessagePage>>(
-        queryKeys.messages(conversationId),
-        (old) => {
-          if (!old || !old.pages) return old;
+      const deletedAt = new Date().toISOString();
 
-          const deletedAt = new Date().toISOString();
+      if (threadRootId) {
+        queryClient.setQueryData(
+          [...queryKeys.messages(conversationId), "thread", threadRootId],
+          (old: ThreadData | undefined) => {
+            if (!old || !old.replies) return old;
+            return {
+              ...old,
+              replies: old.replies.map((m: Message) =>
+                m.id === messageId ? { ...m, deletedAt, content: "" } : m
+              ),
+            };
+          }
+        );
+        queryClient.setQueryData<InfiniteData<MessagePage>>(
+          queryKeys.messages(conversationId),
+          (old) => {
+            if (!old || !old.pages) return old;
+            return {
+              ...old,
+              pages: old.pages.map((page) => ({
+                ...page,
+                data: page.data.map((m) =>
+                  m.id === threadRootId
+                    ? { ...m, threadReplyCount: Math.max(0, (m.threadReplyCount || 0) - 1) }
+                    : m
+                ),
+              })),
+            };
+          }
+        );
+      } else {
+        queryClient.setQueryData<InfiniteData<MessagePage>>(
+          queryKeys.messages(conversationId),
+          (old) => {
+            if (!old || !old.pages) return old;
 
-          const updatedPages = old.pages.map((page) => ({
-            ...page,
-            data: page.data.map((m) =>
-              m.id === messageId
-                ? { ...m, deletedAt, content: "" }
-                : m
-            ),
-          }));
+            const updatedPages = old.pages.map((page) => ({
+              ...page,
+              data: page.data.map((m) => {
+                if (m.id === messageId) {
+                  return { ...m, deletedAt, content: "" };
+                }
+                return m;
+              }),
+            }));
 
-          return {
-            ...old,
-            pages: updatedPages,
-          };
+            return {
+              ...old,
+              pages: updatedPages,
+            };
+          }
+        );
+        if (isThreadRoot) {
+          queryClient.setQueryData(
+            [...queryKeys.messages(conversationId), "thread", messageId],
+            (old: ThreadData | undefined) => {
+              if (!old || !old.root) return old;
+              return {
+                ...old,
+                root: { ...old.root, deletedAt, content: "" },
+                replies: old.replies.map((r: Message) => ({ ...r, deletedAt, content: "" })),
+              };
+            }
+          );
         }
-      );
+      }
 
       return { previousMessages };
     },
-    onSuccess: (serverMessage) => {
-      queryClient.setQueryData<InfiniteData<MessagePage>>(
-        queryKeys.messages(conversationId),
-        (old) => {
-          if (!old || !old.pages) return old;
+    onSuccess: (serverMessage, variables) => {
+      if (variables.threadRootId) {
+        queryClient.setQueryData(
+          [...queryKeys.messages(conversationId), "thread", variables.threadRootId],
+          (old: ThreadData | undefined) => {
+            if (!old || !old.replies) return old;
+            return {
+              ...old,
+              replies: old.replies.map((m: Message) =>
+                m.id === serverMessage.id ? { ...m, ...serverMessage } : m
+              ),
+            };
+          }
+        );
+      } else {
+        queryClient.setQueryData<InfiniteData<MessagePage>>(
+          queryKeys.messages(conversationId),
+          (old) => {
+            if (!old || !old.pages) return old;
 
-          const updatedPages = old.pages.map((page) => ({
-            ...page,
-            data: page.data.map((m) =>
-              m.id === serverMessage.id ? { ...m, ...serverMessage } : m
-            ),
-          }));
+            const updatedPages = old.pages.map((page) => ({
+              ...page,
+              data: page.data.map((m) =>
+                m.id === serverMessage.id ? { ...m, ...serverMessage } : m
+              ),
+            }));
 
-          return {
-            ...old,
-            pages: updatedPages,
-          };
-        }
-      );
+            return {
+              ...old,
+              pages: updatedPages,
+            };
+          }
+        );
+      }
     },
     onError: (err, _variables, context) => {
       if (context?.previousMessages) {

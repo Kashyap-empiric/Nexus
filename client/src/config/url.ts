@@ -24,6 +24,7 @@ export const API_ROUTES = {
       return cursor ? `${baseUrl}?cursor=${cursor}` : baseUrl;
     },
     MESSAGE_DETAIL: (conversationId: string, messageId: string) => `/conversations/${conversationId}/messages/${messageId}`,
+    THREAD: (conversationId: string, messageId: string) => `/conversations/${conversationId}/messages/${messageId}/thread`,
     PINS: (conversationId: string) => `/conversations/${conversationId}/pins`,
     PIN_DETAIL: (conversationId: string, messageId: string) => `/conversations/${conversationId}/pins/${messageId}`,
   },

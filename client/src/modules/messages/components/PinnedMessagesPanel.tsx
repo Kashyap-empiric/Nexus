@@ -54,9 +54,13 @@ export function PinnedMessagesPanel({ conversationId }: PinnedMessagesPanelProps
     );
   }
 
+  const sortedPins = [...pins].sort((a, b) => 
+    new Date(a.message.createdAt).getTime() - new Date(b.message.createdAt).getTime()
+  );
+
   return (
     <div className="flex flex-col gap-2 p-3">
-      {pins.map((pin) => (
+      {sortedPins.map((pin) => (
         <div
           key={pin.id}
           role="button"

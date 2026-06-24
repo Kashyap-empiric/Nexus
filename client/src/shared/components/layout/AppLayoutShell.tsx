@@ -40,13 +40,14 @@ function MemberCountBadge({ workspaceId }: { workspaceId: string }) {
   );
 }
 
-export type InfoPanelView = 'about' | 'members' | 'pins';
+export type InfoPanelView = 'about' | 'members' | 'pins' | 'thread';
 
 export interface LayoutUIContextType {
   infoPanelOpen: boolean;
   infoPanelView: InfoPanelView;
   setInfoPanelView: (view: InfoPanelView) => void;
   closeInfoPanel: () => void;
+  setInfoPanelOpen: (open: boolean) => void;
 }
 
 const LayoutUIContext = createContext<LayoutUIContextType | null>(null);
@@ -247,6 +248,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
             infoPanelView,
             setInfoPanelView,
             closeInfoPanel: () => setInfoPanelOpen(false),
+            setInfoPanelOpen,
           }}>
             {children}
           </LayoutUIContext.Provider>
