@@ -61,31 +61,43 @@ export function SocketProvider() {
 
     const handleWorkspaceUpdate = (payload: { action: "UPDATED" | "DELETED"; workspace: { id: string; name?: string } }) => {
       if (payload.action === "DELETED" && payload.workspace?.id) {
-        const currentWorkspaceId = useChatStore.getState().activeWorkspaceId;
-        if (currentWorkspaceId === payload.workspace.id) {
+        const workspaces = queryClient.getQueryData<any[]>(["workspaces"]);
+        const workspace = workspaces?.find(w => w.id === payload.workspace?.id);
+        const isCurrentWorkspace = workspace && pathname?.startsWith(`/workspaces/${workspace.slug}`);
+
+        queryClient.removeQueries({ queryKey: ["workspaces", payload.workspace.id] });
+        queryClient.removeQueries({ queryKey: ["workspace-channels", payload.workspace.id] });
+        queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+
+        if (isCurrentWorkspace) {
           toast.error("The workspace you were viewing has been deleted.", { duration: Infinity });
-          useChatStore.getState().setMode("DM");
-          useChatStore.getState().setActiveWorkspaceId(null);
-          useChatStore.getState().setActiveConversationId(null);
           router.replace("/conversations");
         }
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["workspaces"] });
       }
-      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
     };
 
     const handleMemberUpdate = (payload: MemberUpdatePayload & { workspaceId?: string }) => {
       if (payload.action === "REMOVED" && payload.member?.userId === user?.id) {
-        const currentWorkspaceId = useChatStore.getState().activeWorkspaceId;
-        if (currentWorkspaceId === payload.workspaceId) {
-          toast.error("You are no longer in this workspace.", { id: `removed-ws-${payload.workspaceId}`, duration: Infinity });
-          useChatStore.getState().setMode("DM");
-          useChatStore.getState().setActiveWorkspaceId(null);
-          useChatStore.getState().setActiveConversationId(null);
+        const workspaces = queryClient.getQueryData<any[]>(["workspaces"]);
+        const workspace = workspaces?.find(w => w.id === payload.workspaceId);
+        const isCurrentWorkspace = workspace && pathname?.startsWith(`/workspaces/${workspace.slug}`);
+
+        if (payload.workspaceId) {
+          queryClient.removeQueries({ queryKey: ["workspaces", payload.workspaceId] });
+          queryClient.removeQueries({ queryKey: ["workspace-channels", payload.workspaceId] });
+        }
+        queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+
+        if (isCurrentWorkspace) {
+          toast.info("You were removed from the workspace.", { id: `removed-ws-${payload.workspaceId}`, duration: Infinity });
           router.replace("/conversations");
         }
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["workspace-members"] });
+        queryClient.invalidateQueries({ queryKey: ["workspaces"] });
       }
-      queryClient.invalidateQueries({ queryKey: ["workspace-members"] });
-      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
     };
 
     const handleChannelMemberUpdate = (payload: { workspaceId: string; channelId: string }) => {
@@ -97,8 +109,10 @@ export function SocketProvider() {
     const handleChannelMemberRemoved = (payload: { workspaceId: string; channelId: string; removedUserId?: string }) => {
       if (payload.removedUserId === user?.id) {
         if (pathname.includes(`/channels/${payload.channelId}`)) {
-          toast.error("You have been removed from this channel.", { id: `removed-${payload.channelId}` });
+          toast.info("You were removed from the channel.", { id: `removed-${payload.channelId}` });
           const workspacePath = pathname.split('/channels/')[0];
+          queryClient.removeQueries({ queryKey: ["workspaces", payload.workspaceId, "channels", payload.channelId] });
+          queryClient.invalidateQueries({ queryKey: ["workspace-channels", payload.workspaceId] });
           router.replace(workspacePath || '/');
         }
       }

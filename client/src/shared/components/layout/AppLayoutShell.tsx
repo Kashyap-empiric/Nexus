@@ -7,9 +7,9 @@ import { NavigationRail } from "@/modules/chat/components/NavigationRail";
 import { BellPopover } from "@/modules/notifications/components/BellPopover";
 import { MessageSearchPopover } from "@/modules/messages/components/MessageSearchPopover";
 import { useChatStore } from "@/modules/chat/store/chatStore";
+import { useRouteState } from "@/shared/hooks/useRouteState";
 import { useWorkspaceMembersQuery } from "@/modules/workspaces/hooks/useWorkspaces";
 import { cn } from "@/shared/lib/utils";
-import { presetNavigationFromLink } from "@/shared/lib/navigation";
 import { Hash, Users, ArrowLeft } from "lucide-react";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { PresenceIndicator } from "@/modules/chat/components/PresenceIndicator";
@@ -75,7 +75,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const headerInfo = useChatStore((state) => state.headerInfo);
-  const activeWorkspaceId = useChatStore((state) => state.activeWorkspaceId);
+  const { activeWorkspaceId } = useRouteState();
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [infoPanelOpen, setInfoPanelOpen] = useState(false);
@@ -101,7 +101,6 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
     if ("serviceWorker" in navigator) {
       const handleMessage = (event: MessageEvent) => {
         if (event.data && event.data.type === 'NAVIGATE' && event.data.url) {
-          presetNavigationFromLink(event.data.url);
           router.push(event.data.url);
         }
       };

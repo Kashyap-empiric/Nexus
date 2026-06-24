@@ -15,15 +15,9 @@ interface HeaderInfo {
 }
 
 interface UiState {
-  mode: "DM" | "WORKSPACE";
-  activeWorkspaceId: string | null;
-  activeConversationId: string | null;
   lastVisitedChannels: Record<string, string>;
   drafts: Map<string, string>;
   headerInfo: HeaderInfo | null;
-  setMode: (mode: "DM" | "WORKSPACE") => void;
-  setActiveWorkspaceId: (id: string | null) => void;
-  setActiveConversationId: (id: string | null) => void;
   setLastVisitedChannel: (workspaceId: string, channelId: string) => void;
   setDraft: (conversationId: string, text: string) => void;
   clearDraft: (conversationId: string) => void;
@@ -33,16 +27,10 @@ interface UiState {
 }
 
 export const useChatStore = create<UiState>((set) => ({
-  mode: "DM",
-  activeWorkspaceId: null,
-  activeConversationId: null,
   lastVisitedChannels: {},
   drafts: new Map(),
   headerInfo: null,
 
-  setMode: (mode) => set({ mode }),
-  setActiveWorkspaceId: (id) => set({ activeWorkspaceId: id }),
-  setActiveConversationId: (id) => set({ activeConversationId: id }),
   setLastVisitedChannel: (workspaceId, channelId) => 
     set((state) => ({
       lastVisitedChannels: {
@@ -69,9 +57,6 @@ export const useChatStore = create<UiState>((set) => ({
     })),
   clearAll: () =>
     set({
-      mode: "DM",
-      activeWorkspaceId: null,
-      activeConversationId: null,
       lastVisitedChannels: {},
       drafts: new Map(),
       headerInfo: null,

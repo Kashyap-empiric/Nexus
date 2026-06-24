@@ -12,7 +12,6 @@ import { cn } from "@/shared/lib/utils";
 import { toast } from "sonner";
 import { friendlyError } from "@/shared/lib/friendly-error";
 import type { Notification } from "../types/notification";
-import { presetNavigationFromLink } from "@/shared/lib/navigation";
 
 type Tab = "replies" | "invites";
 
@@ -39,7 +38,6 @@ function NotificationItem({
       onMarkRead(notification.id);
     }
     if (notification.link) {
-      presetNavigationFromLink(notification.link);
       router.push(notification.link);
     }
   };

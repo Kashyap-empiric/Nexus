@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { ActiveConversation } from "@/modules/chat";
-import { useChatStore } from "@/modules/chat/store/chatStore";
 
 export default function ActiveConversationPage() {
   const params = useParams();
@@ -11,15 +10,6 @@ export default function ActiveConversationPage() {
   const searchParams = useSearchParams();
   const highlightMessageId = searchParams?.get("highlight") || undefined;
 
-  const setMode = useChatStore((state) => state.setMode);
-  const setActiveWorkspaceId = useChatStore((state) => state.setActiveWorkspaceId);
-  const setActiveConversationId = useChatStore((state) => state.setActiveConversationId);
-
-  useEffect(() => {
-    setMode("DM");
-    setActiveWorkspaceId(null);
-    setActiveConversationId(conversationId);
-  }, [setMode, setActiveWorkspaceId, setActiveConversationId, conversationId]);
   
   return <ActiveConversation conversationId={conversationId} highlightMessageId={highlightMessageId} />;
 }

@@ -15,6 +15,7 @@ import { useParams, useRouter, usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useGlobalSocket } from "@/modules/chat/hooks/useGlobalSocket";
 import { useChatStore } from "@/modules/chat/store/chatStore";
+import { useRouteState } from "@/shared/hooks/useRouteState";
 import { useSocketStore } from "@/socket/socketStore";
 import { stripMarkdown } from "@/shared/lib/utils";
 import { APP_ROUTES } from "@/config/url";
@@ -59,8 +60,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
   const queryClient = useQueryClient();
   const { data: conversations, isLoading, isError: isConvError } = useConversationsQuery();
 
-  const mode = useChatStore((state) => state.mode);
-  const activeWorkspaceId = useChatStore((state) => state.activeWorkspaceId);
+  const { mode, activeWorkspaceId } = useRouteState();
   const { data: workspaceChannels, isLoading: isLoadingChannels } = useWorkspaceChannelsQuery(mode === "WORKSPACE" ? activeWorkspaceId : null);
   const { data: workspaceDetails } = useWorkspaceDetails(mode === "WORKSPACE" ? activeWorkspaceId : null);
   const currentAuthUser = useUser();
@@ -86,29 +86,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
     }
   }, [mode, activeWorkspaceId, activeId, workspaceChannels, setLastVisitedChannel]);
 
-  useEffect(() => {
-    if (
-      pathname?.includes(APP_ROUTES.SETTINGS.INDEX) ||
-      pathname?.includes(APP_ROUTES.NOTIFICATIONS.INDEX)
-    ) return;
 
-    if (mode === "WORKSPACE" && activeWorkspaceId && workspaceChannels && workspaceChannels.length > 0) {
-      const isCurrentlyInAChannel = workspaceChannels.some(c => c.id === activeId);
-      if (!isCurrentlyInAChannel) {
-        const savedChannelId = lastVisitedChannels[activeWorkspaceId];
-        const savedChannelExists = savedChannelId && workspaceChannels.some(c => c.id === savedChannelId);
-
-        const targetId = savedChannelExists
-          ? savedChannelId
-          : (workspaceChannels.find(c => c.name === "general") || workspaceChannels[0]).id;
-
-        if (activeId !== targetId && pendingRedirect.current !== targetId) {
-          pendingRedirect.current = targetId;
-          router.push(`/workspaces/${activeWorkspaceId}/channels/${targetId}`);
-        }
-      }
-    }
-  }, [mode, activeWorkspaceId, activeId, workspaceChannels, lastVisitedChannels, pathname, router]);
 
   const { data: dbProfile } = useProfile();
 
@@ -415,7 +393,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={async () => { try { await logout(); } catch {} queryClient.clear(); socket.disconnect(); setIsLogoutModalOpen(false); useChatStore.getState().setMode("DM"); useChatStore.getState().setActiveWorkspaceId(null); useChatStore.getState().setActiveConversationId(null); router.push("/login"); }}>Sign Out</AlertDialogAction>
+            <AlertDialogAction onClick={async () => { try { await logout(); } catch {} queryClient.clear(); socket.disconnect(); setIsLogoutModalOpen(false); router.push("/login"); }}>Sign Out</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

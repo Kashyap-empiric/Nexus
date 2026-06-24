@@ -8,35 +8,10 @@ beforeEach(() => {
 describe("useChatStore", () => {
   it("has correct initial state", () => {
     const state = useChatStore.getState();
-    expect(state.mode).toBe("DM");
-    expect(state.activeWorkspaceId).toBeNull();
-    expect(state.activeConversationId).toBeNull();
     expect(state.lastVisitedChannels).toEqual({});
     expect(state.drafts.size).toBe(0);
     expect(state.headerInfo).toBeNull();
   });
-
-  it("setMode updates the mode", () => {
-    useChatStore.getState().setMode("WORKSPACE");
-    expect(useChatStore.getState().mode).toBe("WORKSPACE");
-  });
-
-  it("setActiveWorkspaceId updates workspace id", () => {
-    useChatStore.getState().setActiveWorkspaceId("ws-1");
-    expect(useChatStore.getState().activeWorkspaceId).toBe("ws-1");
-  });
-
-  it("setActiveWorkspaceId(null) clears workspace id", () => {
-    useChatStore.getState().setActiveWorkspaceId("ws-1");
-    useChatStore.getState().setActiveWorkspaceId(null);
-    expect(useChatStore.getState().activeWorkspaceId).toBeNull();
-  });
-
-  it("setActiveConversationId updates conversation id", () => {
-    useChatStore.getState().setActiveConversationId("conv-1");
-    expect(useChatStore.getState().activeConversationId).toBe("conv-1");
-  });
-
   it("setLastVisitedChannel stores channel per workspace", () => {
     useChatStore.getState().setLastVisitedChannel("ws-1", "ch-1");
     expect(useChatStore.getState().lastVisitedChannels["ws-1"]).toBe("ch-1");
@@ -92,18 +67,12 @@ describe("useChatStore", () => {
   });
 
   it("clearAll resets state to initial values", () => {
-    useChatStore.getState().setMode("WORKSPACE");
-    useChatStore.getState().setActiveWorkspaceId("ws-1");
-    useChatStore.getState().setActiveConversationId("conv-1");
     useChatStore.getState().setLastVisitedChannel("ws-1", "ch-1");
     useChatStore.getState().setDraft("conv-1", "Hello");
     useChatStore.getState().setHeaderInfo({ title: "General", isChannel: true, totalUnreadCount: 0, memberPanelOpen: false });
     useChatStore.getState().clearAll();
 
     const state = useChatStore.getState();
-    expect(state.mode).toBe("DM");
-    expect(state.activeWorkspaceId).toBeNull();
-    expect(state.activeConversationId).toBeNull();
     expect(state.lastVisitedChannels).toEqual({});
     expect(state.drafts.size).toBe(0);
     expect(state.headerInfo).toBeNull();

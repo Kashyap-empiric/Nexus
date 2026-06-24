@@ -75,7 +75,12 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
 
     const timer = setTimeout(() => {
       const el = document.getElementById(`msg-${highlightMessageId}`);
-      if (!el) return;
+      if (!el) {
+        if (hasNextPage) {
+          fetchNextPage();
+        }
+        return;
+      }
 
       el.scrollIntoView({ behavior: "smooth", block: "center" });
 
@@ -93,7 +98,7 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [highlightMessageId, data, isFetchingNextPage, isLoading]);
+  }, [highlightMessageId, data, isFetchingNextPage, isLoading, hasNextPage, fetchNextPage]);
 
   if (isLoading) {
     return <MessageListSkeleton />;

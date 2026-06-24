@@ -7,7 +7,6 @@ import type { Workspace } from "@/modules/workspaces/types/workspace";
 
 import { getAuthUser } from "@/modules/auth/store/useAuthStore";
 import { showMessageNotification } from "@/shared/lib/notifications";
-import { useChatStore } from "@/modules/chat/store/chatStore";
 
 export const handleMessageNew = (queryClient: QueryClient) => {
   return (message: Message) => {
@@ -70,10 +69,10 @@ export const handleMessageNew = (queryClient: QueryClient) => {
 
       if (currentUser && message.userId === currentUser.id) return;
 
-      const { activeConversationId } = useChatStore.getState();
+      const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
       const isViewingConversation =
         typeof window !== "undefined" &&
-        activeConversationId === message.conversationId &&
+        currentPath.includes(message.conversationId) &&
         document.hasFocus();
 
       if (!isViewingConversation) {

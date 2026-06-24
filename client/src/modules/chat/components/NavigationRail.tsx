@@ -3,23 +3,58 @@
 import { MessagesSquare, Plus, Settings } from "lucide-react";
 import { APP_ROUTES } from "@/config/url";
 import Link from "next/link";
-import { useChatStore } from "../store/chatStore";
+import { useRouter } from "next/navigation";
+import { useRouteState } from "@/shared/hooks/useRouteState";
+import { useChatStore } from "@/modules/chat/store/chatStore";
 import { useWorkspaces } from "@/modules/workspaces/hooks/useWorkspaces";
 import { useConversationsQuery } from "@/modules/conversations/hooks/useConversations";
 import { CreateWorkspaceModal } from "@/modules/workspaces/components/CreateWorkspaceModal";
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 import { cn } from "@/shared/lib/utils";
 import { getPublicUrl } from "@/shared/lib/upload";
+import { fetchWorkspaceChannels } from "@/modules/workspaces/api/workspaces.api";
+import type { Workspace } from "@/modules/workspaces/types/workspace";
 
 interface NavigationRailProps {
   openSettings: (view: 'profile' | 'appearance') => void;
 }
 
 export function NavigationRail({ openSettings }: NavigationRailProps) {
-  const { mode, activeWorkspaceId, setMode, setActiveWorkspaceId } = useChatStore();
+  const router = useRouter();
+  const { mode, activeWorkspaceId } = useRouteState();
+  const lastVisitedChannels = useChatStore((state) => state.lastVisitedChannels);
   const { data: workspaces = [] } = useWorkspaces();
   const { data: conversations = [] } = useConversationsQuery();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const navigatingRef = useRef(false);
+
+  const handleWorkspaceClick = useCallback(async (workspace: Workspace) => {
+    if (navigatingRef.current) return;
+    navigatingRef.current = true;
+
+    try {
+      const savedChannelId = lastVisitedChannels[workspace.slug];
+      if (savedChannelId) {
+        router.push(`/workspaces/${workspace.slug}/channels/${savedChannelId}`);
+        return;
+      }
+
+      const channels = await fetchWorkspaceChannels(workspace.slug);
+      const targetChannel = channels.find((c) => c.name === "general") || channels[0];
+      if (targetChannel) {
+        router.push(`/workspaces/${workspace.slug}/channels/${targetChannel.id}`);
+        return;
+      }
+
+      // Fallback to DM view if no channels found
+      router.push(APP_ROUTES.CONVERSATIONS.INDEX);
+    } catch (err) {
+      console.warn("[NavigationRail] Failed to navigate to workspace:", err);
+      router.push(APP_ROUTES.CONVERSATIONS.INDEX);
+    } finally {
+      navigatingRef.current = false;
+    }
+  }, [lastVisitedChannels, router]);
 
   const dmConversations = conversations.filter(c => c.type === "DM");
   const dmUnreadCount = dmConversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
@@ -38,10 +73,7 @@ export function NavigationRail({ openSettings }: NavigationRailProps) {
               mode === "DM" ? "bg-brand text-brand-foreground rounded-xl shadow-sm" : ""
             )}
             title="Direct Messages"
-            onClick={() => {
-              setMode("DM");
-              setActiveWorkspaceId(null);
-            }}
+            onClick={() => {}}
           >
             <MessagesSquare size={20} />
             {dmUnreadCount > 0 && mode !== "DM" && (
@@ -60,10 +92,7 @@ export function NavigationRail({ openSettings }: NavigationRailProps) {
             return (
               <button
                 key={workspace.id}
-                onClick={() => {
-                  setMode("WORKSPACE");
-                  setActiveWorkspaceId(workspace.slug);
-                }}
+                onClick={() => handleWorkspaceClick(workspace)}
                 title={workspace.name}
                 className={cn(
                   "w-[40px] h-[40px] rounded-2xl bg-muted text-muted-foreground flex items-center justify-center transition-all duration-200 hover:rounded-xl hover:bg-accent hover:text-accent-foreground font-semibold text-lg relative",

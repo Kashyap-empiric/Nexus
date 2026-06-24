@@ -1,19 +1,5 @@
-
-
-import { useChatStore } from "@/modules/chat/store/chatStore";
-
-
+// This function is kept for backwards compatibility or future use
+// Navigation state is now purely derived from the URL via useRouteState
 export function presetNavigationFromLink(link: string): void {
-  const store = useChatStore.getState();
-
-  if (link.startsWith("/workspaces/")) {
-    const slugMatch = link.match(/^\/workspaces\/([^/?]+)/);
-    if (slugMatch) {
-      store.setMode("WORKSPACE");
-      store.setActiveWorkspaceId(slugMatch[1]);
-    }
-  } else if (link.startsWith("/conversations/")) {
-    store.setMode("DM");
-    store.setActiveWorkspaceId(null);
-  }
+  // No-op
 }
