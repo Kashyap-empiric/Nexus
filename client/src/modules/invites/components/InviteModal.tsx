@@ -58,21 +58,29 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
 
   const [workspaceMemberIds, setWorkspaceMemberIds] = useState<Set<string>>(new Set());
 
-  
   useEffect(() => {
-    if (isOpen && type === "WORKSPACE" && entityId) {
-      import("../../workspaces/api/workspaces.api").then(({ fetchWorkspaceMembers }) => {
-        fetchWorkspaceMembers(entityId).then((members) => {
-          setWorkspaceMemberIds(new Set(members.map((m) => m.userId)));
-        }).catch(() => {
-          toast.error("Failed to load workspace members");
-        });
-      });
-    } else {
-      setWorkspaceMemberIds(new Set());
+    if (!isOpen || type !== "WORKSPACE" || !entityId) {
+      requestAnimationFrame(() => setWorkspaceMemberIds(new Set()));
+      return;
     }
+
+    let cancelled = false;
+
+    import("../../workspaces/api/workspaces.api").then(({ fetchWorkspaceMembers }) => {
+      fetchWorkspaceMembers(entityId).then((members) => {
+        if (!cancelled) {
+          setWorkspaceMemberIds(new Set(members.map((m) => m.userId)));
+        }
+      }).catch(() => {
+        if (!cancelled) {
+          toast.error("Failed to load workspace members");
+        }
+      });
+    });
+
+    return () => { cancelled = true; };
   }, [isOpen, type, entityId]);
-  
+
 
   const filteredResults = searchResults?.filter(
     (u) =>
@@ -114,8 +122,8 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
         selectedUsers.map((u) => u.id)
       );
 
-      if (result.invited.length > 0) {
-        toast.success(`Invite sent to ${result.invited.length} user(s)`);
+      if (result.invitedCount > 0) {
+        toast.success(`Invite sent to ${result.invitedCount} user(s)`);
       }
       if (result.skipped.length > 0) {
         const reasons = result.skipped.map((s) => s.reason).join(", ");
@@ -168,7 +176,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
     if (isOpen && type && !inviteUrl && !isLoading && !error) {
       generate(type, entityId);
     }
-    
+
   }, [isOpen, type, entityId]);
 
   useEffect(() => {
@@ -182,7 +190,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
         setDebouncedQuery("");
       }, 300);
     }
-  }, [isOpen, reset]);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -251,9 +259,9 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
         <DialogBody>
           {type === "WORKSPACE" && (
             <div className="mb-4">
-              <h3 className="font-medium text-sm mb-2">Invite by email</h3>
+              <h3 className="font-medium text-sm mb-2">Invite by email or username</h3>
 
-              {}
+              { }
               <div className="flex flex-wrap gap-1.5 p-2 border rounded-lg bg-muted/30 min-h-[42px] mb-2 focus-within:ring-1 focus-within:ring-ring focus-within:border-border">
                 {selectedUsers.map((user) => (
                   <span
@@ -297,7 +305,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
                 />
               </div>
 
-              {}
+              { }
               {showDropdown && debouncedQuery.length > 0 && (
                 <div
                   ref={dropdownRef}
@@ -358,7 +366,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
                 </div>
               )}
 
-              {}
+              { }
               <Button
                 onClick={handleSubmit}
                 disabled={selectedUsers.length === 0 || isInviting}
@@ -379,7 +387,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
                 )}
               </Button>
 
-              {}
+              { }
               <div className="mb-4">
                 <div className="flex gap-2">
                   <Input

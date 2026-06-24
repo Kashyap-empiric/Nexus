@@ -6,7 +6,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-dvh bg-white dark:bg-zinc-950 overflow-hidden">
+    <div className="flex min-h-dvh bg-background overflow-hidden">
       <AuthSidebar />
 
       {}

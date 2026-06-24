@@ -47,7 +47,9 @@ export const ResetPasswordForm = () => {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 
-  const [verifyState, setVerifyState] = useState<VerifyState>({ status: "loading" });
+  const [verifyState, setVerifyState] = useState<VerifyState>(() => 
+    token ? { status: "loading" } : { status: "expired" },
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -65,8 +67,6 @@ export const ResetPasswordForm = () => {
   
   useEffect(() => {
     if (!token) {
-      
-      setVerifyState({ status: "expired" });
       return;
     }
 
@@ -120,9 +120,9 @@ export const ResetPasswordForm = () => {
       }, 1500);
     } catch (err: unknown) {
       
+      const apiError = err as { response?: { data?: { error?: string } } };
       const message =
-        
-        (err as any)?.response?.data?.error ||
+        apiError?.response?.data?.error ||
         (err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setError(message);
     } finally {

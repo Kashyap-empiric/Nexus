@@ -10,10 +10,8 @@ import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/shared/components/ui/dialog";
 import { useCreateWorkspace } from "../hooks/useWorkspaces";
-import { useChatStore } from "@/modules/chat/store/chatStore";
 import { uploadWorkspaceIcon } from "@/shared/lib/upload";
 import { toast } from "sonner";
-import type { AxiosError } from "axios";
 import { friendlyError } from "@/shared/lib/friendly-error";
 
 interface CreateWorkspaceModalProps {
@@ -29,8 +27,6 @@ export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalPr
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const iconInputRef = useRef<HTMLInputElement>(null);
   const { mutateAsync: createWorkspace, isPending } = useCreateWorkspace();
-  const setMode = useChatStore((state) => state.setMode);
-  const setActiveWorkspaceId = useChatStore((state) => state.setActiveWorkspaceId);
 
   const handleIconSelect = (file: File) => {
     if (file.size > 5 * 1024 * 1024) {
@@ -52,7 +48,7 @@ export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalPr
         iconPath = await uploadWorkspaceIcon(slug.trim() || name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-"), iconFile);
       }
 
-      const workspace = await createWorkspace({
+      await createWorkspace({
         name: name.trim(),
         slug: slug.trim(),
         description: description.trim() || undefined,
@@ -66,10 +62,8 @@ export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalPr
       setIconFile(null);
       setIconPreview(null);
       onClose();
-      setMode("WORKSPACE");
-      setActiveWorkspaceId(workspace.slug);
     } catch (error: unknown) {
-      const axiosError = error as AxiosError<{ error?: string }>;
+      const axiosError = error as { response?: { data?: { error?: string } } };
       const message = friendlyError(axiosError?.response?.data?.error || error, "Failed to create workspace");
       toast.error(message);
     }

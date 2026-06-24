@@ -1,15 +1,20 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useState, useRef, useEffect } from "react";
 import { X, CalendarDays, Hash, Globe, Lock } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { InfoPanelView } from "@/shared/components/layout/AppLayoutShell";
 import { MemberListPanel } from "@/modules/workspaces/components/MemberListPanel";
 import { PinnedMessagesPanel } from "@/modules/messages/components/PinnedMessagesPanel";
+import { ThreadPanel } from "@/modules/threads/components/ThreadPanel";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { PresenceIndicator } from "@/modules/chat/components/PresenceIndicator";
 import { getPublicProfile } from "@/modules/users/api/users.api";
+import { useUser } from "@/modules/auth/store/useAuthStore";
 import Link from "next/link";
+import type { User } from "@/modules/conversations/types/conversation";
+
 interface InfoPanelProps {
   conversationId: string;
   workspaceId?: string;
@@ -34,6 +39,7 @@ const STATUS_LABELS: Record<string, { label: string; dotClass: string }> = {
 export function InfoPanel({ conversationId, workspaceId, channelId, userId, channelName, description, visibility, createdAt, view, setInfoPanelView, onClose }: InfoPanelProps) {
   const isChannel = !!workspaceId;
   const isDM = !!userId;
+  const currentUser = useUser();
 
   const { data: userProfile, isError: isProfileError } = useQuery({
     queryKey: ["users", "profile", userId],
@@ -46,11 +52,54 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
     return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   };
 
+  const [panelWidth, setPanelWidth] = useState(320);
+  const isResizing = useRef(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('nexus-info-panel-width');
+    if (saved) {
+      setTimeout(() => setPanelWidth(parseInt(saved, 10)), 0);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing.current) return;
+      const newWidth = document.body.clientWidth - e.clientX;
+      if (newWidth > 280 && newWidth < 800) {
+        setPanelWidth(newWidth);
+      }
+    };
+    const handleMouseUp = () => {
+      if (isResizing.current) {
+        isResizing.current = false;
+        document.body.style.cursor = 'default';
+        localStorage.setItem('nexus-info-panel-width', panelWidth.toString());
+      }
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [panelWidth]);
+
   return (
-    <div className="flex flex-col w-80 bg-details-panel shadow-xl border-l h-full shrink-0">
+    <div
+      className="flex flex-col bg-details-panel shadow-xl border-l h-full shrink-0 relative w-full md:w-[var(--panel-width)]"
+      style={{ '--panel-width': `${panelWidth}px` } as React.CSSProperties}
+    >
+      <div
+        className="hidden md:block absolute left-0 top-0 bottom-0 w-1.5 -ml-[0.75px] cursor-col-resize hover:bg-brand z-50 transition-colors"
+        onMouseDown={() => {
+          isResizing.current = true;
+          document.body.style.cursor = 'col-resize';
+        }}
+      />
       <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
         <h2 className="font-semibold text-lg text-foreground">Details</h2>
-        <button 
+        <button
           onClick={onClose}
           className="p-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors"
           title="Close"
@@ -89,20 +138,29 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
         >
           Pins
         </button>
+        <button
+          onClick={() => setInfoPanelView(view === 'thread' ? 'about' : 'thread')}
+          className={cn(
+            "flex-1 pb-2 pt-3 text-sm font-medium text-center border-b-2 transition-colors",
+            view === 'thread' ? "border-brand text-brand" : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Thread
+        </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div className="flex-1 overflow-y-auto min-h-0 flex flex-col">
         {view === 'about' && isDM && userProfile && (
           <div className="p-6 space-y-6">
-            {}
+            { }
             <Link href={`/users/${userProfile.id}`} className="flex flex-col items-center gap-3 group">
               <div className="relative">
-<UserAvatar
-                    name={userProfile.fullName || userProfile.username}
-                    src={userProfile.avatarUrl}
-                    className="h-20 w-20 mb-3"
-                    fallbackClassName="bg-primary/20 text-primary font-medium text-3xl"
-                  />
+                <UserAvatar
+                  name={userProfile.fullName || userProfile.username}
+                  src={userProfile.avatarUrl}
+                  className="h-20 w-20 mb-3"
+                  fallbackClassName="bg-primary/20 text-primary font-medium text-3xl"
+                />
                 <PresenceIndicator userId={userProfile.id} status={userProfile.status} className="w-4 h-4 border-[3px]" />
               </div>
               <div className="text-center">
@@ -113,7 +171,7 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
               </div>
             </Link>
 
-            {}
+            { }
             {userProfile.status && (
               <div className="flex items-center gap-2 text-sm">
                 <span className={cn("h-2.5 w-2.5 rounded-full shrink-0", STATUS_LABELS[userProfile.status]?.dotClass || "bg-muted-foreground")} />
@@ -124,7 +182,7 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
               </div>
             )}
 
-            {}
+            { }
             {userProfile.bio && (
               <div>
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Bio</h4>
@@ -132,7 +190,7 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
               </div>
             )}
 
-            {}
+            { }
             {userProfile.createdAt && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <CalendarDays className="h-4 w-4 shrink-0" />
@@ -206,6 +264,13 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
 
         {view === 'pins' && (
           <PinnedMessagesPanel conversationId={conversationId} />
+        )}
+
+        {view === 'thread' && (
+          <ThreadPanel
+            conversationId={conversationId}
+            currentUser={(currentUser as unknown) as User | undefined}
+          />
         )}
       </div>
     </div>

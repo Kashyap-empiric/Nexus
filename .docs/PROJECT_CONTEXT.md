@@ -1,6 +1,6 @@
 # Nexus — Project Context
 
-> **Last Updated:** 2026-06-22
+> **Last Updated:** 2026-06-24
 > **Purpose:** Prerequisite knowledge for working on this codebase. Current state, architecture constraints, and recent history.
 
 ---
@@ -16,7 +16,7 @@ Communication occurs over HTTP (REST via Axios) and WebSockets (Socket.io).
 
 ---
 
-## Current State (June 22)
+## Current State (June 24)
 
 All compilation and tests pass:
 
@@ -24,12 +24,11 @@ All compilation and tests pass:
 |-------|--------|
 | Client TypeScript | 0 errors |
 | Server TypeScript | 0 errors |
-| Client ESLint | 0 errors, 0 warnings |
-| Client tests | 179/179 pass |
+| Client ESLint | 0 errors (17 warnings pre-existing) |
+| Client tests | 175/175 pass |
 | Server tests | 155/155 pass |
-| Uncommitted files | 99 (awaiting commit) |
 
-A cleanup session resolved 13 client TypeScript errors, 2 server TypeScript errors, 33 ESLint issues, and multiple test failures.
+A major threads feature has been merged into `development` along with sidebar refactoring and notification enhancements.
 
 ---
 
@@ -37,7 +36,7 @@ A cleanup session resolved 13 client TypeScript errors, 2 server TypeScript erro
 
 These parts of the system are functioning correctly and have reasonable test coverage:
 
-**Real-time messaging.** Messages appear via optimistic UI, edits and deletes sync through Socket.io, read receipts work for DMs. The dual-delivery pattern (ack callback for sender + room broadcast for recipients) handles temp ID replacement cleanly.
+**Real-time messaging.** Messages appear via optimistic UI, edits and deletes sync through Socket.io, read receipts work for DMs. Threads support with dedicated panel and optimistic updates. The dual-delivery pattern (ack callback for sender + room broadcast for recipients) handles temp ID replacement cleanly.
 
 **Module architecture.** Each feature is separated into `routes → controller → service → repository` on the server and dedicated module directories on the client. The socket dispatcher pattern keeps emission paths traceable.
 
@@ -78,6 +77,19 @@ These are functional but not optimal. They degrade gracefully under small-team u
 | Push subscription lifecycle not handled | No handler for `pushsubscriptionchange` events from the browser. Subscriptions may go stale. |
 
 ---
+
+## Recent Changes (June 24 — Threads & Sidebar Refactor)
+
+The `feat/threads` branch was merged into `development`, delivering:
+
+- **Message Threads** — Dedicated `ThreadPanel` with `ThreadInput`, Zustand thread store, optimistic updates for both main chat and threads. Thread replies tracked via `threadRootId` with `threadReplyCount` and `lastThreadReplyAt`.
+- **Message Mentions** — `MessageMention` join table, `MENTIONED_IN_MESSAGE` notification type (categorized under `REPLIES` preference).
+- **Message Reactions** — `MessageReaction` model with unique `[messageId, userId, emoji]` constraint. Schema only — no endpoints or UI yet.
+- **threadNotifications Preference** — New boolean toggle on `User` model for thread reply notifications.
+- **Sidebar Refactor** — Navigation state derived from URL (`useRouteState`) instead of Zustand store. Removed `usePathname`, auto-redirect logic, and `lastVisitedChannels`.
+- **UserFooterMenu** — Replaced `StatusSelector` with unified user dropdown (profile, status, sign-out).
+- **Message Display Refinements** — Removed message bubbles and right-alignment. Thread connector lines aligned with avatars. Pinned messages sorted chronologically.
+- **Push Resilience** — Notification push enqueue failures caught and logged instead of blocking the creation path.
 
 ## Recent Changes (June 19–22)
 
@@ -125,7 +137,8 @@ The last push addressed password reset, notification types, socket optimization,
 | Auth middleware | `server/src/middlewares/auth.ts` |
 | Env validation | `server/src/config/env.ts` |
 | Presence tracking | `server/src/socket/presenceStore.ts` |
-| Push notifications | `server/src/services/push.service.ts` |
+| Push notifications | `server/src/jobs/processors/pushNotification.processor.ts` |
+| Job queues | `server/src/jobs/` |
 | Feature modules | `server/src/modules/` |
 | Socket infrastructure | `server/src/socket/` |
 
@@ -136,7 +149,7 @@ The last push addressed password reset, notification types, socket optimization,
 | Socket events (shared) | `client/src/socket/socket-events.ts` |
 | Event router | `client/src/socket/eventRouter.ts` |
 | Env validation | `client/src/config/env.ts` |
-| Feature modules | `client/src/modules/` |
+| Feature modules | `client/src/modules/` (incl. `threads/`) |
 | Socket infrastructure | `client/src/socket/` |
 | Shared UI components | `client/src/shared/` |
 | Next.js pages | `client/src/app/` |
@@ -150,7 +163,7 @@ The last push addressed password reset, notification types, socket optimization,
 | `main` | Production — stable, deployed |
 | `development` | Integration — active work branch |
 
-All current work is on `development`. The 99 uncommitted files are staged and awaiting a final commit before deployment.
+All current work is on `development`. The `feat/threads` branch has been fully merged.
 
 ---
 

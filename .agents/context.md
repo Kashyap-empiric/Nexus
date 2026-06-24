@@ -1,6 +1,6 @@
 # Agent Context
 
-> **Last Updated:** 2026-06-22
+> **Last Updated:** 2026-06-24
 > **Purpose:** Single source-of-truth context file for AI agents working on Nexus. All other `.agents/` files are local-only policy references. The authoritative TL-authored rules are in `Rules_Expectations.md` (project root).
 
 ---
@@ -39,6 +39,18 @@ The top-level rules file covers:
 | 10 | Final Submission Requirements — 8-item completion gate |
 
 ---
+
+## Recent Addition: Message Threads (June 24)
+
+**Schema:** `Message.threadRootId` (self-FK), `threadReplyCount`, `lastThreadReplyAt`, `isThreadBroadcast`. `MessageMention` and `MessageReaction` models.
+
+**Client modules:** `client/src/modules/threads/` — `ThreadPanel`, `ThreadInput`, `threadStore`, `useThreadMessages`.
+
+**Socket events:** `threadMessage:new` — dispatched to conversation room for real-time thread reply delivery.
+
+**Navigation refactor:** Use `useRouteState()` from `shared/hooks/useRouteState.ts` to derive `mode`/`activeWorkspaceId` from URL params. Sidebar no longer depends on `useChatStore` for navigation state.
+
+**User footer:** `UserFooterMenu` replaces `StatusSelector` — unified dropdown with profile, status, sign-out.
 
 ## Quick Reference
 

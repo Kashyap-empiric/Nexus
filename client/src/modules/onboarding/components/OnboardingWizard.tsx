@@ -35,8 +35,11 @@ export function OnboardingWizard() {
   
   useEffect(() => {
     if (user?.user_metadata?.full_name && !profileData.fullName) {
-      setProfileData(prev => ({ ...prev, fullName: user.user_metadata.full_name }));
+      requestAnimationFrame(() => {
+        setProfileData(prev => ({ ...prev, fullName: user.user_metadata.full_name }));
+      });
     }
+    
   }, [user, profileData.fullName]);
   
 

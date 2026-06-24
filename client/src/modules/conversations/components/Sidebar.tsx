@@ -11,13 +11,12 @@ import type { Conversation, ConversationMember } from "../types/conversation";
 import { useAuth } from "@/modules/auth";
 import { Input } from "@/shared/components/ui/input";
 import Link from "next/link";
-import { useParams, useRouter, usePathname } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useGlobalSocket } from "@/modules/chat/hooks/useGlobalSocket";
 import { useChatStore } from "@/modules/chat/store/chatStore";
-import { useSocketStore } from "@/socket/socketStore";
+import { useRouteState } from "@/shared/hooks/useRouteState";
 import { stripMarkdown } from "@/shared/lib/utils";
-import { APP_ROUTES } from "@/config/url";
 import { useUser } from "@/modules/auth/store/useAuthStore";
 import { useInviteModal } from "@/modules/invites/hooks/useInviteModal";
 import {
@@ -39,28 +38,27 @@ import {
 import { MessageSquarePlus, UserPlus } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { socket } from "@/socket/socketClient";
-import { useProfile } from "@/modules/users/hooks/useProfile";
 import { WorkspaceHeader } from "@/modules/workspaces/components/WorkspaceHeader";
 import { useWorkspaceDetails } from "@/modules/workspaces/hooks/useWorkspaces";
 
 const NewConversationModal = dynamic(() => import("./NewConversationModal").then((m) => m.NewConversationModal), { ssr: false });
 const CreateChannelModal = dynamic(() => import("@/modules/workspaces/components/CreateChannelModal").then((m) => m.CreateChannelModal), { ssr: false });
 import { WorkspaceChannelItem } from "@/modules/workspaces/components/WorkspaceChannelItem";
-import { StatusSelector } from "@/modules/users/components/StatusSelector";
+import { UserFooterMenu } from "@/modules/users/components/UserFooterMenu";
 
 interface SidebarProps {
   onNavigate?: () => void;
   onOpenWorkspaceSettings?: () => void;
+  openSettings?: (view: 'profile' | 'appearance' | 'notifications' | 'about') => void;
 }
 
-export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
+export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: SidebarProps) {
   useGlobalSocket();
   const { logout } = useAuth();
   const queryClient = useQueryClient();
   const { data: conversations, isLoading, isError: isConvError } = useConversationsQuery();
 
-  const mode = useChatStore((state) => state.mode);
-  const activeWorkspaceId = useChatStore((state) => state.activeWorkspaceId);
+  const { mode, activeWorkspaceId } = useRouteState();
   const { data: workspaceChannels, isLoading: isLoadingChannels } = useWorkspaceChannelsQuery(mode === "WORKSPACE" ? activeWorkspaceId : null);
   const { data: workspaceDetails } = useWorkspaceDetails(mode === "WORKSPACE" ? activeWorkspaceId : null);
   const currentAuthUser = useUser();
@@ -70,9 +68,9 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const params = useParams();
   const router = useRouter();
-  const pathname = usePathname();
+  
   const activeId = (params?.channelId as string) || (params?.id as string);
-  const lastVisitedChannels = useChatStore((state) => state.lastVisitedChannels);
+  
   const setLastVisitedChannel = useChatStore((state) => state.setLastVisitedChannel);
   const pendingRedirect = useRef<string | null>(null);
 
@@ -86,37 +84,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
     }
   }, [mode, activeWorkspaceId, activeId, workspaceChannels, setLastVisitedChannel]);
 
-  useEffect(() => {
-    if (
-      pathname?.includes(APP_ROUTES.SETTINGS.INDEX) ||
-      pathname?.includes(APP_ROUTES.NOTIFICATIONS.INDEX)
-    ) return;
 
-    if (mode === "WORKSPACE" && activeWorkspaceId && workspaceChannels && workspaceChannels.length > 0) {
-      const isCurrentlyInAChannel = workspaceChannels.some(c => c.id === activeId);
-      if (!isCurrentlyInAChannel) {
-        const savedChannelId = lastVisitedChannels[activeWorkspaceId];
-        const savedChannelExists = savedChannelId && workspaceChannels.some(c => c.id === savedChannelId);
-
-        const targetId = savedChannelExists
-          ? savedChannelId
-          : (workspaceChannels.find(c => c.name === "general") || workspaceChannels[0]).id;
-
-        if (activeId !== targetId && pendingRedirect.current !== targetId) {
-          pendingRedirect.current = targetId;
-          router.push(`/workspaces/${activeWorkspaceId}/channels/${targetId}`);
-        }
-      }
-    }
-  }, [mode, activeWorkspaceId, activeId, workspaceChannels, lastVisitedChannels, pathname, router]);
-
-  const { data: dbProfile } = useProfile();
-
-  const socketStatus = useSocketStore((state) => state.socketStatus);
-  const statusStr = dbProfile?.status;
-  const statusLabel = socketStatus === "connected"
-    ? (dbProfile?.statusText || (statusStr === "AWAY" ? "Away" : statusStr === "DND" ? "Do Not Disturb" : statusStr === "INVISIBLE" ? "Offline" : "Online"))
-    : socketStatus === "connecting" ? "Connecting..." : "Offline";
 
   const displayList = mode === "DM"
     ? [...(conversations || [])]
@@ -374,29 +342,13 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
         </div>
 
         { }
-        <div className="p-4 border-t bg-sidebar shrink-0 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="relative shrink-0 flex items-center">
-              <UserAvatar
-                name={dbProfile?.username || currentAuthUser?.user_metadata?.username || "ME"}
-                src={dbProfile?.avatarUrl || currentAuthUser?.user_metadata?.avatar_url || currentAuthUser?.user_metadata?.avatarUrl}
-                className="h-8 w-8 shrink-0"
-                fallbackClassName="text-xs"
-              />
-              <div className="absolute -bottom-0.5 -right-0.5">
-                <StatusSelector />
-              </div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate mb-1 leading-none">
-                {dbProfile?.username || currentAuthUser?.user_metadata?.username || "My Account"}
-              </p>
-              <p className="text-xs text-muted-foreground leading-none truncate">{statusLabel}</p>
-            </div>
+        <div className="flex items-stretch border-t bg-sidebar shrink-0">
+          <div className="flex-1 min-w-0">
+            <UserFooterMenu openSettings={openSettings || (() => {})} />
           </div>
           <button
             onClick={() => setIsLogoutModalOpen(true)}
-            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+            className="p-4 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors shrink-0 flex items-center justify-center border-l"
             title="Sign out"
           >
             <LogOut className="h-4 w-4" />
@@ -414,7 +366,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings }: SidebarProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={async () => { try { await logout(); } catch { } queryClient.clear(); socket.disconnect(); setIsLogoutModalOpen(false); useChatStore.getState().setMode("DM"); useChatStore.getState().setActiveWorkspaceId(null); useChatStore.getState().setActiveConversationId(null); router.push("/login"); }}>Sign Out</AlertDialogAction>
+            <AlertDialogAction onClick={async () => { try { await logout(); } catch {} queryClient.clear(); socket.disconnect(); setIsLogoutModalOpen(false); router.push("/login"); }}>Sign Out</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

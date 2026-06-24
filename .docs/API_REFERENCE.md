@@ -1,6 +1,6 @@
 # Nexus — API Reference
 
-> **Last Updated:** 2026-06-22
+> **Last Updated:** 2026-06-24
 > **Purpose:** Complete OpenAPI-style reference for all REST endpoints and Socket.io events.
 
 ---
@@ -164,6 +164,10 @@ GET /api/conversations/:id/messages?cursor=<messageId>&limit=50
       "isEdited": false,
       "deletedAt": null,
       "replyToId": "uuidv7 | null",
+      "threadRootId": "uuidv7 | null",
+      "threadReplyCount": 0,
+      "lastThreadReplyAt": "iso8601 | null",
+      "isThreadBroadcast": false,
       "createdAt": "iso8601",
       "user": { "username": "string", "avatarUrl": "string | null" }
     }
@@ -189,7 +193,9 @@ POST /api/conversations/:id/messages
 ```json
 {
   "content": "Hello, world!",
-  "replyToId": "uuidv7 | optional"
+  "replyToId": "uuidv7 | optional",
+  "threadRootId": "uuidv7 | optional",
+  "isThreadBroadcast": false
 }
 ```
 
@@ -200,6 +206,8 @@ POST /api/conversations/:id/messages
   "content": "Hello, world!",
   "conversationId": "uuidv7",
   "userId": "uuidv7",
+  "threadRootId": "uuidv7 | null",
+  "threadReplyCount": 0,
   "createdAt": "iso8601"
 }
 ```
@@ -270,6 +278,38 @@ GET /api/messages/search?q=<query>
 ```
 
 **Note**: Uses `contains` (LIKE `%query%`). No full-text index — will degrade at 50K+ messages.
+
+### Get Thread Messages
+
+```
+GET /api/messages/thread/:rootId?cursor=<messageId>&limit=50
+```
+
+**Auth**: ✅ Required + Must be member of parent conversation
+
+**Query Params**:
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `cursor` | string (UUIDv7) | — | Load replies older than this ID |
+| `limit` | number | 50 | Page size (max 100) |
+
+**Response** `200`:
+```json
+{
+  "messages": [
+    {
+      "id": "uuidv7",
+      "content": "string",
+      "userId": "uuidv7",
+      "threadRootId": "uuidv7",
+      "createdAt": "iso8601",
+      "user": { "username": "string", "avatarUrl": "string | null" }
+    }
+  ],
+  "rootMessage": { /* full Message object of thread root */ },
+  "nextCursor": "uuidv7 | null"
+}
+```
 
 ### Pin Message
 
@@ -628,13 +668,27 @@ DELETE /api/notifications/push/subscribe
 GET /api/notifications/preferences
 ```
 
+**Response** `200`:
+```json
+{
+  "pushEnabled": true,
+  "dmNotifications": true,
+  "channelNotifications": false,
+  "mentionNotifications": true,
+  "threadNotifications": true,
+  "inviteNotifications": true,
+  "workspaceActivityNotifications": true,
+  "replyNotifications": true
+}
+```
+
 ### Update Preferences
 
 ```
 PUT /api/notifications/preferences
 ```
 
-**Request**: `{ "pushEnabled": boolean, "dmMentions": boolean, "channelNotifications": boolean }`
+**Request**: `{ "pushEnabled": boolean, "dmMentions": boolean, "channelNotifications": boolean, "threadNotifications": boolean }`
 
 ---
 
@@ -695,7 +749,7 @@ POST /api/invites/decline
 
 | Event | Payload | Trigger |
 |-------|---------|---------|
-| `message:send` | `{ tempId, conversationId, content, replyToId? }` | User presses Enter |
+| `message:send` | `{ tempId, conversationId, content, replyToId?, threadRootId? }` | User presses Enter |
 | `workspace:join` | `{ workspaceId }` | Opens workspace view |
 | `typing:start` | `{ conversationId, username }` | User starts typing |
 | `typing:stop` | `{ conversationId }` | User stops/pauses typing |
@@ -727,3 +781,4 @@ POST /api/invites/decline
 | `notification:update` | `Notification` | Notification updated (mark read) |
 | `typing:start` | `{ conversationId, username }` | User started typing |
 | `typing:stop` | `{ conversationId }` | User stopped typing |
+| `threadMessage:new` | `Message` | New reply in a thread the client is viewing |

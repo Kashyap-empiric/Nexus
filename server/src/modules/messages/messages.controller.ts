@@ -86,13 +86,30 @@ export const getMessages = async (req: AuthRequest, res: Response): Promise<void
   }
 };
 
+export const getThreadMessages = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { conversationId, messageId } = req.params as { conversationId: string; messageId: string };
+
+    const { root, replies } = await messagesService.getThreadMessages(conversationId, messageId);
+
+    res.json({ data: { root, replies } });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
+      return;
+    }
+    console.error("Error fetching thread messages:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export const createMessage = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { conversationId } = req.params as { conversationId: string };
-    const { content, replyToId } = req.body as CreateMessageBody & { replyToId?: string };
+    const { content, replyToId, threadRootId, isThreadBroadcast } = req.body as CreateMessageBody & { replyToId?: string; threadRootId?: string; isThreadBroadcast?: boolean };
 
-    const { message, conversationMetadata, parentMessageUserId } = await messagesService.createMessage(conversationId, userId, content, replyToId);
+    const { message, conversationMetadata, parentMessageUserId } = await messagesService.createMessage(conversationId, userId, content, replyToId, threadRootId, isThreadBroadcast);
 
     try {
       dispatchMessageEvent("NEW", conversationId, message, conversationMetadata);

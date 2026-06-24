@@ -2,12 +2,12 @@ import { useEffect } from "react";
 import { socket } from "./socketClient";
 
 
-export type SocketHandlerMap<E extends Record<string, any> = Record<string, any>> = {
+export type SocketHandlerMap<E extends Record<string, unknown> = Record<string, unknown>> = {
   [K in keyof E]?: (payload: E[K]) => void;
 };
 
 
-export function useSocketEvent<E extends Record<string, any>>(
+export function useSocketEvent<E extends Record<string, unknown>>(
   event: keyof E,
   handler: (payload: E[keyof E]) => void
 ) {
@@ -23,7 +23,7 @@ export function useSocketEvent<E extends Record<string, any>>(
 }
 
 
-export function useSocketEvents<E extends Record<string, any>>(handlers: SocketHandlerMap<E>) {
+export function useSocketEvents(handlers: Record<string, (payload: never) => void>) {
   useEffect(() => {
     if (!socket) return;
 

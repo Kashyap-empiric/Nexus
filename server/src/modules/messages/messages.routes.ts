@@ -3,7 +3,7 @@ import { authMiddleware } from "@/middlewares/auth.js";
 import { validate } from "@/middlewares/validate.js";
 import { requireConversationMember } from "@/middlewares/requireConversationMember.js";
 import { messageLimiter } from "@/middlewares/rateLimiter.js";
-import { createMessage, getMessages, updateMessage, deleteMessage } from "./messages.controller.js";
+import { createMessage, getMessages, getThreadMessages, updateMessage, deleteMessage } from "./messages.controller.js";
 import { createMessageBodySchema, getMessagesQuerySchema, messageParamsSchema, messageIdParamsSchema, updateMessageBodySchema } from "./messages.schema.js";
 
 const router = Router({ mergeParams: true });
@@ -32,6 +32,14 @@ router.patch(
   validate({ params: messageIdParamsSchema, body: updateMessageBodySchema }),
   requireConversationMember({ paramName: "conversationId" }),
   updateMessage
+);
+
+router.get(
+  "/:messageId/thread",
+  authMiddleware,
+  validate({ params: messageIdParamsSchema }),
+  requireConversationMember({ paramName: "conversationId" }),
+  getThreadMessages
 );
 
 router.delete(

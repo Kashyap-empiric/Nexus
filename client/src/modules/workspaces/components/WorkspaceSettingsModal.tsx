@@ -2,7 +2,7 @@
 
 
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -17,10 +17,9 @@ import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogTitle, 
 import { useWorkspaceDetails, useWorkspaceMembersQuery, useUpdateWorkspaceMutation, useDeleteWorkspaceMutation, useLeaveWorkspaceMutation, useUpdateMemberRole, useRemoveMember } from "../hooks/useWorkspaces";
 import { useUser } from "@/modules/auth/store/useAuthStore";
 import { useParams, useRouter } from "next/navigation";
-import { Camera, ArrowLeftFromLine, Trash, Shield, ShieldCheck, User as UserIcon } from "lucide-react";
+import { Camera, ArrowLeftFromLine, Trash, Shield, ShieldCheck, User as UserIcon, Settings, Users, ChevronRight, ArrowLeft, UserMinus } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import type { WorkspaceRole, WorkspaceMember } from "../types/workspace";
-import { useChatStore } from "@/modules/chat/store/chatStore";
 import { uploadWorkspaceIcon, getPublicUrl, deleteFile } from "@/shared/lib/upload";
 import { friendlyError } from "@/shared/lib/friendly-error";
 import { CustomRoleDropdown, ROLE_BADGE_STYLES } from "./CustomRoleDropdown";
@@ -39,6 +38,16 @@ const ROLE_ICONS: Record<WorkspaceRole, typeof Shield> = {
   MEMBER: UserIcon,
 };
 
+const TAB_GROUPS = [
+  {
+    label: "Workspace Settings",
+    items: [
+      { id: "general", label: "General", icon: Settings },
+      { id: "members", label: "Members", icon: Users },
+    ]
+  }
+] as const;
+
 interface WorkspaceSettingsModalProps {
   isOpen: boolean;
   workspaceId: string | null;
@@ -47,6 +56,7 @@ interface WorkspaceSettingsModalProps {
 
 export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: WorkspaceSettingsModalProps) {
   const [activeTab, setActiveTab] = useState<"general" | "members">("general");
+  const [showMobileMenu, setShowMobileMenu] = useState(true);
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
   const { data: workspaceData, isLoading: workspaceLoading } = useWorkspaceDetails(workspaceId);
   const { data: members, isLoading: membersLoading } = useWorkspaceMembersQuery(workspaceId);
@@ -62,12 +72,23 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
     register,
     handleSubmit,
     reset,
-    watch,
     formState: { errors, isDirty },
   } = useForm<WorkspaceFormValues>({
     resolver: zodResolver(workspaceSchema),
     defaultValues: { name: "", slug: "", description: "" },
   });
+
+  const [previewName, setPreviewName] = useState("");
+  const [descLength, setDescLength] = useState(0);
+  const [currentSlug, setCurrentSlug] = useState("");
+
+  useEffect(() => {
+    if (isOpen) {
+      requestAnimationFrame(() => {
+        setShowMobileMenu(true);
+      });
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (workspace) {
@@ -75,6 +96,11 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
         name: workspace.name || "",
         slug: workspace.slug || "",
         description: workspace.description || "",
+      });
+      requestAnimationFrame(() => {
+        setPreviewName(workspace.name || "");
+        setCurrentSlug(workspace.slug || "");
+        setDescLength(workspace.description?.length || 0);
       });
     }
   }, [workspace, reset]);
@@ -101,7 +127,6 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
       reset(data);
 
       if (data.slug && data.slug !== workspace?.slug) {
-        setActiveWorkspaceId(data.slug);
         const channelId = params?.channelId as string | undefined;
         if (channelId) {
           router.push(`/workspaces/${data.slug}/channels/${channelId}`);
@@ -137,10 +162,8 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
     if (!workspaceId) return;
     try {
       await leaveWorkspace({ workspaceId });
-      toast.success("Left workspace");
+      toast.success("You left the workspace.");
       onClose();
-      setActiveWorkspaceId(null);
-      useChatStore.getState().setMode("DM");
       router.push("/conversations");
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Failed to leave workspace"));
@@ -150,7 +173,7 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
   const [pendingOwnerPromotion, setPendingOwnerPromotion] = useState<{ userId: string; username: string } | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<{ userId: string; username: string } | null>(null);
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
-
+  
   const handleRoleChange = async (userId: string, role: WorkspaceRole) => {
     if (!workspaceId) return;
     try {
@@ -173,15 +196,25 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
 
   const authUser = useUser();
   const currentUser = (members || []).find((m: WorkspaceMember) => m.userId === authUser?.id);
-  const setActiveWorkspaceId = useChatStore((state) => state.setActiveWorkspaceId);
   const params = useParams();
+  
   const router = useRouter();
-  const isSlugManuallyEdited = useRef(false);
+  
   const iconInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUploadingIcon, setIsUploadingIcon] = useState(false);
   const [iconFile, setIconFile] = useState<File | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
+
+  const handleIconBrowse = useCallback(() => {
+    iconInputRef.current?.click();
+  }, []);
+
+  const handleIconKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      iconInputRef.current?.click();
+    }
+  }, []);
 
   const handleIconSelect = (file: File) => {
     if (file.size > 5 * 1024 * 1024) {
@@ -213,25 +246,77 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent drawer size="xl" className="w-[90vw] md:!w-[750px] lg:!w-[900px] p-0 bg-background !block">
+      <DialogContent fullscreenMobile size="2xl" className="w-[90vw] md:!w-[800px] lg:!w-[1000px] sm:h-[80vh] p-0 bg-background md:flex-row overflow-hidden">
         <DialogHeader className="sr-only">
           <DialogTitle>Workspace Settings</DialogTitle>
           <DialogDescription>Manage workspace settings</DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col sm:flex-row">
-          {}
-          <div className="w-full sm:w-48 bg-muted/10 sm:bg-muted/30 border-r border-border p-4 flex sm:flex-col gap-1 shrink-0 max-h-[85vh] overflow-y-auto">
-            <button onClick={() => setActiveTab("general")} className={cn("text-left px-3 py-2 rounded-md text-sm font-medium transition-colors", activeTab === "general" ? "bg-brand/10 text-brand" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground")}>
-              General
-            </button>
-            <button onClick={() => setActiveTab("members")} className={cn("text-left px-3 py-2 rounded-md text-sm font-medium transition-colors", activeTab === "members" ? "bg-brand/10 text-brand" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground")}>
-              Members
-            </button>
+        {/* Sidebar */}
+        <div
+          className={cn(
+            "w-full md:w-64 bg-muted/10 md:bg-muted/30 border-r border-border p-0 md:p-4 flex-col overflow-y-auto shrink-0",
+            showMobileMenu ? "flex" : "hidden md:flex"
+          )}
+        >
+          {/* Mobile Header */}
+          <div className="px-6 pt-12 pb-4 md:hidden">
+            <h2 className="text-2xl font-bold">Workspace Settings</h2>
           </div>
 
-          {}
-          <div className="flex-1 p-6 overflow-y-auto max-h-[85vh]">
+          <div className="flex flex-col gap-6 p-4 md:p-0">
+            {TAB_GROUPS.map((group, groupIdx) => (
+              <div key={groupIdx} className="flex flex-col gap-2">
+                <h3 className="text-[12px] font-bold tracking-wider text-muted-foreground uppercase px-2 md:px-3">
+                  {group.label}
+                </h3>
+                <div className="flex flex-col bg-card md:bg-transparent border md:border-0 border-border rounded-xl md:rounded-none overflow-hidden divide-y md:divide-y-0 divide-border">
+                  {group.items.map((tab) => {
+                    const Icon = tab.icon;
+                    const isActive = activeTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          setActiveTab(tab.id as "general" | "members");
+                          setShowMobileMenu(false);
+                        }}
+                        className={cn(
+                          "group flex items-center justify-between px-4 md:px-3 py-3.5 md:py-2 text-base md:text-sm font-medium transition-colors w-full text-left",
+                          isActive
+                            ? "bg-brand/10 text-brand md:rounded-md"
+                            : "text-foreground md:text-muted-foreground hover:bg-muted/50 md:hover:bg-muted hover:text-foreground md:rounded-md"
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Icon className="h-5 w-5 md:h-4 md:w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                          {tab.label}
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/50 md:hidden" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div
+          className={cn(
+            "flex-1 p-6 md:p-8 overflow-y-auto bg-background",
+            !showMobileMenu ? "block" : "hidden md:block"
+          )}
+        >
+          <div className="max-w-4xl w-full mx-auto md:mx-0">
+            <button
+              onClick={() => setShowMobileMenu(true)}
+              className="md:hidden flex items-center gap-2 mb-6 text-muted-foreground hover:text-foreground -ml-2 p-2 rounded-md transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5" />
+              <span className="font-medium">Back to Settings</span>
+            </button>
             {workspaceLoading ? (
               <div className="animate-pulse space-y-4">
                 <div className="h-8 w-1/3 bg-muted rounded" />
@@ -240,11 +325,11 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
               </div>
             ) : activeTab === "general" ? (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                <p className="text-xs text-muted-foreground">
-                  Preview: <span className="font-medium text-foreground">{watch("name") || "Untitled"}</span>
+                <p className="text-sm text-muted-foreground">
+                  Preview: <span className="font-medium text-foreground">{previewName || "Untitled"}</span>
                 </p>
 
-                {}
+                { }
                 <div>
                   <p className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase mb-3">BRANDING</p>
                   <hr className="border-border mb-4" />
@@ -260,8 +345,8 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                         const file = e.dataTransfer.files?.[0];
                         if (file) handleIconSelect(file);
                       }}
-                      onClick={() => iconInputRef.current?.click()}
-                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") iconInputRef.current?.click(); }}
+                      onClick={handleIconBrowse}
+                      onKeyDown={handleIconKeyDown}
                       className={cn(
                         "relative h-20 w-20 rounded-xl border-2 border-dashed flex items-center justify-center cursor-pointer transition-colors",
                         isDragOver ? "border-brand bg-brand/5" : "border-muted-foreground/25 hover:border-muted-foreground/50"
@@ -302,23 +387,29 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="ws-name">Name</Label>
-                      <Input id="ws-name" {...register("name")} />
+                      <Input id="ws-name" {...register("name", {
+                        onChange: (e) => setPreviewName(e.target.value),
+                      })} />
                       {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="ws-slug">Slug</Label>
-                      <Input id="ws-slug" {...register("slug", { onChange: () => { isSlugManuallyEdited.current = true; } })} className="font-mono text-sm" />
+                      <Input id="ws-slug" {...register("slug", {
+                        onChange: (e) => setCurrentSlug(e.target.value),
+                      })} className="font-mono text-sm" />
                       {errors.slug && <p className="text-sm text-destructive">{errors.slug.message}</p>}
-                      {watch("slug") && (
+                      {currentSlug && (
                         <p className="font-mono text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
-                          nexus.app/workspace/{watch("slug")}
+                          nexus.app/workspace/{currentSlug}
                         </p>
                       )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="ws-description">Description</Label>
-                      <Textarea id="ws-description" {...register("description")} className="resize-none" rows={3} />
-                      <p className="text-xs text-muted-foreground text-right">{watch("description")?.length || 0} / 500</p>
+                      <Textarea id="ws-description" {...register("description", {
+                        onChange: (e) => setDescLength(e.target.value.length),
+                      })} className="resize-none" rows={3} />
+                      <p className="text-xs text-muted-foreground text-right">{descLength} / 500</p>
                     </div>
                   </div>
                 </div>
@@ -329,7 +420,7 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                   </Button>
                 </div>
 
-                {}
+                { }
                 <div className="pt-8">
                   <p className="text-[11px] font-bold tracking-wider text-destructive uppercase mb-3">DANGER ZONE</p>
                   <hr className="border-border mb-4" />
@@ -363,7 +454,7 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                 </div>
               </form>
             ) : (
-              
+
               <div className="space-y-4 px-2 sm:px-6">
                 <h3 className="text-lg font-medium">Members</h3>
                 {membersLoading ? (
@@ -413,7 +504,7 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                                 className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                 onClick={() => setPendingRemoval({ userId: member.userId, username: member.user?.username || "Unknown" })}
                               >
-                                <Trash className="h-4 w-4" />
+                                <UserMinus className="h-4 w-4" />
                               </Button>
                             </div>
                           ) : (
@@ -437,14 +528,14 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
               </div>
             )}
 
-            {}
+            { }
             {activeTab === "members" && (
               <>
-                {}
+                { }
                 <AlertDialog open={!!pendingOwnerPromotion} onOpenChange={(open) => { if (!open) setPendingOwnerPromotion(null); }}>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogMedia><ShieldCheck className="size-5 text-emerald-600 dark:text-emerald-400" /></AlertDialogMedia>
+                      <AlertDialogMedia><ShieldCheck className="size-5" style={{ color: 'var(--color-role-owner, #059669)' }} /></AlertDialogMedia>
                       <AlertDialogTitle>Promote to Owner</AlertDialogTitle>
                       <AlertDialogDescription>
                         Are you sure you want to make <strong>{pendingOwnerPromotion?.username}</strong> an owner?
@@ -460,11 +551,11 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                   </AlertDialogContent>
                 </AlertDialog>
 
-                {}
+                { }
                 <AlertDialog open={!!pendingRemoval} onOpenChange={(open) => { if (!open) setPendingRemoval(null); }}>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogMedia><Trash className="size-5 text-destructive" /></AlertDialogMedia>
+                      <AlertDialogMedia><UserMinus className="size-5 text-destructive" /></AlertDialogMedia>
                       <AlertDialogTitle>Remove Member</AlertDialogTitle>
                       <AlertDialogDescription>
                         Are you sure you want to remove <strong>{pendingRemoval?.username}</strong> from this workspace?
@@ -484,7 +575,6 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
           </div>
         </div>
       </DialogContent>
-      {}
       <AlertDialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>

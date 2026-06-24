@@ -32,8 +32,11 @@ export function CreateWorkspaceStep({ onCreate, isLoading, initialName, defaultF
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)+/g, "");
-      setWorkspaceSlug(generatedSlug);
+      requestAnimationFrame(() => {
+        setWorkspaceSlug(generatedSlug);
+      });
     }
+    
   }, [workspaceName, slugEdited]);
   
 

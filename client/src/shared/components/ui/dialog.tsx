@@ -65,10 +65,10 @@ interface DialogContentProps extends DialogPrimitive.Popup.Props {
 }
 
 const SIZE_MAP: Record<DialogSize, string> = {
-  sm: "sm:max-w-[480px]",
-  md: "sm:max-w-[640px]",
-  lg: "sm:max-w-[800px]",
-  xl: "sm:max-w-[1000px]",
+  sm: "md:max-w-[480px]",
+  md: "md:max-w-[640px]",
+  lg: "md:max-w-[800px]",
+  xl: "md:max-w-[1000px]",
   "2xl": "xl:max-w-[1280px]",
 }
 
@@ -116,11 +116,11 @@ function DialogContent({
                   "data-open:slide-in-from-bottom-4",
                   "data-closed:slide-out-to-bottom-4",
                   
-                  "sm:inset-auto sm:top-1/2 sm:left-1/2",
-                  "sm:-translate-x-1/2 sm:-translate-y-1/2",
-                  "sm:w-auto sm:h-auto",
-                  "sm:max-w-[calc(100%-2rem)] sm:max-h-[85vh]",
-                  "sm:rounded-xl",
+                  "md:inset-auto md:top-1/2 md:left-1/2",
+                  "md:-translate-x-1/2 md:-translate-y-1/2",
+                  "md:w-auto md:h-auto",
+                  "md:max-w-[calc(100%-2rem)] md:max-h-[85vh]",
+                  "md:rounded-xl",
                   SIZE_MAP[size],
                 )
               : fullscreenMobile
@@ -129,11 +129,11 @@ function DialogContent({
                     "inset-0",
                     "w-full h-full max-w-none max-h-none",
                     "rounded-none",
-                    "sm:inset-auto sm:top-1/2 sm:left-1/2",
-                    "sm:-translate-x-1/2 sm:-translate-y-1/2",
-                    "sm:w-auto sm:h-auto",
-                    "sm:max-w-[calc(100%-2rem)] sm:max-h-[85vh]",
-                    "sm:rounded-xl sm:shadow-xl",
+                    "md:inset-auto md:top-1/2 md:left-1/2",
+                    "md:-translate-x-1/2 md:-translate-y-1/2",
+                    "md:w-auto md:h-auto",
+                    "md:max-w-[calc(100%-2rem)] md:max-h-[85vh]",
+                    "md:rounded-xl md:shadow-xl",
                     SIZE_MAP[size],
                   )
                 : cn(

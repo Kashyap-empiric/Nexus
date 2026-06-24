@@ -19,6 +19,10 @@ export interface Message {
   isPinned?: boolean;
   replyToId?: string | null;
   replyTo?: ReplyTo | null;
+  threadRootId?: string | null;
+  threadReplyCount?: number;
+  lastThreadReplyAt?: string | null;
+  isThreadBroadcast?: boolean;
   pending?: boolean;
   optimistic?: boolean;
 }

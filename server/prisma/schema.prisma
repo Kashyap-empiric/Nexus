@@ -25,6 +25,7 @@ model User {
   channelNotifications           Boolean              @default(false)
   inviteNotifications            Boolean              @default(true)
   replyNotifications             Boolean              @default(true)
+  threadNotifications            Boolean              @default(true)
   workspaceActivityNotifications Boolean              @default(true)
   createdConversations     Conversation[]       @relation("ConversationCreator")
   conversations            ConversationMember[]
@@ -36,6 +37,8 @@ model User {
   pushSubscriptions        PushSubscription[]
   passwordResetTokens      PasswordResetToken[]
   userPins                 PinnedMessage[] @relation("PinToUser")
+  mentions                 MessageMention[]
+  reactions                MessageReaction[]
 }
 
 model Conversation {
@@ -85,6 +88,17 @@ model Message {
   replyToId      String?
   replyTo        Message?             @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
   replies        Message[]            @relation("MessageReplies")
+  
+  threadRootId     String?
+  threadRoot       Message?             @relation("ThreadMessages", fields: [threadRootId], references: [id])
+  threadReplies    Message[]            @relation("ThreadMessages")
+  threadReplyCount Int                  @default(0)
+  lastThreadReplyAt DateTime?
+  isThreadBroadcast Boolean             @default(false)
+  
+  mentions         MessageMention[]
+  reactions        MessageReaction[]
+
   latestIn       Conversation[]       @relation("ConversationLatestMessage")
   readByMembers  ConversationMember[] @relation("ConversationMemberLastRead")
   conversation   Conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -92,6 +106,33 @@ model Message {
   pinRecord      PinnedMessage?  @relation("PinToMessage")
 
   @@index([conversationId, id])
+  @@index([threadRootId, createdAt])
+}
+
+model MessageMention {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId, createdAt])
+}
+
+model MessageReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
 }
 
 model Invite {
@@ -175,6 +216,8 @@ enum NotificationType {
   MESSAGE_REPLIED
   ROLE_CHANGED
   WORKSPACE_DELETED
+  MENTIONED_IN_MESSAGE
+  THREAD_REPLY
 }
 
 model PinnedMessage {

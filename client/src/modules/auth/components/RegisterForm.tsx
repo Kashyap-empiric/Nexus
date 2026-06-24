@@ -25,17 +25,16 @@ export const RegisterForm = () => {
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
   });
 
-  const watchedUsername = watch("username");
+  const [watchedUsername, setWatchedUsername] = useState("");
 
   useEffect(() => {
     if (!watchedUsername || watchedUsername.length < 3) {
-      setUsernameAvailable(null);
+      requestAnimationFrame(() => setUsernameAvailable(null));
       return;
     }
     const timer = setTimeout(async () => {
@@ -115,12 +114,13 @@ export const RegisterForm = () => {
               <Label htmlFor="username" className={errors.username ? "text-destructive" : "text-foreground/80 font-medium"}>
                 Username <span className="text-destructive">*</span>
               </Label>
-              <div className="relative">
-                <Input
+              <div className="relative">                  <Input
                   id="username"
                   placeholder="johndoe"
                   className="h-11 bg-background/50 focus:bg-background transition-colors pr-9"
-                  {...register("username")}
+                  {...register("username", {
+                    onChange: (e) => setWatchedUsername(e.target.value),
+                  })}
                   aria-invalid={!!errors.username}
                 />
                 {checkingUsername && (

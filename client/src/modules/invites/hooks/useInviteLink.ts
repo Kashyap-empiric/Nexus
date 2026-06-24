@@ -17,8 +17,9 @@ export function useInviteLink() {
       setInviteUrl(`${window.location.origin}${invitePath}`);
       setExpiresAt(expiration);
     
-    } catch (err: any) {
-      setError(err?.response?.data?.error || "Failed to generate invite link");
+    } catch (err: unknown) {
+      const apiError = err as { response?: { data?: { error?: string } } };
+      setError(apiError?.response?.data?.error || "Failed to generate invite link");
       toast.error("Could not generate invite link");
     } finally {
       setIsLoading(false);

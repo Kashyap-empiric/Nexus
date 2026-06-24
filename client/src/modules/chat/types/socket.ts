@@ -18,6 +18,8 @@ export interface MessageSendPayload {
   content: string;
   tempId: string;
   replyToId?: string | null;
+  threadRootId?: string | null;
+  isThreadBroadcast?: boolean;
 }
 
 export interface MessageNewPayload {

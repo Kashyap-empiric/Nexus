@@ -17,6 +17,8 @@ export const messageIdParamsSchema = z.object({
 export const createMessageBodySchema = z.object({
   content: z.string().trim().min(1, { message: "Message cannot be empty" }).max(2000, { message: "Message is too long" }),
   replyToId: z.uuid().optional(),
+  threadRootId: z.uuid().optional(),
+  isThreadBroadcast: z.boolean().optional(),
 });
 
 export const updateMessageBodySchema = z.object({

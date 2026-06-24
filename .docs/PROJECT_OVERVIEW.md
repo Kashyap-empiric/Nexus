@@ -1,13 +1,13 @@
 # Nexus — Project Overview
 
-> **Version:** 0.1.0 | **Date:** 2026-06-22
+> **Version:** 0.1.0 | **Date:** 2026-06-24
 > **Purpose:** A comprehensive technical reference for engineers working on Nexus. Covers architecture, design decisions, current state, and known limitations.
 
 ---
 
 ## Overview
 
-Nexus is a real-time messaging platform — workspaces, channels, DMs, presence tracking, push notifications, invites, and message pinning. It's built as a TypeScript monorepo with two applications:
+Nexus is a real-time messaging platform — workspaces, channels, DMs, message threads, mentions, presence tracking, push notifications, invites, message pinning, and reactions (schema). It's built as a TypeScript monorepo with two applications:
 
 - **Client** — Next.js 16 frontend running on port 3001
 - **Server** — Express.js 5 backend running on port 4000
@@ -327,6 +327,7 @@ nexus/
 │   │   │   ├── chat/                # ActiveConversation orchestrator, socket hooks
 │   │   │   ├── conversations/       # Sidebar, DM list, conversation creation
 │   │   │   ├── messages/            # Message list, input, search, pinned messages
+│   │   │   ├── threads/             # Thread panel, thread input, thread store
 │   │   │   ├── workspaces/          # Workspace and channel CRUD, member management
 │   │   │   ├── notifications/       # Bell popover, push subscriptions, preferences
 │   │   │   ├── invites/             # Invite modal, link generation and resolution
@@ -372,6 +373,8 @@ erDiagram
     
     Message ||--|| User : "authored by"
     Message ||--o{ Message : "replies to"
+    Message ||--o{ MessageMention : "mentions"
+    Message ||--o{ MessageReaction : "reactions"
 ```
 
 ### Design Decisions
@@ -475,18 +478,17 @@ Presence state is dual-written to Redis and an in-memory Map. Every socket conne
 
 ---
 
-## Current State (June 22)
+## Current State (June 24)
 
 | Check | Result |
 |-------|--------|
 | Client TypeScript | 0 errors |
 | Server TypeScript | 0 errors |
-| Client ESLint | 0 errors, 0 warnings |
-| Client tests | 179/179 passing |
+| Client ESLint | 0 errors (17 pre-existing warnings) |
+| Client tests | 175/175 passing |
 | Server tests | 155/155 passing |
-| Uncommitted changes | 99 files (awaiting commit) |
 
-The codebase is in a deployment-ready state following a cleanup session that resolved 13 client TypeScript errors, 2 server TypeScript errors, 33 ESLint issues, and multiple test failures.
+A major threads feature has been merged into `development` with dedicated thread UI, optimistic updates, and schema changes for mentions and reactions.
 
 ### Known Issues
 
@@ -503,12 +505,14 @@ The codebase is in a deployment-ready state following a cleanup session that res
 - No `React.memo` usage — message list re-renders entirely on parent state changes
 - TanStack Query has no `staleTime` configured, causing refetches on every navigation
 - Typing indicators lack client-side debounce
+- Thread subscriptions have no explicit follow/unfollow UI
+- Reactions and mentions have schema only — no endpoints or UI
 
 ---
 
 ## Testing
 
-- **Client:** 179 tests via Vitest — socket handlers, stores, utilities, and schemas
+- **Client:** 175 tests via Vitest — socket handlers, stores, utilities, and schemas
 - **Server:** 155 tests via Vitest + Supertest — services, middleware, schema validation, API integration
 
 The test infrastructure uses a Docker PostgreSQL container and a typed mock Prisma client for service-level tests.
@@ -519,7 +523,7 @@ The test infrastructure uses a Docker PostgreSQL container and a typed mock Pris
 
 ## Deployment
 
-Target infrastructure: Render (server) and Vercel (client). The 99 uncommitted changes on the `development` branch need to be staged and pushed before deployment.
+Target infrastructure: Render (server) and Vercel (client). All changes are on the `development` branch.
 
 Required configuration:
 - Supabase project (URL + service role key + anon key)
@@ -536,9 +540,10 @@ For a complete list of environment variables, see [`ENVIRONMENT_VARIABLES.md`](.
 
 1. **Fix single-instance bottlenecks** — Redis adapter for Socket.io, distributed rate limiter, move presence to Redis-only
 2. **Background push notifications** — decouple from the request path using a job queue
-3. **E2E test coverage** — critical user flows (login, message send, channel navigation)
-4. **Performance** — React.memo for message list, staleTime for queries, dynamic imports for heavy components
-5. **Product features** — emoji reactions, @mentions, file uploads, global search
+3. **Thread subscriptions** — explicit follow/unfollow UI, per-thread unread indicators
+4. **E2E test coverage** — critical user flows (login, message send, channel navigation)
+5. **Performance** — React.memo for message list, staleTime for queries, dynamic imports for heavy components
+6. **Product features** — emoji reactions UI, @mention autocomplete, file uploads, global search
 
 ---
 

@@ -90,12 +90,16 @@ export const inviteMemberByUsername = async (workspaceId: string, username: stri
 
 export const inviteMembers = async (workspaceId: string, userIds: string[]): Promise<{
   success: boolean;
-  invited: { userId: string }[];
+  queued?: boolean;
+  total?: number;
+  invitedCount: number;
   skipped: { userId: string; reason: string }[];
 }> => {
   const { data } = await api.post<{
     success: boolean;
-    invited: { userId: string }[];
+    queued?: boolean;
+    total?: number;
+    invitedCount: number;
     skipped: { userId: string; reason: string }[];
   }>(`/workspaces/${workspaceId}/invite-multiple`, { userIds });
   return data;

@@ -43,13 +43,16 @@ interface SharedSettingsModalProps {
 export const SharedSettingsModal = ({ isOpen, currentTab, setTab, closeSettings }: SharedSettingsModalProps) => {
   const [showMobileMenu, setShowMobileMenu] = useState(true);
 
-  
+
   useEffect(() => {
     if (isOpen) {
-      setShowMobileMenu(true);
+      requestAnimationFrame(() => {
+        setShowMobileMenu(true);
+      });
     }
+    
   }, [isOpen]);
-  
+
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {
@@ -66,20 +69,20 @@ export const SharedSettingsModal = ({ isOpen, currentTab, setTab, closeSettings 
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent fullscreenMobile size="2xl" className="w-[90vw] md:!w-[800px] lg:!w-[1000px] sm:h-[80vh] p-0 bg-background md:flex-row overflow-hidden">
+      <DialogContent fullscreenMobile size="2xl" className="w-full md:!w-[800px] lg:!w-[1000px] md:h-[80vh] p-0 bg-background md:flex-row overflow-hidden">
         <DialogHeader className="sr-only">
           <DialogTitle>Settings</DialogTitle>
           <DialogDescription>Manage your account settings</DialogDescription>
         </DialogHeader>
-        
-        {}
-        <div 
+
+        { }
+        <div
           className={cn(
             "w-full md:w-64 bg-muted/10 md:bg-muted/30 border-r border-border p-0 md:p-4 flex-col overflow-y-auto shrink-0",
             showMobileMenu ? "flex" : "hidden md:flex"
           )}
         >
-          {}
+          { }
           <div className="px-6 pt-12 pb-4 md:hidden">
             <h2 className="text-2xl font-bold">Settings</h2>
           </div>
@@ -100,7 +103,7 @@ export const SharedSettingsModal = ({ isOpen, currentTab, setTab, closeSettings 
                         onClick={() => handleTabClick(tab.id as SettingsView)}
                         className={cn(
                           "group flex items-center justify-between px-4 md:px-3 py-3.5 md:py-2 text-base md:text-sm font-medium transition-colors w-full text-left",
-                          isActive && !showMobileMenu
+                          isActive
                             ? "bg-brand/10 text-brand md:rounded-md"
                             : "text-foreground md:text-muted-foreground hover:bg-muted/50 md:hover:bg-muted hover:text-foreground md:rounded-md"
                         )}
@@ -119,22 +122,22 @@ export const SharedSettingsModal = ({ isOpen, currentTab, setTab, closeSettings 
           </div>
         </div>
 
-        {}
-        <div 
+        { }
+        <div
           className={cn(
             "flex-1 p-6 md:p-8 overflow-y-auto bg-background",
             !showMobileMenu ? "block" : "hidden md:block"
           )}
         >
           <div className="max-w-4xl w-full mx-auto md:mx-0">
-            <button 
-              onClick={() => setShowMobileMenu(true)} 
+            <button
+              onClick={() => setShowMobileMenu(true)}
               className="md:hidden flex items-center gap-2 mb-6 text-muted-foreground hover:text-foreground -ml-2 p-2 rounded-md transition-colors"
             >
               <ArrowLeft className="h-5 w-5" />
               <span className="font-medium">Back to Settings</span>
             </button>
-            
+
             {activeTab === "profile" && <ProfileSettings />}
             {activeTab === "appearance" && <AppearanceSettings />}
             {activeTab === "notifications" && <NotificationSettings />}

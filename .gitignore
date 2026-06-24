@@ -14,3 +14,4 @@ CURRENT_PROJECT_STATE.md
 # .agents/ — only context.md is tracked; the rest are local-only policy references
 .agents/*
 !.agents/context.md
+

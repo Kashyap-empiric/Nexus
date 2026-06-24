@@ -17,7 +17,6 @@ import { useLeaveWorkspaceMutation } from "../hooks/useWorkspaces";
 import { toast } from "sonner";
 import { friendlyError } from "@/shared/lib/friendly-error";
 import { useRouter } from "next/navigation";
-import { useChatStore } from "@/modules/chat/store/chatStore";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,10 +41,8 @@ export function WorkspaceHeader({ workspace, onInviteClick, onSettingsClick, rig
     if (!workspace.id) return;
     try {
       await leaveWorkspace({ workspaceId: workspace.id });
-      toast.success("Left workspace successfully");
+      toast.success("You left the workspace.");
       setIsLeaveModalOpen(false);
-      useChatStore.getState().setActiveWorkspaceId(null);
-      useChatStore.getState().setMode("DM");
       router.push("/conversations");
     } catch (err: unknown) {
       toast.error(friendlyError(err, "Failed to leave workspace"));

@@ -1,6 +1,6 @@
 # Nexus — System Architecture
 
-> **Last Updated:** 2026-06-22
+> **Last Updated:** 2026-06-24
 > **Purpose:** Visual and textual description of system architecture, component relationships, and communication patterns.
 
 ---
@@ -87,6 +87,9 @@ flowchart LR
         WS --> NV
         WS --> MS
         
+        TH[threads] --> MS
+        TH --> NV
+
         INV[invites] --> WS
         INV --> NV
         
@@ -205,6 +208,7 @@ flowchart TB
     subgraph SB_Content["Sidebar"]
         SB_C[Conversation List<br/>DMs + Channels]
         SB_H[Header: workspace name]
+        SB_F[UserFooterMenu<br/>Status + Profile + Sign-out]
     end
 
     subgraph MC_Content["Main Content"]
@@ -212,6 +216,12 @@ flowchart TB
         MC_ML[MessageList<br/>Infinite Scroll]
         MC_MI[MessageInput<br/>Tiptap Editor]
         MC_TI[TypingIndicator]
+    end
+
+    subgraph TH_Content["ThreadPanel (right side)"]
+        TH_R[Root Message Context]
+        TH_L[Thread Reply List]
+        TH_I[Thread Input]
     end
 
     subgraph IP_Content["InfoPanel (toggleable)"]
@@ -238,6 +248,7 @@ flowchart LR
     subgraph UIState["UI State (Zustand)"]
         Z_SOCK[socketStatus<br/>onlineUsers<br/>typingUsers]
         Z_CHAT[activeConversation<br/>activeWorkspace<br/>mode: DM | WORKSPACE]
+        Z_THREAD[threadStore<br/>activeThread<br/>threadMessages]
     end
 
     subgraph SocketUpdates["Socket Event Handlers"]
@@ -272,6 +283,7 @@ flowchart TB
     ER -->|message:update| MH
     ER -->|message:delete| MH
     ER -->|message:read| MH
+    ER -->|threadMessage:new| TH[message.handlers.ts<br/>→ Update thread cache]
     
     ER -->|conversation:new| CH[conversation.handlers.ts<br/>→ Update sidebar cache]
     ER -->|conversation:update| CH
@@ -303,3 +315,5 @@ flowchart TB
 | 6 | **Soft deletes** | Messages use `deletedAt` rather than hard deletion. All queries filter `deletedAt: null`. |
 | 7 | **Slug-based routing** | Workspaces use human-readable slugs: `/workspaces/{slug}/channels/{id}`. |
 | 8 | **Repository pattern** | Services never call Prisma directly — all data access is abstracted behind repository functions. |
+| 9 | **Navigation derived from URL** | Sidebar reads `mode`, `activeWorkspaceId` from URL params via `useRouteState` hook, not from Zustand store. Chat store still tracks `activeConversationId`. |
+| 10 | **Threads as sub-messages** | Thread replies are `Message` records with `threadRootId` set. They share the same CRUD infrastructure as top-level messages but are queried via `threadRootId` index. |

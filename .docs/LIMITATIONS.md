@@ -1,6 +1,6 @@
 # Nexus — Known Limitations
 
-> **Last Updated:** 2026-06-19  
+> **Last Updated:** 2026-06-24  
 > **Purpose:** Track known limitations, technical debt, and constraints.
 
 ---
@@ -43,6 +43,11 @@
 |------------|--------|--------|
 | Fixed-width panels | InfoPanel (w-80), MemberListPanel (w-72), Sidebar (md:w-72) consume significant space on tablets | 🟡 Acknowledged |
 | Emoji picker width | Hardcoded 300px — doesn't adapt to wider screens | 🟡 Acknowledged |
+| Thread subscriptions | No explicit follow/unfollow UI for threads — participation-based only | 🟡 Acknowledged |
+| Thread unread indicators | No per-thread unread count or bolded "Reply in Thread" | 🟡 Acknowledged |
+| Reactions schema only | `MessageReaction` model exists but no endpoints or UI | 🟡 Acknowledged |
+| Mention schema only | `MessageMention` model exists but no autocomplete or highlighting | 🟡 Acknowledged |
+| `isThreadBroadcast` no UI toggle | Broadcast flag exists in schema but no client-side control to toggle it | 🟡 Acknowledged |
 | Service worker scope | SW only handles push events. No caching strategies implemented. | 🟡 Acknowledged |
 | No React.memo usage | Message list items re-render on every parent state change | 🟡 Acknowledged |
 | Cache invalidation over-invalidation | Status updates trigger full query cache invalidation instead of targeted updates | 🟡 Acknowledged |
@@ -56,6 +61,11 @@
 
 | Limitation | Resolution | Date |
 |------------|-----------|------|
+| Message threads — no dedicated UI | Implemented ThreadPanel, ThreadInput, threadStore | 2026-06-24 |
+| Message mentions — no schema | Created MessageMention model + MENTIONED_IN_MESSAGE notification | 2026-06-24 |
+| Message reactions — no schema | Created MessageReaction model | 2026-06-24 |
+| Push notification blocks request path | Wrapped in `.catch()` via `notificationQueue.add()` — async via BullMQ | 2026-06-24 |
+| Sidebar Zustand dependency | Refactored to URL-derived navigation state | 2026-06-24 |
 | Soft-delete filtering in `getMessages` | Added `where: { deletedAt: null }` | 2026-06-11 |
 | Pagination ordering from `createdAt` to `id` | Switched to `id` ordering for UUIDv7 monotonic guarantees | 2026-06-11 |
 | Race condition in `deleteMessage` | Added `$transaction` wrapper | 2026-06-11 |

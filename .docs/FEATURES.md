@@ -1,6 +1,6 @@
 # Nexus — Feature Capability Map
 
-> **Last Updated:** 2026-06-22
+> **Last Updated:** 2026-06-24
 > **Purpose:** Strategic inventory of features by domain capability, implementation status, and dependencies.
 
 ---
@@ -43,9 +43,11 @@ flowchart LR
 | Edit Messages | ✅ Complete | REST + socket broadcast |
 | Delete Messages (Soft) | ✅ Complete | `deletedAt` field, filtered from queries |
 | Inline Replies | ✅ Complete | `replyToId` foreign key |
+| Message Threads | ✅ Complete | Dedicated ThreadPanel, ThreadInput, optimistic updates, threadReplyCount, lastThreadReplyAt |
+| Thread Broadcast | ✅ Complete | `isThreadBroadcast` flag — replies can appear in main timeline |
 | Markdown Rendering | ✅ Complete | react-markdown + remark-gfm |
 | Message History | ✅ Complete | Cursor-based pagination with UUIDv7 |
-| Pinned Messages | ✅ Complete | Dedicated panel, real-time sync |
+| Pinned Messages | ✅ Complete | Dedicated panel, real-time sync, chronological sort |
 | Read Receipts (DMs) | ✅ Complete | Single/double checkmark |
 | Read Receipts (Channels) | 🟡 Partial | `partnerLastReadMessageId` undefined for channels |
 | Message Search | ✅ Complete | `contains` query — no full-text index |
@@ -170,8 +172,10 @@ flowchart LR
 | Web Push Notifications | ✅ Complete | VAPID-based |
 | Service Worker | ✅ Complete | Push event handling |
 | Subscription Management | ✅ Complete | Subscribe/unsubscribe API |
-| Notification Preferences | ✅ Complete | Per-type toggles |
+| Notification Preferences | ✅ Complete | Per-type toggles (incl. `threadNotifications`) |
 | Push Lifecycle | 🟡 Partial | No `pushsubscriptionchange` handler |
+| Mention Notifications | ✅ Complete | `MENTIONED_IN_MESSAGE`, `THREAD_REPLY` types added to enum |
+| Push Resilience | ✅ Complete | Enqueue failures caught and logged via `.catch()` |
 
 ---
 
@@ -228,13 +232,14 @@ flowchart LR
 
 | Feature | Priority | Effort | Notes |
 |---------|----------|--------|-------|
-| Emoji Reactions | Medium | Medium | Schema exists — no endpoints or UI |
-| @Mentions | Medium | Medium | No detection or autocomplete |
+| Emoji Reactions | Medium | Medium | Schema exists (`MessageReaction`) — no endpoints or UI |
+| @Mentions | Medium | Medium | Schema exists (`MessageMention`) — no autocomplete or UI highlighting |
 | File Uploads | Low | Large | No S3/cloud storage integration |
 | Global Search (Cmd+K) | Low | Medium | No implementation |
-| Message Threads | Low | Large | Nested replies, separate view |
 | URL Unfurling | Low | Medium | No link preview |
 | Keyboard Shortcuts | Low | Small | Cmd+K, Cmd+, |
 | i18n Support | Low | Large | Hardcoded English throughout |
+| Thread Subscriptions | Low | Medium | No explicit follow/unfollow for thread notifications |
+| Thread Unread Indicators | Low | Medium | No per-thread unread tracking in sidebar |
 | E2E Tests | Medium | Large | Playwright — not started |
 | Load Testing | Low | Medium | No k6/artillery scripts |

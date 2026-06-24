@@ -27,6 +27,9 @@ const NOTIFICATION_CATEGORY_MAP: Record<NotificationType, NotificationCategory> 
   CHANNEL_MEMBER_ADDED: NotificationCategory.WORKSPACE_ACTIVITY,
   MEMBER_REMOVED: NotificationCategory.SYSTEM_CRITICAL,
   CHANNEL_MEMBER_REMOVED: NotificationCategory.SYSTEM_CRITICAL,
+
+  MENTIONED_IN_MESSAGE: NotificationCategory.REPLIES,
+  THREAD_REPLY: NotificationCategory.REPLIES,
 };
 
 const CATEGORY_PREFERENCE_MAP = {
@@ -139,7 +142,7 @@ export const createAndDispatch = async (input: CreateNotificationInput) => {
     const pushBody = notification.body
       ? `${notification.title}: ${notification.body}`
       : notification.title;
-    await notificationQueue.add("push-to-user", {
+    notificationQueue.add("push-to-user", {
       userId: input.userId,
       payload: {
         title: "Nexus",
@@ -148,6 +151,8 @@ export const createAndDispatch = async (input: CreateNotificationInput) => {
         tag: notification.id,
       },
       force: isCritical,
+    }).catch((err: unknown) => {
+      console.error("[Notification Dispatch] Failed to enqueue push-to-user:", err);
     });
   }
 

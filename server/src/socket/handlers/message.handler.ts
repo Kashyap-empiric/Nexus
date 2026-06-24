@@ -39,7 +39,7 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
   socket.on(
     SOCKET_EVENTS.MESSAGE_SEND,
     async (
-      payload: { tempId: string; conversationId: string; content: string; replyToId?: string },
+      payload: { tempId: string; conversationId: string; content: string; replyToId?: string; threadRootId?: string },
       callback: MessageSendCallback
     ) => {
       try {
@@ -83,7 +83,8 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
           payload.conversationId,
           userId,
           payload.content,
-          payload.replyToId
+          payload.replyToId,
+          payload.threadRootId
         );
 
         dispatchMessageEvent("NEW", payload.conversationId, message, conversationMetadata);

@@ -15,6 +15,10 @@ export interface MessageDTO {
     deletedAt: Date | null;
     user: { username: string };
   } | null;
+  threadRootId: string | null;
+  threadReplyCount: number;
+  lastThreadReplyAt: string | null;
+  isThreadBroadcast: boolean;
   createdAt: Date;
   user: UserDTO;
 }
@@ -53,6 +57,8 @@ export interface CreateMessageInput {
   userId: string;
   content: string;
   replyToId?: string | null;
+  threadRootId?: string | null;
+  isThreadBroadcast?: boolean;
 }
 
 export interface EditMessageInput {

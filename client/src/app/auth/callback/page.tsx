@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/shared/lib/supabase";
 import { APP_ROUTES } from "@/config/url";
@@ -9,12 +9,12 @@ export default function AuthCallback() {
   const router = useRouter();
   const redirected = useRef(false);
 
-  const redirect = () => {
+  const redirect = useCallback(() => {
     if (!redirected.current) {
       redirected.current = true;
       router.push(APP_ROUTES.CONVERSATIONS.INDEX);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
@@ -36,7 +36,7 @@ export default function AuthCallback() {
       authListener.subscription.unsubscribe();
     };
     
-  }, []);
+  }, [redirect]);
 
   return (
     <div className="flex min-h-[60vh] w-full items-center justify-center">

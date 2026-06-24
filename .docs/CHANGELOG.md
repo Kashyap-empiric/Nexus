@@ -1,9 +1,31 @@
 # Nexus — Changelog
 
-> **Last Updated:** 2026-06-22  
+> **Last Updated:** 2026-06-24  
 > **Purpose:** Track all significant changes to the project in reverse chronological order.
 
 ---
+
+## 2026-06-24
+
+### Added
+- **Message Threads**: Complete thread implementation with dedicated `ThreadPanel`, `ThreadInput`, `threadStore` (Zustand), and `useThreadMessages` hook. Messages can be threaded via `threadRootId` with `threadReplyCount` and `lastThreadReplyAt` tracking. Inline reply context displays connector lines aligned with avatars. Optimistic updates for both main chat and thread messages.
+- **Message Mentions**: New `MessageMention` model (join table `[messageId, userId]`), `MENTIONED_IN_MESSAGE` notification type with preference gating under `REPLIES` category.
+- **Message Reactions**: New `MessageReaction` model (unique `[messageId, userId, emoji]`) with schema and migration — no endpoints or UI yet.
+- **threadNotifications Preference**: New `User.threadNotifications` boolean (default true), gating `THREAD_REPLY` notification type.
+- **isThreadBroadcast**: New `Message.isThreadBroadcast` flag for broadcasting thread replies to channel main timeline.
+
+### Changed
+- **Sidebar Navigation Refactor**: Derived navigation state from URL params (`useRouteState` hook) instead of Zustand `useChatStore`. Removed `usePathname` dependency, auto-redirect logic, and `lastVisitedChannels` tracking. Sidebar now receives `openSettings` prop for modularity.
+- **User Footer**: Replaced `StatusSelector` component with `UserFooterMenu` — unified user dropdown with profile settings, status selection, and sign-out in the sidebar.
+- **Message Group UI**: Removed message bubbles and right-alignment for sender messages. Unified chat aesthetic with left-aligned messages from all participants. Made thread reply connector lines brighter and properly aligned with avatars. Improved hover actions menu z-index and border styles.
+- **Pinned Messages Panel**: Pinned messages now sorted chronologically (oldest first).
+- **Push Notification Resilience**: `createAndDispatch()` push enqueue wrapped in `.catch()` — failures are logged instead of blocking notification creation.
+
+### Fixed
+- **Sender avatar alignment**: User profile display for root messages in threads now correctly shows sender avatar.
+
+### Documentation
+- Full update of all `.docs/`, `.qa/`, `.agents/`, `docs/`, and `work/` directories to reflect threads, mentions, reactions, sidebar refactor, and notification changes.
 
 ## 2026-06-22
 
