@@ -1,6 +1,6 @@
 # Nexus — Database Reference
 
-> **Last Updated:** 2026-06-22
+> **Last Updated:** 2026-06-24
 > **Purpose:** Database schema, entity relationships, access patterns, and performance considerations. Uses Mermaid ER diagrams instead of raw schema tables.
 
 ---
@@ -71,10 +71,29 @@ erDiagram
         string conversationId FK
         string userId FK
         string replyToId FK "nullable"
+        string threadRootId FK "nullable"
+        int threadReplyCount "default 0"
+        datetime lastThreadReplyAt "nullable"
+        boolean isThreadBroadcast "default false"
         boolean isEdited
         datetime deletedAt "nullable"
         datetime createdAt
         datetime updatedAt
+    }
+
+    MessageMention {
+        string id PK "cuid"
+        string messageId FK
+        string userId FK
+        datetime createdAt
+    }
+
+    MessageReaction {
+        string id PK "cuid"
+        string messageId FK
+        string userId FK
+        string emoji
+        datetime createdAt
     }
 
     PinnedMessage {
@@ -102,7 +121,7 @@ erDiagram
     Notification {
         string id PK "cuid"
         string userId FK
-        enum type "INVITE_RECEIVED | INVITE_ACCEPTED | INVITE_DECLINED | MEMBER_JOINED | CHANNEL_CREATED | CHANNEL_MEMBER_ADDED | CHANNEL_MEMBER_REMOVED | MEMBER_REMOVED | MESSAGE_REPLIED | ROLE_CHANGED | WORKSPACE_DELETED"
+        enum type "INVITE_RECEIVED | INVITE_ACCEPTED | INVITE_DECLINED | MEMBER_JOINED | CHANNEL_CREATED | CHANNEL_MEMBER_ADDED | CHANNEL_MEMBER_REMOVED | MEMBER_REMOVED | MESSAGE_REPLIED | ROLE_CHANGED | WORKSPACE_DELETED | MENTIONED_IN_MESSAGE | THREAD_REPLY"
         string title
         string body "nullable"
         string link "nullable"
@@ -140,6 +159,8 @@ erDiagram
     User ||--o{ PushSubscription : "registers"
     User ||--o{ PasswordResetToken : "requests"
     User ||--o{ PinnedMessage : "pins"
+    User ||--o{ MessageMention : "mentioned in"
+    User ||--o{ MessageReaction : "reacts"
 
     Workspace ||--o{ WorkspaceMember : "has members"
     Workspace ||--o{ Conversation : "contains channels"
@@ -153,8 +174,17 @@ erDiagram
 
     Message ||--|| User : "authored by"
     Message ||--o{ Message : "replies to"
+    Message ||--o{ Message : "thread replies"
+    Message ||--o{ MessageMention : "has mentions"
+    Message ||--o{ MessageReaction : "has reactions"
     Message ||--o| PinnedMessage : "pinned state"
     Message }o--|| Conversation : "part of conversation"
+
+    MessageMention }o--|| Message : "belongs to message"
+    MessageMention }o--|| User : "mentions user"
+
+    MessageReaction }o--|| Message : "belongs to message"
+    MessageReaction }o--|| User : "reacted by user"
 
     PinnedMessage ||--|| Message : "references"
     PinnedMessage }o--|| Conversation : "belongs to conversation"
@@ -176,6 +206,40 @@ User ──< WorkspaceMember >── Workspace
 - **Role-based access**: `WorkspaceMember.role` determines what the user can do (OWNER > ADMIN > MEMBER).
 - **Composite primary key**: `@@id([workspaceId, userId])` — a user can only have one role per workspace.
 - **Cascade**: Deleting a Workspace cascades to WorkspaceMember, Conversation (channels), and all messages.
+
+### Message Threading
+
+```
+Message ──< Message (self-referencing via threadRootId)
+```
+
+- **threadRootId**: Self-referencing FK to `Message.id`. When set, the message is a reply within a thread rather than a top-level conversation message.
+- **threadReplyCount**: Denormalized counter updated on each new thread reply. Used for display in the main timeline without querying the full thread.
+- **lastThreadReplyAt**: Timestamp of the most recent reply. Enables sorting and cutoff decisions.
+- **isThreadBroadcast**: When true, the reply also appears in the main conversation timeline.
+- **Index**: `@@index([threadRootId, createdAt])` — efficient thread reply loading.
+
+### Message Mentions
+
+```
+Message ──< MessageMention >── User
+       (unique [messageId, userId])
+```
+
+- **Join table**: Tracks which users are mentioned in a message.
+- **Unique constraint**: A user can only be mentioned once per message.
+- **Index**: `@@index([userId, createdAt])` — for "messages where I was mentioned" queries.
+
+### Message Reactions
+
+```
+Message ──< MessageReaction >── User
+       (unique [messageId, userId, emoji])
+```
+
+- **Join table**: Tracks emoji reactions on messages.
+- **Unique constraint**: A user can only react once per emoji per message.
+- **Schema exists but no endpoints or UI yet** — data model is ready for future implementation.
 
 ### Conversations (DMs + Channels)
 
@@ -287,7 +351,7 @@ LIMIT 50;
 | `ChannelVisibility` | `PUBLIC`, `PRIVATE` | Channel access control |
 | `WorkspaceRole` | `OWNER`, `ADMIN`, `MEMBER` | Hierarchical permissions (OWNER > ADMIN > MEMBER) |
 | `InviteType` | `USER`, `CONVERSATION`, `WORKSPACE`, `CHANNEL` | Target entity type for invites |
-| `NotificationType` | `INVITE_RECEIVED`, `INVITE_ACCEPTED`, `INVITE_DECLINED`, `MEMBER_JOINED`, `CHANNEL_CREATED`, `CHANNEL_MEMBER_ADDED`, `CHANNEL_MEMBER_REMOVED`, `MEMBER_REMOVED`, `MESSAGE_REPLIED`, `ROLE_CHANGED`, `WORKSPACE_DELETED` | Notification event types |
+| `NotificationType` | `INVITE_RECEIVED`, `INVITE_ACCEPTED`, `INVITE_DECLINED`, `MEMBER_JOINED`, `CHANNEL_CREATED`, `CHANNEL_MEMBER_ADDED`, `CHANNEL_MEMBER_REMOVED`, `MEMBER_REMOVED`, `MESSAGE_REPLIED`, `ROLE_CHANGED`, `WORKSPACE_DELETED`, `MENTIONED_IN_MESSAGE`, `THREAD_REPLY` | Notification event types |
 | `UserStatus` | `AVAILABLE`, `AWAY`, `DND`, `INVISIBLE` | Presence status |
 
 ---

@@ -38,7 +38,7 @@
 - Keep App Router layout/page files to an absolute bare minimum. Extract all meaningful logic and UI states into dedicated components in `modules/<name>/components/`.
 - Do NOT use `flex-col-reverse` for chat interfaces. Parse arrays chronologically and use `scrollIntoView`.
 - Prefer TanStack Query for server state. Do not use `useEffect` for data fetching.
-- Use `useChatStore` from Zustand for local UI state (mode, active workspace, drafts).
+- Use `useRouteState()` for navigation-derived state (mode, activeWorkspaceId). Use `useChatStore` for local UI state (activeConversationId, drafts).
 
 ### Backend (Express)
 - All database reads required to execute an update or delete MUST occur inside `prisma.$transaction(async (tx) => { ... })`.
@@ -55,15 +55,16 @@
 
 ### Module Structure
 - Feature modules live in `client/src/modules/<name>/` and mirror `server/src/modules/<name>/`.
-- Current modules: `auth`, `workspaces`, `invites`, `conversations`, `messages`, `chat`, `users`, `notifications`, `settings`, `landing`.
+- Current modules: `auth`, `workspaces`, `invites`, `conversations`, `messages`, `threads`, `chat`, `users`, `notifications`, `settings`, `landing`.
 - The `chat` module is the orchestrator — it contains `ActiveConversation`, `NavigationRail`, `PresenceIndicator`, the chat store, and socket hooks.
+- The `threads` module contains `ThreadPanel`, `ThreadInput`, `threadStore`, and `useThreadMessages`.
 - Socket infrastructure lives in `client/src/socket/` (not in modules).
 
 ### Routing
 - Use Next.js `useRouter` from `next/navigation` for client-side routing. Never use `window.location.href`.
 - Workspace routes: `/workspaces/{slug}/channels/{channelId}`
 - DM routes: `/conversations/{id}`
-- Use `useChatStore` to determine the current mode (`DM` vs `WORKSPACE`) and `activeWorkspaceId`.
+- Use `useRouteState()` from `shared/hooks/useRouteState.ts` to determine the current mode (`DM` vs `WORKSPACE`) and `activeWorkspaceId` — derived from URL params, not Zustand store.
 
 ### Real-Time (Socket.io)
 - All socket emissions must go through `socket.dispatcher.ts` typed helpers — never import `socket.io` in controllers.
