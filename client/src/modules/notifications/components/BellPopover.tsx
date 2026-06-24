@@ -307,7 +307,7 @@ export function BellPopover() {
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+          <span className="absolute -top-0.5 -right-0.5 bg-destructive text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1" style={{ color: '#ffffff' }}>
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -318,7 +318,7 @@ export function BellPopover() {
           ref={popoverRef}
           className="absolute top-full right-0 mt-2 w-80 bg-popover border rounded-xl shadow-xl overflow-hidden z-50"
         >
-          {}
+          { }
           <div className="flex items-center justify-between px-3 py-2.5 border-b">
             <span className="text-sm font-semibold">Notifications</span>
             <div className="flex items-center gap-1">
@@ -334,7 +334,7 @@ export function BellPopover() {
             </div>
           </div>
 
-          {}
+          { }
           <div className="flex items-center gap-1 px-3 pt-2.5 pb-2 border-b">
             <TabButton
               active={activeTab === "invites"}
@@ -352,7 +352,7 @@ export function BellPopover() {
             />
           </div>
 
-          {}
+          { }
           <div className="max-h-80 overflow-y-auto">
             {isError && (
               <div className="px-3 py-2 text-xs text-destructive bg-destructive/10">
@@ -387,7 +387,7 @@ export function BellPopover() {
             )}
           </div>
 
-          {}
+          { }
           {unreadCount > 0 && (
             <div className="border-t p-2">
               <button
