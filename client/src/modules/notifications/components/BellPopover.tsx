@@ -307,7 +307,7 @@ export function BellPopover() {
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 bg-destructive text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+          <span className="absolute -top-0.5 -right-0.5 bg-destructive text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1" style={{ color: '#ffffff' }}>
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
