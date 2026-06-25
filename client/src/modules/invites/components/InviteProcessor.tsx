@@ -11,6 +11,7 @@ import { api } from "@/shared/lib/api";
 import { API_ROUTES, APP_ROUTES } from "@/config/url";
 import { toast } from "sonner";
 import { safeRedirect } from "@/shared/lib/utils";
+import Image from "next/image";
 import { Loader2 } from "lucide-react";
 
 interface InviteInfo {
@@ -84,10 +85,12 @@ function InviteLandingPage({
   return (
     <div className="flex items-center justify-center min-h-dvh bg-background text-foreground relative overflow-hidden selection:bg-brand/30">
       <div className="absolute inset-0 z-0 pointer-events-none">
-        <img
+        <Image
           src="/images/auth-bg.png"
           alt="Abstract glowing network"
-          className="w-full h-full object-cover opacity-60 mix-blend-screen"
+          fill
+          className="object-cover opacity-60 mix-blend-screen"
+          priority
         />
         <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/80 via-zinc-950/20 to-zinc-950/80"></div>
       </div>
@@ -95,10 +98,13 @@ function InviteLandingPage({
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-brand/10 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="absolute top-8 left-8 z-20">
-        <img
+        <Image
           src="/images/Nexus_brandname.png"
           alt="Nexus Logo"
+          width={180}
+          height={50}
           className="h-8 w-auto opacity-80"
+          priority
         />
       </div>
 
@@ -106,9 +112,11 @@ function InviteLandingPage({
 
         <div className="flex flex-col items-center text-center">
           <div className="w-20 h-20 mb-8 rounded-2xl bg-muted/50 shadow-md flex items-center justify-center ring-1 ring-border hover:scale-105 transition-transform duration-300">
-            <img
+            <Image
               src="/images/Logo.png"
               alt="Nexus"
+              width={48}
+              height={48}
               className="w-12 h-12 object-contain"
             />
           </div>
@@ -277,7 +285,7 @@ export function InviteProcessor() {
     return (
       <div className="flex items-center justify-center min-h-dvh bg-background text-foreground relative overflow-hidden">
         <div className="absolute inset-0 z-0 pointer-events-none">
-          <img src="/images/auth-bg.png" alt="" className="w-full h-full object-cover opacity-60 mix-blend-screen" />
+          <Image src="/images/auth-bg.png" alt="" fill className="object-cover opacity-60 mix-blend-screen" priority />
           <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/80 via-zinc-950/20 to-zinc-950/80"></div>
         </div>
         <div className="flex flex-col items-center gap-4 relative z-10">
@@ -292,7 +300,7 @@ export function InviteProcessor() {
     return (
       <div className="flex items-center justify-center min-h-dvh bg-background text-foreground relative overflow-hidden">
         <div className="absolute inset-0 z-0 pointer-events-none">
-          <img src="/images/auth-bg.png" alt="" className="w-full h-full object-cover opacity-60 mix-blend-screen" />
+          <Image src="/images/auth-bg.png" alt="" fill className="object-cover opacity-60 mix-blend-screen" priority />
           <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/80 via-zinc-950/20 to-zinc-950/80"></div>
         </div>
         <div className="relative z-10 text-center max-w-md px-6 py-8 bg-card/60 backdrop-blur-xl border border-border/50 shadow-2xl rounded-3xl m-4">

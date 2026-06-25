@@ -1,4 +1,5 @@
 
+import Image from "next/image";
 
 export default function OnboardingLayout({
   children,
@@ -10,7 +11,7 @@ export default function OnboardingLayout({
       {}
       <div className="h-14 border-b flex items-center px-6 shrink-0 z-10 bg-background/80 backdrop-blur-sm">
         <div className="flex items-center gap-2">
-          <img src="/images/Nexus_brandname.png" alt="Nexus Logo" className="h-6 object-contain filter drop-shadow-md" />
+          <Image src="/images/Nexus_brandname.png" alt="Nexus Logo" width={180} height={50} className="h-6 w-auto object-contain filter drop-shadow-md" priority />
         </div>
       </div>
 

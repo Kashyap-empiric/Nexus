@@ -16,7 +16,7 @@ import { ThemeProvider } from "@/shared/providers/theme-provider";
 import { QueryProvider } from "@/shared/providers/query-provider";
 import { AuthProvider } from "@/shared/providers/auth-provider";
 import { AuthGate } from "@/shared/providers/AuthGate";
-import { Toaster } from "sonner";
+import { LazyToaster } from "@/shared/components/ui/toaster-lazy";
 
 export default function RootLayout({
   children,
@@ -41,7 +41,7 @@ export default function RootLayout({
               <AuthGate>
                 {children}
               </AuthGate>
-              <Toaster richColors />
+              <LazyToaster />
             </AuthProvider>
           </QueryProvider>
         </ThemeProvider>
