@@ -222,18 +222,22 @@ export const getChannelThreads = async (conversationId: string) => {
 };
 
 export const getWorkspaceThreads = async (slugOrId: string, userId: string) => {
+  console.log("[Threads] looking up workspace", slugOrId);
   let workspace = await prisma.workspace.findUnique({
     where: { slug: slugOrId },
     select: { id: true },
   });
   if (!workspace) {
+    console.log("[Threads] not found by slug, trying id", slugOrId);
     workspace = await prisma.workspace.findUnique({
       where: { id: slugOrId },
       select: { id: true },
     });
   }
   if (!workspace) throw new NotFoundError("Workspace not found");
+  console.log("[Threads] found workspace", workspace.id, "fetching threads");
   const threads = await messagesRepo.findWorkspaceThreads(workspace.id, userId);
+  console.log("[Threads] found", threads.length, "threads");
   return threads.map(mapToThreadSummary);
 };
 

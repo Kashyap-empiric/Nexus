@@ -60,6 +60,7 @@ model Conversation {
   members         ConversationMember[]
   messages        Message[]
   pinnedMessages  PinnedMessage[] @relation("PinToConversation")
+
 }
 
 model ConversationMember {
