@@ -58,4 +58,6 @@ export interface ThreadSummary {
   replyCount: number;
   lastReplyAt: string;
   lastReplyPreview: string | null;
+  lastReplyAuthor: { id: string; username: string; avatarUrl: string | null } | null;
+  participants: { id: string; username: string; avatarUrl: string | null }[];
 }

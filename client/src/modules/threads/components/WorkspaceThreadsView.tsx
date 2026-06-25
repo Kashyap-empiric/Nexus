@@ -15,9 +15,11 @@ interface WorkspaceThreadsViewProps {
   workspaceId: string;
 }
 
+const MAX_VISIBLE_PARTICIPANTS = 3;
+
 export function WorkspaceThreadsView({ workspaceId }: WorkspaceThreadsViewProps) {
   const router = useRouter();
-  
+
   const { data: threads, isLoading, isError } = useWorkspaceThreads(workspaceId);
   const { data: channels } = useWorkspaceChannelsQuery(workspaceId);
   const { openThread } = useThreadStore();
@@ -59,7 +61,7 @@ export function WorkspaceThreadsView({ workspaceId }: WorkspaceThreadsViewProps)
         </div>
         <h2 className="text-xl font-bold text-foreground mb-2">No threads yet</h2>
         <p className="text-muted-foreground">
-          You don&apos;t have any active threads in this workspace. 
+          You don&apos;t have any active threads in this workspace.
           When you reply to a message or someone replies to you, it will show up here.
         </p>
       </div>
@@ -67,72 +69,123 @@ export function WorkspaceThreadsView({ workspaceId }: WorkspaceThreadsViewProps)
   }
 
   return (
-    <div className="flex flex-col h-full bg-background overflow-hidden">
-      <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8 lg:px-12 xl:px-24">
-        <div className="max-w-4xl mx-auto space-y-6">
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-foreground">Threads</h1>
-            <p className="text-muted-foreground mt-1">
-              Conversations you&apos;re participating in.
+    <div className="flex-1 flex flex-col bg-background h-full overflow-hidden">
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-6 md:px-10 lg:px-16 py-6" style={{ maxWidth: 920 }}>
+          <div className="mb-6">
+            <h1 className="text-xl font-bold text-foreground tracking-tight">Threads</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Conversations you&apos;re participating in
             </p>
           </div>
 
-          <div className="space-y-4">
-            {threads.map((thread) => {
+          <div>
+            {threads.map((thread, index) => {
               const channel = channels?.find(c => c.id === thread.conversationId);
-              const channelName = channel?.name || "Unknown channel";
+              const channelName = channel?.name || "unknown";
 
               return (
-                <button
-                  key={thread.threadRootId}
-                  onClick={() => {
-                    // Navigate to channel and open thread
-                    router.push(`/workspaces/${workspaceId}/channels/${thread.conversationId}`);
-                    // Setting a slight timeout to ensure the channel loads before opening the thread
-                    setTimeout(() => {
-                      openThread(thread.threadRootId);
-                      setInfoPanelView('thread');
-                      setInfoPanelOpen(true);
-                    }, 50);
-                  }}
-                  className="w-full text-left p-4 rounded-xl border border-border/50 bg-card hover:border-brand/30 hover:shadow-sm transition-all flex flex-col group relative"
-                >
-                  <div className="flex items-center gap-1.5 mb-3 text-xs font-medium text-muted-foreground">
-                    <Hash className="h-3.5 w-3.5" />
-                    <span className="hover:underline">{channelName}</span>
-                  </div>
-
-                  <div className="flex items-start gap-3">
+                <div key={thread.threadRootId}>
+                  {index > 0 && <div className="border-t border-border/40" />}
+                  <button
+                    onClick={() => {
+                      router.push(`/workspaces/${workspaceId}/channels/${thread.conversationId}`);
+                      setTimeout(() => {
+                        openThread(thread.threadRootId);
+                        setInfoPanelView("thread");
+                        setInfoPanelOpen(true);
+                      }, 50);
+                    }}
+                    className="w-full text-left px-1 py-4 hover:bg-accent/30 transition-colors flex items-start gap-3 group cursor-pointer"
+                  >
                     <UserAvatar
                       name={thread.rootAuthor.username}
                       src={thread.rootAuthor.avatarUrl}
-                      className="h-10 w-10 shrink-0"
+                      className="h-10 w-10 shrink-0 mt-0.5"
                     />
+
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="font-bold text-foreground">{thread.rootAuthor.username}</span>
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Hash className="h-3 w-3 shrink-0" />
+                          <span className="font-medium hover:underline">{channelName}</span>
+                        </div>
+                        <span className="text-[11px] text-muted-foreground/60">
                           {formatRelativeTime(thread.lastReplyAt)}
                         </span>
                       </div>
-                      <p className="text-sm text-foreground/90 line-clamp-2 leading-relaxed">
+
+                      <div className="mb-1">
+                        <span className="text-sm font-semibold text-foreground">
+                          {thread.rootAuthor.username}
+                        </span>
+                        <span className="text-sm text-muted-foreground ml-1.5">
+                          started a thread
+                        </span>
+                      </div>
+
+                      <p className="text-sm text-foreground/80 line-clamp-1 mb-2">
                         {thread.rootMessagePreview}
                       </p>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center gap-3 mt-4 pt-4 border-t border-border/40 pl-[52px]">
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand/10 text-brand text-xs font-semibold shrink-0">
-                      <MessageSquare className="h-3.5 w-3.5" />
-                      {thread.replyCount} {thread.replyCount === 1 ? 'reply' : 'replies'}
+                      {thread.lastReplyPreview && thread.lastReplyAuthor && (
+                        <div className="flex items-start gap-2 mb-2 pl-0">
+                          <div className="relative shrink-0 mt-0.5">
+                            <UserAvatar
+                              name={thread.lastReplyAuthor.username}
+                              src={thread.lastReplyAuthor.avatarUrl}
+                              className="h-5 w-5"
+                            />
+                            <div className="absolute -bottom-0.5 -right-0.5 bg-background rounded-full p-[1px]">
+                              <MessageSquare className="h-2.5 w-2.5 text-brand" />
+                            </div>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs font-medium text-foreground">
+                              {thread.lastReplyAuthor.username}
+                            </span>
+                            <p className="text-xs text-muted-foreground line-clamp-1 leading-relaxed">
+                              {thread.lastReplyPreview}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <MessageSquare className="h-3 w-3" />
+                          <span className="font-medium">
+                            {thread.replyCount} {thread.replyCount === 1 ? "reply" : "replies"}
+                          </span>
+                        </div>
+
+                        {thread.participants.length > 0 && (
+                          <div className="flex items-center">
+                            <div className="flex -space-x-1.5 mr-2">
+                              {thread.participants.slice(0, MAX_VISIBLE_PARTICIPANTS).map((p) => (
+                                <UserAvatar
+                                  key={p.id}
+                                  name={p.username}
+                                  src={p.avatarUrl}
+                                  className="h-5 w-5 border-2 border-background"
+                                />
+                              ))}
+                            </div>
+                            {thread.participants.length > MAX_VISIBLE_PARTICIPANTS && (
+                              <span className="text-[11px] text-muted-foreground">
+                                +{thread.participants.length - MAX_VISIBLE_PARTICIPANTS}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        <span className="text-[11px] font-medium text-brand/70">
+                          Active
+                        </span>
+                      </div>
                     </div>
-                    {thread.lastReplyPreview && (
-                      <span className="text-sm text-muted-foreground truncate">
-                        {thread.lastReplyPreview}
-                      </span>
-                    )}
-                  </div>
-                </button>
+                  </button>
+                </div>
               );
             })}
           </div>

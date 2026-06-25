@@ -201,6 +201,13 @@ export const searchMessages = async (query: string, userId: string, limit: numbe
 };
 
 function mapToThreadSummary(threadRoot: any): any {
+  const replies = threadRoot.threadReplies ?? [];
+  const uniqueParticipants = new Map<string, { id: string; username: string; avatarUrl: string | null }>();
+  for (const reply of replies) {
+    if (reply.user && !uniqueParticipants.has(reply.user.id)) {
+      uniqueParticipants.set(reply.user.id, reply.user);
+    }
+  }
   return {
     threadRootId: threadRoot.id,
     conversationId: threadRoot.conversationId,
@@ -212,7 +219,9 @@ function mapToThreadSummary(threadRoot: any): any {
     },
     replyCount: threadRoot.threadReplyCount,
     lastReplyAt: threadRoot.lastThreadReplyAt ? threadRoot.lastThreadReplyAt.toISOString() : threadRoot.createdAt.toISOString(),
-    lastReplyPreview: threadRoot.threadReplies.length > 0 ? threadRoot.threadReplies[0].content : null,
+    lastReplyPreview: replies.length > 0 ? replies[0].content : null,
+    lastReplyAuthor: replies.length > 0 && replies[0].user ? replies[0].user : null,
+    participants: Array.from(uniqueParticipants.values()),
   };
 }
 

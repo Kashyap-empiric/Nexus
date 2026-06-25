@@ -287,8 +287,13 @@ export const findWorkspaceThreads = async (workspaceId: string, userId: string) 
       threadReplies: {
         where: { deletedAt: null },
         orderBy: { createdAt: "desc" },
-        take: 1,
-        select: { content: true, deletedAt: true },
+        take: 3,
+        select: {
+          content: true,
+          deletedAt: true,
+          userId: true,
+          user: { select: { id: true, username: true, avatarUrl: true } },
+        },
       },
     },
   });
