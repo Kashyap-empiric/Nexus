@@ -159,10 +159,10 @@ export function WorkspaceThreadsView({ workspaceId }: WorkspaceThreadsViewProps)
                           </span>
                         </div>
 
-                        {thread.participants.length > 0 && (
+                        {(thread.participants?.length ?? 0) > 0 && (
                           <div className="flex items-center">
                             <div className="flex -space-x-1.5 mr-2">
-                              {thread.participants.slice(0, MAX_VISIBLE_PARTICIPANTS).map((p) => (
+                              {(thread.participants ?? []).slice(0, MAX_VISIBLE_PARTICIPANTS).map((p) => (
                                 <UserAvatar
                                   key={p.id}
                                   name={p.username}
@@ -171,9 +171,9 @@ export function WorkspaceThreadsView({ workspaceId }: WorkspaceThreadsViewProps)
                                 />
                               ))}
                             </div>
-                            {thread.participants.length > MAX_VISIBLE_PARTICIPANTS && (
+                            {(thread.participants?.length ?? 0) > MAX_VISIBLE_PARTICIPANTS && (
                               <span className="text-[11px] text-muted-foreground">
-                                +{thread.participants.length - MAX_VISIBLE_PARTICIPANTS}
+                                +{(thread.participants?.length ?? 0) - MAX_VISIBLE_PARTICIPANTS}
                               </span>
                             )}
                           </div>
