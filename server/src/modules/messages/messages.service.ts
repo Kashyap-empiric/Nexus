@@ -7,7 +7,6 @@ import { notificationQueue } from "@/jobs/queues.js";
 import { dispatchPinEvent } from "@/socket/socket.dispatcher.js";
 import { prisma } from "@/lib/db.js";
 import { findWorkspaceMember } from "../auth/auth.repository.js";
-import * as workspacesRepo from "../workspaces/workspaces.repository.js";
 
 
 export const sendMessageNotifications = async (
@@ -223,7 +222,16 @@ export const getChannelThreads = async (conversationId: string) => {
 };
 
 export const getWorkspaceThreads = async (slugOrId: string, userId: string) => {
-  const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(slugOrId);
+  let workspace = await prisma.workspace.findUnique({
+    where: { slug: slugOrId },
+    select: { id: true },
+  });
+  if (!workspace) {
+    workspace = await prisma.workspace.findUnique({
+      where: { id: slugOrId },
+      select: { id: true },
+    });
+  }
   if (!workspace) throw new NotFoundError("Workspace not found");
   const threads = await messagesRepo.findWorkspaceThreads(workspace.id, userId);
   return threads.map(mapToThreadSummary);
