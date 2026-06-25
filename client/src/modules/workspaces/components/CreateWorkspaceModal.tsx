@@ -3,6 +3,7 @@
 
 
 import { useState, useRef } from "react";
+import Image from "next/image";
 import { Camera } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -141,7 +142,7 @@ export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalPr
                     className="relative h-16 w-16 rounded-xl border-2 border-dashed flex items-center justify-center cursor-pointer hover:border-muted-foreground/50 hover:bg-muted/50 transition-all border-muted-foreground/25 shrink-0 group"
                   >
                     {iconPreview ? (
-                      <img src={iconPreview} alt="" className="h-full w-full rounded-xl object-cover" />
+                      <Image src={iconPreview} alt="" fill className="rounded-xl object-cover" unoptimized />
                     ) : (
                       <Camera className="h-6 w-6 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors" />
                     )}

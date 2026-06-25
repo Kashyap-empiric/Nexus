@@ -17,6 +17,7 @@ import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogTitle, 
 import { useWorkspaceDetails, useWorkspaceMembersQuery, useUpdateWorkspaceMutation, useDeleteWorkspaceMutation, useLeaveWorkspaceMutation, useUpdateMemberRole, useRemoveMember } from "../hooks/useWorkspaces";
 import { useUser } from "@/modules/auth/store/useAuthStore";
 import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
 import { Camera, ArrowLeftFromLine, Trash, Shield, ShieldCheck, User as UserIcon, Settings, Users, ChevronRight, ArrowLeft, UserMinus } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import type { WorkspaceRole, WorkspaceMember } from "../types/workspace";
@@ -353,11 +354,11 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                       )}
                     >
                       {iconPreview ? (
-                        <img src={iconPreview} alt="" className="h-full w-full rounded-xl object-cover" />
+                        <Image src={iconPreview} alt="" fill className="rounded-xl object-cover" unoptimized />
                       ) : workspace?.iconPath ? (
-                        <img src={getPublicUrl("avatars", workspace.iconPath) || ""} alt="" className="h-full w-full rounded-xl object-cover" />
+                        <Image src={getPublicUrl("avatars", workspace.iconPath) || ""} alt="" fill className="rounded-xl object-cover" sizes="80px" />
                       ) : workspace?.imageUrl ? (
-                        <img src={workspace.imageUrl} alt="" className="h-full w-full rounded-xl object-cover" />
+                        <Image src={workspace.imageUrl} alt="" fill className="rounded-xl object-cover" sizes="80px" />
                       ) : (
                         <Camera className="h-6 w-6 text-muted-foreground/50" />
                       )}

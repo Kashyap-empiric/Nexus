@@ -1,6 +1,7 @@
 
 
 import { useState, useRef } from "react";
+import Image from "next/image";
 import { Camera, Upload } from "lucide-react";
 import { useUser } from "@/modules/auth/store/useAuthStore";
 import { Button } from "@/shared/components/ui/button";
@@ -48,7 +49,7 @@ export function SetupProfileStep({ onContinue, initialData }: SetupProfileStepPr
           <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
             <div className="w-24 h-24 rounded-full overflow-hidden border bg-muted flex items-center justify-center hover:opacity-90 transition-opacity">
               {previewUrl ? (
-                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                <Image src={previewUrl} alt="Preview" fill className="object-cover" unoptimized />
               ) : (
                 <Camera className="w-8 h-8 text-muted-foreground group-hover:scale-110 transition-transform" />
               )}

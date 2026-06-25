@@ -1,6 +1,7 @@
 
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { Loader2, Hash, Camera } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -138,7 +139,7 @@ export function CreateWorkspaceStep({ onCreate, isLoading, initialName, defaultF
                 className="relative h-14 w-14 rounded-xl border-2 border-dashed flex items-center justify-center cursor-pointer hover:border-muted-foreground/50 transition-colors border-muted-foreground/25 bg-background/50"
               >
                 {iconPreview ? (
-                  <img src={iconPreview} alt="" className="h-full w-full rounded-xl object-cover" />
+                  <Image src={iconPreview} alt="" fill className="rounded-xl object-cover" unoptimized />
                 ) : (
                   <Camera className="h-5 w-5 text-muted-foreground/50" />
                 )}
