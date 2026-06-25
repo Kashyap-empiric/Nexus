@@ -54,8 +54,12 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
     onMutate: async ({ content, tempId, threadRootId, isThreadBroadcast }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.messages(conversationId) });
 
-      const userId = currentUser?.id || "me";
-      const username = currentUser?.username || "Me";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const authData: any = currentUser;
+      const userId = authData?.id || "me";
+      const username = authData?.user_metadata?.username || authData?.username || "Me";
+      const avatarUrl = authData?.user_metadata?.avatar_url || authData?.user_metadata?.avatarUrl || authData?.avatarUrl || null;
+      const fullName = authData?.user_metadata?.full_name || authData?.user_metadata?.fullName || authData?.fullName || null;
 
       const previousMessages = queryClient.getQueryData(queryKeys.messages(conversationId));
 
@@ -65,7 +69,7 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
         conversationId,
         userId: userId,
         createdAt: new Date().toISOString(),
-        user: { id: userId, username: username, avatarUrl: currentUser?.avatarUrl || null, fullName: currentUser?.fullName || null },
+        user: { id: userId, username: username, avatarUrl: avatarUrl, fullName: fullName },
         isEdited: false,
         deletedAt: null,
         pending: true,
