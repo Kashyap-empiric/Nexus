@@ -8,6 +8,7 @@ import { InfoPanelView } from "@/shared/components/layout/AppLayoutShell";
 import { MemberListPanel } from "@/modules/workspaces/components/MemberListPanel";
 import { PinnedMessagesPanel } from "@/modules/messages/components/PinnedMessagesPanel";
 import { ThreadPanel } from "@/modules/threads/components/ThreadPanel";
+import { ChannelThreadsBrowser } from "@/modules/threads/components/ChannelThreadsBrowser";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { PresenceIndicator } from "@/modules/chat/components/PresenceIndicator";
 import { getPublicProfile } from "@/modules/users/api/users.api";
@@ -139,14 +140,15 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
           Pins
         </button>
         <button
-          onClick={() => setInfoPanelView(view === 'thread' ? 'about' : 'thread')}
+          onClick={() => setInfoPanelView('threads')}
           className={cn(
             "flex-1 pb-2 pt-3 text-sm font-medium text-center border-b-2 transition-colors",
-            view === 'thread' ? "border-brand text-brand" : "border-transparent text-muted-foreground hover:text-foreground"
+            (view === 'threads' || view === 'thread') ? "border-brand text-brand" : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
-          Thread
+          Threads
         </button>
+
       </div>
 
       <div className="flex-1 overflow-y-auto min-h-0 flex flex-col">
@@ -266,10 +268,18 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
           <PinnedMessagesPanel conversationId={conversationId} />
         )}
 
+        {view === 'threads' && (
+          <ChannelThreadsBrowser
+            conversationId={conversationId}
+            setInfoPanelView={setInfoPanelView}
+          />
+        )}
+
         {view === 'thread' && (
           <ThreadPanel
             conversationId={conversationId}
             currentUser={(currentUser as unknown) as User | undefined}
+            onBack={() => setInfoPanelView('threads')}
           />
         )}
       </div>

@@ -5,6 +5,7 @@ import { APP_ROUTES } from "@/config/url";
 import { ENV } from "@/config/env";
 
 export async function proxy(req: NextRequest) {
+  console.log("PROXY:", req.method, req.nextUrl.pathname, req.headers.get("referer"));
   const res = NextResponse.next();
 
   const supabase = createServerClient(

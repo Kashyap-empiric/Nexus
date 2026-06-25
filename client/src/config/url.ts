@@ -25,6 +25,7 @@ export const API_ROUTES = {
     },
     MESSAGE_DETAIL: (conversationId: string, messageId: string) => `/conversations/${conversationId}/messages/${messageId}`,
     THREAD: (conversationId: string, messageId: string) => `/conversations/${conversationId}/messages/${messageId}/thread`,
+    THREADS: (conversationId: string) => `/conversations/${conversationId}/threads`,
     PINS: (conversationId: string) => `/conversations/${conversationId}/pins`,
     PIN_DETAIL: (conversationId: string, messageId: string) => `/conversations/${conversationId}/pins/${messageId}`,
   },
@@ -48,6 +49,9 @@ export const API_ROUTES = {
   },
   MESSAGES: {
     SEARCH: (query: string) => `/messages/search?q=${encodeURIComponent(query)}`,
+  },
+  WORKSPACES: {
+    THREADS: (workspaceId: string) => `/workspaces/${workspaceId}/threads`,
   },
   CHANNEL_MEMBERS: (workspaceId: string, channelId: string) =>
     `/workspaces/${workspaceId}/channels/${channelId}/members`,

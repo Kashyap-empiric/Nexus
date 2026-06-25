@@ -45,3 +45,17 @@ export interface MessagePage {
   data: Message[];
   nextCursor: string | null;
 }
+
+export interface ThreadSummary {
+  threadRootId: string;
+  conversationId: string;
+  rootMessagePreview: string;
+  rootAuthor: {
+    id: string;
+    username: string;
+    avatarUrl: string | null;
+  };
+  replyCount: number;
+  lastReplyAt: string;
+  lastReplyPreview: string | null;
+}

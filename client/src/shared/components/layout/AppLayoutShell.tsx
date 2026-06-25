@@ -40,7 +40,7 @@ function MemberCountBadge({ workspaceId }: { workspaceId: string }) {
   );
 }
 
-export type InfoPanelView = 'about' | 'members' | 'pins' | 'thread';
+export type InfoPanelView = 'about' | 'members' | 'pins' | 'thread' | 'threads';
 
 export interface LayoutUIContextType {
   infoPanelOpen: boolean;

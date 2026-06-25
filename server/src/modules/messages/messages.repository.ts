@@ -239,6 +239,61 @@ export const findThreadParticipants = async (threadRootId: string): Promise<stri
   return rows.map(r => r.userId);
 };
 
+export const findChannelThreads = async (conversationId: string) => {
+  return prisma.message.findMany({
+    where: {
+      conversationId,
+      threadRootId: null,
+      threadReplyCount: { gt: 0 },
+      deletedAt: null,
+    },
+    orderBy: { lastThreadReplyAt: "desc" },
+    include: {
+      user: {
+        select: { id: true, username: true, avatarUrl: true },
+      },
+      threadReplies: {
+        where: { deletedAt: null },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { content: true, deletedAt: true },
+      },
+    },
+  });
+};
+
+export const findWorkspaceThreads = async (workspaceId: string, userId: string) => {
+  return prisma.message.findMany({
+    where: {
+      conversation: {
+        workspaceId,
+        members: { some: { userId } },
+      },
+      threadRootId: null,
+      threadReplyCount: { gt: 0 },
+      deletedAt: null,
+      OR: [
+        { userId },
+        { threadReplies: { some: { userId, deletedAt: null } } },
+        { mentions: { some: { userId } } },
+        { threadReplies: { some: { mentions: { some: { userId } }, deletedAt: null } } }
+      ],
+    },
+    orderBy: { lastThreadReplyAt: "desc" },
+    include: {
+      user: {
+        select: { id: true, username: true, avatarUrl: true },
+      },
+      threadReplies: {
+        where: { deletedAt: null },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { content: true, deletedAt: true },
+      },
+    },
+  });
+};
+
 export const updateMessage = async (
   messageId: string,
   content: string

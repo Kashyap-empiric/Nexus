@@ -6,16 +6,17 @@ import { useThreadMessagesQuery } from "../hooks/useThreadMessages";
 import { ThreadInput } from "./ThreadInput";
 import { MarkdownRenderer } from "@/modules/messages/components/MarkdownRenderer";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, ArrowLeft } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import type { User } from "@/modules/conversations/types/conversation";
 
 interface ThreadPanelProps {
   conversationId: string;
   currentUser?: User;
+  onBack?: () => void;
 }
 
-export function ThreadPanel({ conversationId, currentUser }: ThreadPanelProps) {
+export function ThreadPanel({ conversationId, currentUser, onBack }: ThreadPanelProps) {
   const { activeThreadRootId, threadData, setThreadData } = useThreadStore();
   const repliesEndRef = useRef<HTMLDivElement>(null);
 
@@ -71,7 +72,18 @@ export function ThreadPanel({ conversationId, currentUser }: ThreadPanelProps) {
           return (
             <>
               <div className="px-5 py-4 border-b border-border/40 bg-card shadow-sm">
-                <h3 className="text-[17px] font-bold text-foreground mb-1">Thread</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  {onBack && (
+                    <button 
+                      onClick={onBack}
+                      className="p-1 -ml-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+                      title="Back to Threads"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </button>
+                  )}
+                  <h3 className="text-[17px] font-bold text-foreground">Thread</h3>
+                </div>
                 <div className="text-[13px] text-muted-foreground flex items-center gap-1.5 flex-wrap">
                   <span className="font-semibold text-foreground">{replies.length} replies</span>
                   <span className="opacity-50">•</span>

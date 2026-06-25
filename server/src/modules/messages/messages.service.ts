@@ -7,6 +7,7 @@ import { notificationQueue } from "@/jobs/queues.js";
 import { dispatchPinEvent } from "@/socket/socket.dispatcher.js";
 import { prisma } from "@/lib/db.js";
 import { findWorkspaceMember } from "../auth/auth.repository.js";
+import * as workspacesRepo from "../workspaces/workspaces.repository.js";
 
 
 export const sendMessageNotifications = async (
@@ -198,6 +199,34 @@ export const getThreadMessages = async (conversationId: string, messageId: strin
 
 export const searchMessages = async (query: string, userId: string, limit: number) => {
   return messagesRepo.searchMessages(query, userId, limit);
+};
+
+function mapToThreadSummary(threadRoot: any): any {
+  return {
+    threadRootId: threadRoot.id,
+    conversationId: threadRoot.conversationId,
+    rootMessagePreview: threadRoot.content,
+    rootAuthor: {
+      id: threadRoot.user.id,
+      username: threadRoot.user.username,
+      avatarUrl: threadRoot.user.avatarUrl,
+    },
+    replyCount: threadRoot.threadReplyCount,
+    lastReplyAt: threadRoot.lastThreadReplyAt ? threadRoot.lastThreadReplyAt.toISOString() : threadRoot.createdAt.toISOString(),
+    lastReplyPreview: threadRoot.threadReplies.length > 0 ? threadRoot.threadReplies[0].content : null,
+  };
+}
+
+export const getChannelThreads = async (conversationId: string) => {
+  const threads = await messagesRepo.findChannelThreads(conversationId);
+  return threads.map(mapToThreadSummary);
+};
+
+export const getWorkspaceThreads = async (slugOrId: string, userId: string) => {
+  const workspace = await workspacesRepo.findWorkspaceByIdOrSlug(slugOrId);
+  if (!workspace) throw new NotFoundError("Workspace not found");
+  const threads = await messagesRepo.findWorkspaceThreads(workspace.id, userId);
+  return threads.map(mapToThreadSummary);
 };
 
 export const pinMessage = async (messageId: string, conversationId: string, userId: string) => {

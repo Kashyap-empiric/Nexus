@@ -387,7 +387,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                               size="icon"
                               className="h-8 w-8 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60"
                               onClick={() => onOpenThread?.(msg.id)}
-                              title="Reply in Thread"
+                              title="Reply in thread"
                             >
                               <MessageSquare className="h-3.5 w-3.5" />
                             </Button>
@@ -437,7 +437,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                   <Reply className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => onOpenThread?.(msg.id)}>
-                                  <MessageSquare className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply in Thread</span>
+                                  <MessageSquare className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply in thread</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(msg.content)}>
                                   <Copy className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy</span>
@@ -478,7 +478,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                   <Reply className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => onOpenThread?.(msg.id)}>
-                                  <MessageSquare className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply in Thread</span>
+                                  <MessageSquare className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply in thread</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(msg.content)}>
                                   <Copy className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy</span>
@@ -595,7 +595,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
               setOpenMenuId(null);
               setContextMenuTarget(null);
             }}>
-              <MessageSquare className="h-4 w-4 mr-2" /> Reply in Thread
+              <MessageSquare className="h-4 w-4 mr-2" /> Reply in thread
             </DropdownMenuItem>
             <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => {
               navigator.clipboard.writeText(contextMenuTarget.content);

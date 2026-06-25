@@ -103,6 +103,37 @@ export const getThreadMessages = async (req: AuthRequest, res: Response, next: N
   }
 };
 
+export const getChannelThreads = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { conversationId } = req.params as { conversationId: string };
+    const threads = await messagesService.getChannelThreads(conversationId);
+    res.json({ data: threads });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
+      return;
+    }
+    console.error("Error fetching channel threads:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getWorkspaceThreads = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { id: workspaceId } = req.params as { id: string };
+    const threads = await messagesService.getWorkspaceThreads(workspaceId, userId);
+    res.json({ data: threads });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
+      return;
+    }
+    console.error("Error fetching workspace threads:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export const createMessage = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;

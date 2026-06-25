@@ -37,6 +37,7 @@ import {
   updateMemberRoleBodySchema,
   addChannelMembersSchema,
 } from "./workspaces.schema.js";
+import { getWorkspaceThreads } from "@/modules/messages/messages.controller.js";
 
 const router = Router();
 
@@ -48,6 +49,13 @@ router.get("/:id", validate({ params: workspaceIdParamsSchema }), getWorkspaceDe
 router.patch("/:id", validate({ params: workspaceIdParamsSchema, body: updateWorkspaceBodySchema }), updateWorkspace);
 router.delete("/:id", validate({ params: workspaceIdParamsSchema }), deleteWorkspace);
 router.post("/:id/leave", validate({ params: workspaceIdParamsSchema }), leaveWorkspace);
+
+router.get(
+  "/:id/threads",
+  validate({ params: workspaceIdParamsSchema }),
+  getWorkspaceThreads
+);
+
 router.get("/:id/channels", validate({ params: workspaceIdParamsSchema }), getWorkspaceChannels);
 router.post("/:id/channels", validate({ params: workspaceIdParamsSchema, body: createChannelBodySchema }), createChannel);
 router.patch("/:id/channels/:channelId", validate({ params: channelIdParamsSchema, body: updateChannelBodySchema }), updateChannel);

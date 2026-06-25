@@ -35,7 +35,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import { MessageSquarePlus, UserPlus } from "lucide-react";
+import { MessageSquarePlus, UserPlus, MessageSquare } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { socket } from "@/socket/socketClient";
 import { WorkspaceHeader } from "@/modules/workspaces/components/WorkspaceHeader";
@@ -58,7 +58,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
   const queryClient = useQueryClient();
   const { data: conversations, isLoading, isError: isConvError } = useConversationsQuery();
 
-  const { mode, activeWorkspaceId } = useRouteState();
+  const { mode, activeWorkspaceId, routeState } = useRouteState();
   const { data: workspaceChannels, isLoading: isLoadingChannels } = useWorkspaceChannelsQuery(mode === "WORKSPACE" ? activeWorkspaceId : null);
   const { data: workspaceDetails } = useWorkspaceDetails(mode === "WORKSPACE" ? activeWorkspaceId : null);
   const currentAuthUser = useUser();
@@ -176,6 +176,22 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
             </div>
           )}
           <div>
+            {mode === "WORKSPACE" && (
+              <div className="mb-2 space-y-[2px]">
+                <Link
+                  href={`/workspaces/${activeWorkspaceId}/threads`}
+                  onClick={() => onNavigate?.()}
+                  className={`flex items-center gap-3 px-2 py-2 rounded-md transition-colors ${
+                    routeState.mode === "workspace" && routeState.destination?.type === "threads"
+                      ? "bg-brand/10 text-brand"
+                      : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+                  }`}
+                >
+                  <MessageSquare className="h-4 w-4 shrink-0" />
+                  <span className="font-medium text-sm">Threads</span>
+                </Link>
+              </div>
+            )}
             <div className="flex items-center justify-between text-xs font-semibold text-[#A0AAB2] uppercase tracking-wider mb-2 px-2 mt-2">
               <span>{mode === "DM" ? "Direct Messages" : "Public Channels"}</span>
               {mode === "DM" ? (
