@@ -74,7 +74,7 @@ export function NavigationRail({ openSettings }: NavigationRailProps) {
               mode === "DM" ? "bg-brand text-brand-foreground rounded-xl shadow-sm" : ""
             )}
             title="Direct Messages"
-            onClick={() => {}}
+            onClick={() => { }}
           >
             <MessagesSquare size={20} />
             {dmUnreadCount > 0 && mode !== "DM" && (

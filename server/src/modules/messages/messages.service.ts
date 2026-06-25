@@ -200,6 +200,52 @@ export const searchMessages = async (query: string, userId: string, limit: numbe
   return messagesRepo.searchMessages(query, userId, limit);
 };
 
+function mapToThreadSummary(threadRoot: any): any {
+  const replies = threadRoot.threadReplies ?? [];
+  const uniqueParticipants = new Map<string, { id: string; username: string; avatarUrl: string | null }>();
+  for (const reply of replies) {
+    if (reply.user && !uniqueParticipants.has(reply.user.id)) {
+      uniqueParticipants.set(reply.user.id, reply.user);
+    }
+  }
+  return {
+    threadRootId: threadRoot.id,
+    conversationId: threadRoot.conversationId,
+    rootMessagePreview: threadRoot.content,
+    rootAuthor: {
+      id: threadRoot.user.id,
+      username: threadRoot.user.username,
+      avatarUrl: threadRoot.user.avatarUrl,
+    },
+    replyCount: threadRoot.threadReplyCount,
+    lastReplyAt: threadRoot.lastThreadReplyAt ? threadRoot.lastThreadReplyAt.toISOString() : threadRoot.createdAt.toISOString(),
+    lastReplyPreview: replies.length > 0 ? replies[0].content : null,
+    lastReplyAuthor: replies.length > 0 && replies[0].user ? replies[0].user : null,
+    participants: Array.from(uniqueParticipants.values()),
+  };
+}
+
+export const getChannelThreads = async (conversationId: string) => {
+  const threads = await messagesRepo.findChannelThreads(conversationId);
+  return threads.map(mapToThreadSummary);
+};
+
+export const getWorkspaceThreads = async (slugOrId: string, userId: string) => {
+  let workspace = await prisma.workspace.findUnique({
+    where: { slug: slugOrId },
+    select: { id: true },
+  });
+  if (!workspace) {
+    workspace = await prisma.workspace.findUnique({
+      where: { id: slugOrId },
+      select: { id: true },
+    });
+  }
+  if (!workspace) throw new NotFoundError("Workspace not found");
+  const threads = await messagesRepo.findWorkspaceThreads(workspace.id, userId);
+  return threads.map(mapToThreadSummary);
+};
+
 export const pinMessage = async (messageId: string, conversationId: string, userId: string) => {
   const message = await messagesRepo.findById(messageId);
   if (!message) {

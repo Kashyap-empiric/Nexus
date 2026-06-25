@@ -12,6 +12,7 @@ import { useWorkspaceDetails } from "@/modules/workspaces/hooks/useWorkspaces";
 import { useLayoutUI } from "@/shared/components/layout/AppLayoutShell";
 import { InfoPanel } from "./InfoPanel";
 import { useThreadStore } from "@/modules/threads/store/threadStore";
+import { createPortal } from "react-dom";
 
 interface ActiveConversationProps {
   conversationId: string;
@@ -46,15 +47,15 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
 
   const { data: conversation, isLoading } = useConversationDetailsQuery(conversationId);
   const { data: conversations } = useConversationsQuery();
-  
+
   const isChannel = conversation?.type === "CHANNEL";
   const { data: workspaceDetails } = useWorkspaceDetails(isChannel ? conversation?.workspaceId || null : null);
 
   const canPin = !isChannel
     ? true
     : workspaceDetails?.workspace.members?.some(
-        (m: { userId: string; role: string }) => m.userId === currentUserId && (m.role === "OWNER" || m.role === "ADMIN")
-      ) ?? false;
+      (m: { userId: string; role: string }) => m.userId === currentUserId && (m.role === "OWNER" || m.role === "ADMIN")
+    ) ?? false;
 
   useEffect(() => {
     if (!conversation) return;
@@ -145,29 +146,34 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
         />
       </div>
 
-      {}
+      { }
       {infoPanelOpen && (
         <>
-          {}
-          <div className="hidden md:block h-full border-l">
-            <InfoPanel 
-              conversationId={conversationId}
-              workspaceId={isChannel ? conversation.workspaceId || undefined : undefined}
-              channelId={isChannel ? conversationId : undefined}
-              userId={isDM ? otherMember?.userId : undefined}
-              channelName={isChannel ? conversation.name : undefined}
-              description={isChannel ? conversation.description : undefined}
-              visibility={isChannel ? conversation.visibility ?? null : undefined}
-              createdAt={isChannel ? conversation.createdAt : undefined}
-              view={infoPanelView}
-              setInfoPanelView={setInfoPanelView}
-              onClose={handleCloseInfoPanel}
-            />
-          </div>
-          
+          {/* Desktop Panel via Portal */}
+          {(() => {
+            const portalTarget = typeof document !== 'undefined' ? document.getElementById('info-panel-portal-target') : null;
+            if (!portalTarget) return null;
+            return createPortal(
+              <InfoPanel
+                conversationId={conversationId}
+                workspaceId={isChannel ? conversation.workspaceId || undefined : undefined}
+                channelId={isChannel ? conversationId : undefined}
+                userId={isDM ? otherMember?.userId : undefined}
+                channelName={isChannel ? conversation.name : undefined}
+                description={isChannel ? conversation.description : undefined}
+                visibility={isChannel ? conversation.visibility ?? null : undefined}
+                createdAt={isChannel ? conversation.createdAt : undefined}
+                view={infoPanelView}
+                setInfoPanelView={setInfoPanelView}
+                onClose={handleCloseInfoPanel}
+              />,
+              portalTarget
+            );
+          })()}
+
           {/* Mobile Overlay Panel */}
           <div className="md:hidden flex flex-col fixed inset-y-0 right-0 w-full z-50 transform transition-transform duration-300 ease-in-out translate-x-0">
-            <InfoPanel 
+            <InfoPanel
               conversationId={conversationId}
               workspaceId={isChannel ? conversation.workspaceId || undefined : undefined}
               channelId={isChannel ? conversationId : undefined}
@@ -181,8 +187,8 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
               onClose={handleCloseInfoPanel}
             />
           </div>
-          {}
-          <div 
+          { }
+          <div
             className="md:hidden fixed inset-0 z-40 bg-scrim transition-opacity"
             onClick={handleCloseInfoPanel}
           />

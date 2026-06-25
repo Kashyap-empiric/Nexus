@@ -36,6 +36,7 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import { MessageSquarePlus, UserPlus } from "lucide-react";
+import { ThreadIcon } from "@/shared/components/ui/thread-icon";
 import { useQueryClient } from "@tanstack/react-query";
 import { socket } from "@/socket/socketClient";
 import { WorkspaceHeader } from "@/modules/workspaces/components/WorkspaceHeader";
@@ -58,7 +59,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
   const queryClient = useQueryClient();
   const { data: conversations, isLoading, isError: isConvError } = useConversationsQuery();
 
-  const { mode, activeWorkspaceId } = useRouteState();
+  const { mode, activeWorkspaceId, routeState } = useRouteState();
   const { data: workspaceChannels, isLoading: isLoadingChannels } = useWorkspaceChannelsQuery(mode === "WORKSPACE" ? activeWorkspaceId : null);
   const { data: workspaceDetails } = useWorkspaceDetails(mode === "WORKSPACE" ? activeWorkspaceId : null);
   const currentAuthUser = useUser();
@@ -68,9 +69,9 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
   const [searchQuery, setSearchQuery] = useState("");
   const params = useParams();
   const router = useRouter();
-  
+
   const activeId = (params?.channelId as string) || (params?.id as string);
-  
+
   const setLastVisitedChannel = useChatStore((state) => state.setLastVisitedChannel);
   const pendingRedirect = useRef<string | null>(null);
 
@@ -176,7 +177,23 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
             </div>
           )}
           <div>
-            <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2 mt-2">
+            {mode === "WORKSPACE" && (
+              <div className="mb-2 space-y-[2px]">
+                <Link
+                  href={`/workspaces/${activeWorkspaceId}/threads`}
+                  onClick={() => onNavigate?.()}
+                  className={`flex items-center gap-3 px-2 py-2 rounded-md transition-colors ${
+                    routeState.mode === "workspace" && routeState.destination?.type === "threads"
+                      ? "bg-brand/10 text-brand"
+                      : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+                  }`}
+                >
+                  <ThreadIcon className="h-4 w-4 shrink-0" />
+                  <span className="font-medium text-sm">Threads</span>
+                </Link>
+              </div>
+            )}
+            <div className="flex items-center justify-between text-xs font-semibold text-[#A0AAB2] uppercase tracking-wider mb-2 px-2 mt-2">
               <span>{mode === "DM" ? "Direct Messages" : "Public Channels"}</span>
               {mode === "DM" ? (
                 <DropdownMenu>
@@ -311,7 +328,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
                 { }
                 {displayList.some(c => c.visibility === "PRIVATE") && (
                   <div>
-                    <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2 mt-4">
+                    <div className="flex items-center justify-between text-xs font-semibold text-[#A0AAB2] uppercase tracking-wider mb-2 px-2 mt-4">
                       <span>Private Channels</span>
                     </div>
                     <div className="space-y-[2px]">
@@ -344,7 +361,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
         { }
         <div className="flex items-stretch border-t bg-sidebar shrink-0">
           <div className="flex-1 min-w-0">
-            <UserFooterMenu openSettings={openSettings || (() => {})} />
+            <UserFooterMenu openSettings={openSettings || (() => { })} />
           </div>
           <button
             onClick={() => setIsLogoutModalOpen(true)}
@@ -366,7 +383,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={async () => { try { await logout(); } catch {} queryClient.clear(); socket.disconnect(); setIsLogoutModalOpen(false); router.push("/login"); }}>Sign Out</AlertDialogAction>
+            <AlertDialogAction onClick={async () => { try { await logout(); } catch { } queryClient.clear(); socket.disconnect(); setIsLogoutModalOpen(false); router.push("/login"); }}>Sign Out</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

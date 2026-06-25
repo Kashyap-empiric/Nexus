@@ -44,6 +44,18 @@ export const getThreadMessages = async (conversationId: string, messageId: strin
   return response.data.data;
 };
 
+export const getChannelThreads = async (conversationId: string) => {
+  const url = API_ROUTES.CONVERSATIONS.THREADS(conversationId);
+  const response = await api.get<{ data: import("../types/message").ThreadSummary[] }>(url);
+  return response.data.data;
+};
+
+export const getWorkspaceThreads = async (workspaceId: string) => {
+  const url = API_ROUTES.WORKSPACES.THREADS(workspaceId);
+  const response = await api.get<{ data: import("../types/message").ThreadSummary[] }>(url);
+  return response.data.data;
+};
+
 export const createMessage = async (conversationId: string, content: string, replyToId?: string | null, threadRootId?: string | null) => {
   const response = await api.post<{ data: Message }>(API_ROUTES.CONVERSATIONS.MESSAGES(conversationId), { content, replyToId, threadRootId });
   return response.data.data;

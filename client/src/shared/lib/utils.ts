@@ -36,3 +36,23 @@ export function stripMarkdown(text: string): string {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+export function formatRelativeTime(dateStr: string | Date | number): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffMs = now - then;
+  
+  if (diffMs < 0) return "just now";
+  
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  
+  const diffHrs = Math.floor(diffMin / 60);
+  if (diffHrs < 24) return `${diffHrs}h ago`;
+  
+  const diffDays = Math.floor(diffHrs / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  
+  return new Date(dateStr).toLocaleDateString();
+}

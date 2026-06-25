@@ -35,7 +35,8 @@ function ContextMenuContent({
   return (
     <MenuPrimitive.Portal>
       <MenuPrimitive.Positioner
-        className={cn("isolate outline-none", `z-[${OVERLAY_Z_INDEX.contextMenu}]`)}
+        className={cn("isolate outline-none")}
+        style={{ zIndex: OVERLAY_Z_INDEX.contextMenu }}
         align={align}
         alignOffset={alignOffset}
         side={side}
@@ -45,11 +46,11 @@ function ContextMenuContent({
           data-slot="context-menu-content"
           className={cn(
             "max-h-(--available-height) origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-            `z-[${OVERLAY_Z_INDEX.contextMenu}]`,
             "min-w-[220px] max-w-[320px]",
             OVERLAY_ANIMATIONS.dropdown,
             className
           )}
+          style={{ zIndex: OVERLAY_Z_INDEX.contextMenu }}
           {...props}
         />
       </MenuPrimitive.Positioner>
