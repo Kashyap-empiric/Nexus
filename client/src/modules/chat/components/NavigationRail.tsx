@@ -65,18 +65,18 @@ export function NavigationRail({ openSettings }: NavigationRailProps) {
 
   return (
     <>
-      <aside className="w-[60px] border-r flex flex-col items-center justify-between shrink-0 bg-workspace-rail py-3 gap-3 overflow-y-auto hide-scrollbar">
-        <div className="flex flex-col items-center gap-3 w-full">
+      <aside className="w-[52px] border-r flex flex-col items-center justify-between shrink-0 bg-workspace-rail py-2.5 gap-2.5 overflow-y-auto hide-scrollbar">
+        <div className="flex flex-col items-center gap-2.5 w-full">
           <Link
             href={dmHref}
             className={cn(
-              "relative w-[40px] h-[40px] rounded-2xl bg-muted text-muted-foreground flex items-center justify-center transition-all duration-200 hover:rounded-xl hover:bg-accent hover:text-accent-foreground",
+              "relative w-9 h-9 rounded-2xl bg-muted text-muted-foreground flex items-center justify-center transition-all duration-200 hover:rounded-xl hover:bg-accent hover:text-accent-foreground",
               mode === "DM" ? "bg-brand text-brand-foreground rounded-xl shadow-sm" : ""
             )}
             title="Direct Messages"
             onClick={() => {}}
           >
-            <MessagesSquare size={20} />
+            <MessagesSquare size={18} />
             {dmUnreadCount > 0 && mode !== "DM" && (
               <div className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-[10px] font-bold leading-none border-2 border-workspace-rail shadow-sm z-10 pointer-events-none" style={{ color: '#ffffff' }}>
                 {dmUnreadCount > 99 ? '99+' : dmUnreadCount}
@@ -96,7 +96,7 @@ export function NavigationRail({ openSettings }: NavigationRailProps) {
                 onClick={() => handleWorkspaceClick(workspace)}
                 title={workspace.name}
                 className={cn(
-                  "w-[40px] h-[40px] rounded-2xl bg-muted text-muted-foreground flex items-center justify-center transition-all duration-200 hover:rounded-xl hover:bg-accent hover:text-accent-foreground font-semibold text-lg relative",
+                  "w-9 h-9 rounded-2xl bg-muted text-muted-foreground flex items-center justify-center transition-all duration-200 hover:rounded-xl hover:bg-accent hover:text-accent-foreground font-semibold text-sm relative",
                   isActive
                     ? "bg-brand text-brand-foreground rounded-xl shadow-sm"
                     : ""
@@ -125,20 +125,20 @@ export function NavigationRail({ openSettings }: NavigationRailProps) {
 
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="w-[40px] h-[40px] rounded-2xl border border-dashed border-border text-muted-foreground flex items-center justify-center transition-all duration-200 hover:rounded-xl hover:bg-accent hover:text-accent-foreground hover:border-transparent"
+            className="w-9 h-9 rounded-2xl border border-dashed border-border text-muted-foreground flex items-center justify-center transition-all duration-200 hover:rounded-xl hover:bg-accent hover:text-accent-foreground hover:border-transparent"
             title="Create Workspace"
           >
-            <Plus size={20} />
+            <Plus size={18} />
           </button>
         </div>
 
         <div className="mt-auto">
           <button
             onClick={() => openSettings('profile')}
-            className="w-[40px] h-[40px] rounded-2xl text-muted-foreground flex items-center justify-center transition-all duration-200 hover:rounded-xl hover:bg-accent hover:text-accent-foreground"
+            className="w-9 h-9 rounded-2xl text-muted-foreground flex items-center justify-center transition-all duration-200 hover:rounded-xl hover:bg-accent hover:text-accent-foreground"
             title="Settings"
           >
-            <Settings size={20} />
+            <Settings size={18} />
           </button>
         </div>
       </aside>

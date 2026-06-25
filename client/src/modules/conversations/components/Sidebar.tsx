@@ -244,12 +244,15 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
                       href={`/conversations/${chat.id}`}
                       prefetch={false}
                       onClick={() => onNavigate?.()}
-                      className={`flex items-center gap-3 px-2 py-2 rounded-md transition-colors ${
+                      className={`relative flex items-center gap-3 px-2 py-2 rounded-md transition-colors ${
                         isActive
-                          ? "bg-brand/10 text-brand"
+                          ? "bg-brand/15 text-brand"
                           : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                         }`}
                     >
+                      {isActive && (
+                        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-r-full bg-brand" />
+                      )}
                       <div className="relative shrink-0">
                         <UserAvatar
                           name={name}

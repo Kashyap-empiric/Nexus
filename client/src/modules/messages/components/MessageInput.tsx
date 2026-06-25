@@ -254,7 +254,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
     <form onSubmit={handleSubmit} className="px-4 md:px-6 xl:px-8 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:pb-6 pt-2 bg-background shrink-0 w-full">
       {}
       {replyingTo && (
-        <div className="flex items-center gap-2 px-3 py-2 mb-1 bg-muted/50 border border-border rounded-t-lg text-sm">
+        <div className="w-full max-w-[var(--chat-max-width)] mx-auto flex items-center gap-2 px-3 py-2 mb-1 bg-muted/50 border border-border rounded-t-lg text-sm">
           <Reply className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <span className="text-muted-foreground">
             Replying to <span className="font-semibold text-foreground">@{replyingTo.username}</span>
@@ -272,7 +272,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
         </div>
       )}
 
-      <div className="w-full flex flex-col bg-composer-surface border border-border/60 rounded-xl shadow-sm transition-colors focus-within:ring-1 focus-within:ring-brand/30 focus-within:border-brand/40 overflow-hidden">
+      <div className="w-full max-w-[var(--chat-max-width)] mx-auto flex flex-col bg-composer-surface border border-border rounded-2xl shadow-lg transition-colors focus-within:ring-2 focus-within:ring-brand/40 focus-within:border-brand/50 overflow-hidden">
         
         {}
         <div className="flex items-center gap-1 px-4 pt-3 pb-1 text-muted-foreground">
@@ -334,7 +334,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
         </div>
 
         {}
-        <div className="flex items-end w-full pl-4 pr-3 py-2 gap-2">
+        <div className="flex items-end w-full pl-4 pr-3 py-2.5 gap-2">
           <div className="flex-1 min-w-0 relative cursor-text" onClick={() => editor.commands.focus()}>
             <EditorContent editor={editor} className="w-full" />
           </div>

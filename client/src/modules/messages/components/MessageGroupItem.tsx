@@ -175,7 +175,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
 
   return (
     <>
-      <div className="mt-3 mb-1.5">
+      <div className="mt-2.5 mb-0.5">
         {messages.map((msg, index) => {
           const isFirst = index === 0;
           const isMyMessage = msg.userId === currentUserId;
@@ -191,7 +191,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
             <div
               key={msg.id}
               id={`msg-${msg.id}`}
-              className={`group/row flex hover:bg-message-hover px-4 md:px-6 animate-in fade-in slide-in-from-bottom-1 duration-300 ease-out ${isFirst ? "pt-2.5 pb-0.5" : "py-0.5"} ${msg.optimistic || msg.pending ? "opacity-70" : ""}`}
+              className={`group/row flex hover:bg-message-hover px-4 md:px-6 animate-in fade-in slide-in-from-bottom-1 duration-300 ease-out ${isFirst ? "pt-2 pb-0.5" : "py-0.5"} ${msg.optimistic || msg.pending ? "opacity-70" : ""}`}
               style={!isDeleted ? { WebkitTouchCallout: "none" } : undefined}
               onTouchStart={(e) => handleTouchStart(e, msg.id, isDeleted, isMyMessage, isPinned, msg.content, user?.username || "Unknown")}
               onTouchEnd={handleTouchEnd}
@@ -272,7 +272,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                   </div>
                 )}
 
-                <div className="text-[15px] text-foreground whitespace-pre-wrap break-words leading-relaxed group/msg relative min-h-[22px]">
+                <div className="text-[15px] text-foreground whitespace-pre-wrap break-words leading-normal group/msg relative min-h-[22px]">
                   {editingMessageId === msg.id && !isDeleted ? (
                     <div className="flex flex-col gap-2 w-full mt-1 mb-2">
                       <textarea

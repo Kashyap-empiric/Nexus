@@ -184,18 +184,21 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
           e.preventDefault();
           triggerRef.current?.click();
         }}
-        className={`group flex items-center justify-between px-2 py-2 rounded-md transition-colors cursor-pointer ${
+        className={`group relative flex items-center justify-between px-2 py-1.5 rounded-md transition-colors cursor-pointer ${
           isActive
-            ? "bg-brand/10 text-brand"
+            ? "bg-brand/15 text-brand font-semibold"
             : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
         }`}
       >
+        {isActive && (
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 h-[18px] w-[3px] rounded-r-full bg-brand" />
+        )}
         {}
         <div className="flex items-center gap-2 min-w-0">
           {channel.visibility === "PRIVATE" ? (
-            <Lock className="h-4 w-4 shrink-0 opacity-70" />
+            <Lock className={`h-4 w-4 shrink-0 ${isActive ? "opacity-100" : "opacity-60"}`} />
           ) : (
-            <Hash className="h-4 w-4 shrink-0 opacity-70" />
+            <Hash className={`h-4 w-4 shrink-0 ${isActive ? "opacity-100" : "opacity-60"}`} />
           )}
           <span className={`truncate text-sm leading-snug ${isUnread && !isActive ? "font-bold text-foreground" : "font-medium"}`}>
             {channel.name}

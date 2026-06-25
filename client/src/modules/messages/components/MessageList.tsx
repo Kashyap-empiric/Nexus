@@ -124,7 +124,7 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto overflow-x-hidden pb-4"
       >
-        <div className="w-full">
+        <div className="w-full mx-auto max-w-[var(--chat-max-width)]">
           <div ref={observerTarget} className="h-1 mt-1 w-full flex justify-center">
             {isFetchingNextPage && <span className="text-xs text-muted-foreground">Loading older messages...</span>}
           </div>
@@ -159,7 +159,7 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
             return (
               <React.Fragment key={group.id}>
                 {showDateSeparator && (
-                  <div className="flex items-center justify-center my-6">
+                  <div className="flex items-center justify-center my-4">
                     <div className="h-px bg-border flex-1 mx-4" />
                     <span className="text-xs text-muted-foreground font-medium shrink-0">
                       {currentGroupDate}

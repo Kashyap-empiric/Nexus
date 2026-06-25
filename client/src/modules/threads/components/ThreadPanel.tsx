@@ -48,9 +48,36 @@ export function ThreadPanel({ conversationId, currentUser }: ThreadPanelProps) {
     );
   }
 
+  const lastReplyAt = replies.length > 0 ? replies[replies.length - 1].createdAt : null;
+
   return (
     <div className="flex-1 flex flex-col min-h-0">
       <div className="flex-1 overflow-y-auto">
+        {rootMessage && (
+          <div className="px-4 py-3 border-b bg-muted/30">
+            <h3 className="text-sm font-bold text-foreground leading-none">Thread</h3>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">
+                {replies.length} {replies.length === 1 ? "reply" : "replies"}
+              </span>
+              {rootMessage.user?.username && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span>Started by {rootMessage.user.username}</span>
+                </>
+              )}
+              {lastReplyAt && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span>
+                    Last reply{" "}
+                    {new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(lastReplyAt))}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
         {isLoading && (
           <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
             Loading thread...
@@ -95,10 +122,6 @@ export function ThreadPanel({ conversationId, currentUser }: ThreadPanelProps) {
             </div>
           );
         })()}
-
-        <div className="text-xs text-muted-foreground text-center py-2 border-b">
-          {replies.length} {replies.length === 1 ? "reply" : "replies"}
-        </div>
 
         <div className="px-4 py-2">
           {replies.map((reply) => {

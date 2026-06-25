@@ -157,7 +157,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
 
       <main className={cn("flex-1 flex-col min-w-0 bg-background h-full", !isContentActive ? "hidden lg:flex" : "flex")}>
         {}
-        <div className="h-14 border-b flex items-center justify-between px-[15px] md:px-4 xl:px-6 shrink-0 bg-background">
+        <div className="h-14 border-b flex items-center justify-between px-[15px] md:px-4 xl:px-6 shrink-0 bg-background shadow-sm z-10">
           <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
             {}
             {mounted && headerInfo && (
@@ -180,9 +180,9 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
               <span className="text-sm text-muted-foreground">Nexus</span>
             ) : isChannel ? (
               <div className="flex items-center gap-2 min-w-0">
-                <Hash className="h-6 w-6 text-muted-foreground shrink-0" />
-                <div className="flex flex-col gap-1 min-w-0">
-                  <h2 className="text-base font-bold text-foreground leading-none truncate">{headerInfo.title}</h2>
+                <Hash className="h-[22px] w-[22px] text-muted-foreground/70 shrink-0" strokeWidth={2.5} />
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <h2 className="text-lg font-bold text-foreground leading-none tracking-tight truncate">{headerInfo.title}</h2>
                   {headerInfo.subtitle && (
                     <span className="text-[12px] text-muted-foreground leading-tight truncate">
                       {headerInfo.subtitle}
@@ -204,8 +204,8 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
                     <PresenceIndicator userId={headerInfo.otherMember.userId} className="-bottom-0.5 -right-0.5" />
                   )}
                 </div>
-                <div className="flex flex-col gap-1 min-w-0">
-                  <h2 className="text-base font-bold text-foreground leading-none truncate">{headerInfo.title}</h2>
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <h2 className="text-lg font-bold text-foreground leading-none tracking-tight truncate">{headerInfo.title}</h2>
                   <span className="text-[11px] text-muted-foreground/60 leading-tight truncate">
                     {headerInfo.otherMember?.userId ? (
                       <HeaderPresenceText userId={headerInfo.otherMember.userId} />
