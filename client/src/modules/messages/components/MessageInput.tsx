@@ -410,7 +410,7 @@ export function MessageInput({
                 Cancel
               </Button>
             )}
-            {onSubmit && (
+            {onSubmit && onCancel && (
               <Button size="sm" variant="default" className="h-7 text-xs px-3" onClick={(e) => { e.preventDefault(); submitMessage(); }} type="button">
                 Save
               </Button>

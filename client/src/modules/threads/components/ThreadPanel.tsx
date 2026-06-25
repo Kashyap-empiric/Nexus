@@ -5,6 +5,7 @@ import { useThreadStore } from "../store/threadStore";
 import { useThreadMessagesQuery } from "../hooks/useThreadMessages";
 import { ThreadInput } from "./ThreadInput";
 import { MarkdownRenderer } from "@/modules/messages/components/MarkdownRenderer";
+import { MessageStatus } from "@/modules/messages/components/MessageStatus";
 import { EditMessageForm } from "@/modules/messages/components/EditMessageForm";
 import { useEditMessageMutation } from "@/modules/messages/hooks/useMessages";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
@@ -188,13 +189,19 @@ export function ThreadPanel({ conversationId, currentUser, onBack }: ThreadPanel
                             fallbackClassName="bg-primary/20 text-primary font-medium text-xs"
                           />
                         </div>
-                        <div className="flex-1 min-w-0 relative z-10">
+                          <div className="flex-1 min-w-0 relative z-10">
                           <div className="flex items-baseline gap-2 mb-0.5">
                             <span className="font-bold text-[14px] text-foreground">
                               {reply.user?.username || "Deleted user"}
                             </span>
-                            <span className="text-[11px] text-muted-foreground/80 font-medium">
+                            <span className="text-[11px] text-muted-foreground/80 font-medium inline-flex items-center gap-1">
                               {new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(new Date(reply.createdAt))}
+                              {isPending && (
+                                <MessageStatus
+                                  messageId={reply.id}
+                                  isPending={true}
+                                />
+                              )}
                             </span>
                           </div>
                           <div className="text-[14px] leading-relaxed text-foreground whitespace-pre-wrap break-words">
@@ -210,7 +217,7 @@ export function ThreadPanel({ conversationId, currentUser, onBack }: ThreadPanel
                               <MarkdownRenderer content={reply.content} />
                             )}
                           </div>
-                          {!reply.deletedAt && editingReplyId !== reply.id && currentUser?.id === reply.userId && (
+                          {!reply.deletedAt && !isPending && editingReplyId !== reply.id && currentUser?.id === reply.userId && (
                             <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                               <Button
                                 variant="ghost"
