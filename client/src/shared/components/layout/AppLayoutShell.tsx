@@ -48,6 +48,7 @@ export interface LayoutUIContextType {
   setInfoPanelView: (view: InfoPanelView) => void;
   closeInfoPanel: () => void;
   setInfoPanelOpen: (open: boolean) => void;
+  closeMobileSidebar: () => void;
 }
 
 const LayoutUIContext = createContext<LayoutUIContextType | null>(null);
@@ -88,13 +89,14 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
   const isContentActive =
     pathname?.includes(APP_ROUTES.CONVERSATIONS.INDEX + "/") ||
     pathname?.includes(APP_ROUTES.WORKSPACES.CHANNELS_PATH + "/") ||
+    pathname?.includes("/workspaces/") ||
     pathname?.startsWith(APP_ROUTES.SETTINGS.INDEX + "/");
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     requestAnimationFrame(() => {
       setMounted(true);
-      if (window.innerWidth >= 768) {
+      if (window.innerWidth >= 1024) {
         setInfoPanelOpen(true);
       }
     });
@@ -250,6 +252,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
               setInfoPanelView,
               closeInfoPanel: () => setInfoPanelOpen(false),
               setInfoPanelOpen,
+              closeMobileSidebar,
             }}>
               {children}
             </LayoutUIContext.Provider>
