@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { SOCKET_EVENTS } from "@/socket/socket-events";
-import { useSocketEvents, SocketHandlerMap } from "@/socket/useSocketEvent";
+import { useSocketEvents } from "@/socket/useSocketEvent";
 import { useSocketStore } from "@/socket/socketStore";
 import { queryKeys } from "@/shared/constants/queryKeys";
 import type { Message, MessagePage } from "@/modules/messages/types/message";

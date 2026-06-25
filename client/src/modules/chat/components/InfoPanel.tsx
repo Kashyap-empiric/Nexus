@@ -98,7 +98,7 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
         }}
       />
       <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
-        <h2 className="font-semibold text-lg text-foreground">Details</h2>
+        <h2 className="font-semibold text-lg text-foreground">Context</h2>
         <button
           onClick={onClose}
           className="p-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors"
@@ -108,7 +108,7 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
         </button>
       </div>
 
-      <div className="flex px-4 border-b shrink-0">
+      <div className="flex gap-1 px-4 border-b shrink-0">
         <button
           onClick={() => setInfoPanelView('about')}
           className={cn(

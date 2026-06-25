@@ -68,9 +68,9 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
   const [searchQuery, setSearchQuery] = useState("");
   const params = useParams();
   const router = useRouter();
-  
+
   const activeId = (params?.channelId as string) || (params?.id as string);
-  
+
   const setLastVisitedChannel = useChatStore((state) => state.setLastVisitedChannel);
   const pendingRedirect = useRef<string | null>(null);
 
@@ -79,7 +79,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
       const isChannel = workspaceChannels?.some(c => c.id === activeId);
       if (isChannel) {
         setLastVisitedChannel(activeWorkspaceId, activeId);
-        pendingRedirect.current = null; 
+        pendingRedirect.current = null;
       }
     }
   }, [mode, activeWorkspaceId, activeId, workspaceChannels, setLastVisitedChannel]);
@@ -168,7 +168,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
           </div>
         )}
 
-        {}
+        { }
         <div className="flex-1 overflow-y-auto px-2 py-3 space-y-6">
           {isConvError && (
             <div className="px-3 py-2 mx-2 mb-2 text-xs text-destructive bg-destructive/10 rounded-md border border-destructive/20">
@@ -176,7 +176,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
             </div>
           )}
           <div>
-            <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2 mt-2">
+            <div className="flex items-center justify-between text-xs font-semibold text-[#A0AAB2] uppercase tracking-wider mb-2 px-2 mt-2">
               <span>{mode === "DM" ? "Direct Messages" : "Public Channels"}</span>
               {mode === "DM" ? (
                 <DropdownMenu>
@@ -244,8 +244,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
                       href={`/conversations/${chat.id}`}
                       prefetch={false}
                       onClick={() => onNavigate?.()}
-                      className={`flex items-center gap-3 px-2 py-2 rounded-md transition-colors ${
-                        isActive
+                      className={`flex items-center gap-3 px-2 py-2 rounded-md transition-colors ${isActive
                           ? "bg-brand/10 text-brand"
                           : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                         }`}
@@ -277,17 +276,17 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
                       </div>
 
                       {isUnread && !isActive && (
-                          <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-[12px] font-bold shrink-0 leading-none" style={{ color: '#ffffff' }}>
-                            {unreadCount > 99 ? '99+' : unreadCount}
-                          </div>
-                        )}
+                        <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-[12px] font-bold shrink-0 leading-none" style={{ color: '#ffffff' }}>
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </div>
+                      )}
                     </Link>
                   );
                 })}
               </div>
             ) : (
               <div className="space-y-4">
-                {}
+                { }
                 <div className="space-y-[2px]">
                   {displayList.filter(c => c.visibility === "PUBLIC").map((chat) => {
                     const isActive = chat.id === activeId;
@@ -309,10 +308,10 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
                   })}
                 </div>
 
-                {}
+                { }
                 {displayList.some(c => c.visibility === "PRIVATE") && (
                   <div>
-                    <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2 mt-4">
+                    <div className="flex items-center justify-between text-xs font-semibold text-[#A0AAB2] uppercase tracking-wider mb-2 px-2 mt-4">
                       <span>Private Channels</span>
                     </div>
                     <div className="space-y-[2px]">
@@ -345,7 +344,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
         {/* User Footer */}
         <div className="flex items-stretch border-t bg-sidebar shrink-0">
           <div className="flex-1 min-w-0">
-            <UserFooterMenu openSettings={openSettings || (() => {})} />
+            <UserFooterMenu openSettings={openSettings || (() => { })} />
           </div>
           <button
             onClick={() => setIsLogoutModalOpen(true)}
@@ -367,7 +366,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={async () => { try { await logout(); } catch {} queryClient.clear(); socket.disconnect(); setIsLogoutModalOpen(false); router.push("/login"); }}>Sign Out</AlertDialogAction>
+            <AlertDialogAction onClick={async () => { try { await logout(); } catch { } queryClient.clear(); socket.disconnect(); setIsLogoutModalOpen(false); router.push("/login"); }}>Sign Out</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -46,34 +46,34 @@ export function ThreadInput({ conversationId, threadRootId, currentUser }: Threa
   };
 
   return (
-    <form onSubmit={handleSubmit} className="border-t p-3 flex flex-col gap-2">
-      <div className="flex items-end gap-2">
+    <form onSubmit={handleSubmit} className="border-t p-4 flex flex-col gap-3 bg-background/50">
+      <div className="flex items-end gap-2 relative">
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Reply in thread..."
           rows={1}
-          className="flex-1 min-w-0 bg-muted/50 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none max-h-32"
+          className="flex-1 min-w-0 bg-muted/30 border border-border/80 rounded-xl px-4 py-3 pb-3 text-[14px] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 resize-none max-h-32 shadow-sm transition-all pr-12"
         />
         <Button
           type="submit"
           size="icon"
           disabled={!content.trim()}
-          className="shrink-0 h-9 w-9"
+          className="absolute right-2 bottom-2 shrink-0 h-8 w-8 rounded-lg"
         >
           <SendHorizontal className="h-4 w-4" />
         </Button>
       </div>
       <div className="flex items-center gap-2 px-1">
-        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors group">
           <input
             type="checkbox"
             checked={isBroadcast}
             onChange={(e) => setIsBroadcast(e.target.checked)}
             className="rounded border-muted-foreground/30 text-brand focus:ring-brand/30 h-3.5 w-3.5 cursor-pointer"
           />
-          Also send to channel
+          <span className="group-hover:text-foreground transition-colors">Also send to channel</span>
         </label>
       </div>
     </form>

@@ -130,7 +130,7 @@
   --status-offline: oklch(0.56 0 0);
 
   /* Theme Contract (Light Base) */
-  --workspace-rail: var(--sidebar);
+  --workspace-rail: oklch(0.95 0 0);
   --workspace-rail-foreground: var(--sidebar-foreground);
   --details-panel: var(--background);
   --composer-surface: var(--background);
@@ -206,7 +206,7 @@
   --status-offline: oklch(0.50 0 0);
 
   /* Theme Contract (Dark Base) */
-  --workspace-rail: var(--sidebar);
+  --workspace-rail: oklch(0.18 0.004 240);
   --workspace-rail-foreground: var(--sidebar-foreground);
   --details-panel: var(--background);
   --composer-surface: oklch(1 0 0 / 0.02);

@@ -171,7 +171,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
 
   return (
     <>
-      {}
+      { }
       <div
         role="button"
         tabIndex={0}
@@ -184,32 +184,31 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
           e.preventDefault();
           triggerRef.current?.click();
         }}
-        className={`group flex items-center justify-between px-2 py-2 rounded-md transition-colors cursor-pointer ${
-          isActive
+        className={`group flex items-center justify-between px-2 py-2 rounded-md transition-colors cursor-pointer ${isActive
             ? "bg-brand/10 text-brand"
             : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
-        }`}
+          }`}
       >
-        {}
+        { }
         <div className="flex items-center gap-2 min-w-0">
           {channel.visibility === "PRIVATE" ? (
             <Lock className="h-4 w-4 shrink-0 opacity-70" />
           ) : (
             <Hash className="h-4 w-4 shrink-0 opacity-70" />
           )}
-          <span className={`truncate text-sm leading-snug ${isUnread && !isActive ? "font-bold text-foreground" : "font-medium"}`}>
+          <span className={`truncate text-sm leading-snug ${isActive ? "font-medium" : isUnread ? "font-bold text-foreground" : "font-medium"}`}>
             {channel.name}
           </span>
         </div>
 
-        {}
+        { }
         <div
           className="flex items-center gap-1 shrink-0"
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
           {isUnread && !isActive && (
-            <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-[12px] font-bold leading-none" style={{ color: '#ffffff' }}>
+            <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-[12px] font-bold leading-none text-destructive-foreground">
               {unreadCount > 99 ? "99+" : unreadCount}
             </div>
           )}
@@ -219,9 +218,8 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
               render={
                 <button
                   ref={triggerRef}
-                  className={`p-1 rounded transition-opacity focus-visible:outline-none hover:bg-muted ${
-                    isActive ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"
-                  }`}
+                  className={`p-1 rounded transition-opacity focus-visible:outline-none hover:bg-muted ${isActive ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"
+                    }`}
                 />
               }
             >
@@ -278,7 +276,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
         </div>
       </div>
 
-      {}
+      { }
       <Dialog open={modalType === "rename"} onOpenChange={handleCloseModal}>
         <DialogContent size="sm" elevation="md" fullscreenMobile>
           <DialogHeader>
@@ -308,7 +306,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
         </DialogContent>
       </Dialog>
 
-      {}
+      { }
       <Dialog open={modalType === "delete"} onOpenChange={handleCloseModal}>
         <DialogContent size="sm" elevation="md" fullscreenMobile>
           <DialogHeader>
@@ -331,7 +329,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
         </DialogContent>
       </Dialog>
 
-      {}
+      { }
       <ManageChannelMembersModal
         workspaceId={workspaceId}
         channelId={channel.id}
@@ -339,7 +337,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
         onOpenChange={handleCloseModal}
       />
 
-      {}
+      { }
       <Dialog open={modalType === "visibility"} onOpenChange={handleCloseModal}>
         <DialogContent size="sm" elevation="md" fullscreenMobile>
           <DialogHeader>
@@ -372,7 +370,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
         onClose={closeModals}
       />
 
-      {}
+      { }
       <Dialog open={modalType === "leave"} onOpenChange={handleCloseModal}>
         <DialogContent size="sm" elevation="md" fullscreenMobile>
           <DialogHeader>

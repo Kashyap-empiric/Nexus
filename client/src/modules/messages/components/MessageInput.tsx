@@ -74,20 +74,20 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
 
   const submitMessage = () => {
     if (!editor) return;
-    
-    
+
+
     const markdownStorage = (editor.storage as unknown) as { markdown: { getMarkdown: () => string } };
     const markdownContent = markdownStorage.markdown.getMarkdown();
-    
+
     if (!markdownContent.trim()) return;
 
     emitTypingStop();
 
     tempIdCounterRef.current += 1;
-    
+
     const tempId = `temp-${crypto.randomUUID()}-${tempIdCounterRef.current}`;
     sendMessage({ conversationId, content: markdownContent.trim(), tempId, replyToId: replyingTo?.id || null });
-    
+
     editor.commands.clearContent(false);
     onClearReply?.();
   };
@@ -140,7 +140,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
         emptyEditorClass: 'is-editor-empty',
       }),
       Markdown.configure({
-        html: false, 
+        html: false,
         transformPastedText: true,
         transformCopiedText: true,
       }),
@@ -204,7 +204,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
   };
 
   if (!editor) {
-    return null; 
+    return null;
   }
 
   const toggleBold = () => {
@@ -252,7 +252,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
 
   return (
     <form onSubmit={handleSubmit} className="px-4 md:px-6 xl:px-8 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:pb-6 pt-2 bg-background shrink-0 w-full">
-      {}
+      { }
       {replyingTo && (
         <div className="flex items-center gap-2 px-3 py-2 mb-1 bg-muted/50 border border-border rounded-t-lg text-sm">
           <Reply className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -272,21 +272,21 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
         </div>
       )}
 
-      <div className="w-full flex flex-col bg-composer-surface border border-border/60 rounded-xl shadow-sm transition-colors focus-within:ring-1 focus-within:ring-brand/30 focus-within:border-brand/40 overflow-hidden">
-        
-        {}
-        <div className="flex items-center gap-1 px-4 pt-3 pb-1 text-muted-foreground">
+      <div className="w-full flex flex-col bg-muted/40 border border-border rounded-xl transition-colors focus-within:border-brand/40 overflow-hidden">
+
+        { }
+        <div className="flex items-center gap-1 px-4 pt-2 pb-2 border-b border-border text-muted-foreground bg-muted/30">
           <button type="button" onClick={toggleBold} className={`p-1.5 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.bold ? activeClass : ''}`} title="Bold">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 12a4 4 0 0 0 0-8H6v8"/><path d="M15 20a4 4 0 0 0 0-8H6v8Z"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 12a4 4 0 0 0 0-8H6v8" /><path d="M15 20a4 4 0 0 0 0-8H6v8Z" /></svg>
           </button>
           <button type="button" onClick={toggleItalic} className={`p-1.5 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.italic ? activeClass : ''}`} title="Italic">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" x2="10" y1="4" y2="4"/><line x1="14" x2="5" y1="20" y2="20"/><line x1="15" x2="9" y1="4" y2="20"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" x2="10" y1="4" y2="4" /><line x1="14" x2="5" y1="20" y2="20" /><line x1="15" x2="9" y1="4" y2="20" /></svg>
           </button>
           <button type="button" onClick={toggleCode} className={`p-1.5 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.code ? activeClass : ''}`} title="Code">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
           </button>
           <button type="button" onClick={toggleStrike} className={`p-1.5 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.strike ? activeClass : ''}`} title="Strikethrough">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4H9a3 3 0 0 0-2.83 4"/><path d="M14 12a4 4 0 0 1 0 8H6"/><line x1="4" x2="20" y1="12" y2="12"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4H9a3 3 0 0 0-2.83 4" /><path d="M14 12a4 4 0 0 1 0 8H6" /><line x1="4" x2="20" y1="12" y2="12" /></svg>
           </button>
 
           <div className="w-px h-5 bg-border mx-0.5" />
@@ -330,10 +330,10 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
               />
             </PopoverContent>
           </Popover>
-          {}
+          { }
         </div>
 
-        {}
+        { }
         <div className="flex items-end w-full pl-4 pr-3 py-2 gap-2">
           <div className="flex-1 min-w-0 relative cursor-text" onClick={() => editor.commands.focus()}>
             <EditorContent editor={editor} className="w-full" />

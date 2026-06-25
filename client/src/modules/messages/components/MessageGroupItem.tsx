@@ -513,10 +513,11 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                       </div>
                       {!isDeleted && (msg.threadReplyCount ?? 0) > 0 && (
                         <div className="mt-1 relative flex items-center">
-                          <div className="absolute -left-[26px] top-[-14px] w-[22px] h-[20px] border-l-[2px] border-b-[2px] border-muted-foreground/40 rounded-bl-lg pointer-events-none" />
+                          <div className="absolute -left-[26px] top-[-14px] w-[22px] bottom-1/2 border-l-[2px] border-b-[2px] border-muted-foreground/40 rounded-bl-lg pointer-events-none" />
                           <button
                             type="button"
-                            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer leading-none z-10"
+                            // eslint-disable-next-line no-restricted-syntax
+                            className="flex items-center gap-1.5 text-xs font-semibold text-blue-400 bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 hover:border-blue-500/30 hover:text-blue-300 px-2.5 py-1.5 rounded-full transition-all cursor-pointer leading-none z-10"
                             onClick={() => onOpenThread?.(msg.id)}
                           >
                             <MessageSquare className="h-3 w-3" />
