@@ -263,8 +263,7 @@ export const findChannelThreads = async (conversationId: string) => {
 };
 
 export const findWorkspaceThreads = async (workspaceId: string, userId: string) => {
-  console.log("[Threads Query] starting with workspaceId", workspaceId, "userId", userId);
-  const result = await prisma.message.findMany({
+  return prisma.message.findMany({
     where: {
       conversation: {
         workspaceId,
@@ -293,8 +292,6 @@ export const findWorkspaceThreads = async (workspaceId: string, userId: string) 
       },
     },
   });
-  console.log("[Threads Query] completed, rows:", result.length);
-  return result;
 };
 
 export const updateMessage = async (
