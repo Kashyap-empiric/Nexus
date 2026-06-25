@@ -108,8 +108,12 @@
   --radius: 0.625rem;
   --overlay-bg: oklch(0 0 0 / 0.45);
   --overlay-blur: 4px;
+  --z-dropdown: 1450;
+  --z-context-menu: 1450;
+  --z-popover: 1460;
   --z-dialog: 1400;
   --z-alert-dialog: 1500;
+  --z-toast: 1600;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -130,7 +134,7 @@
   --status-offline: oklch(0.56 0 0);
 
   /* Theme Contract (Light Base) */
-  --workspace-rail: var(--sidebar);
+  --workspace-rail: oklch(0.95 0 0);
   --workspace-rail-foreground: var(--sidebar-foreground);
   --details-panel: var(--background);
   --composer-surface: var(--background);
@@ -206,7 +210,7 @@
   --status-offline: oklch(0.50 0 0);
 
   /* Theme Contract (Dark Base) */
-  --workspace-rail: var(--sidebar);
+  --workspace-rail: oklch(0.18 0.004 240);
   --workspace-rail-foreground: var(--sidebar-foreground);
   --details-panel: var(--background);
   --composer-surface: oklch(1 0 0 / 0.02);

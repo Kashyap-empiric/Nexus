@@ -40,12 +40,21 @@ export const useThreadStore = create<ThreadState>((set, get) => ({
     if (!threadData) return;
     const exists = threadData.replies.some((r) => r.id === reply.id);
     if (exists) return;
-    set({
-      threadData: {
-        ...threadData,
-        replies: [...threadData.replies, reply],
-      },
-    });
+    const pendingIdx = threadData.replies.findIndex(
+      (r) => r.pending && r.userId === reply.userId
+    );
+    if (pendingIdx !== -1) {
+      const newReplies = [...threadData.replies];
+      newReplies[pendingIdx] = reply;
+      set({ threadData: { ...threadData, replies: newReplies } });
+    } else {
+      set({
+        threadData: {
+          ...threadData,
+          replies: [...threadData.replies, reply],
+        },
+      });
+    }
   },
 
   updateRootMetadata: (rootId: string, replyCount: number, lastReplyAt: string) => {

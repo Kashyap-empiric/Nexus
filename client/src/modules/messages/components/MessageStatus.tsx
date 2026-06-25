@@ -31,9 +31,9 @@ export const MessageStatus = ({
   const isReadByOthers = isChannel ? readCount > 0 : isReadByPartner;
 
   const icon = isReadByOthers ? (
-    <CheckCheck className={cn("h-4 w-4 text-message-read", className)} />
+    <CheckCheck className={cn("h-3.5 w-3.5 text-message-read/80", className)} />
   ) : (
-    <Check className={cn("h-4 w-4 text-muted-foreground", className)} />
+    <Check className={cn("h-3.5 w-3.5 text-muted-foreground/60", className)} />
   );
 
   if (isChannel && readCount > 0) {

@@ -12,11 +12,18 @@ import { pinsParamsSchema, pinsIdParamsSchema } from "@/modules/messages/message
 import { requireConversationMember } from "@/middlewares/requireConversationMember.js";
 
 import messagesRoutes from "@/modules/messages/messages.routes.js";
-import { pinMessage, unpinMessage, getPinnedMessages } from "@/modules/messages/messages.controller.js";
+import { pinMessage, unpinMessage, getPinnedMessages, getChannelThreads } from "@/modules/messages/messages.controller.js";
 
 const router = Router();
 
 router.use("/:conversationId/messages", messagesRoutes);
+
+router.get(
+  "/:conversationId/threads",
+  authMiddleware,
+  requireConversationMember({ paramName: "conversationId" }),
+  getChannelThreads
+);
 
 router.post(
   "/:conversationId/pins/:messageId",

@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import type { MessageGroup } from "@/modules/chat/utils/groupMessages";
 import type { ConversationMember } from "@/modules/conversations/types/conversation";
 import { MessageStatus } from "./MessageStatus";
-import { MoreHorizontal, Pencil, Trash, Ban, Copy, Reply, Text, Pin, MessageSquare } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash, Ban, Copy, Reply, Text, Pin } from "lucide-react";
+import { ThreadIcon } from "@/shared/components/ui/thread-icon";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +30,7 @@ import { Button } from "@/shared/components/ui/button";
 import { stripMarkdown } from "@/shared/lib/utils";
 import { scrollToMessage } from "@/shared/lib/dom";
 import { PinButton } from "./PinButton";
+import { EditMessageForm } from "./EditMessageForm";
 
 interface MessageGroupItemProps {
   group: MessageGroup;
@@ -52,54 +54,25 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
   const unpinMutation = useUnpinMessage(conversationId);
 
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-  const [editContent, setEditContent] = useState("");
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
-  const editInputRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    if (editingMessageId && editInputRef.current) {
-      editInputRef.current.focus();
-      editInputRef.current.selectionStart = editInputRef.current.value.length;
-    }
-  }, [editingMessageId]);
-
-  useEffect(() => {
-    return () => {
-
-    };
-  }, []);
-
-  const handleEditStart = (msgId: string, content: string) => {
+  const handleEditStart = (msgId: string) => {
     setEditingMessageId(msgId);
-    setEditContent(content);
   };
 
   const handleEditCancel = () => {
     setEditingMessageId(null);
-    setEditContent("");
   };
 
-  const handleEditSave = () => {
-    if (editingMessageId && editContent.trim()) {
+  const handleEditSave = (content: string) => {
+    if (editingMessageId && content.trim()) {
       const msg = messages.find(m => m.id === editingMessageId);
       editMutation.mutate({
         messageId: editingMessageId,
-        content: editContent.trim(),
+        content: content.trim(),
         threadRootId: msg?.threadRootId || null
       });
       setEditingMessageId(null);
-      setEditContent("");
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleEditSave();
-    }
-    if (e.key === "Escape") {
-      e.preventDefault();
-      handleEditCancel();
     }
   };
 
@@ -191,7 +164,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
             <div
               key={msg.id}
               id={`msg-${msg.id}`}
-              className={`group/row flex hover:bg-message-hover px-4 md:px-6 animate-in fade-in slide-in-from-bottom-1 duration-300 ease-out ${isFirst ? "pt-2.5 pb-0.5" : "py-0.5"} ${msg.optimistic || msg.pending ? "opacity-70" : ""}`}
+              className={`group/row flex hover:bg-foreground/5 px-4 md:px-6 animate-in fade-in slide-in-from-bottom-1 duration-300 ease-out ${isFirst ? "pt-2.5 pb-0.5" : "py-0.5"} ${msg.optimistic || msg.pending ? "opacity-70" : ""}`}
               style={!isDeleted ? { WebkitTouchCallout: "none" } : undefined}
               onTouchStart={(e) => handleTouchStart(e, msg.id, isDeleted, isMyMessage, isPinned, msg.content, user?.username || "Unknown")}
               onTouchEnd={handleTouchEnd}
@@ -209,9 +182,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                     />
                   );
                 })() : (
-                  <span className="text-[10px] text-muted-foreground/0 group-hover/row:text-muted-foreground transition-colors mt-1.5 absolute left-0 w-9 text-center">
-                    {new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(new Date(msg.createdAt))}
-                  </span>
+                  <span className="mt-1.5" />
                 )}
               </div>
 
@@ -223,7 +194,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                     className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 hover:text-foreground transition-colors cursor-pointer w-fit group/thread-broadcast"
                     onClick={() => onOpenThread?.(msg.threadRootId!)}
                   >
-                    <MessageSquare className="h-3 w-3 shrink-0" />
+                    <ThreadIcon className="h-3 w-3 shrink-0" />
                     <span className="font-semibold truncate">
                       Replied in thread
                     </span>
@@ -274,21 +245,11 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
 
                 <div className="text-[15px] text-foreground whitespace-pre-wrap break-words leading-relaxed group/msg relative min-h-[22px]">
                   {editingMessageId === msg.id && !isDeleted ? (
-                    <div className="flex flex-col gap-2 w-full mt-1 mb-2">
-                      <textarea
-                        ref={editInputRef}
-                        value={editContent}
-                        onChange={(e) => setEditContent(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        className="w-full bg-background border rounded-md p-2 text-base focus:outline-none focus:ring-1 focus:ring-primary resize-none overflow-hidden min-h-[44px]"
-                        rows={Math.max(1, editContent.split('\n').length)}
-                      />
-                      <div className="flex gap-2 text-xs">
-                        <Button size="sm" variant="default" className="h-7 text-xs px-3" onClick={handleEditSave}>Save</Button>
-                        <Button size="sm" variant="ghost" className="h-7 text-xs px-3" onClick={handleEditCancel}>Cancel</Button>
-                        <span className="text-muted-foreground mt-1 ml-1">escape to cancel • enter to save</span>
-                      </div>
-                    </div>
+                    <EditMessageForm
+                      initialContent={msg.content}
+                      onSave={handleEditSave}
+                      onCancel={handleEditCancel}
+                    />
                   ) : (
                     <>
                       <div
@@ -319,7 +280,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                   className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 hover:text-foreground transition-colors cursor-pointer w-fit group/thread-broadcast"
                                   onClick={() => onOpenThread?.(msg.threadRootId!)}
                                 >
-                                  <MessageSquare className="h-3 w-3 shrink-0" />
+                                  <ThreadIcon className="h-3 w-3 shrink-0" />
                                   <span className="font-semibold truncate">
                                     Replied in thread
                                   </span>
@@ -387,9 +348,9 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                               size="icon"
                               className="h-8 w-8 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60"
                               onClick={() => onOpenThread?.(msg.id)}
-                              title="Reply in Thread"
+                              title="Reply in thread"
                             >
-                              <MessageSquare className="h-3.5 w-3.5" />
+                              <ThreadIcon className="h-3.5 w-3.5" />
                             </Button>
                             <PinButton
                               conversationId={conversationId}
@@ -412,14 +373,14 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60"
-                                  onClick={() => handleEditStart(msg.id, msg.content)}
+                                  onClick={() => handleEditStart(msg.id)}
                                 >
                                   <Pencil className="h-3.5 w-3.5" />
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 rounded-none text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                  className="h-8 w-8 rounded-none text-muted-foreground hover:text-destructive hover:bg-accent/60"
                                   onClick={() => setMessageToDelete(msg.id)}
                                 >
                                   <Trash className="h-3.5 w-3.5" />
@@ -437,7 +398,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                   <Reply className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => onOpenThread?.(msg.id)}>
-                                  <MessageSquare className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply in Thread</span>
+                                  <ThreadIcon className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply in thread</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(msg.content)}>
                                   <Copy className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy</span>
@@ -456,7 +417,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                 {isMyMessage && (
                                   <>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => handleEditStart(msg.id, msg.content)}>
+                                    <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => handleEditStart(msg.id)}>
                                       <Pencil className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Edit Message</span>
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
@@ -478,7 +439,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                   <Reply className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => onOpenThread?.(msg.id)}>
-                                  <MessageSquare className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply in Thread</span>
+                                  <ThreadIcon className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Reply in thread</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => navigator.clipboard.writeText(msg.content)}>
                                   <Copy className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Copy</span>
@@ -497,7 +458,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                 {isMyMessage && (
                                   <>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => handleEditStart(msg.id, msg.content)}>
+                                    <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => handleEditStart(msg.id)}>
                                       <Pencil className="h-4 w-4 mr-2" /> <span className="pt-[1px]">Edit Message</span>
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
@@ -512,14 +473,17 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                         )}
                       </div>
                       {!isDeleted && (msg.threadReplyCount ?? 0) > 0 && (
+                        <div className="absolute left-[-26px] top-0 bottom-[12px] w-[22px] border-l-[2px] border-b-[2px] border-muted-foreground/40 rounded-bl-lg pointer-events-none z-0" />
+                      )}
+                      {!isDeleted && (msg.threadReplyCount ?? 0) > 0 && (
                         <div className="mt-1 relative flex items-center">
-                          <div className="absolute -left-[26px] top-[-14px] w-[22px] h-[20px] border-l-[2px] border-b-[2px] border-muted-foreground/40 rounded-bl-lg pointer-events-none" />
                           <button
                             type="button"
-                            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer leading-none z-10"
+                            // eslint-disable-next-line no-restricted-syntax
+                            className="flex items-center gap-1.5 text-xs font-semibold text-blue-400 bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 hover:border-blue-500/30 hover:text-blue-300 px-2.5 py-1.5 rounded-full transition-all cursor-pointer leading-none z-10"
                             onClick={() => onOpenThread?.(msg.id)}
                           >
-                            <MessageSquare className="h-3 w-3" />
+                            <ThreadIcon className="h-3 w-3" />
                             <span className="font-medium">{msg.threadReplyCount} {msg.threadReplyCount === 1 ? "reply" : "replies"}</span>
                             {msg.lastThreadReplyAt && (
                               <>
@@ -594,7 +558,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
               setOpenMenuId(null);
               setContextMenuTarget(null);
             }}>
-              <MessageSquare className="h-4 w-4 mr-2" /> Reply in Thread
+              <ThreadIcon className="h-4 w-4 mr-2" /> Reply in thread
             </DropdownMenuItem>
             <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => {
               navigator.clipboard.writeText(contextMenuTarget.content);
@@ -631,7 +595,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="flex items-center cursor-pointer" onClick={() => {
-                  handleEditStart(contextMenuTarget.msgId, contextMenuTarget.content);
+                  handleEditStart(contextMenuTarget.msgId);
                   setOpenMenuId(null);
                   setContextMenuTarget(null);
                 }}>

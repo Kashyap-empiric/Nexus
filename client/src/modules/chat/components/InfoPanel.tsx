@@ -3,11 +3,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useRef, useEffect } from "react";
 import { X, CalendarDays, Hash, Globe, Lock } from "lucide-react";
+import { ThreadIcon } from "@/shared/components/ui/thread-icon";
 import { cn } from "@/shared/lib/utils";
 import { InfoPanelView } from "@/shared/components/layout/AppLayoutShell";
 import { MemberListPanel } from "@/modules/workspaces/components/MemberListPanel";
 import { PinnedMessagesPanel } from "@/modules/messages/components/PinnedMessagesPanel";
 import { ThreadPanel } from "@/modules/threads/components/ThreadPanel";
+import { ChannelThreadsBrowser } from "@/modules/threads/components/ChannelThreadsBrowser";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { PresenceIndicator } from "@/modules/chat/components/PresenceIndicator";
 import { getPublicProfile } from "@/modules/users/api/users.api";
@@ -98,7 +100,7 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
         }}
       />
       <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
-        <h2 className="font-semibold text-lg text-foreground">Details</h2>
+        <h2 className="font-semibold text-lg text-foreground">Context</h2>
         <button
           onClick={onClose}
           className="p-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors"
@@ -108,7 +110,7 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
         </button>
       </div>
 
-      <div className="flex px-4 border-b shrink-0">
+      <div className="flex gap-1 px-4 border-b shrink-0">
         <button
           onClick={() => setInfoPanelView('about')}
           className={cn(
@@ -139,14 +141,16 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
           Pins
         </button>
         <button
-          onClick={() => setInfoPanelView(view === 'thread' ? 'about' : 'thread')}
+          onClick={() => setInfoPanelView('threads')}
           className={cn(
-            "flex-1 pb-2 pt-3 text-sm font-medium text-center border-b-2 transition-colors",
-            view === 'thread' ? "border-brand text-brand" : "border-transparent text-muted-foreground hover:text-foreground"
+            "flex-1 pb-2 pt-3 text-sm font-medium text-center border-b-2 transition-colors inline-flex items-center justify-center gap-1",
+            (view === 'threads' || view === 'thread') ? "border-brand text-brand" : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
-          Thread
+          <ThreadIcon className="h-3.5 w-3.5" />
+          Threads
         </button>
+
       </div>
 
       <div className="flex-1 overflow-y-auto min-h-0 flex flex-col">
@@ -266,10 +270,18 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
           <PinnedMessagesPanel conversationId={conversationId} />
         )}
 
+        {view === 'threads' && (
+          <ChannelThreadsBrowser
+            conversationId={conversationId}
+            setInfoPanelView={setInfoPanelView}
+          />
+        )}
+
         {view === 'thread' && (
           <ThreadPanel
             conversationId={conversationId}
             currentUser={(currentUser as unknown) as User | undefined}
+            onBack={() => setInfoPanelView('threads')}
           />
         )}
       </div>

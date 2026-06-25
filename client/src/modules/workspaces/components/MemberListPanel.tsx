@@ -49,7 +49,7 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
 
   if (isLoading || !members) {
     return (
-      <div className="w-72 border-l bg-muted/10 p-4 shrink-0 flex flex-col gap-4 h-full">
+      <div className="w-full p-4 shrink-0 flex flex-col gap-4 h-full">
         <div className="h-4 w-20 bg-muted animate-pulse rounded" />
         {[1, 2, 3].map(i => (
           <div key={i} className="flex items-center gap-3">
@@ -163,11 +163,11 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
   };
 
   return (
-    <div className="w-72 border-l bg-muted/10 p-4 overflow-y-auto shrink-0 flex flex-col gap-6 h-full">
+    <div className="w-full p-4 overflow-y-auto shrink-0 flex flex-col gap-6 h-full">
       {onlineMembers.length > 0 && (
         <div>
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">
-            {isChannelView ? "In Channel" : "Online"} — {onlineMembers.length}
+            Online — {onlineMembers.length}
           </h3>
           <div className="space-y-0.5">
             {onlineMembers.map(renderMember)}
@@ -177,7 +177,7 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
       {offlineMembers.length > 0 && (
         <div>
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">
-            {isChannelView ? "In Channel" : "Offline"} — {offlineMembers.length}
+            Offline — {offlineMembers.length}
           </h3>
           <div className="space-y-0.5">
             {offlineMembers.map(renderMember)}

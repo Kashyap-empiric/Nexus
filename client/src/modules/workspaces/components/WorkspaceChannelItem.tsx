@@ -196,7 +196,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
           ) : (
             <Hash className="h-4 w-4 shrink-0 opacity-70" />
           )}
-          <span className={`truncate text-sm leading-snug ${isUnread && !isActive ? "font-bold text-foreground" : "font-medium"}`}>
+          <span className={`truncate text-sm leading-snug ${isActive ? "font-medium" : isUnread ? "font-bold text-foreground" : "font-medium"}`}>
             {channel.name}
           </span>
         </div>
@@ -208,7 +208,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
           onPointerDown={(e) => e.stopPropagation()}
         >
           {isUnread && !isActive && (
-            <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-[12px] font-bold leading-none" style={{ color: '#ffffff' }}>
+            <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-[12px] font-bold leading-none text-destructive-foreground">
               {unreadCount > 99 ? "99+" : unreadCount}
             </div>
           )}

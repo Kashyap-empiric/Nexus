@@ -25,16 +25,17 @@ function HoverCardContent({
       <PopoverPrimitive.Positioner
         align={align}
         sideOffset={sideOffset}
-        className={cn("isolate", `z-[${OVERLAY_Z_INDEX.hoverCard}]`)}
+        className={cn("isolate")}
+        style={{ zIndex: OVERLAY_Z_INDEX.hoverCard }}
       >
         <PopoverPrimitive.Popup
           data-slot="hover-card-content"
           className={cn(
             "w-64 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-hidden",
-            `z-[${OVERLAY_Z_INDEX.hoverCard}]`,
             OVERLAY_ANIMATIONS.hover,
             className
           )}
+          style={{ zIndex: OVERLAY_Z_INDEX.hoverCard }}
           {...props}
         />
       </PopoverPrimitive.Positioner>

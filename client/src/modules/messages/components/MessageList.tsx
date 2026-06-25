@@ -57,7 +57,7 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
     if (!latestMessageId) return;
     if (latestMessage?.pending) return;
     if (myLastReadMessageId && latestMessageId <= myLastReadMessageId) return;
-    if (isLatestMessageMine) return; 
+    if (isLatestMessageMine) return;
 
     markRead({
       conversationId,
@@ -161,7 +161,7 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
                 {showDateSeparator && (
                   <div className="flex items-center justify-center my-6">
                     <div className="h-px bg-border flex-1 mx-4" />
-                    <span className="text-xs text-muted-foreground font-medium shrink-0">
+                    <span className="text-xs text-[#A0AAB2] font-medium shrink-0">
                       {currentGroupDate}
                     </span>
                     <div className="h-px bg-border flex-1 mx-4" />
@@ -182,7 +182,7 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
             );
           })}
 
-          {}
+          { }
           <TypingIndicator
             conversationId={conversationId}
             currentUserId={currentUserId}
@@ -192,7 +192,7 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
         </div>
       </div>
 
-      {}
+      { }
       {!isAtBottom && (
         <div className="absolute bottom-2 right-4 md:right-8 z-10 animate-in fade-in zoom-in-95 duration-200">
           <Button

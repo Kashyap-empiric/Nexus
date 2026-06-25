@@ -176,8 +176,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
     if (isOpen && type && !inviteUrl && !isLoading && !error) {
       generate(type, entityId);
     }
-
-  }, [isOpen, type, entityId]);
+  }, [isOpen, type, entityId, inviteUrl, isLoading, error, generate]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -190,7 +189,7 @@ export function InviteModal({ isOpen, onClose, type, entityId }: InviteModalProp
         setDebouncedQuery("");
       }, 300);
     }
-  }, [isOpen]);
+  }, [isOpen, reset]);
 
   useEffect(() => {
     if (!isOpen) return;

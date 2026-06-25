@@ -32,7 +32,7 @@ export default function WorkspaceChannelPage() {
       socket.off("connect", joinWorkspaceRoom);
     };
   }, [joinWorkspaceRoom]);
-  
+
   if (!channelId) return null;
 
   return <ActiveConversation conversationId={channelId} highlightMessageId={highlightMessageId} />;
