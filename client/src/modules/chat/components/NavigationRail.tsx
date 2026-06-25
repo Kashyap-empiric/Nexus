@@ -10,6 +10,7 @@ import { useWorkspaces } from "@/modules/workspaces/hooks/useWorkspaces";
 import { useConversationsQuery } from "@/modules/conversations/hooks/useConversations";
 import { CreateWorkspaceModal } from "@/modules/workspaces/components/CreateWorkspaceModal";
 import { useState, useCallback, useRef } from "react";
+import Image from "next/image";
 import { cn } from "@/shared/lib/utils";
 import { getPublicUrl } from "@/shared/lib/upload";
 import { fetchWorkspaceChannels } from "@/modules/workspaces/api/workspaces.api";
@@ -102,9 +103,9 @@ export function NavigationRail({ openSettings }: NavigationRailProps) {
                 )}
               >
                 {workspace.iconPath ? (
-                  <img src={getPublicUrl("avatars", workspace.iconPath) || ""} alt={workspace.name} className="w-full h-full object-cover rounded-[inherit]" />
+                  <Image src={getPublicUrl("avatars", workspace.iconPath) || ""} alt={workspace.name} fill className="object-cover rounded-[inherit]" sizes="40px" />
                 ) : workspace.imageUrl ? (
-                  <img src={workspace.imageUrl} alt={workspace.name} className="w-full h-full object-cover rounded-[inherit]" />
+                  <Image src={workspace.imageUrl} alt={workspace.name} fill className="object-cover rounded-[inherit]" sizes="40px" />
                 ) : (
                   workspace.name.substring(0, 2).toUpperCase()
                 )}
