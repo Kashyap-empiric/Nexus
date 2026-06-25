@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useSendMessageMutation } from "@/modules/messages/hooks/useMessages";
 import { SendHorizontal, Smile, X, Reply, List, ListOrdered } from "lucide-react";
@@ -25,12 +25,42 @@ interface MessageInputProps {
   disabled?: boolean;
   replyingTo?: { id: string; username: string; content: string } | null;
   onClearReply?: () => void;
+  placeholder?: string;
+  initialContent?: string;
+  onSubmit?: (content: string) => void;
+  onCancel?: () => void;
+  children?: ReactNode;
+  hideSendButton?: boolean;
+  threadRootId?: string;
+  compact?: boolean;
 }
 
-export function MessageInput({ conversationId, currentUser, disabled, replyingTo, onClearReply }: MessageInputProps) {
+export function MessageInput({
+  conversationId,
+  currentUser,
+  disabled,
+  replyingTo,
+  onClearReply,
+  placeholder = "Message...",
+  initialContent,
+  onSubmit,
+  onCancel,
+  children,
+  hideSendButton,
+  threadRootId,
+  compact,
+}: MessageInputProps) {
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [emojiPickerWidth, setEmojiPickerWidth] = useState(300);
   const { theme } = useTheme();
   const { mutate: sendMessage } = useSendMessageMutation(conversationId, currentUser);
+
+  useEffect(() => {
+    const handleResize = () => setEmojiPickerWidth(Math.min(300, window.innerWidth - 32));
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const isTypingRef = useRef(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -75,18 +105,23 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
   const submitMessage = () => {
     if (!editor) return;
 
-
     const markdownStorage = (editor.storage as unknown) as { markdown: { getMarkdown: () => string } };
     const markdownContent = markdownStorage.markdown.getMarkdown();
 
     if (!markdownContent.trim()) return;
+
+    if (onSubmit) {
+      onSubmit(markdownContent.trim());
+      editor.commands.clearContent(false);
+      return;
+    }
 
     emitTypingStop();
 
     tempIdCounterRef.current += 1;
 
     const tempId = `temp-${crypto.randomUUID()}-${tempIdCounterRef.current}`;
-    sendMessage({ conversationId, content: markdownContent.trim(), tempId, replyToId: replyingTo?.id || null });
+    sendMessage({ conversationId, content: markdownContent.trim(), tempId, replyToId: replyingTo?.id || null, threadRootId });
 
     editor.commands.clearContent(false);
     onClearReply?.();
@@ -136,7 +171,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
         },
       }),
       Placeholder.configure({
-        placeholder: "Message...",
+        placeholder,
         emptyEditorClass: 'is-editor-empty',
       }),
       Markdown.configure({
@@ -145,10 +180,12 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
         transformCopiedText: true,
       }),
     ],
-    content: '',
+    content: initialContent || '',
     editable: !disabled,
     onUpdate: () => {
-      handleTypingActivity();
+      if (!onSubmit) {
+        handleTypingActivity();
+      }
     },
     onTransaction: ({ editor }) => {
       setActiveMarks({
@@ -181,6 +218,11 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
             return true;
           }
         }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          onCancel?.();
+          return true;
+        }
         return false;
       },
     },
@@ -191,6 +233,18 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
       editor.setEditable(!disabled);
     }
   }, [editor, disabled]);
+
+  useEffect(() => {
+    if (editor && initialContent && editor.isEmpty) {
+      editor.commands.setContent(initialContent);
+    }
+  }, [editor, initialContent]);
+
+  useEffect(() => {
+    if (editor && initialContent) {
+      editor.commands.focus("end");
+    }
+  }, [editor, initialContent]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -251,9 +305,8 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
   const activeClass = "bg-primary/20 text-primary ring-1 ring-primary/30";
 
   return (
-    <form onSubmit={handleSubmit} className="px-4 md:px-6 xl:px-8 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:pb-6 pt-2 bg-background shrink-0 w-full">
-      { }
-      {replyingTo && (
+    <form onSubmit={handleSubmit} className={compact ? "w-full" : "px-4 md:px-6 xl:px-8 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:pb-6 pt-2 bg-background shrink-0 w-full"}>
+      {!compact && replyingTo && (
         <div className="flex items-center gap-2 px-3 py-2 mb-1 bg-muted/50 border border-border rounded-t-lg text-sm">
           <Reply className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <span className="text-muted-foreground">
@@ -272,41 +325,40 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
         </div>
       )}
 
-      <div className="w-full flex flex-col bg-muted/40 border border-border rounded-xl transition-colors focus-within:border-brand/40 overflow-hidden">
+      <div className={`w-full flex flex-col border border-border rounded-lg transition-colors focus-within:border-brand/40 overflow-hidden ${compact ? "bg-background" : "bg-muted/40"}`}>
 
-        { }
-        <div className="flex items-center gap-1 px-4 pt-2 pb-2 border-b border-border text-muted-foreground bg-muted/30">
-          <button type="button" onClick={toggleBold} className={`p-1.5 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.bold ? activeClass : ''}`} title="Bold">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 12a4 4 0 0 0 0-8H6v8" /><path d="M15 20a4 4 0 0 0 0-8H6v8Z" /></svg>
+        <div className="flex items-center gap-1 px-3 pt-1.5 pb-1.5 border-b border-border text-muted-foreground bg-muted/30">
+          <button type="button" onClick={toggleBold} className={`p-1 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.bold ? activeClass : ''}`} title="Bold">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 12a4 4 0 0 0 0-8H6v8" /><path d="M15 20a4 4 0 0 0 0-8H6v8Z" /></svg>
           </button>
-          <button type="button" onClick={toggleItalic} className={`p-1.5 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.italic ? activeClass : ''}`} title="Italic">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" x2="10" y1="4" y2="4" /><line x1="14" x2="5" y1="20" y2="20" /><line x1="15" x2="9" y1="4" y2="20" /></svg>
+          <button type="button" onClick={toggleItalic} className={`p-1 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.italic ? activeClass : ''}`} title="Italic">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" x2="10" y1="4" y2="4" /><line x1="14" x2="5" y1="20" y2="20" /><line x1="15" x2="9" y1="4" y2="20" /></svg>
           </button>
-          <button type="button" onClick={toggleCode} className={`p-1.5 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.code ? activeClass : ''}`} title="Code">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
+          <button type="button" onClick={toggleCode} className={`p-1 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.code ? activeClass : ''}`} title="Code">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
           </button>
-          <button type="button" onClick={toggleStrike} className={`p-1.5 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.strike ? activeClass : ''}`} title="Strikethrough">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4H9a3 3 0 0 0-2.83 4" /><path d="M14 12a4 4 0 0 1 0 8H6" /><line x1="4" x2="20" y1="12" y2="12" /></svg>
-          </button>
-
-          <div className="w-px h-5 bg-border mx-0.5" />
-
-          <button type="button" onClick={toggleBulletList} className={`p-1.5 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.bulletList ? activeClass : ''}`} title="Bullet List">
-            <List className="h-4 w-4" />
-          </button>
-          <button type="button" onClick={toggleOrderedList} className={`p-1.5 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.orderedList ? activeClass : ''}`} title="Numbered List">
-            <ListOrdered className="h-4 w-4" />
+          <button type="button" onClick={toggleStrike} className={`p-1 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.strike ? activeClass : ''}`} title="Strikethrough">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4H9a3 3 0 0 0-2.83 4" /><path d="M14 12a4 4 0 0 1 0 8H6" /><line x1="4" x2="20" y1="12" y2="12" /></svg>
           </button>
 
-          <div className="w-px h-5 bg-border mx-0.5" />
+          <div className="w-px h-4 bg-border mx-0.5" />
+
+          <button type="button" onClick={toggleBulletList} className={`p-1 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.bulletList ? activeClass : ''}`} title="Bullet List">
+            <List className="h-3.5 w-3.5" />
+          </button>
+          <button type="button" onClick={toggleOrderedList} className={`p-1 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.orderedList ? activeClass : ''}`} title="Numbered List">
+            <ListOrdered className="h-3.5 w-3.5" />
+          </button>
+
+          <div className="w-px h-4 bg-border mx-0.5" />
 
           <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
             <PopoverTrigger
               type="button"
-              className="p-1.5 hover:bg-muted hover:text-foreground rounded-md transition-colors flex items-center justify-center"
+              className="p-1 hover:bg-muted hover:text-foreground rounded-md transition-colors flex items-center justify-center"
               title="Emoji"
             >
-              <Smile className="h-4 w-4" />
+              <Smile className="h-3.5 w-3.5" />
             </PopoverTrigger>
             <PopoverContent
               side="top"
@@ -319,7 +371,7 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
                 theme={theme === 'dark' ? EmojiPickerTheme.DARK : EmojiPickerTheme.LIGHT}
                 lazyLoadEmojis={true}
                 searchPlaceHolder="Search emojis..."
-                width={300}
+                width={emojiPickerWidth}
                 previewConfig={{ showPreview: true }}
                 style={{
                   '--epr-emoji-size': '20px',
@@ -330,27 +382,42 @@ export function MessageInput({ conversationId, currentUser, disabled, replyingTo
               />
             </PopoverContent>
           </Popover>
-          { }
         </div>
 
-        { }
-        <div className="flex items-end w-full pl-4 pr-3 py-2 gap-2">
+        <div className="flex items-end w-full pl-3 pr-3 py-2 gap-2">
           <div className="flex-1 min-w-0 relative cursor-text" onClick={() => editor.commands.focus()}>
             <EditorContent editor={editor} className="w-full" />
           </div>
 
-          <Button
-            type="submit"
-            disabled={isEmpty || disabled}
-            size="icon"
-            variant="ghost"
-            className={`shrink-0 h-8 w-8 mb-[2px] rounded-md transition-all flex items-center justify-center hover:bg-muted ${!isEmpty ? "text-primary" : "text-muted-foreground opacity-50"}`}
-            title="Send message"
-          >
-            <SendHorizontal className="h-5 w-5" />
-            <span className="sr-only">Send</span>
-          </Button>
+          {!hideSendButton && (
+            <Button
+              type="submit"
+              disabled={isEmpty || disabled}
+              size="icon"
+              className="shrink-0 h-8 w-8 rounded-lg"
+              title="Send message"
+            >
+              <SendHorizontal className="h-4 w-4" />
+              <span className="sr-only">Send</span>
+            </Button>
+          )}
         </div>
+
+        {(children || onCancel) && (
+          <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-background">
+            {onCancel && (
+              <Button size="sm" variant="ghost" className="h-7 text-xs px-3" onClick={onCancel} type="button">
+                Cancel
+              </Button>
+            )}
+            {onSubmit && (
+              <Button size="sm" variant="default" className="h-7 text-xs px-3" onClick={(e) => { e.preventDefault(); submitMessage(); }} type="button">
+                Save
+              </Button>
+            )}
+            {children}
+          </div>
+        )}
       </div>
     </form>
   );
