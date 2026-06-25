@@ -1,13 +1,17 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useThreadStore } from "../store/threadStore";
 import { useThreadMessagesQuery } from "../hooks/useThreadMessages";
 import { ThreadInput } from "./ThreadInput";
 import { MarkdownRenderer } from "@/modules/messages/components/MarkdownRenderer";
+import { EditMessageForm } from "@/modules/messages/components/EditMessageForm";
+import { useEditMessageMutation } from "@/modules/messages/hooks/useMessages";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
-import { MessageSquare, ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
+import { ThreadIcon } from "@/shared/components/ui/thread-icon";
 import { cn } from "@/shared/lib/utils";
+import { Button } from "@/shared/components/ui/button";
 import type { User } from "@/modules/conversations/types/conversation";
 
 interface ThreadPanelProps {
@@ -16,9 +20,18 @@ interface ThreadPanelProps {
   onBack?: () => void;
 }
 
+function threadTitle(rootMessage: { content?: string } | undefined): string {
+  if (!rootMessage?.content) return "Thread";
+  const stripped = rootMessage.content.replace(/[#*`~>\[\]_|-]/g, "").trim();
+  return stripped.length > 60 ? stripped.slice(0, 60) + "…" : stripped;
+}
+
 export function ThreadPanel({ conversationId, currentUser, onBack }: ThreadPanelProps) {
   const { activeThreadRootId, threadData, setThreadData } = useThreadStore();
   const repliesEndRef = useRef<HTMLDivElement>(null);
+  const editMutation = useEditMessageMutation(conversationId);
+
+  const [editingReplyId, setEditingReplyId] = useState<string | null>(null);
 
   const { data, isLoading, isError } = useThreadMessagesQuery(
     conversationId,
@@ -38,11 +51,26 @@ export function ThreadPanel({ conversationId, currentUser, onBack }: ThreadPanel
   const rootMessage = threadData?.root;
   const replies = threadData?.replies ?? [];
 
+  const handleEditSave = (content: string) => {
+    if (editingReplyId && content.trim()) {
+      editMutation.mutate({
+        messageId: editingReplyId,
+        content: content.trim(),
+        threadRootId: activeThreadRootId,
+      });
+      setEditingReplyId(null);
+    }
+  };
+
+  const handleEditCancel = () => {
+    setEditingReplyId(null);
+  };
+
   if (!activeThreadRootId) {
     return (
       <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
         <div className="text-center px-4">
-          <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-40" />
+          <ThreadIcon className="h-8 w-8 mx-auto mb-2 opacity-40" />
           <p>Select a message to view its thread</p>
         </div>
       </div>
@@ -82,7 +110,7 @@ export function ThreadPanel({ conversationId, currentUser, onBack }: ThreadPanel
                       <ArrowLeft className="h-4 w-4" />
                     </button>
                   )}
-                  <h3 className="text-[17px] font-bold text-foreground">Thread</h3>
+                  <h3 className="text-[17px] font-bold text-foreground truncate">{threadTitle(rootMessage)}</h3>
                 </div>
                 <div className="text-[13px] text-muted-foreground flex items-center gap-1.5 flex-wrap">
                   <span className="font-semibold text-foreground">{replies.length} replies</span>
@@ -170,12 +198,31 @@ export function ThreadPanel({ conversationId, currentUser, onBack }: ThreadPanel
                             </span>
                           </div>
                           <div className="text-[14px] leading-relaxed text-foreground whitespace-pre-wrap break-words">
-                            {reply.deletedAt ? (
+                            {editingReplyId === reply.id ? (
+                              <EditMessageForm
+                                initialContent={reply.content}
+                                onSave={handleEditSave}
+                                onCancel={handleEditCancel}
+                              />
+                            ) : reply.deletedAt ? (
                               <span className="italic text-muted-foreground/70">This message was deleted.</span>
                             ) : (
                               <MarkdownRenderer content={reply.content} />
                             )}
                           </div>
+                          {!reply.deletedAt && editingReplyId !== reply.id && currentUser?.id === reply.userId && (
+                            <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60"
+                                onClick={() => setEditingReplyId(reply.id)}
+                                title="Edit message"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

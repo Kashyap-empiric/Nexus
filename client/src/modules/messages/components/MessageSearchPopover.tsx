@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, Hash, MessageSquare, Loader2 } from "lucide-react";
+import { Search, Hash, Loader2 } from "lucide-react";
+import { ThreadIcon } from "@/shared/components/ui/thread-icon";
 import { useRouter } from "next/navigation";
 import { useMessageSearchQuery } from "../hooks/useMessageSearch";
 import { APP_ROUTES } from "@/config/url";
@@ -136,7 +137,7 @@ export function MessageSearchPopover() {
                     {result.conversation.type === "CHANNEL" ? (
                       <Hash className="h-4 w-4" />
                     ) : (
-                      <MessageSquare className="h-4 w-4" />
+                      <ThreadIcon className="h-4 w-4" />
                     )}
                   </div>
                   <div className="min-w-0 flex-1">

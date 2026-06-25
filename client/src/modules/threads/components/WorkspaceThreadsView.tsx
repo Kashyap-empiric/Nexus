@@ -4,13 +4,15 @@ import { useState } from "react";
 import { useWorkspaceThreads } from "@/modules/messages/hooks/useThreads";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { formatRelativeTime } from "@/shared/lib/utils";
-import { MessageSquare, Hash, Loader2, MessagesSquare } from "lucide-react";
+import { Hash, Loader2 } from "lucide-react";
+import { ThreadIcon } from "@/shared/components/ui/thread-icon";
 import { useWorkspaceChannelsQuery } from "@/modules/workspaces/hooks/useWorkspaceChannels";
 import { useThreadStore } from "@/modules/threads/store/threadStore";
 import { useEffect } from "react";
 import { useChatStore } from "@/modules/chat/store/chatStore";
 import { ThreadPanel } from "./ThreadPanel";
 import { useUser } from "@/modules/auth/store/useAuthStore";
+import { useLayoutUI } from "@/shared/components/layout/AppLayoutShell";
 import type { User } from "@/modules/conversations/types/conversation";
 import { cn } from "@/shared/lib/utils";
 
@@ -33,6 +35,7 @@ export function WorkspaceThreadsView({ workspaceId }: WorkspaceThreadsViewProps)
   const { openThread } = useThreadStore();
   const setHeaderInfo = useChatStore((state) => state.setHeaderInfo);
   const authUser = useUser();
+  const { closeMobileSidebar } = useLayoutUI();
 
   useEffect(() => {
     setHeaderInfo({
@@ -70,7 +73,7 @@ export function WorkspaceThreadsView({ workspaceId }: WorkspaceThreadsViewProps)
         </div>
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
           <div className="h-14 w-14 bg-muted/60 rounded-2xl flex items-center justify-center mb-5">
-            <MessagesSquare className="h-7 w-7 text-muted-foreground" />
+            <ThreadIcon className="h-7 w-7 text-muted-foreground" />
           </div>
           <h2 className="text-base font-semibold text-foreground mb-1.5">No threads yet</h2>
           <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
@@ -93,7 +96,11 @@ export function WorkspaceThreadsView({ workspaceId }: WorkspaceThreadsViewProps)
       <div className="flex-1 flex min-h-0 overflow-hidden">
 
         {/* ── Left pane: thread list ── */}
-        <div className="w-[380px] shrink-0 border-r border-border/50 flex flex-col overflow-y-auto">
+        <div className={cn(
+          "flex flex-col overflow-y-auto border-r border-border/50 shrink-0",
+          selectedThread ? "max-lg:hidden" : "max-lg:w-full",
+          "lg:w-[380px]"
+        )}>
           <div className="flex flex-col gap-3 p-4">
             {threads.map((thread) => {
               const channel = channels?.find((c) => c.id === thread.conversationId);
@@ -112,6 +119,7 @@ export function WorkspaceThreadsView({ workspaceId }: WorkspaceThreadsViewProps)
                 >
                   <button
                     onClick={() => {
+                      closeMobileSidebar();
                       openThread(thread.threadRootId);
                       setSelectedThread({
                         threadRootId: thread.threadRootId,
@@ -184,7 +192,7 @@ export function WorkspaceThreadsView({ workspaceId }: WorkspaceThreadsViewProps)
                             </div>
                           )}
                           <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                            <MessageSquare className="h-3 w-3 shrink-0" />
+                            <ThreadIcon className="h-3 w-3 shrink-0" />
                             <span className="font-medium">
                               {thread.replyCount}{" "}
                               {thread.replyCount === 1 ? "reply" : "replies"}
@@ -201,16 +209,21 @@ export function WorkspaceThreadsView({ workspaceId }: WorkspaceThreadsViewProps)
         </div>
 
         {/* ── Right pane: thread detail ── */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-background">
+        <div className={cn(
+          "flex flex-col min-h-0 overflow-hidden bg-background",
+          selectedThread ? "max-lg:flex max-lg:w-full" : "max-lg:hidden",
+          "lg:flex-1"
+        )}>
           {selectedThread ? (
             <ThreadPanel
               conversationId={selectedThread.conversationId}
               currentUser={authUser as unknown as User | undefined}
+              onBack={() => setSelectedThread(null)}
             />
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <div className="h-12 w-12 bg-muted/50 rounded-2xl flex items-center justify-center mb-4">
-                <MessageSquare className="h-6 w-6 text-muted-foreground/60" />
+                <ThreadIcon className="h-6 w-6 text-muted-foreground/60" />
               </div>
               <p className="text-sm font-medium text-muted-foreground">Select a thread to read it</p>
               <p className="text-[13px] text-muted-foreground/60 mt-1">

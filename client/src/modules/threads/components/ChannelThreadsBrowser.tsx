@@ -1,7 +1,7 @@
 import { useChannelThreads } from "@/modules/messages/hooks/useThreads";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { formatRelativeTime } from "@/shared/lib/utils";
-import { MessageSquare } from "lucide-react";
+import { ThreadIcon } from "@/shared/components/ui/thread-icon";
 import type { InfoPanelView } from "@/shared/components/layout/AppLayoutShell";
 
 import { useThreadStore } from "@/modules/threads/store/threadStore";
@@ -35,7 +35,7 @@ export function ChannelThreadsBrowser({ conversationId, setInfoPanelView, onOpen
   if (!threads || threads.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-        <MessageSquare className="h-8 w-8 text-muted-foreground mb-3" />
+        <ThreadIcon className="h-8 w-8 text-muted-foreground mb-3" />
         <h3 className="font-medium text-foreground mb-1">No active threads</h3>
         <p className="text-sm text-muted-foreground">
           Reply to any message to start a thread.
@@ -81,7 +81,7 @@ export function ChannelThreadsBrowser({ conversationId, setInfoPanelView, onOpen
               </div>
               <div className="flex items-center gap-2 mt-1 pl-10">
                 <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand/10 text-brand text-xs font-medium">
-                  <MessageSquare className="h-3 w-3" />
+                  <ThreadIcon className="h-3 w-3" />
                   {thread.replyCount} {thread.replyCount === 1 ? 'reply' : 'replies'}
                 </div>
                 {thread.lastReplyPreview && (

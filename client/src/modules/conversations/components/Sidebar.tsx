@@ -35,7 +35,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import { MessageSquarePlus, UserPlus, MessageSquare } from "lucide-react";
+import { MessageSquarePlus, UserPlus } from "lucide-react";
+import { ThreadIcon } from "@/shared/components/ui/thread-icon";
 import { useQueryClient } from "@tanstack/react-query";
 import { socket } from "@/socket/socketClient";
 import { WorkspaceHeader } from "@/modules/workspaces/components/WorkspaceHeader";
@@ -187,7 +188,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
                       : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                   }`}
                 >
-                  <MessageSquare className="h-4 w-4 shrink-0" />
+                  <ThreadIcon className="h-4 w-4 shrink-0" />
                   <span className="font-medium text-sm">Threads</span>
                 </Link>
               </div>

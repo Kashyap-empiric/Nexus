@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useRef, useEffect } from "react";
 import { X, CalendarDays, Hash, Globe, Lock } from "lucide-react";
+import { ThreadIcon } from "@/shared/components/ui/thread-icon";
 import { cn } from "@/shared/lib/utils";
 import { InfoPanelView } from "@/shared/components/layout/AppLayoutShell";
 import { MemberListPanel } from "@/modules/workspaces/components/MemberListPanel";
@@ -142,10 +143,11 @@ export function InfoPanel({ conversationId, workspaceId, channelId, userId, chan
         <button
           onClick={() => setInfoPanelView('threads')}
           className={cn(
-            "flex-1 pb-2 pt-3 text-sm font-medium text-center border-b-2 transition-colors",
+            "flex-1 pb-2 pt-3 text-sm font-medium text-center border-b-2 transition-colors inline-flex items-center justify-center gap-1",
             (view === 'threads' || view === 'thread') ? "border-brand text-brand" : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
+          <ThreadIcon className="h-3.5 w-3.5" />
           Threads
         </button>
 
