@@ -136,10 +136,10 @@ Invites — link generation, resolution, batch invite, email invite
 - Add invite analytics (click-through rate)
 
 ## Agent Self QA
-Status: PENDING
+Status: PASS
 
 ## Human QA
 Status: PENDING
 
 ## Review Status
-Status: PENDING
+Status: READY_FOR_REVIEW

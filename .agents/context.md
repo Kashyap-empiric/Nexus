@@ -1,6 +1,6 @@
 # Agent Context
 
-> **Last Updated:** 2026-06-24
+> **Last Updated:** 2026-06-26
 > **Purpose:** Single source-of-truth context file for AI agents working on Nexus. All other `.agents/` files are local-only policy references. The authoritative TL-authored rules are in `Rules_Expectations.md` (project root).
 
 ---
@@ -40,11 +40,23 @@ The top-level rules file covers:
 
 ---
 
-## Recent Addition: Message Threads (June 24)
+## Recent Addition: Message Threads (June 24–25)
 
-**Schema:** `Message.threadRootId` (self-FK), `threadReplyCount`, `lastThreadReplyAt`, `isThreadBroadcast`. `MessageMention` and `MessageReaction` models.
+**Phase 1 (June 24):** `Message.threadRootId` (self-FK), `threadReplyCount`, `lastThreadReplyAt`, `isThreadBroadcast`. `MessageMention` and `MessageReaction` models.
 
-**Client modules:** `client/src/modules/threads/` — `ThreadPanel`, `ThreadInput`, `threadStore`, `useThreadMessages`.
+**Client modules:** `client/src/modules/threads/` — `ThreadPanel`, `ThreadInput`, `threadStore`, `useThreadMessages`, `WorkspaceThreadsView`, `ChannelThreadsBrowser`.
+
+**Phase 2 enhancements (June 25):**
+- **Thread Summaries API** — `getThreadSummaries`, `getThreadSummaryCounts` service methods
+- **Workspace Threads Page** — Slack-style card-based feed at `/workspaces/[slug]/threads` with sidebar entry, channel pills, participant avatars, reply counts
+- **Channel Threads Browser** — `ChannelThreadsBrowser` component; Threads tab in InfoPanel
+- **Message Actions Toolbar** — Copy/edit/delete on thread replies; formatting toolbar in edit mode
+- **Thread Panel as Right Pane** — Right-side detail pane integration
+- **Editor Consolidation** — Reusable `MessageInput` component shared between main chat and threads
+- **Discord-style Thread Icon** — `ThreadIcon` component replacing `MessageSquare`
+- **useOptimisticMessage Hook** — Utility for pending message state checking
+- **Optimistic Reply Fix** — `threadStore.addReply` replaces pending placeholder
+- **Auth Metadata Fix** — `avatarUrl`/`fullName` from `user_metadata`
 
 **Socket events:** `threadMessage:new` — dispatched to conversation room for real-time thread reply delivery.
 

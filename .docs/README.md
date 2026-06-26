@@ -1,6 +1,6 @@
 # Nexus — Documentation Index
 
-> **Last Updated:** 2026-06-22
+> **Last Updated:** 2026-06-26
 > **Purpose:** Navigate the `.docs/` directory. Each file serves a specific audience and intent. Read this first.
 
 ---

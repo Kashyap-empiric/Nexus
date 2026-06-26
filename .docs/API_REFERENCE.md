@@ -1,6 +1,6 @@
 # Nexus — API Reference
 
-> **Last Updated:** 2026-06-24
+> **Last Updated:** 2026-06-26
 > **Purpose:** Complete OpenAPI-style reference for all REST endpoints and Socket.io events.
 
 ---
