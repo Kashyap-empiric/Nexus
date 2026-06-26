@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authMiddleware } from "@/middlewares/auth.js";
+import { rejectDeletingAccount } from "@/middlewares/accountStatus.js";
 import { validate } from "@/middlewares/validate.js";
 import { requireConversationMember } from "@/middlewares/requireConversationMember.js";
 import { messageLimiter } from "@/middlewares/rateLimiter.js";
@@ -20,6 +21,7 @@ router.post(
   "/",
   messageLimiter,
   authMiddleware,
+  rejectDeletingAccount,
   validate({ params: messageParamsSchema, body: createMessageBodySchema }),
   requireConversationMember({ paramName: "conversationId" }),
   createMessage
@@ -29,6 +31,7 @@ router.patch(
   "/:messageId",
   messageLimiter,
   authMiddleware,
+  rejectDeletingAccount,
   validate({ params: messageIdParamsSchema, body: updateMessageBodySchema }),
   requireConversationMember({ paramName: "conversationId" }),
   updateMessage
@@ -46,6 +49,7 @@ router.delete(
   "/:messageId",
   messageLimiter,
   authMiddleware,
+  rejectDeletingAccount,
   validate({ params: messageIdParamsSchema }),
   requireConversationMember({ paramName: "conversationId" }),
   deleteMessage

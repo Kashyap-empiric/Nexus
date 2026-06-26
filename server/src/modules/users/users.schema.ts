@@ -26,4 +26,10 @@ export const updateStatusSchema = z.object({
   statusText: z.string().max(100).nullable().optional(),
 });
 
+export const deleteAccountSchema = z.object({
+  confirmation: z.string().min(1, "Confirmation is required to delete your account."),
+});
+
+export type DeleteAccountBody = z.infer<typeof deleteAccountSchema>;
+
 export type UpdateStatusBody = z.infer<typeof updateStatusSchema>;

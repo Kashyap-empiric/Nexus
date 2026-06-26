@@ -50,7 +50,7 @@ import { UserFooterMenu } from "@/modules/users/components/UserFooterMenu";
 interface SidebarProps {
   onNavigate?: () => void;
   onOpenWorkspaceSettings?: () => void;
-  openSettings?: (view: 'profile' | 'appearance' | 'notifications' | 'about') => void;
+  openSettings?: (view: 'profile' | 'appearance' | 'notifications' | 'account') => void;
 }
 
 export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: SidebarProps) {
@@ -112,8 +112,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
           return c.name.toLowerCase().includes(searchQuery.toLowerCase());
         }
         return true;
-      })
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      });
 
   const isListLoading = mode === "DM" ? isLoading : isLoadingChannels;
 
@@ -286,7 +285,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
                               ? <span className="italic">This message was deleted</span>
                               : chat.latestMessage.userId === currentAuthUser?.id
                                 ? `You: ${stripMarkdown(chat.latestMessage.content)}`
-                                : `${chat.latestMessage.user.username}: ${stripMarkdown(chat.latestMessage.content)}`
+                                : `${chat.latestMessage.user?.username ?? 'Unknown'}: ${stripMarkdown(chat.latestMessage.content)}`
                             }
                           </span>
                         )}

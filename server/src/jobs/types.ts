@@ -63,6 +63,11 @@ export type CleanupJobData = {
   type: "expired-invites" | "expired-reset-tokens" | "soft-deleted-messages";
 };
 
+export type DeleteAccountJob = {
+  userId: string;
+  ownedWorkspaceIds: string[];
+};
+
 export type JobData =
   | PushToMembersJob
   | PushNotificationJob
@@ -70,4 +75,5 @@ export type JobData =
   | RevokeInviteJob
   | FanOutNotificationJob
   | BatchInviteJob
-  | CleanupJobData;
+  | CleanupJobData
+  | DeleteAccountJob;

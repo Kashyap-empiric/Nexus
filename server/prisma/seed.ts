@@ -84,12 +84,15 @@ async function main() {
     },
   })
 
+  const alice = await prisma.user.findUnique({ where: { id: aliceId }, select: { username: true, avatarUrl: true } });
+  const bob = await prisma.user.findUnique({ where: { id: bobId }, select: { username: true, avatarUrl: true } });
+
   const messages = [
-    { id: uuidv7(), userId: aliceId, content: 'Hey Bob! How are you?' },
-    { id: uuidv7(), userId: bobId, content: 'Hey Alice! Doing great, you?' },
-    { id: uuidv7(), userId: aliceId, content: 'Pretty good! Working on Nexus 🚀' },
-    { id: uuidv7(), userId: bobId, content: 'Nice! Let me know if you need help testing.' },
-    { id: uuidv7(), userId: aliceId, content: 'Will do, thanks!' },
+    { id: uuidv7(), userId: aliceId, content: 'Hey Bob! How are you?', displayNameSnapshot: alice!.username, avatarSnapshot: alice?.avatarUrl ?? null },
+    { id: uuidv7(), userId: bobId, content: 'Hey Alice! Doing great, you?', displayNameSnapshot: bob!.username, avatarSnapshot: bob?.avatarUrl ?? null },
+    { id: uuidv7(), userId: aliceId, content: 'Pretty good! Working on Nexus 🚀', displayNameSnapshot: alice!.username, avatarSnapshot: alice?.avatarUrl ?? null },
+    { id: uuidv7(), userId: bobId, content: 'Nice! Let me know if you need help testing.', displayNameSnapshot: bob!.username, avatarSnapshot: bob?.avatarUrl ?? null },
+    { id: uuidv7(), userId: aliceId, content: 'Will do, thanks!', displayNameSnapshot: alice!.username, avatarSnapshot: alice?.avatarUrl ?? null },
   ]
 
   for (const msg of messages) {

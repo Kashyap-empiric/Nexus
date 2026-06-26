@@ -4,12 +4,12 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogHeader } from "@/shared/components/ui/dialog";
 import { ProfileSettings } from "./ProfileSettings";
 import { AppearanceSettings } from "./AppearanceSettings";
-import { AboutSettings } from "./AboutSettings";
+import { AccountSettings } from "./AccountSettings";
 import { NotificationSettings } from "@/modules/notifications/components/NotificationSettings";
-import { User, Monitor, Bell, Info, ArrowLeft, ChevronRight } from "lucide-react";
+import { User, Monitor, Bell, LogOut, ArrowLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 
-export type SettingsView = 'profile' | 'appearance' | 'notifications' | 'about';
+export type SettingsView = 'profile' | 'appearance' | 'notifications' | 'account';
 
 const TAB_GROUPS = [
   {
@@ -26,9 +26,9 @@ const TAB_GROUPS = [
     ]
   },
   {
-    label: "Other",
+    label: "Account",
     items: [
-      { id: "about", label: "About", icon: Info },
+      { id: "account", label: "Account", icon: LogOut },
     ]
   }
 ] as const;
@@ -141,7 +141,7 @@ export const SharedSettingsModal = ({ isOpen, currentTab, setTab, closeSettings 
             {activeTab === "profile" && <ProfileSettings />}
             {activeTab === "appearance" && <AppearanceSettings />}
             {activeTab === "notifications" && <NotificationSettings />}
-            {activeTab === "about" && <AboutSettings />}
+            {activeTab === "account" && <AccountSettings />}
           </div>
         </div>
       </DialogContent>

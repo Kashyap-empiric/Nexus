@@ -19,6 +19,7 @@ model User {
   statusText               String?
   avatarPath               String?
   isOnboarded              Boolean              @default(false)
+  isDeleting               Boolean              @default(false)
   pushNotificationsEnabled       Boolean              @default(true)
   dmNotifications                Boolean              @default(true)
   mentionNotifications           Boolean              @default(true)
@@ -78,15 +79,17 @@ model ConversationMember {
 }
 
 model Message {
-  id             String               @id
-  content        String
-  conversationId String
-  userId         String
-  isEdited       Boolean              @default(false)
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  deletedAt      DateTime?
-  replyToId      String?
+  id                   String               @id
+  content              String
+  conversationId       String
+  userId               String?
+  displayNameSnapshot  String
+  avatarSnapshot       String?
+  isEdited             Boolean              @default(false)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  deletedAt            DateTime?
+  replyToId            String?
   replyTo        Message?             @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
   replies        Message[]            @relation("MessageReplies")
   
@@ -103,7 +106,7 @@ model Message {
   latestIn       Conversation[]       @relation("ConversationLatestMessage")
   readByMembers  ConversationMember[] @relation("ConversationMemberLastRead")
   conversation   Conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
   pinRecord      PinnedMessage?  @relation("PinToMessage")
 
   @@index([conversationId, id])
@@ -163,10 +166,11 @@ model Workspace {
   ownerId   String
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
-  slug      String            @unique
-  channels  Conversation[]
-  owner     User              @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  members   WorkspaceMember[]
+  slug        String            @unique
+  isDeleting  Boolean           @default(false)
+  channels    Conversation[]
+  owner       User              @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members     WorkspaceMember[]
 }
 
 model WorkspaceMember {

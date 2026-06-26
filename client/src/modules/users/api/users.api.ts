@@ -32,3 +32,7 @@ export const updateStatus = async (data: { status: "AVAILABLE" | "AWAY" | "DND" 
   const response = await api.patch<{ data: UserResult }>(API_ROUTES.USERS.STATUS, data);
   return response.data.data;
 };
+
+export const deleteAccount = async (confirmation: string): Promise<void> => {
+  await api.delete(API_ROUTES.USERS.DELETE_ACCOUNT, { data: { confirmation } });
+};
