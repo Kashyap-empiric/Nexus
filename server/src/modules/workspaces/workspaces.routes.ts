@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authMiddleware } from "@/middlewares/auth.js";
+import { rejectDeletingAccount } from "@/middlewares/accountStatus.js";
 import { validate } from "@/middlewares/validate.js";
 import {
   getUserWorkspaces,
@@ -42,6 +43,7 @@ import { getWorkspaceThreads } from "@/modules/messages/messages.controller.js";
 const router = Router();
 
 router.use(authMiddleware);
+router.use(rejectDeletingAccount);
 
 router.get("/", getUserWorkspaces);
 router.post("/", validate({ body: createWorkspaceBodySchema }), createWorkspace);

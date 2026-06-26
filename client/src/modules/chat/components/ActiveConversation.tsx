@@ -88,6 +88,8 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
 
     return () => {
       setHeaderInfo(null);
+      closeThread();
+      closeInfoPanel();
     };
   }, [conversation, currentUserId, conversations, conversationId, isChannel, workspaceDetails, setHeaderInfo]);
 

@@ -14,6 +14,7 @@ export const API_ROUTES = {
     STATUS: '/users/me/status',
     CHECK_USERNAME: (username: string) => `/users/check-username?username=${encodeURIComponent(username)}`,
     RESOLVE_USERNAME: '/users/resolve-username',
+    DELETE_ACCOUNT: '/users/me',
   },
   CONVERSATIONS: {
     BASE: '/conversations',

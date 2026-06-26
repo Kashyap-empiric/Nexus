@@ -6,6 +6,7 @@ import { processRevokeInvite } from "./processors/revokeInvite.processor.js";
 import { processFanOutNotification } from "./processors/fanOutNotification.processor.js";
 import { processBatchInvite } from "./processors/batchInvite.processor.js";
 import { processCleanup } from "./processors/cleanup.processor.js";
+import { processDeleteAccount } from "./processors/deleteAccount.processor.js";
 import { cleanupQueue } from "./queues.js";
 import type {
   PushToMembersJob,
@@ -15,6 +16,7 @@ import type {
   BatchInviteJob,
   SendEmailJob,
   CleanupJobData,
+  DeleteAccountJob,
 } from "./types.js";
 
 const connection = getBullConnectionOptions();
@@ -39,6 +41,8 @@ export function startWorkers() {
           return processFanOutNotification(job.data as FanOutNotificationJob);
         case "batch-invite":
           return processBatchInvite(job.data as BatchInviteJob);
+        case "delete-account":
+          return processDeleteAccount(job.data as DeleteAccountJob);
         default:
           throw new Error(`Unknown notification job: ${job.name}`);
       }

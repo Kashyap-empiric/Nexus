@@ -27,7 +27,7 @@ const STATUS_OPTIONS = [
 ] as const;
 
 interface UserFooterMenuProps {
-  openSettings: (view: 'profile' | 'appearance' | 'notifications' | 'about') => void;
+  openSettings: (view: 'profile' | 'appearance' | 'notifications' | 'account') => void;
 }
 
 export function UserFooterMenu({ openSettings }: UserFooterMenuProps) {

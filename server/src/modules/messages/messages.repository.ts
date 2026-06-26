@@ -142,16 +142,29 @@ export const createMessageTransaction = async (
   userId: string,
   content: string,
   messageId: string,
+  displayNameSnapshot: string,
+  avatarSnapshot: string | null,
   replyToId?: string | null,
   threadRootId?: string | null,
   isThreadBroadcast?: boolean
 ) => {
   const operations: any[] = [];
 
+  const baseCreateData: any = {
+    id: messageId,
+    conversationId,
+    userId,
+    content,
+    displayNameSnapshot,
+    avatarSnapshot,
+    replyToId: replyToId ?? undefined,
+    isThreadBroadcast: isThreadBroadcast ?? false,
+  };
+
   if (threadRootId) {
     operations.push(
       prisma.message.create({
-        data: { id: messageId, conversationId, userId, content, replyToId: replyToId ?? undefined, threadRootId, isThreadBroadcast: isThreadBroadcast ?? false },
+        data: { ...baseCreateData, threadRootId },
         include: {
           user: {
             select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
@@ -172,7 +185,7 @@ export const createMessageTransaction = async (
   } else {
     operations.push(
       prisma.message.create({
-        data: { id: messageId, conversationId, userId, content, replyToId: replyToId ?? undefined, isThreadBroadcast: isThreadBroadcast ?? false },
+        data: baseCreateData,
         include: {
           user: {
             select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
@@ -236,7 +249,7 @@ export const findThreadParticipants = async (threadRootId: string): Promise<stri
     select: { userId: true },
     distinct: ["userId"],
   });
-  return rows.map(r => r.userId);
+  return rows.map(r => r.userId).filter((id): id is string => id !== null);
 };
 
 export const findChannelThreads = async (conversationId: string) => {

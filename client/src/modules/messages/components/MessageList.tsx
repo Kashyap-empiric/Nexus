@@ -5,7 +5,7 @@ import { useMessagesInfiniteQuery } from "@/modules/messages/hooks/useMessages";
 import { useMarkConversationReadMutation } from "@/modules/conversations/hooks/useConversations";
 import { useMessageScroll } from "@/modules/chat/hooks/useMessageScroll";
 import { MessageGroupItem } from "./MessageGroupItem";
-import { groupMessages } from "@/modules/chat/utils/groupMessages";
+import { groupMessages, type MessageGroup } from "@/modules/chat/utils/groupMessages";
 import { MessageListSkeleton } from "./MessageListSkeleton";
 import { TypingIndicator } from "./TypingIndicator";
 import { ChevronDown } from "lucide-react";
@@ -53,17 +53,28 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
     fetchNextPage,
   });
 
-  useEffect(() => {
-    if (!latestMessageId) return;
-    if (latestMessage?.pending) return;
-    if (myLastReadMessageId && latestMessageId <= myLastReadMessageId) return;
-    if (isLatestMessageMine) return;
+  // Mark messages as read on conversation switch or unmount
+  const conversationIdRef = useRef(conversationId);
+  const latestMessageIdRef = useRef(latestMessageId);
+  const myLastReadMessageRef = useRef(myLastReadMessageId);
+  const markReadFnRef = useRef(markRead);
 
-    markRead({
-      conversationId,
-      messageId: latestMessageId,
-    });
-  }, [conversationId, latestMessageId, markRead, myLastReadMessageId, isLatestMessageMine, latestMessage?.pending]);
+  useEffect(() => {
+    conversationIdRef.current = conversationId;
+    latestMessageIdRef.current = latestMessageId;
+    myLastReadMessageRef.current = myLastReadMessageId;
+    markReadFnRef.current = markRead;
+  });
+
+  useEffect(() => {
+    return () => {
+      const msgId = latestMessageIdRef.current;
+      const lastReadId = myLastReadMessageRef.current;
+      if (msgId && msgId !== lastReadId) {
+        markReadFnRef.current({ conversationId: conversationIdRef.current, messageId: msgId });
+      }
+    };
+  }, [conversationId]);
 
 
 
@@ -101,6 +112,18 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
     return () => clearTimeout(timer);
   }, [highlightMessageId, data, isFetchingNextPage, isLoading, hasNextPage, fetchNextPage]);
 
+  const rawMessages = data?.pages.flatMap((page) => page?.data || []).reverse() || [];
+  const messageGroups = groupMessages(rawMessages);
+  const pinnedMessageIds = new Set(data?.pages.flatMap((page) => page?.pinnedMessageIds || []) || []);
+
+  // Determine effective last read position
+  const effectiveLastReadId =
+    isLatestMessageMine && latestMessageId ? latestMessageId :
+    myLastReadMessageId;
+
+  // Insert unread divider into message groups
+  const { displayGroups, dividerAfterGroup } = insertUnreadDivider(messageGroups, effectiveLastReadId);
+
   if (isLoading) {
     return <MessageListSkeleton />;
   }
@@ -112,10 +135,6 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
       </div>
     );
   }
-
-  const rawMessages = data?.pages.flatMap((page) => page?.data || []).reverse() || [];
-  const messageGroups = groupMessages(rawMessages);
-  const pinnedMessageIds = new Set(data?.pages.flatMap((page) => page?.pinnedMessageIds || []) || []);
 
   return (
     <div className="flex-1 relative min-h-0 flex flex-col bg-background overflow-x-hidden">
@@ -151,9 +170,9 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
             </>
           )}
 
-          {messageGroups.map((group, index) => {
+          {displayGroups.map((group, index) => {
             const currentGroupDate = new Date(group.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
-            const prevGroupDate = index > 0 ? new Date(messageGroups[index - 1].createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }) : null;
+            const prevGroupDate = index > 0 ? new Date(displayGroups[index - 1].createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }) : null;
             const showDateSeparator = currentGroupDate !== prevGroupDate;
 
             return (
@@ -178,6 +197,9 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
                   pinnedMessageIds={pinnedMessageIds}
                   canPin={canPin}
                 />
+                {index === dividerAfterGroup && (
+                  <UnreadDivider />
+                )}
               </React.Fragment>
             );
           })}
@@ -208,6 +230,70 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
           </Button>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Inserts an unread divider into message groups based on the last-read message ID.
+ * Splits any group that contains the last-read message in the middle.
+ */
+function insertUnreadDivider(
+  groups: MessageGroup[],
+  lastReadMessageId: string | null | undefined
+): { displayGroups: MessageGroup[]; dividerAfterGroup: number | null } {
+  if (!lastReadMessageId) {
+    return { displayGroups: groups, dividerAfterGroup: null };
+  }
+
+  const result: MessageGroup[] = [];
+  let dividerAfterGroup: number | null = null;
+
+  for (const group of groups) {
+    const msgIndex = group.messages.findIndex(m => m.id === lastReadMessageId);
+    if (msgIndex === -1) {
+      result.push(group);
+      continue;
+    }
+
+    // Found the last read message in this group
+    if (msgIndex === group.messages.length - 1) {
+      // Last message in the group — divider goes after this group
+      result.push(group);
+      dividerAfterGroup = result.length - 1;
+    } else {
+      // Middle of the group — split into two groups with divider between
+      // Part 1: messages up to and including the last read message
+      result.push({
+        ...group,
+        id: group.id + "-read",
+        messages: group.messages.slice(0, msgIndex + 1),
+      });
+      dividerAfterGroup = result.length - 1;
+      // Part 2: messages after the last read message (unread)
+      result.push({
+        ...group,
+        messages: group.messages.slice(msgIndex + 1),
+      });
+    }
+  }
+
+  // If the divider is after the last group, there are no unread messages — don't show it
+  if (dividerAfterGroup !== null && dividerAfterGroup === result.length - 1) {
+    dividerAfterGroup = null;
+  }
+
+  return { displayGroups: result, dividerAfterGroup };
+}
+
+function UnreadDivider() {
+  return (
+    <div className="flex items-center justify-center my-4 px-4 md:px-6">
+      <div className="h-px bg-destructive/30 flex-1" />
+      <span className="text-xs font-semibold text-destructive mx-3 shrink-0 uppercase tracking-wider select-none">
+        New
+      </span>
+      <div className="h-px bg-destructive/30 flex-1" />
     </div>
   );
 }
