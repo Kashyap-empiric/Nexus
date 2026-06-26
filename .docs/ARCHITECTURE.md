@@ -1,6 +1,6 @@
 # Nexus — System Architecture
 
-> **Last Updated:** 2026-06-24
+> **Last Updated:** 2026-06-26
 > **Purpose:** Visual and textual description of system architecture, component relationships, and communication patterns.
 
 ---

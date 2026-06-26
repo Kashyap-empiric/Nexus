@@ -1,6 +1,6 @@
 # Nexus — Project Overview
 
-> **Version:** 0.1.0 | **Date:** 2026-06-24
+> **Version:** 0.1.0 | **Date:** 2026-06-26
 > **Purpose:** A comprehensive technical reference for engineers working on Nexus. Covers architecture, design decisions, current state, and known limitations.
 
 ---
@@ -478,17 +478,17 @@ Presence state is dual-written to Redis and an in-memory Map. Every socket conne
 
 ---
 
-## Current State (June 24)
+## Current State (June 26)
 
 | Check | Result |
 |-------|--------|
 | Client TypeScript | 0 errors |
 | Server TypeScript | 0 errors |
 | Client ESLint | 0 errors (17 pre-existing warnings) |
-| Client tests | 175/175 passing |
+| Client tests | 179/179 passing |
 | Server tests | 155/155 passing |
 
-A major threads feature has been merged into `development` with dedicated thread UI, optimistic updates, and schema changes for mentions and reactions.
+Threads feature has been merged into `development` with workspace-level threads view, channel thread browser, message actions on thread replies, formatting toolbar in edit mode, and comprehensive UI polish (Discord-style thread icons, connector line improvements, z-index refactor).
 
 ### Known Issues
 

@@ -1,9 +1,38 @@
 # Nexus — Changelog
 
-> **Last Updated:** 2026-06-24  
+> **Last Updated:** 2026-06-26  
 > **Purpose:** Track all significant changes to the project in reverse chronological order.
 
 ---
+
+## 2026-06-25
+
+### Added
+- **Thread Summaries API**: `getThreadSummaries` and `getThreadSummaryCounts` service methods for fetching thread activity per conversation. TanStack Query hooks (`useThreadsQuery`, `useThreadSummaryCounts`) on client for data fetching.
+- **Workspace Threads Page**: Slack-style workspace-level threads view at `/workspaces/[slug]/threads` with card-based thread rows, channel pills, participant avatars, reply counts, and active indicators. Sidebar navigation entry added.
+- **Channel Threads Browser**: Thread browser component for channel-level thread listing; Threads tab added to InfoPanel.
+- **Message Actions Toolbar**: Copy/edit/delete hover toolbar and dropdown menu on thread replies in ThreadPanel. Delete confirmation AlertDialog with destructive styling.
+- **Formatting Toolbar in Edit Mode**: Formatting toolbar (bold, italic, strikethrough, code) added to edit form for messages.
+- **Discord-style Thread Icon**: Dedicated `ThreadIcon` component replacing `MessageSquare` for thread indicators across the app.
+- **useOptimisticMessage Hook**: Utility hook for checking pending/optimistic message state.
+- **Thread Connector Improvements**: Consecutive messages from same sender grouped with improved connector line rendering (rounded bottom corners for thread end).
+
+### Changed
+- **Thread Panel as Right Pane**: ThreadPanel now integrates as a right-side detail pane in workspace threads view instead of a full overlay.
+- **Terminology Update**: Changed "Create Thread" to "Reply in thread" across the entire UI.
+- **Editor Consolidation**: Refactored formatting toolbar and editor logic into reusable `MessageInput` component shared between main chat and threads.
+- **Z-index Refactor**: Replaced runtime template literal z-index with inline style in overlay components for predictable stacking.
+- **Mobile Sidebar Overlay**: Improved mobile sidebar backdrop visibility and info panel auto-open behavior.
+
+### Fixed
+- **Optimistic Reply Duplication**: `threadStore.addReply` now replaces pending optimistic placeholder instead of appending duplicate.
+- **Auth Metadata Propagation**: Optimistic mutation now extracts `avatarUrl`/`fullName` from `user_metadata` in auth data.
+- **Edit Button Visibility**: Edit button hidden for optimistic/pending thread replies.
+- **Pending Status Display**: Optimistic thread replies correctly show pending state (70% opacity).
+- **Participants Access**: Null-safe participants access in `WorkspaceThreadsView`.
+
+### Documentation
+- Full comprehensive update of all `.docs/`, `.agents/`, `.qa/`, `docs/`, and `work/` directories to reflect June 24-25 changes including thread summaries, workspace threads view, message actions toolbar, edit formatting, and UI refinements.
 
 ## 2026-06-24
 

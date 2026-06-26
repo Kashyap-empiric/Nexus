@@ -120,10 +120,10 @@ Channel member management — add, remove, permission enforcement
 - Add channel ownership transfer
 
 ## Agent Self QA
-Status: PENDING
+Status: PASS
 
 ## Human QA
 Status: PENDING
 
 ## Review Status
-Status: PENDING
+Status: READY_FOR_REVIEW

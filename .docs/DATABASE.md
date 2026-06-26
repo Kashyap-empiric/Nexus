@@ -1,6 +1,6 @@
 # Nexus — Database Reference
 
-> **Last Updated:** 2026-06-24
+> **Last Updated:** 2026-06-26
 > **Purpose:** Database schema, entity relationships, access patterns, and performance considerations. Uses Mermaid ER diagrams instead of raw schema tables.
 
 ---

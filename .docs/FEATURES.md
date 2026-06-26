@@ -1,6 +1,6 @@
 # Nexus — Feature Capability Map
 
-> **Last Updated:** 2026-06-24
+> **Last Updated:** 2026-06-26
 > **Purpose:** Strategic inventory of features by domain capability, implementation status, and dependencies.
 
 ---
@@ -43,7 +43,9 @@ flowchart LR
 | Edit Messages | ✅ Complete | REST + socket broadcast |
 | Delete Messages (Soft) | ✅ Complete | `deletedAt` field, filtered from queries |
 | Inline Replies | ✅ Complete | `replyToId` foreign key |
-| Message Threads | ✅ Complete | Dedicated ThreadPanel, ThreadInput, optimistic updates, threadReplyCount, lastThreadReplyAt |
+| Message Threads | ✅ Complete | Dedicated ThreadPanel, ThreadInput, optimistic updates, threadReplyCount, lastThreadReplyAt. Workspace-level threads view (card-based feed with channel pills, participant avatars, reply counts). Channel-level thread browser in InfoPanel. |
+| Message Actions Toolbar | ✅ Complete | Copy/edit/delete hover toolbar on thread replies; delete confirmation AlertDialog; formatting toolbar in edit mode |
+| Thread Connectors | ✅ Complete | Consecutive sender grouping with rounded bottom corners; Discord-style thread icon; connector lines aligned with avatars |
 | Thread Broadcast | ✅ Complete | `isThreadBroadcast` flag — replies can appear in main timeline |
 | Markdown Rendering | ✅ Complete | react-markdown + remark-gfm |
 | Message History | ✅ Complete | Cursor-based pagination with UUIDv7 |

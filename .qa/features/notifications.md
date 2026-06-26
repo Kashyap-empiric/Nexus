@@ -96,14 +96,14 @@ Server event → NotificationService.createNotification() → DB insert + Socket
 - Push subscriptions scoped to user
 
 ### Tradeoffs
-- Push notifications are synchronous in the request path (50–150ms added to message send)
+- Push notifications are now fully async via BullMQ (decoupled from request path) - Jun 2026
 - N+1 query pattern for push delivery — queries each member individually
 
 ## Known Limitations
 
 | Limitation | Reason Deferred | Introduced |
 |---|---|---|
-| Push notifications block the request path | Should be background job | 2026-06-15 |
+| Push notifications block the request path | ✅ Resolved — moved to BullMQ async processing | 2026-06-23 |
 | N+1 push queries per message send | Batch with WHERE userId IN (...) | 2026-06-15 |
 | No pushsubscriptionchange handler | Subscriptions may go stale | 2026-06-15 |
 
@@ -122,19 +122,18 @@ Notifications — in-app notifications, push notifications, preferences
 - In-app + push parallel delivery
 
 ### Risks
-- Synchronous push adds latency to message send
-- N+1 queries in push delivery
+- N+1 queries in push delivery (batch with WHERE IN pending)
+- No pushsubscriptionchange handler (subscriptions may go stale)
 
 ### Follow-up Work
-- Decouple push into background job queue
 - Batch push queries with WHERE IN
 - Add pushsubscriptionchange handler in service worker
 
 ## Agent Self QA
-Status: PENDING
+Status: PASS
 
 ## Human QA
 Status: PENDING
 
 ## Review Status
-Status: PENDING
+Status: READY_FOR_REVIEW
