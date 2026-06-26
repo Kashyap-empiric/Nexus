@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authMiddleware } from "@/middlewares/auth.js";
+import { rejectDeletingAccount } from "@/middlewares/accountStatus.js";
 import { validate } from "@/middlewares/validate.js";
 import { pushLimiter } from "@/middlewares/rateLimiter.js";
 import { updatePreferencesSchema } from "./notifications.schema.js";
@@ -17,6 +18,7 @@ import {
 const router = Router();
 
 router.use(authMiddleware);
+router.use(rejectDeletingAccount);
 
 router.get("/", getNotifications);
 router.get("/unread-count", getUnreadCount);

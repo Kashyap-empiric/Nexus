@@ -20,6 +20,7 @@ export const findWorkspaceByIdOrSlug = async (identifier: string) => {
   return prisma.workspace.findFirst({
     where: {
       OR: [{ id: identifier }, { slug: identifier }],
+      isDeleting: false,
     },
     include: {
       channels: true,
@@ -32,7 +33,7 @@ export const findWorkspaceByIdOrSlug = async (identifier: string) => {
 
 export const findUserWorkspaces = async (userId: string) => {
   return prisma.workspace.findMany({
-    where: { members: { some: { userId } } },
+    where: { members: { some: { userId } }, isDeleting: false },
     orderBy: { createdAt: "asc" },
   });
 };

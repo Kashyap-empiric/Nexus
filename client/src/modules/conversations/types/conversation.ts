@@ -32,7 +32,7 @@ export interface Conversation {
     user: {
       username: string;
       fullName: string | null;
-    };
+    } | null;
   } | null;
   updatedAt: string;
   createdAt: string;

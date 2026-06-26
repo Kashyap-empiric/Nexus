@@ -112,6 +112,41 @@ export const updateAvatar = async (req: AuthRequest, res: Response): Promise<voi
 };
 
 import { dispatchUserStatusUpdate, dispatchUserProfileUpdate } from "@/socket/socket.dispatcher.js";
+import { getIO } from "@/socket/socket.js";
+import { notificationQueue } from "@/jobs/queues.js";
+
+export const deleteAccount = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { confirmation } = req.body;
+
+    const user = await usersService.findUserById(userId);
+    if (!user) {
+      res.status(404).json({ error: "User not found." });
+      return;
+    }
+
+    const expected = `DELETE ${user.email}`;
+    if (confirmation !== expected) {
+      res.status(400).json({ error: `Type exactly 'DELETE ${user.email}' to confirm.` });
+      return;
+    }
+
+    const ownedWorkspaceIds = await usersService.deleteAccount(userId);
+
+    const io = getIO();
+    io.in(`user:${userId}`).disconnectSockets(true);
+
+    if (notificationQueue) {
+      await notificationQueue.add("delete-account", { userId, ownedWorkspaceIds });
+    }
+
+    res.status(202).json({ message: "Account deletion initiated." });
+  } catch (error) {
+    console.error("Error deleting account:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 
 export const updateStatus = async (req: AuthRequest, res: Response): Promise<void> => {
   try {

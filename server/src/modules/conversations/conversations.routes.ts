@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authMiddleware } from "@/middlewares/auth.js";
+import { rejectDeletingAccount } from "@/middlewares/accountStatus.js";
 import { validate } from "@/middlewares/validate.js";
 import {
   createConversation,
@@ -28,6 +29,7 @@ router.get(
 router.post(
   "/:conversationId/pins/:messageId",
   authMiddleware,
+  rejectDeletingAccount,
   validate({ params: pinsIdParamsSchema }),
   requireConversationMember({ paramName: "conversationId" }),
   pinMessage
@@ -36,6 +38,7 @@ router.post(
 router.delete(
   "/:conversationId/pins/:messageId",
   authMiddleware,
+  rejectDeletingAccount,
   validate({ params: pinsIdParamsSchema }),
   requireConversationMember({ paramName: "conversationId" }),
   unpinMessage
@@ -58,6 +61,7 @@ router.get(
 router.post(
   "/",
   authMiddleware,
+  rejectDeletingAccount,
   validate({ body: createConversationSchema }),
   createConversation
 );
@@ -72,6 +76,7 @@ router.get(
 router.patch(
   "/:id/read",
   authMiddleware,
+  rejectDeletingAccount,
   validate({ body: markReadSchema }),
   requireConversationMember({ paramName: "id" }),
   markConversationAsRead

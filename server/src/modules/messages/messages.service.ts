@@ -49,6 +49,13 @@ export const getMessages = async (conversationId: string, cursor: string | undef
 export const createMessage = async (conversationId: string, userId: string, content: string, replyToId?: string | null, threadRootId?: string | null, isThreadBroadcast?: boolean) => {
   const messageId = uuidv7();
 
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { username: true, avatarUrl: true },
+  });
+  const displayNameSnapshot = user?.username || "Unknown";
+  const avatarSnapshot = user?.avatarUrl || null;
+
   let parentMessageUserId: string | null = null;
   if (replyToId) {
     const parentMessage = await messagesRepo.findById(replyToId);
@@ -82,6 +89,8 @@ export const createMessage = async (conversationId: string, userId: string, cont
     userId,
     content,
     messageId,
+    displayNameSnapshot,
+    avatarSnapshot,
     replyToId,
     threadRootId,
     isThreadBroadcast
@@ -101,7 +110,7 @@ export const createMessage = async (conversationId: string, userId: string, cont
     }
   };
 
-  if (replyToId && parentMessageUserId && parentMessageUserId !== userId) {
+  if (replyToId && parentMessageUserId && parentMessageUserId !== userId && !threadRootId) {
     try {
       const conversation = await conversationsRepo.findById(conversationId);
       const channelName = conversation?.name;
@@ -130,52 +139,6 @@ export const createMessage = async (conversationId: string, userId: string, cont
     }
   }
 
-  if (threadRootId) {
-    try {
-      const notifiedUserIds = new Set<string>();
-
-      const rootMessage = await messagesRepo.findById(threadRootId);
-      if (rootMessage && rootMessage.userId !== userId) {
-        notifiedUserIds.add(rootMessage.userId);
-      }
-
-      const participants = await messagesRepo.findThreadParticipants(threadRootId);
-      for (const pid of participants) {
-        if (pid !== userId) {
-          notifiedUserIds.add(pid);
-        }
-      }
-
-      const conversation = await conversationsRepo.findById(conversationId);
-      const channelName = conversation?.name;
-      const isChannel = conversation?.type === "CHANNEL";
-      const notificationLink = isChannel && conversation?.workspaceId
-        ? `/workspaces/${conversation.workspaceId}/channels/${conversationId}?highlight=${message.id}`
-        : `/conversations/${conversationId}?highlight=${message.id}`;
-
-      for (const targetUserId of notifiedUserIds) {
-        try {
-          await createAndDispatch({
-            userId: targetUserId,
-            type: "THREAD_REPLY",
-            title: `Reply from ${message.user.username}`,
-            body: message.content,
-            link: notificationLink,
-            metadata: {
-              conversationId,
-              messageId: message.id,
-              threadRootId,
-              username: message.user.username,
-            },
-          });
-        } catch (err) {
-          console.error("[Thread Notification] Failed to create thread reply notification:", err);
-        }
-      }
-    } catch (err) {
-      console.error("[Thread Notification] Error processing thread notifications:", err);
-    }
-  }
 
   return { message, conversationMetadata, parentMessageUserId };
 };
@@ -335,9 +298,9 @@ export const editMessage = async (messageId: string, conversationId: string, use
         content: updatedMessage.content,
         deletedAt: updatedMessage.deletedAt,
         createdAt: updatedMessage.createdAt,
-        user: {
+        user: updatedMessage.user ? {
           username: updatedMessage.user.username
-        }
+        } : null
       }
     };
   }

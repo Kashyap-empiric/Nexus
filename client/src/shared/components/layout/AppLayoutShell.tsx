@@ -83,7 +83,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
   const [infoPanelOpen, setInfoPanelOpen] = useState(false);
   const [infoPanelView, setInfoPanelView] = useState<InfoPanelView>('about');
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsView, setSettingsView] = useState<'profile' | 'appearance' | 'notifications' | 'about'>('profile');
+  const [settingsView, setSettingsView] = useState<'profile' | 'appearance' | 'notifications' | 'account'>('profile');
   const [workspaceSettingsOpen, setWorkspaceSettingsOpen] = useState(false);
 
   const isContentActive =
@@ -117,7 +117,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
   const inviteModal = useInviteModalContext();
   const closeMobileSidebar = useCallback(() => setMobileSidebarOpen(false), []);
 
-  const openSettings = (view: 'profile' | 'appearance' | 'notifications' | 'about') => {
+  const openSettings = (view: 'profile' | 'appearance' | 'notifications' | 'account') => {
     setSettingsView(view);
     setSettingsOpen(true);
   };

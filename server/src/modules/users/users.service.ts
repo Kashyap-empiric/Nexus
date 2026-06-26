@@ -1,4 +1,7 @@
+import { prisma } from "@/lib/db.js";
+import { runTransaction } from "@/lib/transaction.js";
 import * as usersRepo from "./users.repository.js";
+import { BadRequestError } from "@/lib/app-error.js";
 import { extractAvatarPath } from "@/utils/upload.js";
 
 export const searchUsers = async (query: string, currentUserId: string) => {
@@ -13,6 +16,10 @@ export const getMyProfile = async (userId: string) => {
   const user = await usersRepo.findUserById(userId);
   if (!user) throw new Error("User not found");
   return user;
+};
+
+export const findUserById = async (id: string) => {
+  return usersRepo.findUserById(id);
 };
 
 export const getPublicProfile = async (id: string) => {
@@ -47,4 +54,20 @@ export const updateStatus = async (
   statusText?: string | null
 ) => {
   return usersRepo.updateUser(userId, { status, statusText });
+};
+
+export const deleteAccount = async (userId: string) => {
+  const ownedWorkspaceIds = await usersRepo.findOwnedWorkspaceIds(userId);
+
+  if (ownedWorkspaceIds.length > 0) {
+    await usersRepo.markWorkspacesDeleting(ownedWorkspaceIds);
+  }
+
+  await usersRepo.setUserDeleting(userId);
+
+  await runTransaction(async (tx) => {
+    await usersRepo.deleteAccountCleanup(tx, userId, ownedWorkspaceIds);
+  });
+
+  return ownedWorkspaceIds;
 };

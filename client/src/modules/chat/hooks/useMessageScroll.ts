@@ -26,17 +26,17 @@ export function useMessageScroll({
   const isAtBottomRef = useRef(true);
   const hasInitialScrolled = useRef(false);
 
-  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [isAtBottom, setIsAtBottom] = useState(false);
   const [hasNewMessages, setHasNewMessages] = useState(false);
 
   const scrollToBottom = useCallback((behavior: "auto" | "smooth" = "smooth") => {
     isProgrammaticScroll.current = true;
     bottomRef.current?.scrollIntoView({ behavior });
     isAtBottomRef.current = true;
+    setIsAtBottom(true);
+    setHasNewMessages(false);
 
     requestAnimationFrame(() => {
-      setIsAtBottom(true);
-      setHasNewMessages(false);
       setTimeout(() => {
         isProgrammaticScroll.current = false;
       }, 100);
