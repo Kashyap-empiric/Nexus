@@ -128,6 +128,16 @@ Messaging module — send, edit, delete, paginate messages
 - Fix channel read receipts
 - Decouple push notifications into background job
 
+## Thread Support
+- [ ] Messages can be threaded via `threadRootId`
+- [ ] Thread replies appear in dedicated ThreadPanel
+- [ ] Optimistic updates work for thread replies (70% opacity pending state)
+- [ ] Thread reply count increments correctly (`threadReplyCount`)
+- [ ] Workspace-level threads page shows active threads
+- [ ] Channel thread browser in InfoPanel shows thread summaries
+- [ ] Message actions toolbar (copy/edit/delete) on thread replies
+- [ ] Thread reply can be broadcast to main channel (`isThreadBroadcast`)
+
 ## Agent Self QA
 Status: PASS
 

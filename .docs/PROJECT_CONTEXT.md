@@ -1,6 +1,6 @@
 # Nexus — Project Context
 
-> **Last Updated:** 2026-06-24
+> **Last Updated:** 2026-06-26
 > **Purpose:** Prerequisite knowledge for working on this codebase. Current state, architecture constraints, and recent history.
 
 ---
@@ -16,7 +16,7 @@ Communication occurs over HTTP (REST via Axios) and WebSockets (Socket.io).
 
 ---
 
-## Current State (June 24)
+## Current State (June 26)
 
 All compilation and tests pass:
 
@@ -25,10 +25,10 @@ All compilation and tests pass:
 | Client TypeScript | 0 errors |
 | Server TypeScript | 0 errors |
 | Client ESLint | 0 errors (17 warnings pre-existing) |
-| Client tests | 175/175 pass |
+| Client tests | 179/179 pass |
 | Server tests | 155/155 pass |
 
-A major threads feature has been merged into `development` along with sidebar refactoring and notification enhancements.
+A major threads feature has been merged into `development` along with sidebar refactoring and notification enhancements. Threads continue to receive UI polish: workspace-level threads view, message actions toolbar on thread replies, formatting toolbar in edit mode, thread panel as right pane, and optimized optimistic reply handling.
 
 ---
 
@@ -76,12 +76,11 @@ These are functional but not optimal. They degrade gracefully under small-team u
 | Push notifications query members individually | No batching — N+1 queries per message send. Refactor to `findMany` with `WHERE userId IN (...)` would resolve this. |
 | Push subscription lifecycle not handled | No handler for `pushsubscriptionchange` events from the browser. Subscriptions may go stale. |
 
----
+---## Recent Changes (June 24–25 — Threads, Sidebar Refactor, Thread Enhancements)
 
-## Recent Changes (June 24 — Threads & Sidebar Refactor)
+The `feat/threads` branch was merged into `development`, and subsequent thread enhancements have been added:
 
-The `feat/threads` branch was merged into `development`, delivering:
-
+### June 24 — Threads Initial Release
 - **Message Threads** — Dedicated `ThreadPanel` with `ThreadInput`, Zustand thread store, optimistic updates for both main chat and threads. Thread replies tracked via `threadRootId` with `threadReplyCount` and `lastThreadReplyAt`.
 - **Message Mentions** — `MessageMention` join table, `MENTIONED_IN_MESSAGE` notification type (categorized under `REPLIES` preference).
 - **Message Reactions** — `MessageReaction` model with unique `[messageId, userId, emoji]` constraint. Schema only — no endpoints or UI yet.
@@ -90,6 +89,19 @@ The `feat/threads` branch was merged into `development`, delivering:
 - **UserFooterMenu** — Replaced `StatusSelector` with unified user dropdown (profile, status, sign-out).
 - **Message Display Refinements** — Removed message bubbles and right-alignment. Thread connector lines aligned with avatars. Pinned messages sorted chronologically.
 - **Push Resilience** — Notification push enqueue failures caught and logged instead of blocking the creation path.
+
+### June 25 — Thread Enhancements & UI Polish
+- **Thread Summaries API** — `getThreadSummaries` and `getThreadSummaryCounts` service methods with TanStack Query hooks for fetching thread activity per conversation.
+- **Workspace Threads Page** — Slack-style workspace-level threads view at `/workspaces/[slug]/threads` with card-based thread rows, channel pills, participant avatars, reply counts, and active indicators. Sidebar navigation entry added.
+- **Channel Threads Browser** — Thread browser component for channel-level thread listing; Threads tab added to InfoPanel.
+- **Message Actions Toolbar** — Copy/edit/delete hover toolbar and dropdown menu on thread replies in ThreadPanel. Delete confirmation AlertDialog with destructive styling.
+- **Formatting Toolbar in Edit Mode** — Formatting toolbar (bold, italic, strikethrough, code) added to edit form for messages.
+- **Discord-style Thread Icon** — Dedicated `ThreadIcon` component replacing `MessageSquare` for thread indicators across the app.
+- **Thread Panel as Right Pane** — ThreadPanel integrates as a right-side detail pane in workspace threads view.
+- **Editor Consolidation** — Refactored into reusable `MessageInput` component shared between main chat and threads.
+- **Optimistic Reply Fix** — `threadStore.addReply` replaces pending placeholder instead of appending duplicate.
+- **Auth Metadata Fix** — Optimistic mutation extracts `avatarUrl`/`fullName` from `user_metadata`.
+- **Z-index Refactor** — Replaced runtime template literal z-index with inline style in overlay components.
 
 ## Recent Changes (June 19–22)
 

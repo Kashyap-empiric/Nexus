@@ -112,10 +112,10 @@ Password reset — forgot password, reset flow, token verification
 - Replace timeout with more robust event handling
 
 ## Agent Self QA
-Status: PENDING
+Status: PASS
 
 ## Human QA
 Status: PENDING
 
 ## Review Status
-Status: PENDING
+Status: READY_FOR_REVIEW

@@ -1,6 +1,6 @@
 # Nexus — Known Limitations
 
-> **Last Updated:** 2026-06-24  
+> **Last Updated:** 2026-06-26  
 > **Purpose:** Track known limitations, technical debt, and constraints.
 
 ---
@@ -45,6 +45,7 @@
 | Emoji picker width | Hardcoded 300px — doesn't adapt to wider screens | 🟡 Acknowledged |
 | Thread subscriptions | No explicit follow/unfollow UI for threads — participation-based only | 🟡 Acknowledged |
 | Thread unread indicators | No per-thread unread count or bolded "Reply in Thread" | 🟡 Acknowledged |
+| Workspace threads view | Workspace-level view exists but no sorting/filtering options | 🟡 Acknowledged |
 | Reactions schema only | `MessageReaction` model exists but no endpoints or UI | 🟡 Acknowledged |
 | Mention schema only | `MessageMention` model exists but no autocomplete or highlighting | 🟡 Acknowledged |
 | `isThreadBroadcast` no UI toggle | Broadcast flag exists in schema but no client-side control to toggle it | 🟡 Acknowledged |
