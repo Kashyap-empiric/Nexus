@@ -75,10 +75,10 @@ export function AboutSettings() {
       <hr className="border-border" />
 
       <div className="flex justify-center gap-6 text-sm text-muted-foreground">
-        <a href="https://github.com/anomalyco/nexus" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors underline underline-offset-2">
+        <a href="https://github.com/Kashyap-empiric/Nexus" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors underline underline-offset-2">
           GitHub
         </a>
-        <a href="https://opencode.ai" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors underline underline-offset-2">
+        <a href="https://github.com/Kashyap-empiric/Nexus/tree/main/.docs" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors underline underline-offset-2">
           Docs
         </a>
       </div>
