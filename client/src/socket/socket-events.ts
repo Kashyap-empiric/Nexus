@@ -24,6 +24,7 @@ export const SOCKET_EVENTS = {
   CHANNEL_MEMBER_REMOVED: "channel:member-removed",
   MESSAGE_PIN: "message:pin",
   MESSAGE_UNPIN: "message:unpin",
+  PRESENCE_UPDATE: "presence:update",
 } as const;
 
 export type Visibility = "PUBLIC" | "PRIVATE";

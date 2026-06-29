@@ -1,6 +1,6 @@
 # Nexus — Project Context
 
-> **Last Updated:** 2026-06-26
+> **Last Updated:** 2026-06-29
 > **Purpose:** Prerequisite knowledge for working on this codebase. Current state, architecture constraints, and recent history.
 
 ---
@@ -16,7 +16,7 @@ Communication occurs over HTTP (REST via Axios) and WebSockets (Socket.io).
 
 ---
 
-## Current State (June 26)
+## Current State (June 29)
 
 All compilation and tests pass:
 
@@ -24,11 +24,11 @@ All compilation and tests pass:
 |-------|--------|
 | Client TypeScript | 0 errors |
 | Server TypeScript | 0 errors |
-| Client ESLint | 0 errors (17 warnings pre-existing) |
-| Client tests | 179/179 pass |
-| Server tests | 155/155 pass |
+| Client ESLint | 0 errors (warnings pre-existing) |
+| Client tests | Tests pass |
+| Server tests | Tests pass |
 
-A major threads feature has been merged into `development` along with sidebar refactoring and notification enhancements. Threads continue to receive UI polish: workspace-level threads view, message actions toolbar on thread replies, formatting toolbar in edit mode, thread panel as right pane, and optimized optimistic reply handling.
+Significant UI and infrastructure improvements have been made: InfoPanel replaced with modular RightPanel with About view, scroll restoration, and draft persistence. @mention autocomplete implemented with Tiptap integration and keyboard-navigable dropdown. Thread participants model added with follow/unfollow API and notification levels. Desktop notifications now gate against user preferences. All `any` type casts removed across 36 files. AlertDialog confirmations standardized for all destructive actions.
 
 ---
 
@@ -76,7 +76,47 @@ These are functional but not optimal. They degrade gracefully under small-team u
 | Push notifications query members individually | No batching — N+1 queries per message send. Refactor to `findMany` with `WHERE userId IN (...)` would resolve this. |
 | Push subscription lifecycle not handled | No handler for `pushsubscriptionchange` events from the browser. Subscriptions may go stale. |
 
----## Recent Changes (June 24–25 — Threads, Sidebar Refactor, Thread Enhancements)
+---## Recent Changes (June 29 — RightPanel, @Mentions, Thread Participants, Type Cleanup)
+
+### RightPanel with About View
+- Replaced monolithic `InfoPanel` with modular `RightPanel` supporting dynamic panes (About, Members, Pins, Threads)
+- Created `AboutPanel` showing channel description, creator, creation date, member count with formatted timestamps
+- Added scroll position restoration when toggling right panel
+- Added draft persistence in MessageInput across conversation switches
+- Slide-in/out CSS transform animation using `data-[state=open]` attributes
+
+### @Mention Autocomplete
+- `MentionList` component with keyboard-navigable dropdown (ArrowUp/Down/Enter/Tab/Escape)
+- `mentionSuggestion` plugin integrating Tiptap Mention extension with `ConversationMember` data
+- Popup rendered via Tippy.js at cursor position
+- Avatar, username, and full name display in mention suggestions
+- Rendered messages highlight @mentions with `mention-chip` styling
+
+### Thread Participants
+- New `ThreadParticipant` table (`[threadRootId, userId]` composite PK) with `isFollowing`, `notificationLevel` (ALL/MENTIONS/MUTED), and `joinedAt`
+- Prisma migration with backfill for thread root authors, repliers, and mentioned users
+- API endpoints: POST follow, DELETE unfollow, PATCH update notification level
+- Client hooks: `useFollowThread`, `useUnfollowThread`, `useUpdateThreadNotifications`
+
+### Desktop Notification Gating
+- Thread reply desktop notifications respect `replyNotifications` preference
+- Channel desktop notifications respect `mentionNotifications` (@mentioned) and `channelNotifications`
+- DM desktop notifications respect `dmNotifications` preference
+- Preferences fetched from API if not in cache
+
+### Type Cleanup
+- All `any` type casts removed across 36 files (client and server)
+- Server: email.ts, transaction.ts, errorHandler.ts, repositories, services, socket middlewares
+- Client: MessageInput, MessageList, useMessages, AppLayoutShell, ThreadPanel, RightPanel, etc.
+
+### AlertDialog Standardization
+- WorkspaceSettingsModal: Leave Workspace → AlertDialog with confirmation
+- WorkspaceChannelItem: Delete channel, Leave channel, Change visibility → AlertDialog with destructive styling
+
+### Socket Events
+- Added `PRESENCE_UPDATE` socket event constant
+
+## Recent Changes (June 24–25 — Threads, Sidebar Refactor, Thread Enhancements)
 
 The `feat/threads` branch was merged into `development`, and subsequent thread enhancements have been added:
 

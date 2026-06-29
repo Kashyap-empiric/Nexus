@@ -26,6 +26,8 @@ export const API_ROUTES = {
     },
     MESSAGE_DETAIL: (conversationId: string, messageId: string) => `/conversations/${conversationId}/messages/${messageId}`,
     THREAD: (conversationId: string, messageId: string) => `/conversations/${conversationId}/messages/${messageId}/thread`,
+    THREAD_FOLLOW: (conversationId: string, messageId: string) => `/conversations/${conversationId}/messages/${messageId}/thread/follow`,
+    THREAD_NOTIFICATIONS: (conversationId: string, messageId: string) => `/conversations/${conversationId}/messages/${messageId}/thread/notifications`,
     THREADS: (conversationId: string) => `/conversations/${conversationId}/threads`,
     PINS: (conversationId: string) => `/conversations/${conversationId}/pins`,
     PIN_DETAIL: (conversationId: string, messageId: string) => `/conversations/${conversationId}/pins/${messageId}`,

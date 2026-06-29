@@ -9,7 +9,7 @@ import { EditMessageForm } from "@/modules/messages/components/EditMessageForm";
 import { useEditMessageMutation, useDeleteMessageMutation } from "@/modules/messages/hooks/useMessages";
 import { groupMessages } from "@/modules/chat/utils/groupMessages";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
-import { ArrowLeft, Copy, MoreHorizontal, Pencil, Text, Trash } from "lucide-react";
+import { ArrowLeft, Copy, MoreHorizontal, Pencil, Text, Trash, Bell, BellOff, BellRing, Check } from "lucide-react";
 import { ThreadIcon } from "@/shared/components/ui/thread-icon";
 import { cn, stripMarkdown } from "@/shared/lib/utils";
 import { Button } from "@/shared/components/ui/button";
@@ -32,6 +32,7 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import type { User } from "@/modules/conversations/types/conversation";
+import { useFollowThread, useUnfollowThread, useUpdateThreadNotifications } from "@/modules/messages/hooks/useThreads";
 
 interface ThreadPanelProps {
   conversationId: string;
@@ -50,6 +51,9 @@ export function ThreadPanel({ conversationId, currentUser, onBack }: ThreadPanel
   const repliesEndRef = useRef<HTMLDivElement>(null);
   const editMutation = useEditMessageMutation(conversationId);
   const deleteMutation = useDeleteMessageMutation(conversationId);
+  const followMutation = useFollowThread();
+  const unfollowMutation = useUnfollowThread();
+  const updateNotifMutation = useUpdateThreadNotifications();
 
   const [editingReplyId, setEditingReplyId] = useState<string | null>(null);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
@@ -97,6 +101,52 @@ export function ThreadPanel({ conversationId, currentUser, onBack }: ThreadPanel
 
   const handleEditCancel = () => {
     setEditingReplyId(null);
+  };
+
+  const participant = threadData?.participant;
+  const isFollowing = participant?.isFollowing ?? false;
+  
+  const handleFollow = () => {
+    if (!activeThreadRootId) return;
+    followMutation.mutate({ conversationId, messageId: activeThreadRootId });
+    if (threadData) {
+      setThreadData({
+        ...threadData,
+        participant: {
+          isFollowing: true,
+          notificationLevel: "ALL",
+        }
+      });
+    }
+  };
+
+  const handleUnfollow = () => {
+    if (!activeThreadRootId) return;
+    unfollowMutation.mutate({ conversationId, messageId: activeThreadRootId });
+    if (threadData) {
+      setThreadData({
+        ...threadData,
+        participant: {
+          isFollowing: false,
+          notificationLevel: participant?.notificationLevel || "ALL",
+        }
+      });
+    }
+  };
+
+  const handleUpdateNotifs = (level: "ALL" | "MENTIONS") => {
+    if (!activeThreadRootId) return;
+    updateNotifMutation.mutate({ conversationId, messageId: activeThreadRootId, level });
+    
+    if (threadData) {
+      setThreadData({
+        ...threadData,
+        participant: {
+          isFollowing: true,
+          notificationLevel: level,
+        }
+      });
+    }
   };
 
   if (!activeThreadRootId) {
@@ -189,19 +239,64 @@ export function ThreadPanel({ conversationId, currentUser, onBack }: ThreadPanel
           return (
             <>
               <div className="px-5 py-4 border-b border-border/40 bg-card shadow-sm">
-                <div className="flex items-center gap-2 mb-1">
-                  {onBack && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={onBack}
-                      className="h-8 w-8 -ml-2 mr-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                      title="Back to Threads"
+                <div className="flex items-start justify-between gap-4 mb-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {onBack && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={onBack}
+                        className="h-8 w-8 -ml-2 mr-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer shrink-0"
+                        title="Back to Threads"
+                      >
+                        <ArrowLeft className="h-5 w-5" />
+                      </Button>
+                    )}
+                    <h3 className="text-[17px] font-bold text-foreground truncate">{threadTitle(rootMessage)}</h3>
+                  </div>
+                  
+                  {!isFollowing ? (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleFollow}
+                      className="shrink-0 h-8 gap-2 text-xs font-medium text-muted-foreground hover:text-foreground"
                     >
-                      <ArrowLeft className="h-5 w-5" />
+                      Follow
                     </Button>
+                  ) : (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={<Button variant="outline" size="sm" className="shrink-0 h-8 gap-2 text-xs font-medium text-primary hover:text-primary/90" />}
+                      >
+                        Following
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-72">
+                        <DropdownMenuItem onClick={() => handleUpdateNotifs("ALL")} className="flex flex-col items-start p-3 gap-1 cursor-pointer h-auto whitespace-normal">
+                          <div className="flex items-center w-full justify-between">
+                            <span className="font-medium flex items-center gap-2"><BellRing className="w-4 h-4" /> All activity</span>
+                            {participant?.notificationLevel === "ALL" && <Check className="w-4 h-4 text-primary" />}
+                          </div>
+                          <span className="text-xs text-muted-foreground ml-6">Notify for every new reply in this thread</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleUpdateNotifs("MENTIONS")} className="flex flex-col items-start p-3 gap-1 cursor-pointer h-auto whitespace-normal">
+                          <div className="flex items-center w-full justify-between">
+                            <span className="font-medium flex items-center gap-2"><Bell className="w-4 h-4" /> Mentions only</span>
+                            {participant?.notificationLevel === "MENTIONS" && <Check className="w-4 h-4 text-primary" />}
+                          </div>
+                          <span className="text-xs text-muted-foreground ml-6">Only notify when someone mentions you</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleUnfollow} className="flex flex-col items-start p-3 gap-1 cursor-pointer h-auto whitespace-normal">
+                          <div className="flex items-center w-full justify-between">
+                            <span className="font-medium flex items-center gap-2"><BellOff className="w-4 h-4" /> Unfollow thread</span>
+                          </div>
+                          <span className="text-xs text-muted-foreground ml-6">Turn off all notifications for this thread</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   )}
-                  <h3 className="text-[17px] font-bold text-foreground truncate">{threadTitle(rootMessage)}</h3>
                 </div>
                 <div className="text-[13px] text-muted-foreground flex items-center gap-1.5 flex-wrap">
                   <span className="font-semibold text-foreground">{replies.length} replies</span>

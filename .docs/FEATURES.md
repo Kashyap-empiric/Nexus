@@ -1,6 +1,6 @@
 # Nexus — Feature Capability Map
 
-> **Last Updated:** 2026-06-26
+> **Last Updated:** 2026-06-29
 > **Purpose:** Strategic inventory of features by domain capability, implementation status, and dependencies.
 
 ---
@@ -43,8 +43,8 @@ flowchart LR
 | Edit Messages | ✅ Complete | REST + socket broadcast |
 | Delete Messages (Soft) | ✅ Complete | `deletedAt` field, filtered from queries |
 | Inline Replies | ✅ Complete | `replyToId` foreign key |
-| Message Threads | ✅ Complete | Dedicated ThreadPanel, ThreadInput, optimistic updates, threadReplyCount, lastThreadReplyAt. Workspace-level threads view (card-based feed with channel pills, participant avatars, reply counts). Channel-level thread browser in InfoPanel. |
-| Message Actions Toolbar | ✅ Complete | Copy/edit/delete hover toolbar on thread replies; delete confirmation AlertDialog; formatting toolbar in edit mode |
+| Message Threads | ✅ Complete | Dedicated ThreadPanel, ThreadInput, optimistic updates, threadReplyCount, lastThreadReplyAt. Workspace-level threads view (card-based feed with channel pills, participant avatars, reply counts). Channel-level thread browser in RightPanel. Thread participants model with follow/unfollow and notification levels (ALL/MENTIONS/MUTED). Thread participant API endpoints (follow, unfollow, update notifications). |
+| Message Actions Toolbar | ✅ Complete | Copy/edit/delete hover toolbar on thread replies; delete confirmation AlertDialog; formatting toolbar in edit mode. Draft persistence in MessageInput across conversation switches. |
 | Thread Connectors | ✅ Complete | Consecutive sender grouping with rounded bottom corners; Discord-style thread icon; connector lines aligned with avatars |
 | Thread Broadcast | ✅ Complete | `isThreadBroadcast` flag — replies can appear in main timeline |
 | Markdown Rendering | ✅ Complete | react-markdown + remark-gfm |
@@ -52,6 +52,7 @@ flowchart LR
 | Pinned Messages | ✅ Complete | Dedicated panel, real-time sync, chronological sort |
 | Read Receipts (DMs) | ✅ Complete | Single/double checkmark |
 | Read Receipts (Channels) | 🟡 Partial | `partnerLastReadMessageId` undefined for channels |
+| Scroll Restoration | ✅ Complete | Scroll position preserved when toggling right panel |
 | Message Search | ✅ Complete | `contains` query — no full-text index |
 
 ---
@@ -226,7 +227,7 @@ flowchart LR
 | Markdown Rendering | ✅ Complete | Bold, italic, code, lists, tables |
 | Tiptap Editor | ✅ Complete | Rich text + markdown message input |
 | AlertDialog Confirmations | ✅ Complete | Replaced `window.confirm` |
-| InfoPanel (Members/Pins) | ✅ Complete | Toggleable right panel |
+| RightPanel (Members/About/Pins/Threads) | ✅ Complete | Modular right panel replacing InfoPanel. Supports dynamic panes: About, Members, Pins, Threads. Slide-in/out CSS transform animation. Scroll position preservation on toggle. AboutPanel shows channel description, creator, creation date, member count. |
 
 ---
 
@@ -235,13 +236,15 @@ flowchart LR
 | Feature | Priority | Effort | Notes |
 |---------|----------|--------|-------|
 | Emoji Reactions | Medium | Medium | Schema exists (`MessageReaction`) — no endpoints or UI |
-| @Mentions | Medium | Medium | Schema exists (`MessageMention`) — no autocomplete or UI highlighting |
+| @Mentions | ✅ Complete | Tiptap @mention extension with autocomplete (MentionList + mentionSuggestion), keyboard navigation, avatar display. Mention rendering via LazyMarkdown with mention-chip styling. Mention parsing creates MessageMention rows and dispatches MENTIONED_IN_MESSAGE notifications. |
 | File Uploads | Low | Large | No S3/cloud storage integration |
 | Global Search (Cmd+K) | Low | Medium | No implementation |
 | URL Unfurling | Low | Medium | No link preview |
 | Keyboard Shortcuts | Low | Small | Cmd+K, Cmd+, |
 | i18n Support | Low | Large | Hardcoded English throughout |
-| Thread Subscriptions | Low | Medium | No explicit follow/unfollow for thread notifications |
+| Thread Subscriptions | ✅ Complete | ThreadParticipant model with follow/unfollow API, notification levels (ALL/MENTIONS/MUTED). Thread root authors and repliers auto-subscribed. API endpoints: POST follow, DELETE unfollow, PATCH notification level. Client hooks: useFollowThread, useUnfollowThread, useUpdateThreadNotifications. |
 | Thread Unread Indicators | Low | Medium | No per-thread unread tracking in sidebar |
+| Desktop Notification Preferences Gating | ✅ Complete | Desktop notifications respect replyNotifications, mentionNotifications, channelNotifications, dmNotifications preferences. Fetches prefs from API if not cached. |
+| AlertDialog Confirmations | ✅ Complete | All destructive actions use shadcn AlertDialog: delete channel, leave channel, change visibility, leave workspace, delete workspace. |
 | E2E Tests | Medium | Large | Playwright — not started |
 | Load Testing | Low | Medium | No k6/artillery scripts |

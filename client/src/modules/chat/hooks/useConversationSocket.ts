@@ -12,9 +12,24 @@ import type { MessageReadPayload } from "../types/socket";
 import type { ThreadData } from "@/modules/threads/store/threadStore";
 import { InfiniteData } from "@tanstack/react-query";
 import { getAuthUser } from "@/modules/auth/store/useAuthStore";
+import { socket } from "@/socket/socketClient";
+import { useSearchParams } from "next/navigation";
+import { useEffect } from "react";
 
 export const useConversationSocket = (conversationId: string) => {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const threadId = searchParams?.get("thread") || null;
+
+  useEffect(() => {
+    if (!conversationId) return;
+    
+    socket.emit(SOCKET_EVENTS.PRESENCE_UPDATE, { conversationId, threadId });
+
+    return () => {
+      socket.emit(SOCKET_EVENTS.PRESENCE_UPDATE, { conversationId: null, threadId: null });
+    };
+  }, [conversationId, threadId]);
 
   const events = useMemo(() => {
     if (!conversationId) return {} as Record<string, (payload: never) => void>;

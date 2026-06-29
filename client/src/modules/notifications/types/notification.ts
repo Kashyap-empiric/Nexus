@@ -31,5 +31,6 @@ export interface NotificationPreference {
   channelNotifications: boolean;
   inviteNotifications: boolean;
   replyNotifications: boolean;
+  threadNotifications: boolean;
   workspaceActivityNotifications: boolean;
 }

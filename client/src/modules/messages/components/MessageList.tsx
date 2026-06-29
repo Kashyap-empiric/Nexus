@@ -75,13 +75,21 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
     return () => {
       const msgId = latestMessageIdRef.current;
       const lastReadId = myLastReadMessageRef.current;
-      if (msgId && msgId !== lastReadId) {
+      if (msgId && msgId !== lastReadId && !msgId.startsWith("temp-")) {
         markReadFnRef.current({ conversationId: conversationIdRef.current, messageId: msgId });
       }
     };
   }, [conversationId]);
 
+  // Mark as read in real-time when scrolled to bottom
+  useEffect(() => {
+    if (!latestMessageId || isLatestMessageMine) return;
+    if (latestMessageId.startsWith("temp-")) return;
 
+    if (isAtBottom && latestMessageId !== myLastReadMessageId) {
+      markRead({ conversationId, messageId: latestMessageId });
+    }
+  }, [latestMessageId, isAtBottom, myLastReadMessageId, conversationId, markRead, isLatestMessageMine]);
 
   const highlightHandledRef = useRef<string | null>(null);
 

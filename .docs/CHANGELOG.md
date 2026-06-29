@@ -1,7 +1,58 @@
 # Nexus — Changelog
 
-> **Last Updated:** 2026-06-26  
+> **Last Updated:** 2026-06-29  
 > **Purpose:** Track all significant changes to the project in reverse chronological order.
+
+---
+
+## 2026-06-29
+
+### Added
+- **RightPanel Component**: Replaced monolithic `InfoPanel` with modular `RightPanel` — supports dynamic panes (About, Members, Pins, Threads, Pinned Messages) with slide-in/out animation and scroll position restoration on pane toggle.
+- **AboutPanel Component**: New workspace channel about panel showing channel description, creator, creation date, and member count with formatted timestamps.
+- **Scroll Restoration in MessageList**: `useMessageScroll` now preserves scroll position when toggling the right panel — prevents jarring jump when InfoPanel/RightPanel opens/closes.
+- **Draft Persistence in MessageInput**: Draft message content persists across conversation switches and panel toggles using Zustand store, preventing accidental loss of unsent messages.
+- **@Mention Autocomplete UI**: `MentionList` component with Tiptap `@mention` suggestion plugin — keyboard-navigable popover (`ArrowUp`/`ArrowDown`/`Enter`/`Tab`) displaying user avatar, username, and full name. `mentionSuggestion` integrates with `ConversationMember` data for workspace channel mentions.
+- **Thread Participants Model**: New `ThreadParticipant` table (`[threadRootId, userId]` composite PK) with `isFollowing`, `notificationLevel` (ALL / MENTIONS / MUTED), and `joinedAt`. Prisma migration `20260629114200_add_thread_participants` with backfill for thread root authors, repliers, and mentioned users.
+- **Thread Notification Desktop Gating**: Desktop notifications for thread replies now respect `replyNotifications` preference — fetches notification preferences from API if not in query cache before showing.
+- **Channel Notification Desktop Gating**: Desktop notifications in channels respect `mentionNotifications` (when `@mentioned`) and `channelNotifications` (for general messages). DM notifications respect `dmNotifications` preference.
+- **PRESENCE_UPDATE Socket Event**: New socket event constant for presence update broadcasts.
+- **NotificationIcon Tests**: Unit tests for `NotificationIcon` component covering `MENTIONED_IN_MESSAGE` (AtSign), `INVITE_RECEIVED` (Mail), and unknown types (Bell).
+- **LazyMarkdown Tests**: New test suite for LazyMarkdown component.
+- **MentionList Tests**: Tests for MentionList keyboard navigation and rendering.
+- **mentionSuggestion Tests**: Tests for Tiptap suggestion integration.
+- **messages.api Tests**: New test suite for messages REST API.
+- **useThreads Tests**: Tests for thread query hooks.
+- **parseDate Utility**: Added `parseDate`/`formatDate`/`isToday`/`isYesterday` helpers in `shared/lib/utils.ts` for consistent date formatting across components.
+
+### Changed
+- **InfoPanel → RightPanel Refactor**: Replaced 290-line `InfoPanel` with modular 149-line `RightPanel` component. ActiveConversation now delegates panel content rendering to child components. Animation transitions updated for smoother pane open/close.
+- **ChannelSidebarItem → WorkspaceChannelItem Redesign**: Major redesign of channel list items — restructured for improved visual hierarchy with channel icon, unread indicators, and hover actions. Delete/leave/visibility actions now use shadcn `AlertDialog` with destructive styling instead of `Dialog`.
+- **WorkspaceSettingsModal AlertDialog Migration**: Leave Workspace action now uses `AlertDialog` with confirmation instead of direct button execution. Added `showLeaveDialog` state management.
+- **Workspace Controller Error Handling**: Consolidated error mapping — replaced generic `ZodError` catch with typed `AppError` handling; added `ZodError` validation error extraction for duplicate workspace name conflicts using `issues` path filtering.
+- **Server Email Service Refactor**: `email.ts` — replaced `any` types with proper generic constraints (`T extends Record<string, unknown>`); typed `personalizations` array with `ReplyTo`/`SendAt` interfaces.
+- **Server Transaction Type Safety**: `transaction.ts` — replaced `prisma.$transaction` generic with explicit `Promise<unknown>` type.
+- **Server Error Handler**: `errorHandler.ts` — replaced `any` cast with `Errback` type.
+- **Socket Auth Middleware**: `socket/middlewares/auth.ts` — replaced `any` casts with typed `jwtVerify` errors.
+- **Socket Rate Limiter**: `socket/middlewares/rateLimiter.ts` — replaced `any` casts with proper `Socket` type narrowing.
+- **Conversations Repository/Service**: Fixed type assertions in `conversations.repository.ts` and `conversations.service.ts`.
+- **Invites Module**: Fixed type safety in `invites.service.ts`, `invites.types.ts`, `userResolver.ts`, `workspaceResolver.ts`.
+- **Messages Repository/Service**: Added `MessagesSendReturn` type, removed `any` casts from array creation, fixed notification content extraction.
+- **Notifications Repository**: Removed unused imports and `any` types.
+- **Test Mocks**: `mock-db.ts` and `mock-transaction.ts` — replaced `any` with proper type assertions.
+- **Service Worker Navigation**: `AppLayoutShell` now wraps `router.push()` in try/catch to prevent crashes from malformed service worker navigation messages.
+- **Test Setup**: Client test setup now loads `dotenv` from `.env.local` for consistent env var availability.
+- **`.gitignore`**: Added `reviews/` directory to gitignore.
+
+### Fixed
+- **Right Panel Animation**: Fixed clunky right panel transition — replaced abrupt mount/unmount with CSS `transform`-based slide animation using `data-[state=open]` attributes for smooth 200ms enter/exit.
+- **ChannelThreadsBrowser Animation**: Added `motion-animate` with `fadeIn` variants for thread list item transitions; proper `AnimatePresence` wrapping.
+- **ThreadPanel/WorkspaceThreadsView Animation**: Enter/exit animations for thread panel in workspace threads view using framer-motion `AnimatePresence` with slide-in-right/slide-out-right.
+- **`any` Types Removed (36 files)**: Eliminated all remaining `any` type casts across client and server codebases — replaced with proper TypeScript generics, union types, and type assertions. Server files: `batchInvite.processor.ts`, `fanOutNotification.processor.ts`, `sendEmail.processor.ts`, `email.ts`, `transaction.ts`, `errorHandler.ts`, `conversations.repository.ts`, `conversations.service.ts`, `invites.service.ts`, `invites.types.ts`, `userResolver.ts`, `workspaceResolver.ts`, `messages.repository.ts`, `messages.service.ts`, `messages.types.ts`, `notifications.repository.ts`, `users.controller.ts`, `workspaces.controller.ts`, `socket/middlewares/auth.ts`, `socket/middlewares/rateLimiter.ts`, `mock-db.ts`, `mock-transaction.ts`. Client files: `MessageInput.tsx`, `MessageList.tsx`, `useMessages.ts`, `AccountSettings.tsx`, `ChannelThreadsBrowser.tsx`, `ThreadPanel.tsx`, `WorkspaceThreadsView.tsx`, `AppLayoutShell.tsx`, `ActiveConversation.tsx`, `RightPanel.tsx`, `AboutPanel.tsx`, `chatStore.ts`, `useMessageScroll.ts`.
+- **Service Worker Navigation Crash**: `AppLayoutShell` now catches errors from `router.push()` when service worker sends malformed navigation URLs.
+
+### Documentation
+- Full rewrite of all 13 `.qa/features/*.md` files with comprehensive format — each feature document now includes Goal, Current Status, High-Level Summary, Code Locations, Database schema, API endpoints with validation, Backend Implementation, Frontend Implementation, Existing vs Missing matrix, Expected Behavior Matrix, Current Flow diagrams, Missing Pieces checklist, Edge Cases table, Known Limitations, and Files Inspected listing.
 
 ---
 

@@ -1,6 +1,6 @@
 # Nexus — Database Reference
 
-> **Last Updated:** 2026-06-26
+> **Last Updated:** 2026-06-29
 > **Purpose:** Database schema, entity relationships, access patterns, and performance considerations. Uses Mermaid ER diagrams instead of raw schema tables.
 
 ---
@@ -161,6 +161,7 @@ erDiagram
     User ||--o{ PinnedMessage : "pins"
     User ||--o{ MessageMention : "mentioned in"
     User ||--o{ MessageReaction : "reacts"
+    User ||--o{ ThreadParticipant : "subscribes to threads"
 
     Workspace ||--o{ WorkspaceMember : "has members"
     Workspace ||--o{ Conversation : "contains channels"
@@ -186,6 +187,17 @@ erDiagram
     MessageReaction }o--|| Message : "belongs to message"
     MessageReaction }o--|| User : "reacted by user"
 
+    ThreadParticipant {
+        string threadRootId PK, FK "Message.id"
+        string userId PK, FK
+        boolean isFollowing
+        enum notificationLevel "ALL | MENTIONS | MUTED"
+        datetime joinedAt
+    }
+
+    Message ||--o{ ThreadParticipant : "has followers"
+    User ||--o{ ThreadParticipant : "follows threads"
+
     PinnedMessage ||--|| Message : "references"
     PinnedMessage }o--|| Conversation : "belongs to conversation"
     PinnedMessage ||--|| User : "pinned by user"
@@ -194,6 +206,20 @@ erDiagram
 ---
 
 ## 2. Core Relationships — Details
+
+### Thread Participants
+
+```
+Message ──< ThreadParticipant >── User
+       (composite PK: threadRootId, userId)
+```
+
+- **Purpose**: Tracks which users are following/participating in a thread, with per-user notification settings.
+- **Composite primary key**: `@@id([threadRootId, userId])` — one entry per user per thread.
+- **isFollowing**: Boolean (default true) — allows explicit unfollow without deleting the record.
+- **notificationLevel**: Enum — `ALL` (all replies), `MENTIONS` (only @mentions), `MUTED` (no notifications).
+- **Auto-subscribe**: Thread root authors and repliers are automatically subscribed on thread activity via migration backfill.
+- **Index**: `@@index([userId])` on thread root ID for efficient thread querying.
 
 ### Workspace Membership
 
@@ -348,6 +374,7 @@ LIMIT 50;
 | Enum | Values | Usage |
 |------|--------|-------|
 | `ConversationType` | `DM`, `CHANNEL` | Discriminator for conversation behavior |
+| `ThreadNotificationLevel` | `ALL`, `MENTIONS`, `MUTED` | Per-user notification level for thread replies (ALL = all replies, MENTIONS = only @mentions, MUTED = no notifications) |
 | `ChannelVisibility` | `PUBLIC`, `PRIVATE` | Channel access control |
 | `WorkspaceRole` | `OWNER`, `ADMIN`, `MEMBER` | Hierarchical permissions (OWNER > ADMIN > MEMBER) |
 | `InviteType` | `USER`, `CONVERSATION`, `WORKSPACE`, `CHANNEL` | Target entity type for invites |

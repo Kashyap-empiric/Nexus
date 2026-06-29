@@ -69,7 +69,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
-      {}
+      { }
       <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
         <div className="flex items-center gap-3">
           <Link
@@ -92,7 +92,7 @@ export default function NotificationsPage() {
         </button>
       </div>
 
-      {}
+      { }
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-20">

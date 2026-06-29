@@ -1,6 +1,6 @@
 # Nexus — Known Limitations
 
-> **Last Updated:** 2026-06-26  
+> **Last Updated:** 2026-06-29  
 > **Purpose:** Track known limitations, technical debt, and constraints.
 
 ---
@@ -43,11 +43,11 @@
 |------------|--------|--------|
 | Fixed-width panels | InfoPanel (w-80), MemberListPanel (w-72), Sidebar (md:w-72) consume significant space on tablets | 🟡 Acknowledged |
 | Emoji picker width | Hardcoded 300px — doesn't adapt to wider screens | 🟡 Acknowledged |
-| Thread subscriptions | No explicit follow/unfollow UI for threads — participation-based only | 🟡 Acknowledged |
+| Thread subscriptions | ✅ Implemented with ThreadParticipant model, follow/unfollow API, notification levels (ALL/MENTIONS/MUTED). API endpoints and hooks exist. | ✅ Resolved 2026-06-29 |
 | Thread unread indicators | No per-thread unread count or bolded "Reply in Thread" | 🟡 Acknowledged |
 | Workspace threads view | Workspace-level view exists but no sorting/filtering options | 🟡 Acknowledged |
 | Reactions schema only | `MessageReaction` model exists but no endpoints or UI | 🟡 Acknowledged |
-| Mention schema only | `MessageMention` model exists but no autocomplete or highlighting | 🟡 Acknowledged |
+| Mention autocomplete & highlighting | ✅ Implemented with Tiptap Mention extension, MentionList dropdown, and mention-chip styling in LazyMarkdown | ✅ Resolved 2026-06-29 |
 | `isThreadBroadcast` no UI toggle | Broadcast flag exists in schema but no client-side control to toggle it | 🟡 Acknowledged |
 | Service worker scope | SW only handles push events. No caching strategies implemented. | 🟡 Acknowledged |
 | No React.memo usage | Message list items re-render on every parent state change | 🟡 Acknowledged |
@@ -56,7 +56,8 @@
 | Excessive console.log in production | Push and notification services log extensively, consuming Render log quota | 🟡 Acknowledged |
 | Message search uses `contains` | No full-text search index — will slow at 50K+ messages | 🟡 Acknowledged |
 | 105 ESLint issues in client | 54 errors, 51 warnings — linting debt needs systematic cleanup | 🟡 Open |
-| Any casts in socket/event layers | Client socket handlers use loose typing | 🟡 Acknowledged |
+| Any casts across codebase | All `any` type casts removed across 36 files (client + server) — replaced with proper TypeScript generics, union types, and type assertions | ✅ Resolved 2026-06-29 |
+| Desktop notification preferences gating | Desktop notifications now respect replyNotifications, mentionNotifications, channelNotifications, dmNotifications preferences | ✅ Resolved 2026-06-29 |
 
 ## Resolved
 

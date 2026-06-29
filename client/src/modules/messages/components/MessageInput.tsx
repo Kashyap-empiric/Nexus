@@ -16,9 +16,25 @@ import { SOCKET_EVENTS } from "@/socket/socket-events";
 import { socket } from "@/socket/socketClient";
 
 import { useEditor, EditorContent } from '@tiptap/react';
+import { Extension } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Markdown } from 'tiptap-markdown';
+import Mention from '@tiptap/extension-mention';
+import { getMentionSuggestionOptions } from './mentionSuggestion';
+import { useConversationDetailsQuery } from '@/modules/conversations/hooks/useConversations';
+
+const CustomMention = Mention.extend({
+  addStorage() {
+    return {
+      markdown: {
+        serialize(state: { write: (val: string) => void }, node: { attrs: { label?: string; id: string } }) {
+          state.write(`@${node.attrs.label ?? node.attrs.id}`);
+        },
+      },
+    };
+  },
+});
 
 interface MessageInputProps {
   conversationId: string;
@@ -55,6 +71,7 @@ export function MessageInput({
   const [emojiPickerWidth, setEmojiPickerWidth] = useState(300);
   const { theme } = useTheme();
   const { mutate: sendMessage } = useSendMessageMutation(conversationId, currentUser);
+  const { data: conversationData } = useConversationDetailsQuery(conversationId);
 
   // Draft persistence
   const { setDraft, clearDraft } = useChatStore();
@@ -152,6 +169,26 @@ export function MessageInput({
     onClearReply?.();
   };
 
+  const EnterSubmitExtension = Extension.create({
+    name: 'enterSubmit',
+    addKeyboardShortcuts() {
+      return {
+        Enter: () => {
+          const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+          if (isMobile) return false;
+
+          if (this.editor.isActive('bulletList') || this.editor.isActive('orderedList')) {
+            return false;
+          }
+
+          submitMessage();
+          return true;
+        },
+        'Shift-Enter': () => false,
+      };
+    },
+  });
+
   const [activeMarks, setActiveMarks] = useState({
     bold: false,
     italic: false,
@@ -204,6 +241,16 @@ export function MessageInput({
         transformPastedText: true,
         transformCopiedText: true,
       }),
+      CustomMention.configure({
+        HTMLAttributes: {
+          class: 'mention-chip text-brand font-medium bg-brand/10 px-1 rounded-sm',
+        },
+        renderLabel({ node }) {
+          return `@${node.attrs.label ?? node.attrs.id}`
+        },
+        suggestion: getMentionSuggestionOptions(conversationData?.members || []),
+      }),
+      EnterSubmitExtension,
     ],
     content: initialContent || '',
     editable: !disabled,
@@ -235,22 +282,6 @@ export function MessageInput({
         class: 'w-full min-h-[24px] max-h-[140px] px-1 py-1 bg-transparent border-0 focus:ring-0 text-base outline-none prose-p:my-0 prose-p:whitespace-pre-wrap overflow-y-auto disabled:opacity-50 break-words',
       },
       handleKeyDown: (view, event) => {
-        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-
-        if (event.key === 'Enter') {
-          if (isMobile) {
-            return false;
-          }
-
-          if (!event.shiftKey) {
-            if (editor?.isActive('bulletList') || editor?.isActive('orderedList')) {
-              return false;
-            }
-            event.preventDefault();
-            submitMessage();
-            return true;
-          }
-        }
         if (event.key === "Escape") {
           event.preventDefault();
           onCancel?.();

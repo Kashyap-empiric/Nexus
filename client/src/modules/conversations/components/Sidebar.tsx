@@ -180,8 +180,8 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
                   href={`/workspaces/${activeWorkspaceId}/threads`}
                   onClick={() => onNavigate?.()}
                   className={`flex items-center gap-3 px-2 py-2 rounded-md transition-colors ${routeState.mode === "workspace" && routeState.destination?.type === "threads"
-                      ? "bg-brand/10 text-brand"
-                      : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+                    ? "bg-brand/10 text-brand"
+                    : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                     }`}
                 >
                   <ThreadIcon className="h-4 w-4 shrink-0" />

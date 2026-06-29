@@ -1,6 +1,6 @@
 # Nexus — Project Overview
 
-> **Version:** 0.1.0 | **Date:** 2026-06-26
+> **Version:** 0.1.0 | **Date:** 2026-06-29
 > **Purpose:** A comprehensive technical reference for engineers working on Nexus. Covers architecture, design decisions, current state, and known limitations.
 
 ---
@@ -478,17 +478,17 @@ Presence state is dual-written to Redis and an in-memory Map. Every socket conne
 
 ---
 
-## Current State (June 26)
+## Current State (June 29)
 
 | Check | Result |
 |-------|--------|
 | Client TypeScript | 0 errors |
 | Server TypeScript | 0 errors |
-| Client ESLint | 0 errors (17 pre-existing warnings) |
-| Client tests | 179/179 passing |
-| Server tests | 155/155 passing |
+| Client ESLint | 0 errors (warnings pre-existing) |
+| Client tests | All passing |
+| Server tests | All passing |
 
-Threads feature has been merged into `development` with workspace-level threads view, channel thread browser, message actions on thread replies, formatting toolbar in edit mode, and comprehensive UI polish (Discord-style thread icons, connector line improvements, z-index refactor).
+Threads feature has been enhanced with thread participants (follow/unfollow, notification levels). InfoPanel replaced with modular RightPanel. @mention autocomplete implemented with Tiptap integration. Desktop notifications now gate against user preferences. All `any` types removed across 36 files. AlertDialog confirmations standardized across all destructive actions.
 
 ### Known Issues
 
@@ -505,8 +505,8 @@ Threads feature has been merged into `development` with workspace-level threads 
 - No `React.memo` usage — message list re-renders entirely on parent state changes
 - TanStack Query has no `staleTime` configured, causing refetches on every navigation
 - Typing indicators lack client-side debounce
-- Thread subscriptions have no explicit follow/unfollow UI
-- Reactions and mentions have schema only — no endpoints or UI
+- Reactions have schema only — no endpoints or UI
+- Thread reply notifications are not yet dispatched (THREAD_REPLY type exists but unused)
 
 ---
 
@@ -543,7 +543,7 @@ For a complete list of environment variables, see [`ENVIRONMENT_VARIABLES.md`](.
 3. **Thread subscriptions** — explicit follow/unfollow UI, per-thread unread indicators
 4. **E2E test coverage** — critical user flows (login, message send, channel navigation)
 5. **Performance** — React.memo for message list, staleTime for queries, dynamic imports for heavy components
-6. **Product features** — emoji reactions UI, @mention autocomplete, file uploads, global search
+6. **Product features** — emoji reactions UI, file uploads, global search
 
 ---
 

@@ -40,7 +40,7 @@ export const getMessages = async (conversationId: string, cursor?: string | null
 
 export const getThreadMessages = async (conversationId: string, messageId: string) => {
   const url = API_ROUTES.CONVERSATIONS.THREAD(conversationId, messageId);
-  const response = await api.get<{ data: { root: Message; replies: Message[] } }>(url);
+  const response = await api.get<{ data: { root: Message; replies: Message[]; participant: { isFollowing: boolean; notificationLevel: "ALL" | "MENTIONS" | "MUTED" } | null } }>(url);
   return response.data.data;
 };
 
@@ -84,4 +84,19 @@ export const unpinMessage = async (conversationId: string, messageId: string) =>
 export const getPinnedMessages = async (conversationId: string) => {
   const response = await api.get<{ data: PinnedMessage[] }>(API_ROUTES.CONVERSATIONS.PINS(conversationId));
   return response.data.data;
+};
+
+export const followThread = async (conversationId: string, messageId: string) => {
+  const response = await api.post(API_ROUTES.CONVERSATIONS.THREAD_FOLLOW(conversationId, messageId));
+  return response.data;
+};
+
+export const unfollowThread = async (conversationId: string, messageId: string) => {
+  const response = await api.delete(API_ROUTES.CONVERSATIONS.THREAD_FOLLOW(conversationId, messageId));
+  return response.data;
+};
+
+export const updateThreadNotifications = async (conversationId: string, messageId: string, level: "ALL" | "MENTIONS" | "MUTED") => {
+  const response = await api.patch(API_ROUTES.CONVERSATIONS.THREAD_NOTIFICATIONS(conversationId, messageId), { level });
+  return response.data;
 };

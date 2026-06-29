@@ -18,6 +18,16 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/shared/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog";
 import { useDeleteChannel, useUpdateChannel } from "../hooks/useWorkspaces";
 import { useRemoveChannelMemberMutation } from "../hooks/useChannelMembers";
 import { useUser } from "@/modules/auth/store/useAuthStore";
@@ -307,27 +317,24 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
       </Dialog>
 
       { }
-      <Dialog open={modalType === "delete"} onOpenChange={handleCloseModal}>
-        <DialogContent size="sm" elevation="md" fullscreenMobile>
-          <DialogHeader>
-            <DialogTitle>Delete Channel</DialogTitle>
-            <DialogDescription>
+      <AlertDialog open={modalType === "delete"} onOpenChange={handleCloseModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Channel</AlertDialogTitle>
+            <AlertDialogDescription>
               Are you sure you want to delete #{channel.name}? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogBody>
-            <p className="text-sm text-muted-foreground">
+              <br /><br />
               All messages in this channel will be permanently deleted.
-            </p>
-          </DialogBody>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={closeModals} disabled={isDeleting}>Cancel</Button>
-            <Button type="button" variant="destructive" onClick={confirmDelete} disabled={isDeleting}>
-              {isDeleting ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {isDeleting ? "Deleting..." : "Delete Channel"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       { }
       <ManageChannelMembersModal
@@ -338,30 +345,27 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
       />
 
       { }
-      <Dialog open={modalType === "visibility"} onOpenChange={handleCloseModal}>
-        <DialogContent size="sm" elevation="md" fullscreenMobile>
-          <DialogHeader>
-            <DialogTitle>Change Visibility</DialogTitle>
-            <DialogDescription>
+      <AlertDialog open={modalType === "visibility"} onOpenChange={handleCloseModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change Visibility</AlertDialogTitle>
+            <AlertDialogDescription>
               Are you sure you want to make #{channel.name}{" "}
               {channel.visibility === "PRIVATE" ? "public" : "private"}?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogBody>
-            <p className="text-sm text-muted-foreground">
+              <br /><br />
               {channel.visibility === "PRIVATE"
                 ? "Anyone in the workspace will be able to see and join this channel."
                 : "Only current members will be able to see this channel."}
-            </p>
-          </DialogBody>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={closeModals} disabled={isUpdating}>Cancel</Button>
-            <Button type="button" onClick={confirmVisibility} disabled={isUpdating}>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isUpdating}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmVisibility} disabled={isUpdating}>
               {isUpdating ? "Updating..." : "Confirm"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ChannelSettingsModal
         isOpen={modalType === "settings"}
@@ -371,27 +375,24 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
       />
 
       { }
-      <Dialog open={modalType === "leave"} onOpenChange={handleCloseModal}>
-        <DialogContent size="sm" elevation="md" fullscreenMobile>
-          <DialogHeader>
-            <DialogTitle>Leave Channel</DialogTitle>
-            <DialogDescription>
+      <AlertDialog open={modalType === "leave"} onOpenChange={handleCloseModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Leave Channel</AlertDialogTitle>
+            <AlertDialogDescription>
               Are you sure you want to leave #{channel.name}? You will need to be re-invited to rejoin.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogBody>
-            <p className="text-sm text-muted-foreground">
+              <br /><br />
               You will no longer receive messages or notifications from this channel.
-            </p>
-          </DialogBody>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={closeModals} disabled={isLeaving}>Cancel</Button>
-            <Button type="button" variant="destructive" onClick={confirmLeave} disabled={isLeaving}>
-              {isLeaving ? "Leaving..." : "Leave"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isLeaving}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmLeave} disabled={isLeaving} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {isLeaving ? "Leaving..." : "Leave Channel"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

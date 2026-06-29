@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Bell, ExternalLink, Reply, Mail, Check, X } from "lucide-react";
+import { Bell, ExternalLink, Reply, Mail, Check, X, AtSign } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/shared/lib/api";
@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { friendlyError } from "@/shared/lib/friendly-error";
 import type { Notification } from "../types/notification";
 
-type Tab = "replies" | "invites";
+type Tab = "replies" | "mentions" | "invites";
 
 function NotificationItem({
   notification,
@@ -225,12 +225,23 @@ export function BellPopover() {
     isFetchingNextPage: isLoadingMoreInvites,
     isError: isInvitesError,
   } = useNotifications(INVITE_TYPES);
+  const {
+    data: mentionsData,
+    fetchNextPage: fetchMoreMentions,
+    hasNextPage: hasMoreMentions,
+    isFetchingNextPage: isLoadingMoreMentions,
+    isError: isMentionsError,
+  } = useNotifications("MENTIONED_IN_MESSAGE");
   const markAsRead = useMarkAsRead();
   const markAllAsRead = useMarkAllAsRead();
 
   const replies = useMemo(
     () => repliesData?.pages.flatMap((page) => page.data) ?? [],
     [repliesData]
+  );
+  const mentions = useMemo(
+    () => mentionsData?.pages.flatMap((page) => page.data) ?? [],
+    [mentionsData]
   );
   const invites = useMemo(
     () => invitesData?.pages.flatMap((page) => page.data) ?? [],
@@ -239,31 +250,40 @@ export function BellPopover() {
 
   const notificationMap: Record<Tab, Notification[]> = {
     replies,
+    mentions,
     invites,
   };
 
   const activeNotifications = notificationMap[activeTab];
+
   const fetchMoreMap: Record<Tab, () => void> = {
     replies: fetchMoreReplies,
+    mentions: fetchMoreMentions,
     invites: fetchMoreInvites,
   };
   const hasMoreMap: Record<Tab, boolean> = {
     replies: hasMoreReplies ?? false,
+    mentions: hasMoreMentions ?? false,
     invites: hasMoreInvites ?? false,
   };
   const isLoadingMoreMap: Record<Tab, boolean> = {
     replies: isLoadingMoreReplies,
+    mentions: isLoadingMoreMentions,
     invites: isLoadingMoreInvites,
   };
 
   const activeFetchMore = fetchMoreMap[activeTab];
   const activeHasMore = hasMoreMap[activeTab];
   const activeIsLoadingMore = isLoadingMoreMap[activeTab];
-  const isError = activeTab === "replies" ? isRepliesError : isInvitesError;
+  const isError = activeTab === "replies" ? isRepliesError : activeTab === "mentions" ? isMentionsError : isInvitesError;
 
   const repliesUnread = useMemo(
     () => replies.filter((n) => !n.read).length,
     [replies]
+  );
+  const mentionsUnread = useMemo(
+    () => mentions.filter((n) => !n.read).length,
+    [mentions]
   );
   const invitesUnread = useMemo(
     () => invites.filter((n) => !n.read).length,
@@ -342,6 +362,13 @@ export function BellPopover() {
               onClick={() => setActiveTab("invites")}
             />
             <TabButton
+              active={activeTab === "mentions"}
+              label="Mentions"
+              icon={<AtSign className="h-3.5 w-3.5" />}
+              count={mentionsUnread}
+              onClick={() => setActiveTab("mentions")}
+            />
+            <TabButton
               active={activeTab === "replies"}
               label="Replies"
               icon={<Reply className="h-3.5 w-3.5" />}
@@ -361,7 +388,9 @@ export function BellPopover() {
               <div className="py-8 text-center text-sm text-muted-foreground">
                 {activeTab === "replies"
                   ? "No replies yet"
-                  : "No invites yet"}
+                  : activeTab === "mentions"
+                    ? "No mentions yet"
+                    : "No invites yet"}
               </div>
             ) : (
               <>

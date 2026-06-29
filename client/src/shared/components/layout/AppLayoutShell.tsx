@@ -105,7 +105,11 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
     if ("serviceWorker" in navigator) {
       const handleMessage = (event: MessageEvent) => {
         if (event.data && event.data.type === 'NAVIGATE' && event.data.url) {
-          router.push(event.data.url);
+          try {
+            router.push(event.data.url);
+          } catch (err) {
+            console.error("Failed to parse navigation URL:", err);
+          }
         }
       };
       navigator.serviceWorker.addEventListener("message", handleMessage);

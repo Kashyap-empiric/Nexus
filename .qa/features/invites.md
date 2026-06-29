@@ -1,145 +1,332 @@
 # Feature: Invites
 
-## Positive Tests
-- [ ] Can generate invite link for workspace
-- [ ] Can generate invite link for DM conversation
-- [ ] Invite link shows invite info (workspace name, inviter) when accessed
-- [ ] Can resolve/accept invite and join workspace
-- [ ] New members auto-joined to #general channel
-- [ ] Batch invite multiple users by ID
-- [ ] Invite by email sends email via SendGrid
-- [ ] Invite by username creates in-app notification
-- [ ] Can decline/revoke invite
-- [ ] Socket rooms joined after invite acceptance
+## Goal
 
-## Negative Tests
-- [ ] Non-admin cannot generate workspace invite links
-- [ ] Expired invite returns error
-- [ ] Revoked invite returns error
-- [ ] Max-uses exhausted invite returns error
-- [ ] Cannot invite non-existent user
-- [ ] Cannot invite self to workspace
-- [ ] Already-member gets appropriate response
+Allow users to generate invite links for workspaces, channels, and conversations; share them; and allow recipients to accept or decline invitations. Support batch invite and email-based invitations.
 
-## API Verification
-- [ ] `POST /api/invites/generate` returns 201 with token
-- [ ] `POST /api/invites/resolve` returns 200 with redirectUrl
-- [ ] `GET /api/invites/info?token=` returns 200 with invite info
-- [ ] `POST /api/invites/decline` returns 200
-- [ ] `POST /api/workspaces/:id/invite` returns 200
-- [ ] `POST /api/workspaces/:id/invite-multiple` returns 200
-- [ ] `POST /api/workspaces/:id/invite-email` returns 200
+---
 
-## Database Verification
-- [ ] Invite row created with correct type and entityId
-- [ ] Token is unique and securely random
-- [ ] usedCount incremented on resolution
-- [ ] expiresAt set correctly (default 7 days)
-- [ ] Member rows created on workspace invite acceptance
-- [ ] ConversationMember rows created on channel/DM invite acceptance
+## Current Status
 
-## UI Verification
-- [ ] Desktop layout (>=1024px)
-- [ ] Tablet layout (768-1023px)
-- [ ] Mobile layout (<768px)
-- [ ] Invite modal loads correctly
-- [ ] Loading state during invite generation
-- [ ] Error state for invalid/expired invites
-- [ ] Dark mode
-- [ ] No browser console errors (check DevTools console)
+```
+Implemented
+```
 
-## Error Verification
-- [ ] API 400 errors show user-friendly message
-- [ ] API 403 errors show permission denied
-- [ ] Expired invite token shows clear error
-- [ ] Revoked invite shows appropriate message
+Full invite system with token-based links, public info endpoint, resolution with atomic consumption, socket room joining, notification fan-out, batch invite, and email invites via BullMQ.
 
-## Demo Preparation
+---
 
-### Demo Flow
-1. Generate an invite link for a workspace
-2. Share link with another user
-3. Recipient opens link — invite info displayed
-4. Recipient accepts invite — joins workspace and #general channel
-5. Verify socket rooms joined dynamically
-6. Test batch invite by user IDs
-7. Test email invite via SendGrid
+## High-Level Summary
 
-### Test Accounts
-- Workspace OWNER/ADMIN account for generating invites
-- New user account (not in workspace) for accepting
+- Invite types: WORKSPACE, CHANNEL, USER, CONVERSATION — each with its own resolver.
+- Tokens are 32-byte random hex strings, consumed atomically via raw SQL to prevent race conditions.
+- Invite resolution uses a transaction with pluggable resolvers per invite type.
+- Socket rooms are joined dynamically on acceptance (no reconnect needed).
+- Invite link generation reuses existing active invites within 24 hours (unless `forceNew`).
+- Email invites sent via BullMQ `sendEmail` processor (SendGrid).
+- Batch invite enqueues `batch-invite` job for async processing.
+- Scheduled cleanup of expired invites runs daily at 3 AM via BullMQ.
+- `GET /api/invites/info` is public (no auth required) for link sharing.
 
-### Expected Results
-- Invite link generated with unique token
-- Recipient information displayed correctly
-- Acceptance joins workspace and default channels
-- Socket rooms updated without reconnect
-- Email invite sent via SendGrid
+---
 
-## Architecture Explanation
+## Code Locations
 
-### Design Decisions
-- Token-based invites with 32-byte random hex (crypto.randomBytes)
-- Invite types: WORKSPACE, CHANNEL, USER, CONVERSATION
-- Socket room joining on invite acceptance (no manual reconnect needed)
-- Atomic token consumption via raw SQL to prevent race conditions
+```
+Backend
 
-### Data Flow
-Client → REST → Controller → Service → Invite token generated/consumed + Socket dispatcher → room join
+server/src/modules/invites/invites.service.ts      — Core invite logic
+server/src/modules/invites/invites.controller.ts   — Request handlers
+server/src/modules/invites/invites.routes.ts       — Route definitions
+server/src/modules/invites/invites.repository.ts   — Database queries
+server/src/modules/invites/invites.types.ts        — TypeScript types
+server/src/modules/invites/resolvers/index.ts      — Resolver registry
+server/src/modules/invites/resolvers/workspaceResolver.ts    — Workspace accept
+server/src/modules/invites/resolvers/channelResolver.ts      — Channel accept
+server/src/modules/invites/resolvers/userResolver.ts         — User DM accept
+server/src/modules/invites/resolvers/conversationResolver.ts — Conversation accept
+server/src/jobs/processors/batchInvite.processor.ts  — Batch invite worker
+server/src/jobs/processors/revokeInvite.processor.ts  — Revoke invite worker
+server/src/jobs/processors/sendEmail.processor.ts     — Email worker
+server/src/jobs/processors/cleanup.processor.ts       — Cleanup expired invites
 
-### API Flow
-- `POST /api/invites/generate` — create token
-- `GET /api/invites/info?token=` — public invite info
-- `POST /api/invites/resolve` — consume token, join entity
-- `POST /api/invites/decline` — revoke token
+Database
 
-### Database Interactions
-- `Invite` table: unique index on `token`, tracked via `usedCount`
-- `WorkspaceMember` rows created on workspace invite acceptance
-- `ConversationMember` rows created on channel invite acceptance
+server/prisma/schema.prisma
 
-### Permission Model
-- ADMIN/OWNER can generate workspace invites
-- MEMBER can generate channel invites (if channel member)
-- Public invite info endpoint requires no auth (for link sharing)
+Frontend
 
-### Tradeoffs
-- Token-based invites require link sharing — no native app deep linking
-- 24-hour token rotation via lastUsedAt tracking
+client/src/modules/invites/index.ts                              — Module barrel
+client/src/modules/invites/context/InviteModalContext.tsx         — Modal context
+client/src/modules/invites/lib/handleInvite.ts                   — Invite handler
+client/src/modules/invites/hooks/useInviteModal.ts               — Modal hook
+client/src/modules/invites/hooks/useInviteLink.ts                — Link generation hook
+client/src/modules/invites/api/invites.api.ts                    — API client
+client/src/modules/invites/types/invites.ts                      — Types
+client/src/modules/invites/components/InviteModal.tsx            — Invite UI modal
+client/src/modules/invites/components/InviteProcessor.tsx        — Landing page
+client/src/app/invite/page.tsx                                   — Invite page
+```
+
+---
+
+## Database
+
+```prisma
+model Invite {
+  id         String     @id @default(cuid())
+  entityId   String
+  token      String     @unique
+  createdBy  String
+  expiresAt  DateTime?
+  maxUses    Int?
+  usedCount  Int        @default(0)
+  revoked    Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+  type       InviteType
+  lastUsedAt DateTime?
+  creator    User       @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([type, entityId])
+}
+
+enum InviteType {
+  USER
+  CONVERSATION
+  WORKSPACE
+  CHANNEL
+}
+```
+
+- `token` has a unique constraint.
+- Indexed on `type, entityId` for finding all invites for an entity.
+- Cascade delete on user deletion.
+
+---
+
+## API
+
+### Endpoints
+
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| POST | `/api/invites/generate` | Required | Generate invite token |
+| POST | `/api/invites/resolve` | Required | Accept/consume invite token |
+| POST | `/api/invites/decline` | Required | Decline invite |
+| GET | `/api/invites/info?token=` | Public | Get invite info (no auth) |
+
+### Workspace-specific Endpoints (from workspaces controller)
+
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| POST | `/api/workspaces/:id/invite` | Required | Invite user by username/email |
+| POST | `/api/workspaces/:id/invite-multiple` | Required | Batch invite by user IDs |
+| POST | `/api/workspaces/:id/invite-email` | Required | Invite by email |
+
+### Request Validation
+
+- No Zod schema for `invites.schema.ts` — file does not exist. Validation is done inline in controller.
+- `generateInvite`: expects `type` (string) and optional `entityId`.
+- `resolveInvite`: expects `token` (string).
+- `declineInvite`: expects `token` (string).
+- Workspace invite schemas are in `workspaces.schema.ts` with full Zod validation.
+
+### Permissions
+
+- `generateInvite`: USER type (any auth user), WORKSPACE type (ADMIN/OWNER), CONVERSATION type (channel member).
+- `resolveInvite`: any authenticated user can accept any invite.
+- `GET /api/invites/info`: public (no auth).
+
+---
+
+## Backend Implementation
+
+### Invite Service (`server/src/modules/invites/invites.service.ts`)
+
+- **`generateInviteService()`**:
+  - Checks permissions based on invite type.
+  - If not `forceNew`, finds existing active invite within 24 hours and returns it.
+  - Otherwise revokes old invite and creates new one.
+  - Token: 32 random bytes as hex string.
+  - Default expiry: 7 days.
+- **`resolveInviteService()`**:
+  - Runs within a Prisma transaction.
+  - Validates invite (exists, not revoked, not expired, max uses not exhausted).
+  - Delegates to type-specific resolver.
+  - Consumes token atomically via raw SQL (`UPDATE ... SET usedCount = usedCount + 1 WHERE ...`).
+  - Updates INVITE_RECEIVED notification to accepted state.
+  - Fires domain events (socket dispatches).
+  - Enqueues pending notifications via fan-out job.
+- **`getInviteInfoService()`**: Fetches invite by token, looks up entity name and inviter info.
+- **`revokeInviteByToken()`**: Sets `revoked: true`.
+
+### Invite Resolvers (`server/src/modules/invites/resolvers/`)
+
+- **workspaceResolver**: Adds user as workspace member, joins #general channel, creates MEMBER_JOINED and INVITE_ACCEPTED notifications for admins/inviter.
+- **channelResolver**: Adds user as conversation member (handles P2002 for already member).
+- **conversationResolver**: Adds user as conversation member, rejects DM invites.
+- **userResolver**: Creates or gets DM between inviter and invitee using `createOrGetDM`.
+
+### Invite Controller (`server/src/modules/invites/invites.controller.ts`)
+
+- **resolveInvite**: Calls service, emits domain events (CONVERSATION_UPDATE, CONVERSATION_NEW, WORKSPACE_MEMBER_UPDATE), dynamically joins socket rooms.
+- **declineInvite**: Revokes invite, sends INVITE_DECLINED notification to inviter.
+- **getInviteInfo**: Returns invite info with entity name, inviter details, validity status.
+
+---
+
+## Frontend Implementation
+
+### InviteProcessor (`client/src/modules/invites/components/InviteProcessor.tsx`)
+
+- Fetches invite info from `GET /api/invites/info?token=`.
+- Shows landing page with inviter name, entity name, accept/decline buttons.
+- If user not logged in, shows "Log In to Accept" and "Create New Account" links with invite token stored in sessionStorage.
+- If invite is invalid/expired/revoked, shows error page with "Go to Homepage" button.
+
+### InviteModal (`client/src/modules/invites/components/InviteModal.tsx`)
+
+- Multi-purpose modal: generates invite link for workspace or channel.
+- For WORKSPACE invites: user search dropdown, email invite input, and shareable link.
+- User search with debounced query and workspace member filtering.
+- Batch invite via `POST /api/workspaces/:id/invite-multiple`.
+- Email invite via `POST /api/workspaces/:id/invite-email`.
+- Copy-to-clipboard for shareable invite link.
+- Shows expiration date.
+
+### useInviteLink (`client/src/modules/invites/hooks/useInviteLink.ts`)
+
+- Generates invite link and tracks loading/error state.
+
+---
+
+## Existing vs Missing
+
+| Aspect | Status | Evidence |
+|--------|--------|----------|
+| Token-based invite generation | ✅ | `generateInviteService` |
+| Atomic token consumption | ✅ | Raw SQL `UPDATE usedCount` |
+| Type-specific resolvers | ✅ | workspaceResolver, channelResolver, etc. |
+| Socket room joining on accept | ✅ | Dynamic join in controller |
+| Invite info (public endpoint) | ✅ | `GET /api/invites/info` |
+| Decline invite | ✅ | `declineInvite` controller |
+| Batch invite | ✅ | `POST /api/workspaces/:id/invite-multiple` |
+| Email invite | ✅ | `inviteByEmail` controller |
+| Scheduled invite cleanup | ✅ | BullMQ scheduled job at 3 AM |
+| Invite modal UI | ✅ | InviteModal.tsx |
+| Invite landing page | ✅ | InviteProcessor.tsx |
+| Zod schema for invites | ❌ | `invites.schema.ts` does not exist |
+| Native app deep linking | ❌ | HTTP URLs only |
+| Invite analytics (click-through) | ❌ | Not tracked |
+
+---
+
+## Expected Behavior Matrix
+
+| Scenario | Expected Behavior | Current Behavior | Status |
+|----------|-------------------|------------------|--------|
+| ADMIN generates workspace invite | Token created, returned | `generateInviteService` checks ADMIN/OWNER role | ✅ |
+| MEMBER generates workspace invite | 403 forbidden | Permission check rejects | ✅ |
+| User accepts workspace invite | Added to workspace + #general | workspaceResolver: onboardUserToWorkspaceInTransaction | ✅ |
+| User accepts channel invite | Added to channel members | channelResolver: create ConversationMember | ✅ |
+| User accepts DM invite | DM created (or existing returned) | userResolver: createOrGetDM | ✅ |
+| Accept expired invite | 400 error | `expiresAt < new Date()` check | ✅ |
+| Accept revoked invite | 400 error | `revoked` check | ✅ |
+| Accept max-uses exhausted invite | 400 error | `maxUses && usedCount >= maxUses` check | ✅ |
+| Already-member accepts workspace invite | Redirect, no duplicate join | `alreadyMember: true`, consumed: false | ✅ |
+| Already-member accepts channel invite | Redirect, no duplicate | P2002 caught, membershipCreated: false | ✅ |
+| Invite link shared with non-user | Login/Register prompt | sessionStorage stores token | ✅ |
+| Multiple rapid accepts of same link | Only one succeeds | Atomic SQL `UPDATE ... SET usedCount` | ✅ |
+| 24-hour invite reuse | Same link returned if < 24h old | `findExistingActiveInvite` check | ✅ |
+| Email invite to non-user | Email sent, invite created | `inviteByEmail` + `send-email` job | ✅ |
+
+---
+
+## Current Flow
+
+```
+Generate invite:
+  Client → POST /api/invites/generate → generateInviteService
+  → Check permissions → Find existing active invite (< 24h) or create new
+  → crypto.randomBytes(32) → Prisma create → return { invitePath, token, expiresAt }
+
+Resolve invite:
+  Client → POST /api/invites/resolve → resolveInviteService
+  → Prisma transaction:
+    1. Find invite by token
+    2. Validate (not revoked, not expired, not maxed)
+    3. Delegate to type-specific resolver
+    4. Atomic SQL consumed
+  → Update INVITE_RECEIVED notification to accepted
+  → Fire domain events (socket dispatches)
+  → Dynamically join socket rooms
+  → Enqueue pending notifications (MEMBER_JOINED, INVITE_ACCEPTED)
+```
+
+---
+
+## Missing Pieces
+
+```
+□ Zod validation schema for invites endpoints
+□ Native app deep linking for invites
+□ Invite analytics (click-through rate tracking)
+□ Re-invite notification when existing invite expires
+□ Custom invite message
+```
+
+---
+
+## Edge Cases
+
+| Edge Case | Current | Status |
+|-----------|---------|--------|
+| Concurrent invite consumption | Atomic SQL prevents double-use | ✅ |
+| Invite token brute force | 256-bit random token, practically unguessable | ✅ |
+| User deleted before accepting invite | Cascade delete removes invite | ✅ |
+| Workspace deleted before invite accepted | Invite becomes invalid (no workspace found) | ✅ |
+| Email invite to already-registered user | In-app notification sent + email | ✅ |
+| Email invite to non-existent email | No user found, email with link sent | ✅ |
+| Self-invite | Rejected (cannot invite yourself) | ✅ |
+| Invite for deleted conversation | Resolver throws CHANNEL_NOT_FOUND | ✅ |
+
+---
 
 ## Known Limitations
 
-| Limitation | Reason Deferred | Introduced |
-|---|---|---|
-| No native app deep linking | Invite links are HTTP URLs only | 2026-06-11 |
-| Email invite uses SendGrid (requires API key) | Alternative providers not integrated | 2026-06-15 |
+- No Zod validation schema file exists for invites (`server/src/modules/invites/invites.schema.ts` does not exist).
+- Invite links are HTTP URLs only — no native app deep linking.
+- Email delivery depends on configured SendGrid API key.
+- Token reuse within 24 hours could be a security concern if token is leaked.
+- No rate limiting on invite generation endpoint.
+- No way to send invites from the invite page itself — must use modal in workspace.
 
-## AI Usage Report
+---
 
-### Scope
-Invites — link generation, resolution, batch invite, email invite
+## Files Inspected
 
-### Files Modified
-- Invite components, lib (client)
-- Invite routes, controller, service, resolvers (server)
-
-### Decisions Made
-- Token-based over userId-based invites for link shareability
-- Atomic consumption via raw SQL to prevent race conditions
-
-### Risks
-- Token replay if not consumed atomically
-- SendGrid dependency for email invites
-
-### Follow-up Work
-- Add native app deep linking for invites
-- Add invite analytics (click-through rate)
-
-## Agent Self QA
-Status: PASS
-
-## Human QA
-Status: PENDING
-
-## Review Status
-Status: READY_FOR_REVIEW
+```
+server/src/modules/invites/invites.service.ts
+server/src/modules/invites/invites.controller.ts
+server/src/modules/invites/invites.routes.ts
+server/src/modules/invites/invites.repository.ts
+server/src/modules/invites/invites.types.ts
+server/src/modules/invites/resolvers/index.ts
+server/src/modules/invites/resolvers/workspaceResolver.ts
+server/src/modules/invites/resolvers/channelResolver.ts
+server/src/modules/invites/resolvers/userResolver.ts
+server/src/modules/invites/resolvers/conversationResolver.ts
+server/src/modules/workspaces/workspaces.controller.ts
+server/src/jobs/processors/batchInvite.processor.ts
+server/src/jobs/processors/revokeInvite.processor.ts
+server/src/jobs/processors/sendEmail.processor.ts
+server/src/jobs/processors/cleanup.processor.ts
+server/prisma/schema.prisma
+client/src/modules/invites/components/InviteModal.tsx
+client/src/modules/invites/components/InviteProcessor.tsx
+client/src/modules/invites/hooks/useInviteLink.ts
+client/src/modules/invites/hooks/useInviteModal.ts
+client/src/modules/invites/api/invites.api.ts
+client/src/modules/invites/types/invites.ts
+```

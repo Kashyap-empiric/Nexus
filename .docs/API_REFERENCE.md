@@ -1,6 +1,6 @@
 # Nexus — API Reference
 
-> **Last Updated:** 2026-06-26
+> **Last Updated:** 2026-06-29
 > **Purpose:** Complete OpenAPI-style reference for all REST endpoints and Socket.io events.
 
 ---
@@ -692,6 +692,53 @@ PUT /api/notifications/preferences
 
 ---
 
+## Thread Participants
+
+### Follow Thread
+
+Subscribe the current user to a thread with default ALL notification level.
+
+```
+POST /api/conversations/:id/messages/:messageId/thread/follow
+```
+
+**Auth**: ✅ Required + Conversation member
+
+**Response** `201`: `{ "success": true }`
+
+### Unfollow Thread
+
+Unsubscribe the current user from a thread (still receives notifications if mentioned).
+
+```
+DELETE /api/conversations/:id/messages/:messageId/thread/follow
+```
+
+**Auth**: ✅ Required + Conversation member
+
+**Response** `200`: `{ "success": true }`
+
+### Update Thread Notification Level
+
+Change notification level for the current user on a specific thread.
+
+```
+PATCH /api/conversations/:id/messages/:messageId/thread/notifications
+```
+
+**Auth**: ✅ Required + Conversation member
+
+**Request**:
+```json
+{
+  "level": "ALL | MENTIONS | MUTED"
+}
+```
+
+**Response** `200`: `{ "success": true, "notificationLevel": "ALL" }`
+
+---
+
 ## Invites
 
 ### Get Invite Info
@@ -777,8 +824,10 @@ POST /api/invites/decline
 | `presence:initial` | `{ users: [{ userId, status }] }` | Initial presence state on connect |
 | `user:status:update` | `{ userId, status, statusText }` | Status changed |
 | `user:update` | `{ userId }` | Profile updated (re-fetch) |
+| `presence:update` | `{ userId, status }` | Presence status update |
 | `notification:new` | `Notification` | New in-app notification |
 | `notification:update` | `Notification` | Notification updated (mark read) |
 | `typing:start` | `{ conversationId, username }` | User started typing |
 | `typing:stop` | `{ conversationId }` | User stopped typing |
 | `threadMessage:new` | `Message` | New reply in a thread the client is viewing |
+| `presence:update` | `{ userId, status }` | Presence status updated |
