@@ -30,7 +30,7 @@ export const ProfileSettings = () => {
   const { mutateAsync: updateAvatar } = useUpdateAvatar();
   const { inviteUrl, isLoading: isInviteLoading, generate } = useInviteLink();
   const [isInviteCopied, setIsInviteCopied] = useState(false);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -66,14 +66,14 @@ export const ProfileSettings = () => {
   const onSubmit = async (data: ProfileFormValues) => {
     try {
       setIsUploading(true);
-      
+
       let newAvatarUrl: string | null = profile!.avatarUrl;
       if (avatarFile) {
         newAvatarUrl = await uploadAvatarAndGetUrl(profile!.id, avatarFile);
       } else if (isAvatarRemoved) {
         newAvatarUrl = null;
       }
-      
+
       if (newAvatarUrl !== profile!.avatarUrl) {
         await updateAvatar(newAvatarUrl);
         if (profile!.avatarUrl) {
@@ -86,14 +86,14 @@ export const ProfileSettings = () => {
         fullName: data.fullName || null,
         bio: data.bio || null,
       });
-      
+
       toast.success("Profile updated successfully");
-      
+
       if (avatarPreview) URL.revokeObjectURL(avatarPreview);
       setAvatarFile(null);
       setAvatarPreview(null);
       setIsAvatarRemoved(false);
-      reset({ ...data, fullName: data.fullName || "", bio: data.bio || "" }); 
+      reset({ ...data, fullName: data.fullName || "", bio: data.bio || "" });
     } catch (error: unknown) {
       const errObj = error && typeof error === "object" ? error as { status?: number; message?: string } : {};
       if (errObj.status === 409) {
@@ -164,12 +164,12 @@ export const ProfileSettings = () => {
 
       <div className="flex items-center gap-6 pb-2">
         <div className="relative group">
-          <UserAvatar 
+          <UserAvatar
             name={profile?.username || "ME"}
             src={isAvatarRemoved ? null : (avatarPreview || profile?.avatarUrl)}
-            className="h-24 w-24 text-2xl" 
+            className="h-24 w-24 text-2xl"
           />
-          <button 
+          <button
             type="button"
             onClick={handleAvatarClick}
             disabled={isUploading}
@@ -177,11 +177,11 @@ export const ProfileSettings = () => {
           >
             {isUploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Camera className="h-6 w-6" />}
           </button>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            className="hidden" 
-            accept="image/png, image/jpeg, image/webp" 
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept="image/png, image/jpeg, image/webp"
             onChange={handleFileChange}
           />
         </div>

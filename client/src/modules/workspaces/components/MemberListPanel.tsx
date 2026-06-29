@@ -185,7 +185,7 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
         </div>
       )}
 
-      {}
+      { }
       {!isChannelView && (
         <AlertDialog open={!!memberToPromote} onOpenChange={(open) => { if (!open) setMemberToPromote(null); }}>
           <AlertDialogContent>
@@ -216,7 +216,7 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
         </AlertDialog>
       )}
 
-      {}
+      { }
       {!isChannelView && (
         <AlertDialog open={!!memberToRemove} onOpenChange={(open) => { if (!open && !isRemoving) setMemberToRemove(null); }}>
           <AlertDialogContent>

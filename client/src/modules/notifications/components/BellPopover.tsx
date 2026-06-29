@@ -316,7 +316,7 @@ export function BellPopover() {
           ref={popoverRef}
           className="absolute top-full right-0 mt-2 w-80 bg-popover border rounded-xl shadow-xl overflow-hidden z-50"
         >
-          {}
+          { }
           <div className="flex items-center justify-between px-3 py-2.5 border-b">
             <span className="text-sm font-semibold">Notifications</span>
             <div className="flex items-center gap-1">
@@ -332,7 +332,7 @@ export function BellPopover() {
             </div>
           </div>
 
-          {}
+          { }
           <div className="flex items-center gap-1 px-3 pt-2.5 pb-2 border-b">
             <TabButton
               active={activeTab === "invites"}
@@ -350,7 +350,7 @@ export function BellPopover() {
             />
           </div>
 
-          {}
+          { }
           <div className="max-h-80 overflow-y-auto">
             {isError && (
               <div className="px-3 py-2 text-xs text-destructive bg-destructive/10">
@@ -385,7 +385,7 @@ export function BellPopover() {
             )}
           </div>
 
-          {}
+          { }
           {unreadCount > 0 && (
             <div className="border-t p-2">
               <button

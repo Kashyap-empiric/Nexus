@@ -8,7 +8,7 @@ import { MessageGroupItem } from "./MessageGroupItem";
 import { groupMessages, type MessageGroup } from "@/modules/chat/utils/groupMessages";
 import { MessageListSkeleton } from "./MessageListSkeleton";
 import { TypingIndicator } from "./TypingIndicator";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import React from "react";
@@ -36,6 +36,9 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
   const latestMessageId = latestMessage?.id;
   const isLatestMessageMine = latestMessage?.userId === currentUserId;
 
+  const rawMessages = data?.pages.flatMap((page) => page?.data || []).reverse() || [];
+  const oldestMessageId = rawMessages[0]?.id;
+
   const {
     scrollContainerRef,
     bottomRef,
@@ -47,6 +50,7 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
   } = useMessageScroll({
     conversationId,
     latestMessageId,
+    oldestMessageId,
     isLatestMessageMine,
     hasNextPage,
     isFetchingNextPage,
@@ -112,14 +116,13 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
     return () => clearTimeout(timer);
   }, [highlightMessageId, data, isFetchingNextPage, isLoading, hasNextPage, fetchNextPage]);
 
-  const rawMessages = data?.pages.flatMap((page) => page?.data || []).reverse() || [];
   const messageGroups = groupMessages(rawMessages);
   const pinnedMessageIds = new Set(data?.pages.flatMap((page) => page?.pinnedMessageIds || []) || []);
 
   // Determine effective last read position
   const effectiveLastReadId =
     isLatestMessageMine && latestMessageId ? latestMessageId :
-    myLastReadMessageId;
+      myLastReadMessageId;
 
   // Insert unread divider into message groups
   const { displayGroups, dividerAfterGroup } = insertUnreadDivider(messageGroups, effectiveLastReadId);
@@ -144,8 +147,13 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
         className="flex-1 overflow-y-auto overflow-x-hidden pb-4"
       >
         <div className="w-full">
-          <div ref={observerTarget} className="h-1 mt-1 w-full flex justify-center">
-            {isFetchingNextPage && <span className="text-xs text-muted-foreground">Loading older messages...</span>}
+          <div ref={observerTarget} className="h-10 mt-2 mb-2 w-full flex items-center justify-center">
+            {isFetchingNextPage && (
+              <div className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-muted/40 border border-border/40 text-muted-foreground shadow-sm backdrop-blur-sm">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                <span className="text-xs font-medium">Loading older messages...</span>
+              </div>
+            )}
           </div>
 
           {!hasNextPage && (

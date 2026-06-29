@@ -2,17 +2,17 @@ import { useChannelThreads } from "@/modules/messages/hooks/useThreads";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { formatRelativeTime } from "@/shared/lib/utils";
 import { ThreadIcon } from "@/shared/components/ui/thread-icon";
-import type { InfoPanelView } from "@/shared/components/layout/AppLayoutShell";
+import type { RightPanelView } from "@/shared/components/layout/AppLayoutShell";
 
 import { useThreadStore } from "@/modules/threads/store/threadStore";
 
 interface ChannelThreadsBrowserProps {
   conversationId: string;
-  setInfoPanelView: (view: InfoPanelView) => void;
+  setRightPanelView: (view: RightPanelView) => void;
   onOpenThread?: (threadRootId: string) => void;
 }
 
-export function ChannelThreadsBrowser({ conversationId, setInfoPanelView, onOpenThread }: ChannelThreadsBrowserProps) {
+export function ChannelThreadsBrowser({ conversationId, setRightPanelView, onOpenThread }: ChannelThreadsBrowserProps) {
   const { data: threads, isLoading, isError } = useChannelThreads(conversationId);
   const { openThread } = useThreadStore();
 
@@ -56,7 +56,7 @@ export function ChannelThreadsBrowser({ conversationId, setInfoPanelView, onOpen
                   onOpenThread(thread.threadRootId);
                 } else {
                   openThread(thread.threadRootId);
-                  setInfoPanelView('thread');
+                  setRightPanelView('thread');
                 }
               }}
               className="w-full text-left p-3 rounded-xl border border-border/50 bg-card hover:bg-accent/50 transition-colors flex flex-col gap-2 group"

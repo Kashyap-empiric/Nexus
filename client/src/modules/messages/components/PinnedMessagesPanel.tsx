@@ -20,7 +20,7 @@ interface PinnedMessagesPanelProps {
 export function PinnedMessagesPanel({ conversationId }: PinnedMessagesPanelProps) {
   const { data: pins, isLoading, isError } = usePinnedMessages(conversationId);
   const unpinMutation = useUnpinMessage(conversationId);
-  const { closeInfoPanel } = useLayoutUI();
+  const { closeRightPanel } = useLayoutUI();
   const isMobile = useMediaQuery("(max-width: 767px)");
   const router = useRouter();
   const pathname = usePathname();
@@ -54,7 +54,7 @@ export function PinnedMessagesPanel({ conversationId }: PinnedMessagesPanelProps
     );
   }
 
-  const sortedPins = [...pins].sort((a, b) => 
+  const sortedPins = [...pins].sort((a, b) =>
     new Date(a.message.createdAt).getTime() - new Date(b.message.createdAt).getTime()
   );
 
@@ -70,13 +70,13 @@ export function PinnedMessagesPanel({ conversationId }: PinnedMessagesPanelProps
             const el = document.getElementById(`msg-${pin.messageId}`);
             if (el) {
               if (isMobile) {
-                closeInfoPanel();
+                closeRightPanel();
                 setTimeout(() => scrollToMessage(pin.messageId), 300);
               } else {
                 scrollToMessage(pin.messageId);
               }
             } else {
-              if (isMobile) closeInfoPanel();
+              if (isMobile) closeRightPanel();
               const newParams = new URLSearchParams(searchParams.toString());
               newParams.set("highlight", pin.messageId);
               router.replace(`${pathname}?${newParams.toString()}`);
@@ -92,13 +92,13 @@ export function PinnedMessagesPanel({ conversationId }: PinnedMessagesPanelProps
             const el = document.getElementById(`msg-${pin.messageId}`);
             if (el) {
               if (isMobile) {
-                closeInfoPanel();
+                closeRightPanel();
                 setTimeout(() => scrollToMessage(pin.messageId), 300);
               } else {
                 scrollToMessage(pin.messageId);
               }
             } else {
-              if (isMobile) closeInfoPanel();
+              if (isMobile) closeRightPanel();
               const newParams = new URLSearchParams(searchParams.toString());
               newParams.set("highlight", pin.messageId);
               router.replace(`${pathname}?${newParams.toString()}`);
@@ -111,13 +111,13 @@ export function PinnedMessagesPanel({ conversationId }: PinnedMessagesPanelProps
               const el = document.getElementById(`msg-${pin.messageId}`);
               if (el) {
                 if (isMobile) {
-                  closeInfoPanel();
+                  closeRightPanel();
                   setTimeout(() => scrollToMessage(pin.messageId), 300);
                 } else {
                   scrollToMessage(pin.messageId);
                 }
               } else {
-                if (isMobile) closeInfoPanel();
+                if (isMobile) closeRightPanel();
                 const newParams = new URLSearchParams(searchParams.toString());
                 newParams.set("highlight", pin.messageId);
                 router.replace(`${pathname}?${newParams.toString()}`);

@@ -374,6 +374,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                   size="icon"
                                   className="h-8 w-8 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60"
                                   onClick={() => handleEditStart(msg.id)}
+                                  title="Edit"
                                 >
                                   <Pencil className="h-3.5 w-3.5" />
                                 </Button>
@@ -382,6 +383,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                   size="icon"
                                   className="h-8 w-8 rounded-none text-muted-foreground hover:text-destructive hover:bg-accent/60"
                                   onClick={() => setMessageToDelete(msg.id)}
+                                  title="Delete"
                                 >
                                   <Trash className="h-3.5 w-3.5" />
                                 </Button>
@@ -389,7 +391,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                             )}
                             <DropdownMenu>
                               <DropdownMenuTrigger
-                                render={<Button variant="ghost" size="icon" className="h-8 w-8 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60" />}
+                                render={<Button variant="ghost" size="icon" className="h-8 w-8 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60" title="More actions" />}
                               >
                                 <MoreHorizontal className="h-4 w-4" />
                               </DropdownMenuTrigger>

@@ -77,12 +77,11 @@ export function UserFooterMenu({ openSettings }: UserFooterMenuProps) {
           fallbackClassName="text-xs"
         />
         <div className="absolute -bottom-0.5 -right-0.5">
-          <span className={`block h-3 w-3 rounded-full border-2 border-background ${
-            currentStatus.value === "DND" ? "bg-status-dnd" :
-            currentStatus.value === "AWAY" ? "bg-status-away" :
-            currentStatus.value === "INVISIBLE" ? "bg-status-offline" :
-            "bg-status-online"
-          }`} />
+          <span className={`block h-3 w-3 rounded-full border-2 border-background ${currentStatus.value === "DND" ? "bg-status-dnd" :
+              currentStatus.value === "AWAY" ? "bg-status-away" :
+                currentStatus.value === "INVISIBLE" ? "bg-status-offline" :
+                  "bg-status-online"
+            }`} />
         </div>
       </div>
       <div className="flex-1 min-w-0 text-left">
@@ -100,7 +99,7 @@ export function UserFooterMenu({ openSettings }: UserFooterMenuProps) {
         setIsOpen(open);
         if (open) setStatusText(profile.statusText || "");
       }}>
-        <SheetTrigger 
+        <SheetTrigger
           render={<button className="w-full p-4 bg-sidebar shrink-0 flex items-center gap-3 min-w-0 hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-left cursor-pointer select-none" />}
         >
           {triggerContent}
@@ -113,14 +112,14 @@ export function UserFooterMenu({ openSettings }: UserFooterMenuProps) {
             <div className="p-2">
               <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">Update Status</div>
               <form onSubmit={handleStatusTextSubmit} className="flex items-center gap-2 mb-2">
-                <Input 
+                <Input
                   value={statusText}
                   onChange={(e) => setStatusText(e.target.value)}
                   placeholder="What's your status?"
                   className="h-10 text-sm"
                   maxLength={100}
                 />
-                <Button type="submit" size="icon" variant="ghost" className="h-10 w-10 shrink-0">
+                <Button type="submit" size="icon" variant="ghost" className="h-10 w-10 shrink-0" title="Save status">
                   <Save className="h-5 w-5" />
                 </Button>
               </form>
@@ -165,7 +164,7 @@ export function UserFooterMenu({ openSettings }: UserFooterMenuProps) {
       setIsOpen(open);
       if (open) setStatusText(profile.statusText || "");
     }}>
-      <DropdownMenuTrigger 
+      <DropdownMenuTrigger
         render={<button className="w-full p-4 bg-sidebar shrink-0 flex items-center gap-3 min-w-0 hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-left cursor-pointer select-none" />}
       >
         {triggerContent}
@@ -173,16 +172,16 @@ export function UserFooterMenu({ openSettings }: UserFooterMenuProps) {
       <DropdownMenuContent align="end" className="w-64 mb-1">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Update Status</DropdownMenuLabel>
-          
+
           <form onSubmit={handleStatusTextSubmit} className="p-2 flex items-center gap-2">
-            <Input 
+            <Input
               value={statusText}
               onChange={(e) => setStatusText(e.target.value)}
               placeholder="What's your status?"
               className="h-8 text-xs"
               maxLength={100}
             />
-            <Button type="submit" size="icon" variant="ghost" className="h-8 w-8 shrink-0">
+            <Button type="submit" size="icon" variant="ghost" className="h-8 w-8 shrink-0" title="Save status">
               <Save className="h-4 w-4" />
             </Button>
           </form>

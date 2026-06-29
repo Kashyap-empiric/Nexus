@@ -24,7 +24,12 @@ export const useThreadStore = create<ThreadState>((set, get) => ({
   threadPanelOpen: false,
 
   openThread: (rootMessageId: string) => {
-    set({ activeThreadRootId: rootMessageId, threadPanelOpen: true, threadData: null });
+    const current = get().activeThreadRootId;
+    if (current === rootMessageId) {
+      set({ threadPanelOpen: true });
+    } else {
+      set({ activeThreadRootId: rootMessageId, threadPanelOpen: true, threadData: null });
+    }
   },
 
   closeThread: () => {

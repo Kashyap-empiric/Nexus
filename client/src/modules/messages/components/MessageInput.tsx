@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useSendMessageMutation } from "@/modules/messages/hooks/useMessages";
+import { useChatStore } from "@/modules/chat/store/chatStore";
 import { SendHorizontal, Smile, X, Reply, List, ListOrdered } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/components/ui/popover";
@@ -55,6 +56,20 @@ export function MessageInput({
   const { theme } = useTheme();
   const { mutate: sendMessage } = useSendMessageMutation(conversationId, currentUser);
 
+  // Draft persistence
+  const { setDraft, clearDraft } = useChatStore();
+  const _draftKey = threadRootId ? `${conversationId}:thread:${threadRootId}` : conversationId;
+  // Subscribe only to the draft for this specific key to avoid re-renders on other drafts
+  const savedDraft = useChatStore((s) => s.drafts.get(_draftKey));
+  // Refs to avoid stale closures inside the TipTap useEditor callback
+  const draftKeyRef = useRef(_draftKey);
+  draftKeyRef.current = _draftKey;
+  const onSubmitRef = useRef(onSubmit);
+  onSubmitRef.current = onSubmit;
+  const compactRef = useRef(compact);
+  compactRef.current = compact;
+  const latestContentRef = useRef('');
+
   useEffect(() => {
     const handleResize = () => setEmojiPickerWidth(Math.min(300, window.innerWidth - 32));
     handleResize();
@@ -99,8 +114,13 @@ export function MessageInput({
     return () => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       emitTypingStop();
+
+      // Save draft on unmount if user had typed something
+      if (latestContentRef.current) {
+        setDraft(draftKeyRef.current, latestContentRef.current);
+      }
     };
-  }, [emitTypingStop]);
+  }, [emitTypingStop, setDraft]);
 
   const submitMessage = () => {
     if (!editor) return;
@@ -111,6 +131,7 @@ export function MessageInput({
     if (!markdownContent.trim()) return;
 
     if (onSubmit) {
+      clearDraft(_draftKey);
       onSubmit(markdownContent.trim());
       editor.commands.clearContent(false);
       return;
@@ -123,6 +144,7 @@ export function MessageInput({
     const tempId = `temp-${crypto.randomUUID()}-${tempIdCounterRef.current}`;
     sendMessage({ conversationId, content: markdownContent.trim(), tempId, replyToId: replyingTo?.id || null, threadRootId });
 
+    clearDraft(_draftKey);
     editor.commands.clearContent(false);
     onClearReply?.();
   };
@@ -183,8 +205,16 @@ export function MessageInput({
     content: initialContent || '',
     editable: !disabled,
     onUpdate: () => {
-      if (!onSubmit) {
+      if (!onSubmitRef.current) {
         handleTypingActivity();
+      }
+
+      // Save draft (skip in compact/edit mode)
+      if (!compactRef.current && !onSubmitRef.current) {
+        const markdownStorage = (editor.storage as unknown) as { markdown: { getMarkdown: () => string } };
+        const content = markdownStorage.markdown.getMarkdown();
+        latestContentRef.current = content;
+        setDraft(draftKeyRef.current, content);
       }
     },
     onTransaction: ({ editor }) => {
@@ -245,6 +275,18 @@ export function MessageInput({
       editor.commands.focus("end");
     }
   }, [editor, initialContent]);
+
+  // Load draft on mount or when draftKey changes (conversation/thread switch)
+  const draftLoadedRef = useRef(_draftKey);
+  useEffect(() => {
+    if (!editor || compact || onSubmit) return;
+    if (draftLoadedRef.current === _draftKey && !editor.isEmpty) return;
+    draftLoadedRef.current = _draftKey;
+    if (savedDraft && editor.isEmpty) {
+      editor.commands.setContent(savedDraft);
+      editor.commands.focus("end");
+    }
+  }, [editor, _draftKey, savedDraft, compact, onSubmit]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -325,9 +367,9 @@ export function MessageInput({
         </div>
       )}
 
-      <div className={`w-full flex flex-col border border-border rounded-lg transition-colors focus-within:border-brand/40 overflow-hidden ${compact ? "bg-background" : "bg-muted/40"}`}>
+      <div className={`w-full flex flex-col border border-border/80 shadow-sm rounded-lg transition-all focus-within:ring-1 focus-within:ring-primary/20 focus-within:border-primary/40 overflow-hidden ${compact ? "bg-background" : "bg-card"}`}>
 
-        <div className="flex items-center gap-1 px-3 pt-1.5 pb-1.5 border-b border-border text-muted-foreground bg-muted/30">
+        <div className="flex items-center gap-2 px-3 pt-2 pb-2 border-b border-border/60 text-muted-foreground bg-muted/50">
           <button type="button" onClick={toggleBold} className={`p-1 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.bold ? activeClass : ''}`} title="Bold">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 12a4 4 0 0 0 0-8H6v8" /><path d="M15 20a4 4 0 0 0 0-8H6v8Z" /></svg>
           </button>

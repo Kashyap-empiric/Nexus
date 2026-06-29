@@ -74,7 +74,7 @@ export const useMarkConversationReadMutation = () => {
 
       return { previousConversations, previousChannelQueries };
     },
-    onError: (_err, { conversationId }, context) => {
+    onError: (_err, _variables, context) => {
       // Rollback to the previous values on error
       if (context?.previousConversations) {
         queryClient.setQueryData(queryKeys.conversations, context.previousConversations);

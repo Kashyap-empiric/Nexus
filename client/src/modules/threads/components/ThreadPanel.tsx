@@ -129,19 +129,21 @@ export function ThreadPanel({ conversationId, currentUser, onBack }: ThreadPanel
           const isPending = rootMessage.pending || rootMessage.optimistic;
           const rootDate = new Date(rootMessage.createdAt);
           const lastReply = replies.length > 0 ? replies[replies.length - 1] : null;
-          
+
           return (
             <>
               <div className="px-5 py-4 border-b border-border/40 bg-card shadow-sm">
                 <div className="flex items-center gap-2 mb-1">
                   {onBack && (
-                    <button 
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={onBack}
-                      className="p-1 -ml-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+                      className="h-8 w-8 -ml-2 mr-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                       title="Back to Threads"
                     >
-                      <ArrowLeft className="h-4 w-4" />
-                    </button>
+                      <ArrowLeft className="h-5 w-5" />
+                    </Button>
                   )}
                   <h3 className="text-[17px] font-bold text-foreground truncate">{threadTitle(rootMessage)}</h3>
                 </div>
@@ -159,7 +161,7 @@ export function ThreadPanel({ conversationId, currentUser, onBack }: ThreadPanel
                   )}
                 </div>
               </div>
-              
+
               <div className="pb-2">
                 <div className="relative px-4 md:px-6 pt-5 pb-4">
                   {replies.length > 0 && (
@@ -204,15 +206,15 @@ export function ThreadPanel({ conversationId, currentUser, onBack }: ThreadPanel
                       const isMyMessage = reply.userId === currentUser?.id;
                       const connectorLeft = "left-[34px] md:left-[42px]";
                       return (
-                      <div
-                        key={reply.id}
-                        id={`thread-msg-${reply.id}`}
-                        className={cn(
-                          "group/row flex hover:bg-foreground/5 px-4 md:px-6 transition-colors relative",
-                          isFirst ? "pt-2.5 pb-0.5" : "py-0.5",
-                          isPending && "opacity-70"
-                        )}
-                      >
+                        <div
+                          key={reply.id}
+                          id={`thread-msg-${reply.id}`}
+                          className={cn(
+                            "group/row flex hover:bg-foreground/5 px-4 md:px-6 transition-colors relative",
+                            isFirst ? "pt-2.5 pb-0.5" : "py-0.5",
+                            isPending && "opacity-70"
+                          )}
+                        >
                           {!isLast && (
                             <>
                               <div className={`absolute ${connectorLeft} top-0 h-[10px] w-[2px] bg-muted-foreground/40 z-0`} />
@@ -298,7 +300,7 @@ export function ThreadPanel({ conversationId, currentUser, onBack }: ThreadPanel
                                   )}
                                   <DropdownMenu>
                                     <DropdownMenuTrigger
-                                      render={<Button variant="ghost" size="icon" className="h-8 w-8 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60" />}
+                                      render={<Button variant="ghost" size="icon" className="h-8 w-8 rounded-none text-muted-foreground hover:text-foreground hover:bg-accent/60" title="More actions" />}
                                     >
                                       <MoreHorizontal className="h-4 w-4" />
                                     </DropdownMenuTrigger>

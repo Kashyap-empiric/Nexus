@@ -17,10 +17,13 @@ interface HeaderInfo {
 interface UiState {
   lastVisitedChannels: Record<string, string>;
   drafts: Map<string, string>;
+  scrollPositions: Record<string, number>;
   headerInfo: HeaderInfo | null;
   setLastVisitedChannel: (workspaceId: string, channelId: string) => void;
   setDraft: (conversationId: string, text: string) => void;
   clearDraft: (conversationId: string) => void;
+  setScrollPosition: (conversationId: string, scrollTop: number) => void;
+  clearScrollPosition: (conversationId: string) => void;
   setHeaderInfo: (info: HeaderInfo | null) => void;
   setMemberPanelOpen: (open: boolean) => void;
   clearAll: () => void;
@@ -29,6 +32,7 @@ interface UiState {
 export const useChatStore = create<UiState>((set) => ({
   lastVisitedChannels: {},
   drafts: new Map(),
+  scrollPositions: {},
   headerInfo: null,
 
   setLastVisitedChannel: (workspaceId, channelId) => 
@@ -50,6 +54,18 @@ export const useChatStore = create<UiState>((set) => ({
       newDrafts.delete(conversationId);
       return { drafts: newDrafts };
     }),
+  setScrollPosition: (conversationId, scrollTop) =>
+    set((state) => ({
+      scrollPositions: {
+        ...state.scrollPositions,
+        [conversationId]: scrollTop
+      }
+    })),
+  clearScrollPosition: (conversationId) =>
+    set((state) => {
+      const { [conversationId]: _, ...rest } = state.scrollPositions;
+      return { scrollPositions: rest };
+    }),
   setHeaderInfo: (info) => set({ headerInfo: info }),
   setMemberPanelOpen: (open) =>
     set((state) => ({
@@ -59,6 +75,7 @@ export const useChatStore = create<UiState>((set) => ({
     set({
       lastVisitedChannels: {},
       drafts: new Map(),
+      scrollPositions: {},
       headerInfo: null,
     }),
 }));

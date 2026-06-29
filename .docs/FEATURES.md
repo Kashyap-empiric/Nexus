@@ -93,7 +93,7 @@ flowchart LR
 | Private Channels | ✅ Complete | Explicit member addition |
 | Channel Member Management | ✅ Complete | Dedicated `ManageChannelMembersModal` |
 | Visibility Toggle | ✅ Complete | PUBLIC ↔ PRIVATE (with confirmation) |
-| Channel List Polling | 🟡 Partial | Uses 5s interval instead of socket events |
+| Channel List Polling | ✅ Complete | Socket events for real-time updates |
 
 ---
 
@@ -190,7 +190,7 @@ flowchart LR
 | Username OR Email Login | ✅ Complete | Server resolves username → email |
 | Password Reset | ✅ Complete | Custom server-side flow |
 | Session Persistence | ✅ Complete | Supabase SSR cookies |
-| Edge Middleware Protection | ✅ Complete | Next.js middleware |
+| Edge Middleware Protection | ✅ Complete | `proxy.ts` — server-side route guard with Supabase SSR session check |
 | JWKS Token Verification | ✅ Complete | Zero network calls |
 | Profile Editing | ✅ Complete | Username, full name, bio |
 | Avatar Upload | ✅ Complete | Supabase Storage |

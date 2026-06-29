@@ -10,9 +10,10 @@ import { useChatStore } from "../store/chatStore";
 import { MessageListSkeleton } from "@/modules/messages/components/MessageListSkeleton";
 import { useWorkspaceDetails } from "@/modules/workspaces/hooks/useWorkspaces";
 import { useLayoutUI } from "@/shared/components/layout/AppLayoutShell";
-import { InfoPanel } from "./InfoPanel";
+import { RightPanel } from "./RightPanel";
 import { useThreadStore } from "@/modules/threads/store/threadStore";
 import { createPortal } from "react-dom";
+import { cn } from "@/shared/lib/utils";
 
 interface ActiveConversationProps {
   conversationId: string;
@@ -32,18 +33,18 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
   const handleClearReply = useCallback(() => {
     setReplyingTo(null);
   }, []);
-  const { infoPanelOpen, setInfoPanelOpen, infoPanelView, setInfoPanelView, closeInfoPanel } = useLayoutUI();
+  const { rightPanelOpen, setRightPanelOpen, rightPanelView, setRightPanelView, closeRightPanel } = useLayoutUI();
   const { openThread, closeThread } = useThreadStore();
   const handleOpenThread = useCallback((messageId: string) => {
     openThread(messageId);
-    setInfoPanelView('thread');
-    setInfoPanelOpen(true);
-  }, [openThread, setInfoPanelView, setInfoPanelOpen]);
+    setRightPanelView('thread');
+    setRightPanelOpen(true);
+  }, [openThread, setRightPanelView, setRightPanelOpen]);
 
-  const handleCloseInfoPanel = useCallback(() => {
+  const handleCloseRightPanel = useCallback(() => {
     closeThread();
-    closeInfoPanel();
-  }, [closeThread, closeInfoPanel]);
+    closeRightPanel();
+  }, [closeThread, closeRightPanel]);
 
   const { data: conversation, isLoading } = useConversationDetailsQuery(conversationId);
   const { data: conversations } = useConversationsQuery();
@@ -56,6 +57,12 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
     : workspaceDetails?.workspace.members?.some(
       (m: { userId: string; role: string }) => m.userId === currentUserId && (m.role === "OWNER" || m.role === "ADMIN")
     ) ?? false;
+
+  useEffect(() => {
+    return () => {
+      closeThread();
+    };
+  }, [conversationId, closeThread]);
 
   useEffect(() => {
     if (!conversation) return;
@@ -88,10 +95,14 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
 
     return () => {
       setHeaderInfo(null);
-      closeThread();
-      closeInfoPanel();
     };
   }, [conversation, currentUserId, conversations, conversationId, isChannel, workspaceDetails, setHeaderInfo]);
+
+  useEffect(() => {
+    if (!isChannel && rightPanelView === 'members') {
+      setRightPanelView('about');
+    }
+  }, [isChannel, rightPanelView, setRightPanelView]);
 
   if (isLoading) {
     return (
@@ -149,53 +160,56 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
       </div>
 
       { }
-      {infoPanelOpen && (
-        <>
-          {/* Desktop Panel via Portal */}
-          {(() => {
-            const portalTarget = typeof document !== 'undefined' ? document.getElementById('info-panel-portal-target') : null;
-            if (!portalTarget) return null;
-            return createPortal(
-              <InfoPanel
-                conversationId={conversationId}
-                workspaceId={isChannel ? conversation.workspaceId || undefined : undefined}
-                channelId={isChannel ? conversationId : undefined}
-                userId={isDM ? otherMember?.userId : undefined}
-                channelName={isChannel ? conversation.name : undefined}
-                description={isChannel ? conversation.description : undefined}
-                visibility={isChannel ? conversation.visibility ?? null : undefined}
-                createdAt={isChannel ? conversation.createdAt : undefined}
-                view={infoPanelView}
-                setInfoPanelView={setInfoPanelView}
-                onClose={handleCloseInfoPanel}
-              />,
-              portalTarget
-            );
-          })()}
+      {/* Desktop Panel — always mounted via portal, hidden via CSS when closed */}
+      {(() => {
+        const portalTarget = typeof document !== 'undefined' ? document.getElementById('right-panel-portal-target') : null;
+        if (!portalTarget) return null;
+        return createPortal(
+          <RightPanel
+            conversationId={conversationId}
+            workspaceId={isChannel ? conversation.workspaceId || undefined : undefined}
+            channelId={isChannel ? conversationId : undefined}
+            userId={isDM ? otherMember?.userId : undefined}
+            channelName={isChannel ? conversation.name : undefined}
+            description={isChannel ? conversation.description : undefined}
+            visibility={isChannel ? conversation.visibility ?? null : undefined}
+            createdAt={isChannel ? conversation.createdAt : undefined}
+            view={rightPanelView!}
+            onClose={handleCloseRightPanel}
+          />,
+          portalTarget
+        );
+      })()}
 
-          {/* Mobile Overlay Panel */}
-          <div className="md:hidden flex flex-col fixed inset-y-0 right-0 w-full z-50 transform transition-transform duration-300 ease-in-out translate-x-0">
-            <InfoPanel
-              conversationId={conversationId}
-              workspaceId={isChannel ? conversation.workspaceId || undefined : undefined}
-              channelId={isChannel ? conversationId : undefined}
-              userId={isDM ? otherMember?.userId : undefined}
-              channelName={isChannel ? conversation.name : undefined}
-              description={isChannel ? conversation.description : undefined}
-              visibility={isChannel ? conversation.visibility ?? null : undefined}
-              createdAt={isChannel ? conversation.createdAt : undefined}
-              view={infoPanelView}
-              setInfoPanelView={setInfoPanelView}
-              onClose={handleCloseInfoPanel}
-            />
-          </div>
-          { }
-          <div
-            className="md:hidden fixed inset-0 z-40 bg-scrim transition-opacity"
-            onClick={handleCloseInfoPanel}
-          />
-        </>
-      )}
+      {/* Mobile Overlay Panel — always mounted, animated via CSS transform */}
+      <div
+        className={cn(
+          "md:hidden flex flex-col fixed inset-y-0 right-0 w-full z-50 transform transition-transform duration-300 ease-in-out",
+          rightPanelOpen ? "translate-x-0" : "translate-x-full"
+        )}
+      >
+        <RightPanel
+          conversationId={conversationId}
+          workspaceId={isChannel ? conversation.workspaceId || undefined : undefined}
+          channelId={isChannel ? conversationId : undefined}
+          userId={isDM ? otherMember?.userId : undefined}
+          channelName={isChannel ? conversation.name : undefined}
+          description={isChannel ? conversation.description : undefined}
+          visibility={isChannel ? conversation.visibility ?? null : undefined}
+          createdAt={isChannel ? conversation.createdAt : undefined}
+          view={rightPanelView!}
+          onClose={handleCloseRightPanel}
+        />
+      </div>
+      { }
+      {/* Mobile scrim — always mounted, opacity toggled */}
+      <div
+        className={cn(
+          "md:hidden fixed inset-0 z-40 bg-scrim transition-opacity duration-300",
+          rightPanelOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        )}
+        onClick={handleCloseRightPanel}
+      />
     </div>
   );
 }

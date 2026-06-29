@@ -83,9 +83,7 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
         pendingRedirect.current = null;
       }
     }
-  }, [mode, activeWorkspaceId, activeId, workspaceChannels, setLastVisitedChannel]);
-
-
+  }, [mode, activeWorkspaceId, activeId, workspaceChannels, setLastVisitedChannel])
 
   const displayList = mode === "DM"
     ? [...(conversations || [])]
@@ -181,11 +179,10 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
                 <Link
                   href={`/workspaces/${activeWorkspaceId}/threads`}
                   onClick={() => onNavigate?.()}
-                  className={`flex items-center gap-3 px-2 py-2 rounded-md transition-colors ${
-                    routeState.mode === "workspace" && routeState.destination?.type === "threads"
+                  className={`flex items-center gap-3 px-2 py-2 rounded-md transition-colors ${routeState.mode === "workspace" && routeState.destination?.type === "threads"
                       ? "bg-brand/10 text-brand"
                       : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
-                  }`}
+                    }`}
                 >
                   <ThreadIcon className="h-4 w-4 shrink-0" />
                   <span className="font-medium text-sm">Threads</span>
@@ -261,8 +258,8 @@ export function Sidebar({ onNavigate, onOpenWorkspaceSettings, openSettings }: S
                       prefetch={false}
                       onClick={() => onNavigate?.()}
                       className={`flex items-center gap-3 px-2 py-2 rounded-md transition-colors ${isActive
-                          ? "bg-brand/10 text-brand"
-                          : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+                        ? "bg-brand/10 text-brand"
+                        : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                         }`}
                     >
                       <div className="relative shrink-0">

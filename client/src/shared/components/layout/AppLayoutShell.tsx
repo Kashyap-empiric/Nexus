@@ -20,7 +20,8 @@ import dynamic from "next/dynamic";
 const InviteModal = dynamic(() => import("@/modules/invites").then(mod => mod.InviteModal), { ssr: false });
 const SharedSettingsModal = dynamic(() => import("@/modules/settings").then(mod => mod.SharedSettingsModal), { ssr: false });
 const WorkspaceSettingsModal = dynamic(() => import("@/modules/workspaces").then(mod => mod.WorkspaceSettingsModal), { ssr: false });
-import { Info } from "lucide-react";
+import { Info, Pin } from "lucide-react";
+import { ThreadIcon } from "@/shared/components/ui/thread-icon";
 import React, { createContext, useContext } from "react";
 import { useSocketStore } from "@/socket/socketStore";
 
@@ -40,14 +41,14 @@ function MemberCountBadge({ workspaceId }: { workspaceId: string }) {
   );
 }
 
-export type InfoPanelView = 'about' | 'members' | 'pins' | 'thread' | 'threads';
+export type RightPanelView = 'about' | 'members' | 'pins' | 'threads' | 'thread' | null;
 
 export interface LayoutUIContextType {
-  infoPanelOpen: boolean;
-  infoPanelView: InfoPanelView;
-  setInfoPanelView: (view: InfoPanelView) => void;
-  closeInfoPanel: () => void;
-  setInfoPanelOpen: (open: boolean) => void;
+  rightPanelOpen: boolean;
+  rightPanelView: RightPanelView;
+  setRightPanelView: (view: RightPanelView) => void;
+  closeRightPanel: () => void;
+  setRightPanelOpen: (open: boolean) => void;
   closeMobileSidebar: () => void;
 }
 
@@ -80,8 +81,8 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
   const { activeWorkspaceId } = useRouteState();
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [infoPanelOpen, setInfoPanelOpen] = useState(false);
-  const [infoPanelView, setInfoPanelView] = useState<InfoPanelView>('about');
+  const [rightPanelOpen, setRightPanelOpen] = useState(false);
+  const [rightPanelView, setRightPanelView] = useState<RightPanelView>('about');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsView, setSettingsView] = useState<'profile' | 'appearance' | 'notifications' | 'account'>('profile');
   const [workspaceSettingsOpen, setWorkspaceSettingsOpen] = useState(false);
@@ -97,7 +98,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
     requestAnimationFrame(() => {
       setMounted(true);
       if (window.innerWidth >= 1024) {
-        setInfoPanelOpen(true);
+        setRightPanelOpen(true);
       }
     });
 
@@ -112,6 +113,24 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
     }
   }, [router]);
 
+  // Close right panel on Escape key
+  useEffect(() => {
+    if (!rightPanelOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        // Don't close if user is actively editing (e.g., editing a message, searching)
+        // Let the child handler (MessageInput, search popover, etc.) handle it first
+        const target = e.target as HTMLElement;
+        if (target.closest('[contenteditable="true"], input:not([type="checkbox"]):not([type="radio"]), textarea')) return;
+        setRightPanelOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [rightPanelOpen, setRightPanelOpen]);
+
   const isChannel = mounted ? (headerInfo?.isChannel ?? false) : false;
 
   const inviteModal = useInviteModalContext();
@@ -120,6 +139,15 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
   const openSettings = (view: 'profile' | 'appearance' | 'notifications' | 'account') => {
     setSettingsView(view);
     setSettingsOpen(true);
+  };
+
+  const toggleRightPanel = (view: RightPanelView) => {
+    if (rightPanelOpen && rightPanelView === view) {
+      setRightPanelOpen(false);
+    } else {
+      setRightPanelView(view);
+      setRightPanelOpen(true);
+    }
   };
 
   if (pathname?.startsWith('/onboarding')) {
@@ -229,29 +257,108 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
                 <BellPopover />
               </div>
               {mounted && (
-                <button
-                  onClick={() => setInfoPanelOpen(!infoPanelOpen)}
-                  className={cn(
-                    "p-2 rounded-md transition-colors",
-                    infoPanelOpen
-                      ? "bg-brand/10 text-brand"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                <>
+                  <div className="relative">
+                    <button
+                      onClick={() => toggleRightPanel('about')}
+                      className={cn(
+                        "p-2 rounded-md transition-colors relative",
+                        rightPanelOpen && rightPanelView === 'about'
+                          ? "bg-brand/10 text-brand"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                      title={isChannel ? "Channel Info" : "User Profile"}
+                    >
+                      <Info className="h-5 w-5" />
+                      {rightPanelOpen && rightPanelView === 'about' && (
+                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-brand">
+                          <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor">
+                            <path d="M5 0L10 6H0L5 0Z" />
+                          </svg>
+                        </div>
+                      )}
+                    </button>
+                  </div>
+                  {isChannel && (
+                    <div className="relative">
+                      <button
+                        onClick={() => toggleRightPanel('members')}
+                        className={cn(
+                          "p-2 rounded-md transition-colors relative",
+                          rightPanelOpen && rightPanelView === 'members'
+                            ? "bg-brand/10 text-brand"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                        title="Members"
+                      >
+                        <Users className="h-5 w-5" />
+                        {rightPanelOpen && rightPanelView === 'members' && (
+                          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-brand">
+                            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor">
+                              <path d="M5 0L10 6H0L5 0Z" />
+                            </svg>
+                          </div>
+                        )}
+                      </button>
+                    </div>
                   )}
-                  title="Toggle Info"
-                >
-                  <Info className="h-5 w-5" />
-                </button>
+                  <div className="relative">
+                    <button
+                      onClick={() => toggleRightPanel('pins')}
+                      className={cn(
+                        "p-2 rounded-md transition-colors relative",
+                        rightPanelOpen && rightPanelView === 'pins'
+                          ? "bg-brand/10 text-brand"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                      title="Pinned Messages"
+                    >
+                      <Pin className="h-5 w-5" />
+                      {rightPanelOpen && rightPanelView === 'pins' && (
+                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-brand">
+                          <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor">
+                            <path d="M5 0L10 6H0L5 0Z" />
+                          </svg>
+                        </div>
+                      )}
+                    </button>
+                  </div>
+                  {/* Threads — show for channels */}
+                  {isChannel && (
+                    <div className="relative">
+                      <button
+                        onClick={() => toggleRightPanel('threads')}
+                        className={cn(
+                          "p-2 rounded-md transition-colors relative",
+                          rightPanelOpen && (rightPanelView === 'threads' || rightPanelView === 'thread')
+                            ? "bg-brand/10 text-brand"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                        title="Threads"
+                      >
+                        <ThreadIcon className="h-5 w-5" />
+                        {rightPanelOpen && (rightPanelView === 'threads' || rightPanelView === 'thread') && (
+                          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-brand">
+                            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor">
+                              <path d="M5 0L10 6H0L5 0Z" />
+                            </svg>
+                          </div>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
           { }
           <div className="flex-1 min-h-0 flex justify-center">
             <LayoutUIContext.Provider value={{
-              infoPanelOpen,
-              infoPanelView,
-              setInfoPanelView,
-              closeInfoPanel: () => setInfoPanelOpen(false),
-              setInfoPanelOpen,
+              rightPanelOpen,
+              rightPanelView,
+              setRightPanelView,
+              closeRightPanel: () => setRightPanelOpen(false),
+              setRightPanelOpen,
               closeMobileSidebar,
             }}>
               {children}
@@ -259,13 +366,18 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* Portal Target for InfoPanel */}
-        <div 
-          id="info-panel-portal-target"
+        {/* Portal Target for RightPanel — always mounted, width animated */}
+        <div
+          id="right-panel-portal-target"
           className={cn(
-            "hidden md:flex flex-col h-full shrink-0 bg-background transition-all",
-            infoPanelOpen ? "border-l w-auto" : "w-0 border-none overflow-hidden"
+            "hidden md:flex flex-col h-full shrink-0 bg-background transition-all duration-200 ease-in-out",
+            rightPanelOpen ? "border-l" : ""
           )}
+          style={{
+            width: rightPanelOpen ? 'var(--right-panel-width, 320px)' : '0px',
+            minWidth: rightPanelOpen ? '280px' : '0px',
+            overflow: rightPanelOpen ? undefined : 'hidden',
+          }}
         />
       </main>
 
