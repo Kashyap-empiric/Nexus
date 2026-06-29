@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { Response, NextFunction } from "express";
+import type { AuthRequest } from "@/types/shared.js";
 
 process.env.SUPABASE_URL = "https://test-project.supabase.co";
 
@@ -14,14 +16,13 @@ const { verifyConversationMembership } = await import(
 );
 
 describe("requireConversationMember middleware", () => {
-  let req: any, res: any, next: any;
+  let req: Record<string, unknown>;
+  let res: Partial<Response>;
+  let next: NextFunction;
   const handler = requireConversationMember({ paramName: "conversationId" });
 
   beforeEach(() => {
-    req = {
-      user: { id: "user-1" },
-      params: { conversationId: "conv-1" },
-    };
+    req = { user: { id: "user-1" }, params: { conversationId: "conv-1" } };
     res = {
       status: vi.fn().mockReturnThis(),
       json: vi.fn().mockReturnThis(),
@@ -33,7 +34,7 @@ describe("requireConversationMember middleware", () => {
   it("passes when user is a member of the conversation", async () => {
     vi.mocked(verifyConversationMembership).mockResolvedValueOnce(true);
 
-    await handler(req, res, next);
+    await handler(req as unknown as AuthRequest, res as Response, next);
 
     expect(next).toHaveBeenCalled();
     expect(res.status).not.toHaveBeenCalled();
@@ -42,7 +43,7 @@ describe("requireConversationMember middleware", () => {
   it("returns 403 when user is not a member", async () => {
     vi.mocked(verifyConversationMembership).mockResolvedValueOnce(false);
 
-    await handler(req, res, next);
+    await handler(req as unknown as AuthRequest, res as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(403);
     expect(res.json).toHaveBeenCalledWith(
@@ -52,9 +53,9 @@ describe("requireConversationMember middleware", () => {
   });
 
   it("returns 401 when user is not authenticated", async () => {
-    req.user = undefined;
+    req = { params: { conversationId: "conv-1" } };
 
-    await handler(req, res, next);
+    await handler(req as unknown as AuthRequest, res as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith(
@@ -63,9 +64,9 @@ describe("requireConversationMember middleware", () => {
   });
 
   it("returns 400 when conversationId is missing", async () => {
-    req.params = {};
+    req = { params: {} };
 
-    await handler(req, res, next);
+    await handler(req as unknown as AuthRequest, res as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith(

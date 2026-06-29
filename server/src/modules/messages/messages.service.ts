@@ -106,7 +106,7 @@ export const createMessage = async (conversationId: string, userId: string, cont
       deletedAt: message.deletedAt,
       createdAt: message.createdAt,
       user: {
-        username: message.user.username
+        username: message.user!.username
       }
     }
   };
@@ -125,14 +125,14 @@ export const createMessage = async (conversationId: string, userId: string, cont
       await createAndDispatch({
         userId: parentMessageUserId,
         type: "MESSAGE_REPLIED",
-        title: `Reply from ${message.user.username}`,
+        title: `Reply from ${message.user!.username}`,
         body: message.content,
         link: notificationLink,
         metadata: {
           conversationId,
           messageId: message.id,
           replyToId,
-          username: message.user.username,
+          username: message.user!.username,
         },
       });
     } catch (err) {

@@ -1,9 +1,6 @@
 import { vi } from "vitest";
 
-
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type MockFn = any;
+type MockFn = ReturnType<typeof vi.fn>;
 
 interface MockModel {
   findUnique: MockFn;
@@ -33,7 +30,7 @@ interface MockPrismaClient {
   notification: MockModel;
   passwordResetToken: MockModel;
   pushSubscription: MockModel;
-  $transaction: MockFn;
+  $transaction: MockFn & ((fn: (tx: MockPrismaClient) => unknown) => unknown);
   $queryRaw: MockFn;
   $connect: MockFn;
   $disconnect: MockFn;
@@ -68,8 +65,7 @@ export function createMockPrisma(): MockPrismaClient {
     notification: mockModel(),
     passwordResetToken: mockModel(),
     pushSubscription: mockModel(),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    $transaction: vi.fn((fn: any) => fn(mockPrisma)),
+    $transaction: vi.fn((fn: (tx: typeof mockPrisma) => unknown) => fn(mockPrisma)),
     $queryRaw: vi.fn(),
     $connect: vi.fn(),
     $disconnect: vi.fn(),
@@ -89,13 +85,13 @@ export function setupPrismaMock() {
 export function resetPrismaMock() {
   for (const model of Object.values(mockPrisma)) {
     if (typeof model === "function") {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ("mockReset" in model) (model as any).mockReset();
+      if ("mockReset" in model) {
+        (model as unknown as { mockReset: () => void }).mockReset();
+      }
     } else if (typeof model === "object" && model !== null) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      for (const method of Object.values(model as Record<string, any>)) {
-        if (typeof method === "function" && "mockReset" in method) {
-          method.mockReset();
+      for (const method of Object.values(model as Record<string, unknown>)) {
+        if (typeof method === "function" && "mockReset" in (method as object)) {
+          (method as unknown as { mockReset: () => void }).mockReset();
         }
       }
     }

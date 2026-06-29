@@ -147,12 +147,10 @@ export const createMessageTransaction = async (
   replyToId?: string | null,
   threadRootId?: string | null,
   isThreadBroadcast?: boolean
-) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const operations: any[] = [];
+): Promise<[Prisma.MessageGetPayload<{ include: { user: { select: { id: true; username: true; fullName: true; avatarUrl: true; avatarPath: true } }; replyTo: { select: { id: true; content: true; deletedAt: true; user: { select: { username: true } } } } } }>, { id: string; name: string | null; updatedAt: Date; latestMessageId: string | null }]> => {
+  const operations: Prisma.PrismaPromise<unknown>[] = [];
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const baseCreateData: Record<string, any> = {
+  const baseCreateInput: Prisma.MessageUncheckedCreateInput = {
     id: messageId,
     conversationId,
     userId,
@@ -166,8 +164,7 @@ export const createMessageTransaction = async (
   if (threadRootId) {
     operations.push(
       prisma.message.create({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        data: { ...baseCreateData, threadRootId } as any,
+        data: { ...baseCreateInput, threadRootId },
         include: {
           user: {
             select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
@@ -188,8 +185,7 @@ export const createMessageTransaction = async (
   } else {
     operations.push(
       prisma.message.create({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        data: baseCreateData as any,
+        data: baseCreateInput,
         include: {
           user: {
             select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
@@ -225,7 +221,7 @@ export const createMessageTransaction = async (
     }),
   );
 
-  return prisma.$transaction(operations);
+  return prisma.$transaction(operations) as unknown as Promise<[Prisma.MessageGetPayload<{ include: { user: { select: { id: true; username: true; fullName: true; avatarUrl: true; avatarPath: true } }; replyTo: { select: { id: true; content: true; deletedAt: true; user: { select: { username: true } } } } } }>, { id: string; name: string | null; updatedAt: Date; latestMessageId: string | null }]>;
 };
 
 export const findThreadMessages = async (threadRootId: string) => {

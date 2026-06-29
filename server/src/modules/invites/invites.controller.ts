@@ -10,12 +10,13 @@ import { SOCKET_EVENTS } from "../../shared/socket-events.js";
 import { prisma } from "@/lib/db.js";
 import { notificationQueue } from "../../jobs/queues.js";
 
-export const resolveInvite = async (req: AuthRequest, res: Response, next: NextFunction): Promise<any> => {
+export const resolveInvite = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   const { token } = req.body;
   const userId = req.user?.id;
 
   if (!token || !userId) {
-    return res.status(400).json({ error: "Missing token" });
+    res.status(400).json({ error: "Missing token" });
+    return;
   }
 
   try {
@@ -85,19 +86,21 @@ function dispatchConversationUpdate(conversationId: string, userId: string) {
   }
 }
 
-export const declineInvite = async (req: AuthRequest, res: Response): Promise<any> => {
+export const declineInvite = async (req: AuthRequest, res: Response): Promise<void> => {
   const { token } = req.body;
   const userId = req.user?.id;
 
   if (!token) {
-    return res.status(400).json({ error: "Missing token" });
+    res.status(400).json({ error: "Missing token" });
+    return;
   }
 
   try {
     const invite = await revokeInviteByToken(token);
 
     if (!invite) {
-      return res.status(404).json({ error: "INVITE_NOT_FOUND" });
+      res.status(404).json({ error: "INVITE_NOT_FOUND" });
+      return;
     }
 
     if (invite.createdBy && invite.createdBy !== userId) {
@@ -122,46 +125,49 @@ export const declineInvite = async (req: AuthRequest, res: Response): Promise<an
     res.json({ success: true });
   } catch (error) {
     console.error("[declineInvite] error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const getInviteInfo = async (req: Request, res: Response): Promise<any> => {
+export const getInviteInfo = async (req: Request, res: Response): Promise<void> => {
   const token = req.query.token as string;
 
   if (!token) {
-    return res.status(400).json({ error: "Missing token" });
+    res.status(400).json({ error: "Missing token" });
+    return;
   }
 
   try {
     const info = await getInviteInfoService(token);
     if (!info) {
-      return res.status(404).json({ error: "INVITE_NOT_FOUND" });
+      res.status(404).json({ error: "INVITE_NOT_FOUND" });
+      return;
     }
-    return res.json({ data: info });
+    res.json({ data: info });
   } catch (error) {
     console.error("[getInviteInfo] error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const generateInvite = async (req: AuthRequest, res: Response, next: NextFunction): Promise<any> => {
+export const generateInvite = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   const { type, entityId } = req.body;
   const userId = req.user?.id;
 
   if (!type || !userId) {
-    return res.status(400).json({ error: "Missing type" });
+    res.status(400).json({ error: "Missing type" });
+    return;
   }
 
   try {
     const result = await generateInviteService({ type, entityId, userId });
-    return res.json(result);
+    res.json(result);
   } catch (error) {
     if (error instanceof AppError) {
       next(error);
       return;
     }
     console.error("[generateInvite] error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error" });
   }
 };
