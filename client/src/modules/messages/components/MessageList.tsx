@@ -13,6 +13,7 @@ import { Button } from "@/shared/components/ui/button";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import React from "react";
 import type { ConversationMember, User } from "@/modules/conversations/types/conversation";
+import { formatMessageDateSeparator } from "@/shared/lib/utils";
 
 interface MessageListProps {
   conversationId: string;
@@ -179,8 +180,8 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
           )}
 
           {displayGroups.map((group, index) => {
-            const currentGroupDate = new Date(group.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
-            const prevGroupDate = index > 0 ? new Date(displayGroups[index - 1].createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }) : null;
+            const currentGroupDate = formatMessageDateSeparator(group.createdAt);
+            const prevGroupDate = index > 0 ? formatMessageDateSeparator(displayGroups[index - 1].createdAt) : null;
             const showDateSeparator = currentGroupDate !== prevGroupDate;
 
             return (

@@ -68,8 +68,8 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     dispatchUserProfileUpdate(userId);
 
     res.json({ data: updatedProfile });
-  } catch (error: any) {
-    if (error?.code === "P2002") {
+  } catch (error: unknown) {
+    if ((error as Record<string, unknown>)?.code === "P2002") {
       res.status(409).json({ error: "Username already taken" });
       return;
     }

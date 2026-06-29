@@ -72,7 +72,7 @@ export const findDMByPairInTransaction = async (tx: Prisma.TransactionClient, dm
 };
 
 export const findChannelIdsByWorkspaceId = async (workspaceId: string, userId?: string, ownerWorkspaceIds?: Set<string>) => {
-  const where: any = { workspaceId, type: "CHANNEL" };
+  const where: Prisma.ConversationWhereInput = { workspaceId, type: "CHANNEL" };
 
   if (userId && !ownerWorkspaceIds?.has(workspaceId)) {
     where.OR = [
@@ -97,12 +97,12 @@ export const findChannelIdsByWorkspaceIds = async (
 ) => {
   if (workspaceIds.length === 0) return [];
 
-  const where: any = {
+  const where: Prisma.ConversationWhereInput = {
     type: "CHANNEL",
   };
 
   if (userId) {
-    const conditions: any[] = [];
+    const conditions: Prisma.ConversationWhereInput[] = [];
 
     const ownedIds = ownerWorkspaceIds?.size
       ? workspaceIds.filter(id => ownerWorkspaceIds.has(id))
@@ -139,7 +139,7 @@ export const findChannelIdsByWorkspaceIds = async (
 };
 
 export const findChannelByWorkspaceId = async (workspaceId: string, userId?: string, ownerWorkspaceIds?: Set<string>) => {
-  const where: any = {
+  const where: Prisma.ConversationWhereInput = {
     workspaceId,
     type: "CHANNEL",
   };

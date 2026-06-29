@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useWorkspaceThreads } from "@/modules/messages/hooks/useThreads";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { formatRelativeTime } from "@/shared/lib/utils";
-import { Hash, Loader2 } from "lucide-react";
+import { Hash } from "lucide-react";
 import { ThreadIcon } from "@/shared/components/ui/thread-icon";
 import { useWorkspaceChannelsQuery } from "@/modules/workspaces/hooks/useWorkspaceChannels";
 import { useThreadStore } from "@/modules/threads/store/threadStore";
@@ -49,9 +49,42 @@ export function WorkspaceThreadsView({ workspaceId }: WorkspaceThreadsViewProps)
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
-        <p className="text-muted-foreground font-medium">Loading threads...</p>
+      <div className="flex-1 flex flex-col bg-background h-full overflow-hidden animate-in fade-in duration-300">
+        <div className="px-6 pt-5 pb-3.5 border-b border-border/50 shrink-0">
+          <h1 className="text-lg font-bold text-foreground tracking-tight">Threads</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Conversations you&apos;re participating in</p>
+        </div>
+        <div className="flex-1 flex min-h-0 overflow-hidden">
+          <div className="flex flex-col lg:w-[380px] w-full overflow-y-auto border-r border-border/50 p-4 gap-3 shrink-0">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="rounded-xl border border-border/60 bg-card shadow-sm p-3.5 flex flex-col gap-2">
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-full bg-muted animate-pulse mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0 py-0.5">
+                    <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                      <div className="h-3 w-20 bg-muted rounded animate-pulse" />
+                      <div className="h-3 w-16 bg-muted/60 rounded animate-pulse" />
+                      <div className="h-2 w-8 bg-muted/40 rounded animate-pulse ml-auto" />
+                    </div>
+                    <div className="h-3 w-[95%] bg-muted rounded animate-pulse mb-1.5" />
+                    <div className="h-3 w-[80%] bg-muted rounded animate-pulse mb-3" />
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 rounded-full bg-muted animate-pulse" />
+                      <div className="h-3 w-16 bg-muted/50 rounded animate-pulse" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden lg:flex flex-1 flex-col items-center justify-center p-8 text-center bg-background">
+            <div className="h-12 w-12 bg-muted/30 rounded-2xl flex items-center justify-center mb-4">
+              <ThreadIcon className="h-6 w-6 text-muted-foreground/30 animate-pulse" />
+            </div>
+            <div className="h-4 w-48 bg-muted/50 rounded animate-pulse mb-2" />
+            <div className="h-3 w-32 bg-muted/30 rounded animate-pulse" />
+          </div>
+        </div>
       </div>
     );
   }

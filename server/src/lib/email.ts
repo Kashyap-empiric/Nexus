@@ -238,11 +238,12 @@ export async function sendPasswordResetEmail(
         `[email] Unexpected SendGrid status code: ${response.statusCode}`,
       );
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const apiError = error as { response?: { body?: string }; message?: string };
     const sendGridError =
-      error?.response?.body ??
-      error?.response ??
-      error;
+      apiError?.response?.body ??
+      apiError?.response ??
+      apiError;
 
     console.error(
       `[email] ✗ SendGrid rejected password reset to=${params.to}`,
@@ -281,11 +282,12 @@ export async function sendWorkspaceInviteEmail(
         `[email] Unexpected SendGrid status code: ${response.statusCode}`,
       );
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const apiError = error as { response?: { body?: string }; message?: string };
     const sendGridError =
-      error?.response?.body ??
-      error?.response ??
-      error;
+      apiError?.response?.body ??
+      apiError?.response ??
+      apiError;
 
     console.error(
       `[email] ✗ SendGrid rejected  to=${params.to}`,

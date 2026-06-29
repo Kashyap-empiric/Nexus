@@ -56,3 +56,25 @@ export function formatRelativeTime(dateStr: string | Date | number): string {
   
   return new Date(dateStr).toLocaleDateString();
 }
+
+export function formatMessageDateSeparator(dateStr: string | Date | number): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  
+  const isSameDay = (d1: Date, d2: Date) => 
+    d1.getDate() === d2.getDate() && 
+    d1.getMonth() === d2.getMonth() && 
+    d1.getFullYear() === d2.getFullYear();
+
+  if (isSameDay(date, now)) {
+    return 'Today';
+  }
+  
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (isSameDay(date, yesterday)) {
+    return 'Yesterday';
+  }
+
+  return date.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
+}

@@ -1,12 +1,13 @@
 import type { Response, NextFunction } from "express";
 import type { AuthRequest } from "@/types/shared.js";
+
 import { AppError } from "@/lib/app-error.js";
 import { NotFoundError, ForbiddenError, ConflictError } from "@/lib/app-error.js";
 import { ENV } from "@/config/env.js";
 import * as workspacesService from "./workspaces.service.js";
 import * as workspacesRepo from "./workspaces.repository.js";
 import * as usersRepo from "../users/users.repository.js";
-import { dispatchConversationNew } from "@/socket/socket.dispatcher.js";
+import { dispatchConversationNew, type ConversationWithMembers } from "@/socket/socket.dispatcher.js";
 import { createAndDispatch } from "../notifications/notifications.service.js";
 import { generateInviteService, revokeInviteByToken } from "../invites/invites.service.js";
 import { sendWorkspaceInviteEmail } from "../../lib/email.js";
@@ -217,14 +218,14 @@ export const createChannel = async (req: AuthRequest, res: Response, next: NextF
 
     const channel = await workspacesService.createChannel(workspaceId, name, visibility, userId);
     
-    dispatchConversationNew(channel as any);
+    dispatchConversationNew(channel as unknown as ConversationWithMembers);
 
     try {
       if (channel && channel.members && notificationQueue) {
         const workspace = await workspacesService.getWorkspaceDetails(userId, workspaceId);
         const workspaceName = workspace.name;
         const otherUserIds = channel.members
-          .map((m: any) => m.userId)
+          .map((m: { userId: string }) => m.userId)
           .filter((id: string) => id !== userId);
 
         if (otherUserIds.length > 0) {
@@ -392,7 +393,7 @@ export const inviteMemberByUsername = async (req: AuthRequest, res: Response, ne
     }
 
     const workspace = await workspacesService.getWorkspaceDetails(userId, workspaceId);
-    const isAlreadyMember = workspace.members.some((m: any) => m.userId === targetUser.id);
+    const isAlreadyMember = workspace.members.some((m: { userId: string }) => m.userId === targetUser.id);
     if (isAlreadyMember) {
       res.status(400).json({ error: "User is already a member of this workspace" });
       return;
@@ -406,7 +407,7 @@ export const inviteMemberByUsername = async (req: AuthRequest, res: Response, ne
       userId,
       workspace.name,
       currentUser?.username || "Unknown",
-      (workspace as any).imageUrl,
+      workspace.imageUrl ?? undefined,
     );
 
     res.status(200).json({ success: true });
@@ -440,10 +441,10 @@ export const inviteMembers = async (req: AuthRequest, res: Response, next: NextF
     const workspace = await workspacesService.getWorkspaceDetails(userId, workspaceId);
     const currentUser = await usersRepo.findUserById(userId);
     const inviterName = currentUser?.username || "Unknown";
-    const workspaceImageUrl = (workspace as any).imageUrl;
+    const workspaceImageUrl = workspace.imageUrl ?? undefined;
 
     // Pre-filter skipped users (self-invite, already members) synchronously
-    const memberUserIds = new Set(workspace.members.map((m: any) => m.userId));
+    const memberUserIds = new Set(workspace.members.map((m: { userId: string }) => m.userId));
     const validUserIds: string[] = [];
     const skipped: { userId: string; reason: string }[] = [];
 
@@ -489,9 +490,9 @@ export const inviteMembers = async (req: AuthRequest, res: Response, next: NextF
             inviterName,
             workspaceImageUrl,
           );
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.error(`[inviteMembers] Fallback failed for user ${targetUserId}:`, err);
-          skipped.push({ userId: targetUserId, reason: err.message || "Failed to send invite" });
+          skipped.push({ userId: targetUserId, reason: (err as Error).message || "Failed to send invite" });
         }
       }
     }
@@ -531,7 +532,7 @@ export const inviteByEmail = async (req: AuthRequest, res: Response, next: NextF
     } catch {
     }
     if (existingUser) {
-      const isAlreadyMember = workspace.members.some((m: any) => m.userId === existingUser.id);
+      const isAlreadyMember = workspace.members.some((m: { userId: string }) => m.userId === existingUser.id);
       if (isAlreadyMember) {
         res.status(400).json({ error: "User is already a member of this workspace" });
         return;
@@ -627,7 +628,7 @@ export const inviteByEmail = async (req: AuthRequest, res: Response, next: NextF
         title: "Workspace invite",
         body: `You've been invited to ${workspace.name} by ${inviterName}`,
         link: invite.invitePath,
-        imageUrl: (workspace as any).imageUrl || undefined,
+        imageUrl: workspace.imageUrl ?? undefined,
         metadata: {
           workspaceId,
           workspaceName: workspace.name,
@@ -696,7 +697,7 @@ export const addChannelMembers = async (req: AuthRequest, res: Response, next: N
         const currentUser = await usersRepo.findUserById(userId);
         const channel = await workspacesService.getWorkspaceChannels(userId, workspaceId).then(channels => channels.find(c => c.id === channelId));
         const otherUserIds = result.addedUsers
-          .map((u: any) => u.id)
+          .map((u: { id: string }) => u.id)
           .filter((id: string) => id !== userId);
 
         if (otherUserIds.length > 0) {

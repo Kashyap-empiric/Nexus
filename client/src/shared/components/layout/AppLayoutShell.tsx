@@ -41,7 +41,7 @@ function MemberCountBadge({ workspaceId }: { workspaceId: string }) {
   );
 }
 
-export type RightPanelView = 'about' | 'members' | 'pins' | 'threads' | 'thread' | null;
+export type RightPanelView = 'about' | 'pins' | 'threads' | 'thread' | null;
 
 export interface LayoutUIContextType {
   rightPanelOpen: boolean;
@@ -132,6 +132,7 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
   }, [rightPanelOpen, setRightPanelOpen]);
 
   const isChannel = mounted ? (headerInfo?.isChannel ?? false) : false;
+  const isConversation = mounted ? (isChannel || !!headerInfo?.otherMember) : false;
 
   const inviteModal = useInviteModalContext();
   const closeMobileSidebar = useCallback(() => setMobileSidebarOpen(false), []);
@@ -256,52 +257,8 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
               <div className="relative">
                 <BellPopover />
               </div>
-              {mounted && (
+              {mounted && isConversation && (
                 <>
-                  <div className="relative">
-                    <button
-                      onClick={() => toggleRightPanel('about')}
-                      className={cn(
-                        "p-2 rounded-md transition-colors relative",
-                        rightPanelOpen && rightPanelView === 'about'
-                          ? "bg-brand/10 text-brand"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                      title={isChannel ? "Channel Info" : "User Profile"}
-                    >
-                      <Info className="h-5 w-5" />
-                      {rightPanelOpen && rightPanelView === 'about' && (
-                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-brand">
-                          <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor">
-                            <path d="M5 0L10 6H0L5 0Z" />
-                          </svg>
-                        </div>
-                      )}
-                    </button>
-                  </div>
-                  {isChannel && (
-                    <div className="relative">
-                      <button
-                        onClick={() => toggleRightPanel('members')}
-                        className={cn(
-                          "p-2 rounded-md transition-colors relative",
-                          rightPanelOpen && rightPanelView === 'members'
-                            ? "bg-brand/10 text-brand"
-                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                        )}
-                        title="Members"
-                      >
-                        <Users className="h-5 w-5" />
-                        {rightPanelOpen && rightPanelView === 'members' && (
-                          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-brand">
-                            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor">
-                              <path d="M5 0L10 6H0L5 0Z" />
-                            </svg>
-                          </div>
-                        )}
-                      </button>
-                    </div>
-                  )}
                   <div className="relative">
                     <button
                       onClick={() => toggleRightPanel('pins')}
@@ -347,6 +304,27 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
                       </button>
                     </div>
                   )}
+                  <div className="relative">
+                    <button
+                      onClick={() => toggleRightPanel('about')}
+                      className={cn(
+                        "p-2 rounded-md transition-colors relative",
+                        rightPanelOpen && rightPanelView === 'about'
+                          ? "bg-brand/10 text-brand"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                      title={isChannel ? "Channel Info" : "User Profile"}
+                    >
+                      <Info className="h-5 w-5" />
+                      {rightPanelOpen && rightPanelView === 'about' && (
+                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-brand">
+                          <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor">
+                            <path d="M5 0L10 6H0L5 0Z" />
+                          </svg>
+                        </div>
+                      )}
+                    </button>
+                  </div>
                 </>
               )}
             </div>
@@ -371,12 +349,12 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
           id="right-panel-portal-target"
           className={cn(
             "hidden md:flex flex-col h-full shrink-0 bg-background transition-all duration-200 ease-in-out",
-            rightPanelOpen ? "border-l" : ""
+            rightPanelOpen && isConversation ? "border-l" : ""
           )}
           style={{
-            width: rightPanelOpen ? 'var(--right-panel-width, 320px)' : '0px',
-            minWidth: rightPanelOpen ? '280px' : '0px',
-            overflow: rightPanelOpen ? undefined : 'hidden',
+            width: rightPanelOpen && isConversation ? 'var(--right-panel-width, 320px)' : '0px',
+            minWidth: rightPanelOpen && isConversation ? '280px' : '0px',
+            overflow: rightPanelOpen && isConversation ? undefined : 'hidden',
           }}
         />
       </main>

@@ -25,12 +25,13 @@ export const socketAuthMiddleware = async (
     const user = await verifyToken(token);
     socket.data.user = user;
     next();
-  } catch (error: any) {
+  } catch (error: unknown) {
     let errorCode = SOCKET_AUTH_ERRORS.AUTH_SERVICE_ERROR;
+    const jwtError = error as { name?: string };
 
-    if (error?.name === "JsonWebTokenError") {
+    if (jwtError.name === "JsonWebTokenError") {
       errorCode = SOCKET_AUTH_ERRORS.TOKEN_INVALID;
-    } else if (error?.name === "TokenExpiredError") {
+    } else if (jwtError.name === "TokenExpiredError") {
       errorCode = SOCKET_AUTH_ERRORS.TOKEN_INVALID;
     }
 

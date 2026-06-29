@@ -89,7 +89,7 @@ export const resolveInviteService = async ({ token, userId }: ResolveInviteParam
                 },
               });
               if (notification) {
-                dispatchNotificationUpdate(userId, notification as any);
+                dispatchNotificationUpdate(userId, notification as unknown as Parameters<typeof dispatchNotificationUpdate>[1]);
               }
             }
           }

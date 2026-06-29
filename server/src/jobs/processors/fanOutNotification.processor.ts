@@ -13,7 +13,7 @@ export async function processFanOutNotification(data: FanOutNotificationJob): Pr
     userIds.map((userId) =>
       createAndDispatch({
         userId,
-        type: data.type as any,
+        type: data.type as unknown as Parameters<typeof createAndDispatch>[0]["type"],
         title: template.title,
         body: template.body,
         link: template.link,

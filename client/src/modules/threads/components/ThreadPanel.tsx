@@ -114,8 +114,64 @@ export function ThreadPanel({ conversationId, currentUser, onBack }: ThreadPanel
     <div className="flex-1 flex flex-col min-h-0">
       <div className="flex-1 overflow-y-auto">
         {isLoading && (
-          <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
-            Loading thread...
+          <div className="flex-1 flex flex-col animate-in fade-in duration-300">
+            <div className="px-5 py-4 border-b border-border/40 bg-card shadow-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
+                <div className="h-5 w-48 bg-muted rounded-md animate-pulse" />
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-16 bg-muted/60 rounded animate-pulse" />
+                <div className="h-3 w-24 bg-muted/60 rounded animate-pulse" />
+              </div>
+            </div>
+
+            <div className="relative px-4 md:px-6 pt-5 pb-4">
+              <div className="absolute left-[34px] md:left-[42px] top-[54px] bottom-0 w-[2px] bg-muted-foreground/10 z-0" />
+              
+              <div className="flex relative z-10">
+                <div className="w-[36px] shrink-0 flex justify-center items-start">
+                  <div className="w-9 h-9 mt-0.5 rounded-full bg-muted animate-pulse" />
+                </div>
+                <div className="flex-1 min-w-0 ml-2">
+                  <div className="flex items-baseline gap-1.5 mb-2">
+                    <div className="w-24 h-4 bg-muted rounded animate-pulse" />
+                    <div className="w-12 h-3 bg-muted rounded animate-pulse" />
+                  </div>
+                  <div className="w-[90%] h-4 bg-muted rounded animate-pulse mb-1.5" />
+                  <div className="w-[75%] h-4 bg-muted rounded animate-pulse" />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col">
+              {[1, 2, 3].map((i, idx) => {
+                const isLast = idx === 2;
+                const connectorLeft = "left-[34px] md:left-[42px]";
+                
+                return (
+                  <div key={i} className="flex px-4 md:px-6 relative pt-2.5 pb-0.5 mb-4">
+                    {!isLast && (
+                      <div className={`absolute ${connectorLeft} top-0 bottom-0 w-[2px] bg-muted-foreground/10 z-0`} />
+                    )}
+                    {isLast && (
+                      <div className={`absolute ${connectorLeft} top-0 h-[30px] w-[2px] bg-muted-foreground/10 z-0`} />
+                    )}
+                    
+                    <div className="w-[36px] shrink-0 flex justify-center items-start relative z-10">
+                      <div className="w-9 h-9 mt-0.5 rounded-full bg-muted animate-pulse" />
+                    </div>
+                    <div className="flex-1 min-w-0 ml-2 relative z-10">
+                      <div className="flex items-baseline gap-1.5 mb-2">
+                        <div className="w-20 h-4 bg-muted rounded animate-pulse" />
+                        <div className="w-10 h-3 bg-muted rounded animate-pulse" />
+                      </div>
+                      <div className={`${i % 2 === 0 ? 'w-2/3' : 'w-[85%]'} h-4 bg-muted rounded animate-pulse`} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 

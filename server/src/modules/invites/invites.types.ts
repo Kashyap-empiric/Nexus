@@ -14,6 +14,7 @@ export interface DomainEvent {
   workspaceId?: string;
   channelId?: string;
   member?: { userId: string };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload?: any;
 }
 

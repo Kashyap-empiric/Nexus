@@ -5,7 +5,7 @@ export const userInviteResolver: InviteResolver = {
   async resolve(context: ResolveInviteContext) {
     const { tx, invite, actorId } = context;
     
-    const result = await createOrGetDM(actorId, invite.entityId, tx as any);
+    const result = await createOrGetDM(actorId, invite.entityId, tx as unknown as Parameters<typeof createOrGetDM>[2]);
 
     const events = [];
     if (result.created) {

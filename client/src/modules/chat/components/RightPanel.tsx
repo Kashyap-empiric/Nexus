@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { X } from "lucide-react";
 import { RightPanelView, useLayoutUI } from "@/shared/components/layout/AppLayoutShell";
-import { MemberListPanel } from "@/modules/workspaces/components/MemberListPanel";
 import { PinnedMessagesPanel } from "@/modules/messages/components/PinnedMessagesPanel";
 import { ThreadPanel } from "@/modules/threads/components/ThreadPanel";
 import { ChannelThreadsBrowser } from "@/modules/threads/components/ChannelThreadsBrowser";
@@ -30,34 +29,32 @@ export function RightPanel(props: RightPanelProps) {
   const currentUser = useUser();
   const { setRightPanelView } = useLayoutUI();
 
-  const [panelWidth, setPanelWidth] = useState(320);
+  const panelWidthRef = useRef(320);
   const isResizing = useRef(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('nexus-right-panel-width');
     if (saved) {
-      setTimeout(() => setPanelWidth(parseInt(saved, 10)), 0);
+      panelWidthRef.current = parseInt(saved, 10);
+      document.documentElement.style.setProperty('--right-panel-width', `${panelWidthRef.current}px`);
     }
   }, []);
-
-  // Sync panel width as CSS custom property so the portal target can use it
-  useEffect(() => {
-    document.documentElement.style.setProperty('--right-panel-width', `${panelWidth}px`);
-  }, [panelWidth]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing.current) return;
       const newWidth = document.body.clientWidth - e.clientX;
       if (newWidth > 280 && newWidth < 800) {
-        setPanelWidth(newWidth);
+        panelWidthRef.current = newWidth;
+        document.documentElement.style.setProperty('--right-panel-width', `${newWidth}px`);
       }
     };
     const handleMouseUp = () => {
       if (isResizing.current) {
         isResizing.current = false;
         document.body.style.cursor = 'default';
-        localStorage.setItem('nexus-right-panel-width', panelWidth.toString());
+        document.getElementById('right-panel-portal-target')?.style.removeProperty('transition');
+        localStorage.setItem('nexus-right-panel-width', panelWidthRef.current.toString());
       }
     };
     document.addEventListener('mousemove', handleMouseMove);
@@ -66,12 +63,11 @@ export function RightPanel(props: RightPanelProps) {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [panelWidth]);
+  }, []);
 
   type NonNullView = Exclude<RightPanelView, null>;
-  const PANEL_VIEWS: Partial<Record<NonNullView, React.ComponentType<any>>> = {
+  const PANEL_VIEWS: Record<NonNullView, React.ElementType> = {
     about: AboutPanel,
-    members: MemberListPanel,
     pins: PinnedMessagesPanel,
     threads: ChannelThreadsBrowser,
     thread: ThreadPanel,
@@ -81,10 +77,7 @@ export function RightPanel(props: RightPanelProps) {
 
   const getComponentProps = () => {
     if (view === 'about') {
-      return { isDM, userId, channelName, description, visibility, createdAt };
-    }
-    if (view === 'members') {
-      return { workspaceId: workspaceId!, channelId };
+      return { isDM, userId, channelName, description, visibility, createdAt, workspaceId, channelId };
     }
     if (view === 'pins') {
       return { conversationId };
@@ -106,7 +99,6 @@ export function RightPanel(props: RightPanelProps) {
   const getHeaderTitle = () => {
     switch (view) {
       case 'about': return isDM ? 'Profile' : 'Channel Info';
-      case 'members': return 'Members';
       case 'pins': return 'Pinned Messages';
       case 'threads': return 'Threads';
       default: return 'Details';
@@ -115,8 +107,7 @@ export function RightPanel(props: RightPanelProps) {
 
   return (
     <div
-      className="flex flex-col bg-details-panel shadow-xl border-l h-full shrink-0 relative w-full md:w-[var(--panel-width)]"
-      style={{ '--panel-width': `${panelWidth}px` } as React.CSSProperties}
+      className="flex flex-col bg-details-panel shadow-xl h-full shrink-0 relative w-full"
     >
       {/* Resize handle — desktop only */}
       <div
@@ -124,16 +115,17 @@ export function RightPanel(props: RightPanelProps) {
         onMouseDown={() => {
           isResizing.current = true;
           document.body.style.cursor = 'col-resize';
+          document.getElementById('right-panel-portal-target')?.style.setProperty('transition', 'none', 'important');
         }}
       />
 
       {/* Header — hidden for thread detail (has its own header with back button) */}
       {view && view !== 'thread' && (
-        <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
-          <h2 className="font-semibold text-lg text-foreground">{getHeaderTitle()}</h2>
+        <div className="h-14 flex items-center justify-between px-4 border-b shrink-0 bg-details-panel">
+          <h2 className="text-base font-bold text-foreground leading-none truncate pr-2">{getHeaderTitle()}</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors"
+            className="p-2 -mr-1 rounded-md hover:bg-muted text-muted-foreground transition-colors shrink-0"
             title="Close"
           >
             <X className="h-5 w-5" />

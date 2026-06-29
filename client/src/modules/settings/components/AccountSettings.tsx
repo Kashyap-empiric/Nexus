@@ -57,9 +57,9 @@ export function AccountSettings() {
       queryClient.clear();
       socket.disconnect();
       router.push("/login");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      setDeleteError(err?.response?.data?.error || "Failed to delete account. Please try again.");
+    } catch (err: unknown) {
+      const apiError = err as { response?: { data?: { error?: string } } };
+      setDeleteError(apiError?.response?.data?.error || "Failed to delete account. Please try again.");
       setIsDeleting(false);
     }
   };

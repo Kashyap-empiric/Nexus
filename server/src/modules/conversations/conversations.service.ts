@@ -83,8 +83,8 @@ export const createOrGetDM = async (userIdA: string, userIdB: string, tx?: Prism
     try {
         const conversation = await createDM(userIdA, userIdB, tx);
         return { created: true, conversation };
-    } catch (error: any) {
-        if (error.code === "P2002") {
+    } catch (error: unknown) {
+        if ((error as Record<string, unknown>).code === "P2002") {
             const conversation = await getDMByUsers(
                 userIdA,
                 userIdB,

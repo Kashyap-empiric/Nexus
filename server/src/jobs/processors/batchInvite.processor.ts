@@ -96,7 +96,7 @@ export async function processBatchInvite(data: BatchInviteJob): Promise<void> {
       }
 
       invited++;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(
         `[Job] batch-invite: Failed to invite user ${targetUserId}:`,
         err,

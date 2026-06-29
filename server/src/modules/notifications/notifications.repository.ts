@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db.js";
-import type { Prisma, NotificationType } from "@prisma/client";
+import type { Prisma, NotificationType, Notification } from "@prisma/client";
 
 
 
@@ -8,7 +8,7 @@ export const findByUserId = async (
   cursor?: string,
   limit: number = 21,
   type?: string 
-): Promise<{ data: any[]; nextCursor: string | null }> => {
+): Promise<{ data: Notification[]; nextCursor: string | null }> => {
   const where: Prisma.NotificationWhereInput = { userId };
 
   if (type) {
@@ -46,7 +46,7 @@ export const create = async (data: {
   link?: string;
   imageUrl?: string;
   metadata?: Record<string, unknown>;
-}): Promise<any> => {
+}): Promise<Notification> => {
   return prisma.notification.create({
     data: {
       userId: data.userId,
@@ -55,7 +55,7 @@ export const create = async (data: {
       body: data.body,
       link: data.link,
       imageUrl: data.imageUrl,
-      metadata: data.metadata as any,
+      metadata: data.metadata as unknown as Prisma.InputJsonValue,
     },
   });
 };

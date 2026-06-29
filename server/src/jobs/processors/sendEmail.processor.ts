@@ -158,8 +158,9 @@ export async function processSendEmail(data: SendEmailJob): Promise<void> {
     if (response.statusCode !== 202) {
       console.warn(`[Job] send-email unexpected status  to=${data.to} status=${response.statusCode}`);
     }
-  } catch (error: any) {
-    const sendGridError = error?.response?.body ?? error?.response ?? error;
+  } catch (error: unknown) {
+    const apiError = error as { response?: { body?: string }; message?: string };
+    const sendGridError = apiError?.response?.body ?? apiError?.response ?? apiError;
 
     console.error(
       `[Job] send-email ✗  to=${data.to} type=${data.type}`,

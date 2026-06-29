@@ -63,7 +63,8 @@ export const useChatStore = create<UiState>((set) => ({
     })),
   clearScrollPosition: (conversationId) =>
     set((state) => {
-      const { [conversationId]: _, ...rest } = state.scrollPositions;
+      const rest = { ...state.scrollPositions };
+      delete rest[conversationId];
       return { scrollPositions: rest };
     }),
   setHeaderInfo: (info) => set({ headerInfo: info }),

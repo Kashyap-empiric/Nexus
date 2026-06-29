@@ -6,6 +6,7 @@ import { cn } from "@/shared/lib/utils";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import { PresenceIndicator } from "@/modules/chat/components/PresenceIndicator";
 import { getPublicProfile } from "@/modules/users/api/users.api";
+import { MemberListPanel } from "@/modules/workspaces/components/MemberListPanel";
 import Link from "next/link";
 
 interface AboutPanelProps {
@@ -15,6 +16,8 @@ interface AboutPanelProps {
   description?: string | null;
   visibility?: "PUBLIC" | "PRIVATE" | null;
   createdAt?: string;
+  workspaceId?: string;
+  channelId?: string;
 }
 
 const STATUS_LABELS: Record<string, { label: string; dotClass: string }> = {
@@ -24,7 +27,7 @@ const STATUS_LABELS: Record<string, { label: string; dotClass: string }> = {
   INVISIBLE: { label: "Offline", dotClass: "bg-status-offline" },
 };
 
-export function AboutPanel({ isDM, userId, channelName, description, visibility, createdAt }: AboutPanelProps) {
+export function AboutPanel({ isDM, userId, channelName, description, visibility, createdAt, workspaceId, channelId }: AboutPanelProps) {
   const { data: userProfile, isError: isProfileError } = useQuery({
     queryKey: ["users", "profile", userId],
     queryFn: () => getPublicProfile(userId!),
@@ -134,6 +137,16 @@ export function AboutPanel({ isDM, userId, channelName, description, visibility,
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <CalendarDays className="h-4 w-4 shrink-0" />
           <span>Created {formatJoinDate(createdAt)}</span>
+        </div>
+      )}
+
+      {workspaceId && (
+        <div>
+          <div className="border-t mx-4 mb-3" />
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+            Members
+          </h4>
+          <MemberListPanel workspaceId={workspaceId} channelId={channelId} />
         </div>
       )}
     </div>

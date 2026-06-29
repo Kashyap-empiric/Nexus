@@ -148,9 +148,11 @@ export const createMessageTransaction = async (
   threadRootId?: string | null,
   isThreadBroadcast?: boolean
 ) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const operations: any[] = [];
 
-  const baseCreateData: any = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const baseCreateData: Record<string, any> = {
     id: messageId,
     conversationId,
     userId,
@@ -164,7 +166,8 @@ export const createMessageTransaction = async (
   if (threadRootId) {
     operations.push(
       prisma.message.create({
-        data: { ...baseCreateData, threadRootId },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        data: { ...baseCreateData, threadRootId } as any,
         include: {
           user: {
             select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
@@ -185,7 +188,8 @@ export const createMessageTransaction = async (
   } else {
     operations.push(
       prisma.message.create({
-        data: baseCreateData,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        data: baseCreateData as any,
         include: {
           user: {
             select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },

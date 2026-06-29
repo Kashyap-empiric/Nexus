@@ -2,6 +2,7 @@ import { uuidv7 } from "uuidv7";
 import { NotFoundError, ForbiddenError, BadRequestError, ConflictError } from "@/lib/app-error.js";
 import * as messagesRepo from "./messages.repository.js";
 import * as conversationsRepo from "../conversations/conversations.repository.js";
+import type { ThreadSummary } from "./messages.types.js";
 import { createAndDispatch } from "../notifications/notifications.service.js";
 import { notificationQueue } from "@/jobs/queues.js";
 import { dispatchPinEvent } from "@/socket/socket.dispatcher.js";
@@ -163,7 +164,21 @@ export const searchMessages = async (query: string, userId: string, limit: numbe
   return messagesRepo.searchMessages(query, userId, limit);
 };
 
-function mapToThreadSummary(threadRoot: any): any {
+function mapToThreadSummary(threadRoot: {
+  id: string;
+  conversationId: string;
+  content: string;
+  threadReplyCount: number;
+  lastThreadReplyAt: Date | null;
+  createdAt: Date;
+  user: { id: string; username: string; avatarUrl: string | null } | null;
+  threadReplies?: Array<{
+    content: string;
+    deletedAt: Date | null;
+    userId?: string | null;
+    user?: { id: string; username: string; avatarUrl: string | null } | null;
+  }>;
+}): ThreadSummary {
   const replies = threadRoot.threadReplies ?? [];
   const uniqueParticipants = new Map<string, { id: string; username: string; avatarUrl: string | null }>();
   for (const reply of replies) {
@@ -176,14 +191,14 @@ function mapToThreadSummary(threadRoot: any): any {
     conversationId: threadRoot.conversationId,
     rootMessagePreview: threadRoot.content,
     rootAuthor: {
-      id: threadRoot.user.id,
-      username: threadRoot.user.username,
-      avatarUrl: threadRoot.user.avatarUrl,
+      id: threadRoot.user!.id,
+      username: threadRoot.user!.username,
+      avatarUrl: threadRoot.user!.avatarUrl,
     },
     replyCount: threadRoot.threadReplyCount,
     lastReplyAt: threadRoot.lastThreadReplyAt ? threadRoot.lastThreadReplyAt.toISOString() : threadRoot.createdAt.toISOString(),
     lastReplyPreview: replies.length > 0 ? replies[0].content : null,
-    lastReplyAuthor: replies.length > 0 && replies[0].user ? replies[0].user : null,
+    lastReplyAuthor: replies.length > 0 ? (replies[0].user ?? null) : null,
     participants: Array.from(uniqueParticipants.values()),
   };
 }

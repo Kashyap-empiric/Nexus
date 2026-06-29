@@ -2,6 +2,7 @@ import { vi } from "vitest";
 
 
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type MockFn = any;
 
 interface MockModel {
@@ -67,6 +68,7 @@ export function createMockPrisma(): MockPrismaClient {
     notification: mockModel(),
     passwordResetToken: mockModel(),
     pushSubscription: mockModel(),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     $transaction: vi.fn((fn: any) => fn(mockPrisma)),
     $queryRaw: vi.fn(),
     $connect: vi.fn(),
@@ -87,8 +89,10 @@ export function setupPrismaMock() {
 export function resetPrismaMock() {
   for (const model of Object.values(mockPrisma)) {
     if (typeof model === "function") {
-      if ("mockReset" in model) (model as any).mockReset();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ("mockReset" in model) (model as any).mockReset();
     } else if (typeof model === "object" && model !== null) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       for (const method of Object.values(model as Record<string, any>)) {
         if (typeof method === "function" && "mockReset" in method) {
           method.mockReset();

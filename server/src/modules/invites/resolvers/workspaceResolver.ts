@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import type { InviteResolver, ResolveInviteContext } from "./index.js";
 import type { CreateNotificationInput } from "../../notifications/notifications.types.js";
 import * as workspacesRepo from "../../workspaces/workspaces.repository.js";
@@ -35,7 +36,7 @@ export const workspaceInviteResolver: InviteResolver = {
       };
     }
 
-    const { generalChannelId } = await workspacesRepo.onboardUserToWorkspaceInTransaction(tx as any, workspaceId, actorId);
+    const { generalChannelId } = await workspacesRepo.onboardUserToWorkspaceInTransaction(tx as unknown as Prisma.TransactionClient, workspaceId, actorId);
 
     try {
       const joiner = await tx.user.findUnique({

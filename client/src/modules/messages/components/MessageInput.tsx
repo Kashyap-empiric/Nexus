@@ -63,12 +63,15 @@ export function MessageInput({
   const savedDraft = useChatStore((s) => s.drafts.get(_draftKey));
   // Refs to avoid stale closures inside the TipTap useEditor callback
   const draftKeyRef = useRef(_draftKey);
-  draftKeyRef.current = _draftKey;
   const onSubmitRef = useRef(onSubmit);
-  onSubmitRef.current = onSubmit;
   const compactRef = useRef(compact);
-  compactRef.current = compact;
   const latestContentRef = useRef('');
+
+  useEffect(() => {
+    draftKeyRef.current = _draftKey;
+    onSubmitRef.current = onSubmit;
+    compactRef.current = compact;
+  }, [_draftKey, onSubmit, compact]);
 
   useEffect(() => {
     const handleResize = () => setEmojiPickerWidth(Math.min(300, window.innerWidth - 32));

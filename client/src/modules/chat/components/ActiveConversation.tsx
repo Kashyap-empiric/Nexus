@@ -98,12 +98,6 @@ export function ActiveConversation({ conversationId, highlightMessageId }: Activ
     };
   }, [conversation, currentUserId, conversations, conversationId, isChannel, workspaceDetails, setHeaderInfo]);
 
-  useEffect(() => {
-    if (!isChannel && rightPanelView === 'members') {
-      setRightPanelView('about');
-    }
-  }, [isChannel, rightPanelView, setRightPanelView]);
-
   if (isLoading) {
     return (
       <div className="flex-1 flex flex-col h-full bg-background">

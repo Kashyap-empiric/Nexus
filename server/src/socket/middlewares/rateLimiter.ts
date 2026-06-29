@@ -18,8 +18,8 @@ if (cleanupTimer.unref) {
 }
 
 export const socketRateLimiterMiddleware = (socket: Socket) => {
-  return (packet: any[], next: (err?: any) => void) => {
-    const eventName = packet[0];
+  return (packet: unknown[], next: (err?: Error) => void) => {
+    const eventName = packet[0] as string;
 
     if (eventName === SOCKET_EVENTS.MESSAGE_SEND) {
       const userId = socket.data.user?.id;
@@ -32,8 +32,9 @@ export const socketRateLimiterMiddleware = (socket: Socket) => {
         } else {
           current.count += 1;
           if (current.count > 10) {
-            const callback = typeof packet[packet.length - 1] === "function" 
-              ? packet[packet.length - 1] 
+            const lastArg = packet[packet.length - 1];
+            const callback = typeof lastArg === "function" 
+              ? (lastArg as (data: { error: string }) => void)
               : undefined;
 
             if (callback) {

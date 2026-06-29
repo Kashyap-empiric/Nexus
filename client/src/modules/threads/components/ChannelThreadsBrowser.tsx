@@ -18,8 +18,28 @@ export function ChannelThreadsBrowser({ conversationId, setRightPanelView, onOpe
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center p-4">
-        <span className="text-muted-foreground text-sm animate-pulse">Loading threads...</span>
+      <div className="flex-1 overflow-y-auto min-h-0 flex flex-col bg-background/50">
+        <div className="p-4 flex-1 space-y-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="w-full text-left p-3 rounded-xl border border-border/50 bg-card flex flex-col gap-2">
+              <div className="flex items-start gap-2">
+                <div className="h-8 w-8 rounded-full bg-muted animate-pulse shrink-0 mt-0.5" />
+                <div className="min-w-0 flex-1 py-1">
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <div className="h-3 w-20 bg-muted rounded animate-pulse" />
+                    <div className="h-2.5 w-12 bg-muted/60 rounded animate-pulse shrink-0" />
+                  </div>
+                  <div className="h-3 w-[95%] bg-muted rounded animate-pulse mb-1" />
+                  <div className="h-3 w-[80%] bg-muted rounded animate-pulse" />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 mt-1 pl-10">
+                <div className="h-5 w-16 bg-muted/50 rounded-full animate-pulse" />
+                <div className="h-3 w-1/3 bg-muted/50 rounded animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
