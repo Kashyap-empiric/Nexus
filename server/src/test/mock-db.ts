@@ -30,6 +30,7 @@ interface MockPrismaClient {
   notification: MockModel;
   passwordResetToken: MockModel;
   pushSubscription: MockModel;
+  attachment: MockModel;
   $transaction: MockFn & ((fn: (tx: MockPrismaClient) => unknown) => unknown);
   $queryRaw: MockFn;
   $connect: MockFn;
@@ -65,6 +66,7 @@ export function createMockPrisma(): MockPrismaClient {
     notification: mockModel(),
     passwordResetToken: mockModel(),
     pushSubscription: mockModel(),
+    attachment: mockModel(),
     $transaction: vi.fn((fn: (tx: typeof mockPrisma) => unknown) => fn(mockPrisma)),
     $queryRaw: vi.fn(),
     $connect: vi.fn(),

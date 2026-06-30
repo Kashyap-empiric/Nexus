@@ -103,4 +103,10 @@ async function registerCleanupSchedules() {
     { pattern: "0 4 * * 0" },
     { name: "cleanup", data: { type: "soft-deleted-messages" } },
   );
+
+  await cleanupQueue.upsertJobScheduler(
+    "orphaned-uploads",
+    { pattern: "0 2 * * *" },
+    { name: "cleanup", data: { type: "orphaned-uploads" } },
+  );
 }
