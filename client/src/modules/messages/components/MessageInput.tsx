@@ -4,11 +4,12 @@ import { useState, useEffect, useRef, useCallback, type ReactNode } from "react"
 import dynamic from "next/dynamic";
 import { useSendMessageMutation } from "@/modules/messages/hooks/useMessages";
 import { useChatStore } from "@/modules/chat/store/chatStore";
-import { SendHorizontal, Smile, X, Reply, List, ListOrdered } from "lucide-react";
+import { SendHorizontal, Smile, X, Reply, List, ListOrdered, Paperclip } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/components/ui/popover";
 import { useTheme } from "next-themes";
 import { Theme as EmojiPickerTheme } from 'emoji-picker-react';
+import { toast } from "sonner";
 
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 import type { User } from "@/modules/conversations/types/conversation";
@@ -23,6 +24,9 @@ import { Markdown } from 'tiptap-markdown';
 import Mention from '@tiptap/extension-mention';
 import { getMentionSuggestionOptions } from './mentionSuggestion';
 import { useConversationDetailsQuery } from '@/modules/conversations/hooks/useConversations';
+import { useFileUpload } from '@/modules/uploads/hooks/useFileUpload';
+import { AttachmentPreview } from '@/modules/uploads/components/AttachmentPreview';
+import { UPLOAD_RULES } from '@/modules/uploads/utils/uploads.constants';
 
 const CustomMention = Mention.extend({
   addStorage() {
@@ -72,6 +76,10 @@ export function MessageInput({
   const { theme } = useTheme();
   const { mutate: sendMessage } = useSendMessageMutation(conversationId, currentUser);
   const { data: conversationData } = useConversationDetailsQuery(conversationId);
+
+  // File Uploads
+  const { tasks: uploadTasks, uploadFiles, remove: deleteUpload, retry: retryUpload, clearUploads, isUploading } = useFileUpload({ conversationId });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Draft persistence
   const { setDraft, clearDraft } = useChatStore();
@@ -142,32 +150,7 @@ export function MessageInput({
     };
   }, [emitTypingStop, setDraft]);
 
-  const submitMessage = () => {
-    if (!editor) return;
-
-    const markdownStorage = (editor.storage as unknown) as { markdown: { getMarkdown: () => string } };
-    const markdownContent = markdownStorage.markdown.getMarkdown();
-
-    if (!markdownContent.trim()) return;
-
-    if (onSubmit) {
-      clearDraft(_draftKey);
-      onSubmit(markdownContent.trim());
-      editor.commands.clearContent(false);
-      return;
-    }
-
-    emitTypingStop();
-
-    tempIdCounterRef.current += 1;
-
-    const tempId = `temp-${crypto.randomUUID()}-${tempIdCounterRef.current}`;
-    sendMessage({ conversationId, content: markdownContent.trim(), tempId, replyToId: replyingTo?.id || null, threadRootId });
-
-    clearDraft(_draftKey);
-    editor.commands.clearContent(false);
-    onClearReply?.();
-  };
+  const submitMessageRef = useRef<() => void>(() => {});
 
   const EnterSubmitExtension = Extension.create({
     name: 'enterSubmit',
@@ -181,7 +164,7 @@ export function MessageInput({
             return false;
           }
 
-          submitMessage();
+          submitMessageRef.current();
           return true;
         },
         'Shift-Enter': () => false,
@@ -196,6 +179,7 @@ export function MessageInput({
     strike: false,
     bulletList: false,
     orderedList: false,
+    isThreadBroadcast: false,
   });
 
   const editor = useEditor({
@@ -275,6 +259,7 @@ export function MessageInput({
         strike: editor.isActive('strike'),
         bulletList: editor.isActive('bulletList'),
         orderedList: editor.isActive('orderedList'),
+        isThreadBroadcast: editor.isActive('isThreadBroadcast'),
       });
     },
     editorProps: {
@@ -291,6 +276,61 @@ export function MessageInput({
       },
     },
   });
+
+  const submitMessage = useCallback(() => {
+    if (!editor) return;
+
+    const markdownStorage = (editor.storage as unknown) as { markdown: { getMarkdown: () => string } };
+    const markdownContent = markdownStorage.markdown.getMarkdown();
+
+    const readyAttachments = uploadTasks.filter(t => t.state === "success");
+
+    if (!markdownContent.trim() && readyAttachments.length === 0) return;
+
+    if (uploadTasks.some(t => t.state === "pending" || t.state === "uploading" || t.state === "processing")) {
+      toast.error("Please wait for all uploads to finish before sending.");
+      return;
+    }
+
+    if (onSubmit) {
+      clearDraft(_draftKey);
+      onSubmit(markdownContent.trim());
+      editor.commands.clearContent(false);
+      return;
+    }
+
+    emitTypingStop();
+
+    tempIdCounterRef.current += 1;
+
+    const tempId = `temp-${crypto.randomUUID()}-${tempIdCounterRef.current}`;
+
+    const successfulUploads = uploadTasks.filter(t => t.state === "success" && t.attachment);
+    const attachmentIds = successfulUploads.map(t => t.attachment!.id);
+    const optimisticAttachments = successfulUploads.map(t => ({
+      ...t.attachment!,
+      file: t.file
+    }));
+
+    sendMessage({ 
+      conversationId, 
+      content: markdownContent.trim(), 
+      tempId, 
+      replyToId: replyingTo?.id || null, 
+      threadRootId,
+      attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined,
+      optimisticAttachments: optimisticAttachments.length > 0 ? optimisticAttachments : undefined
+    });
+
+    clearDraft(_draftKey);
+    editor.commands.clearContent(false);
+    clearUploads();
+    onClearReply?.();
+  }, [editor, uploadTasks, onSubmit, _draftKey, emitTypingStop, sendMessage, conversationId, replyingTo, threadRootId, clearDraft, clearUploads, onClearReply]);
+
+  useEffect(() => {
+    submitMessageRef.current = submitMessage;
+  }, [submitMessage]);
 
   useEffect(() => {
     if (editor && editor.isEditable === disabled) {
@@ -337,6 +377,38 @@ export function MessageInput({
     return null;
   }
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    if (files.length + uploadTasks.length > UPLOAD_RULES.MAX_ATTACHMENTS_PER_MESSAGE) {
+      toast.error(`You can only attach up to ${UPLOAD_RULES.MAX_ATTACHMENTS_PER_MESSAGE} files per message.`);
+      return;
+    }
+
+    const totalExistingSize = uploadTasks.reduce((sum, task) => sum + task.file.size, 0);
+    const totalNewSize = Array.from(files).reduce((sum, file) => sum + file.size, 0);
+    
+    if (totalExistingSize + totalNewSize > UPLOAD_RULES.MAX_FILE_SIZE_BYTES) {
+      toast.error(`The total size of all attachments cannot exceed ${UPLOAD_RULES.MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB.`);
+      return;
+    }
+
+    uploadFiles(Array.from(files));
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveAttachment = async (taskId: string) => {
+    try {
+      await deleteUpload(taskId);
+    } catch (error) {
+      console.error("Failed to remove attachment", error);
+    }
+  };
+
   const toggleBold = () => {
     if (editor.isActive('code')) {
       editor.chain().focus().unsetCode().toggleBold().run();
@@ -377,7 +449,8 @@ export function MessageInput({
     editor.chain().focus().toggleOrderedList().run();
   };
 
-  const isEmpty = editor.isEmpty;
+  const readyAttachmentsCount = uploadTasks.filter(t => t.state === "success").length;
+  const isEmpty = editor.isEmpty && readyAttachmentsCount === 0;
   const activeClass = "bg-primary/20 text-primary ring-1 ring-primary/30";
 
   return (
@@ -404,6 +477,20 @@ export function MessageInput({
       <div className={`w-full flex flex-col border border-border/80 shadow-sm rounded-lg transition-all focus-within:ring-1 focus-within:ring-primary/20 focus-within:border-primary/40 overflow-hidden ${compact ? "bg-background" : "bg-card"}`}>
 
         <div className="flex items-center gap-2 px-3 pt-2 pb-2 border-b border-border/60 text-muted-foreground bg-muted/50">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            className="hidden"
+            accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv,video/*,audio/*,.zip,.rar"
+            multiple
+          />
+          <button type="button" onClick={() => fileInputRef.current?.click()} className={`p-1 hover:bg-muted hover:text-foreground rounded-md transition-colors`} title="Attach File" disabled={uploadTasks.length >= UPLOAD_RULES.MAX_ATTACHMENTS_PER_MESSAGE}>
+            <Paperclip className="h-3.5 w-3.5" />
+          </button>
+          
+          <div className="w-px h-4 bg-border mx-0.5" />
+
           <button type="button" onClick={toggleBold} className={`p-1 hover:bg-muted hover:text-foreground rounded-md transition-colors ${activeMarks.bold ? activeClass : ''}`} title="Bold">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 12a4 4 0 0 0 0-8H6v8" /><path d="M15 20a4 4 0 0 0 0-8H6v8Z" /></svg>
           </button>
@@ -460,6 +547,24 @@ export function MessageInput({
           </Popover>
         </div>
 
+        {uploadTasks.length > 0 && (
+          <div className="px-3 py-2 border-b border-border/60 flex flex-wrap gap-2">
+            {uploadTasks.map((task) => (
+              <AttachmentPreview
+                key={task.id}
+                fileName={task.file.name}
+                fileSize={task.file.size}
+                mimeType={task.file.type}
+                isUploading={task.state !== "success" && task.state !== "error"}
+                file={task.file}
+                onRemove={() => handleRemoveAttachment(task.id)}
+                onRetry={task.state === "error" ? () => retryUpload(task.id) : undefined}
+                className={`w-48 ${task.state === "error" ? "border-destructive border-2" : ""}`}
+              />
+            ))}
+          </div>
+        )}
+
         <div className="flex items-end w-full pl-3 pr-3 py-2 gap-2">
           <div className="flex-1 min-w-0 relative cursor-text" onClick={() => editor.commands.focus()}>
             <EditorContent editor={editor} className="w-full" />
@@ -468,7 +573,7 @@ export function MessageInput({
           {!hideSendButton && (
             <Button
               type="submit"
-              disabled={isEmpty || disabled}
+              disabled={isEmpty || disabled || isUploading}
               size="icon"
               className="shrink-0 h-8 w-8 rounded-lg"
               title="Send message"

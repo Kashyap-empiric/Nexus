@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import type { MessageGroup } from "@/modules/chat/utils/groupMessages";
@@ -31,6 +31,9 @@ import { stripMarkdown } from "@/shared/lib/utils";
 import { scrollToMessage } from "@/shared/lib/dom";
 import { PinButton } from "./PinButton";
 import { EditMessageForm } from "./EditMessageForm";
+import { AttachmentList } from "@/modules/uploads/components/AttachmentList";
+import { uploadsApi } from "@/modules/uploads/api/uploads.api";
+import { ImageViewer } from "@/modules/uploads/components/ImageViewer";
 
 interface MessageGroupItemProps {
   group: MessageGroup;
@@ -44,7 +47,7 @@ interface MessageGroupItemProps {
   canPin?: boolean;
 }
 
-export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageId, members, isChannel, onReply, onOpenThread, pinnedMessageIds, canPin = true }: MessageGroupItemProps) {
+export const MessageGroupItem = memo(function MessageGroupItem({ group, currentUserId, partnerLastReadMessageId, members, isChannel, onReply, onOpenThread, pinnedMessageIds, canPin = true }: MessageGroupItemProps) {
   const { user, messages } = group;
   const conversationId = messages[0]?.conversationId;
 
@@ -55,6 +58,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
 
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+  const [viewingGallery, setViewingGallery] = useState<{ images: { url: string; fileName: string }[]; initialIndex: number } | null>(null);
 
   const handleEditStart = (msgId: string) => {
     setEditingMessageId(msgId);
@@ -87,6 +91,16 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
       setMessageToDelete(null);
     }
   };
+
+  const createdUrlsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const urlsRef = createdUrlsRef;
+    return () => {
+      // Cleanup dynamically created object URLs on unmount
+      urlsRef.current.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, []);
 
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -144,6 +158,76 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
       setContextMenuPos({ x: e.clientX, y: e.clientY });
       setOpenMenuId(msgId);
     }
+  };
+
+  const handleAttachmentClick = async (attachment: { id: string; mimeType: string; downloadUrl?: string; originalName: string }, messageAttachments: import("../types/message").ClientAttachment[] = []) => {
+    const isImage = attachment.mimeType.startsWith("image/");
+    
+    // For documents, just open/download
+    if (!isImage) {
+      let dlUrl = attachment.downloadUrl;
+      
+      // If no download URL, check if it's an optimistic file, otherwise fetch from API
+      if (!dlUrl) {
+        const doc = messageAttachments.find(a => a.id === attachment.id);
+        if (doc && doc.file) {
+          dlUrl = URL.createObjectURL(doc.file);
+          createdUrlsRef.current.add(dlUrl);
+          window.open(dlUrl, "_blank");
+        } else {
+          // Open new tab BEFORE await to bypass popup blockers
+          const newTab = window.open('about:blank', '_blank');
+          try {
+            const res = await uploadsApi.getAttachmentDownloadUrl(attachment.id);
+            if (newTab) {
+              newTab.location.href = res.url;
+            } else {
+              window.open(res.url, "_blank");
+            }
+          } catch (err) {
+            console.error("Failed to download document:", err);
+            if (newTab) newTab.close();
+          }
+        }
+      } else {
+        window.open(dlUrl, "_blank");
+      }
+      
+      return;
+    }
+
+    // For images, build the gallery
+    const imageAttachments = messageAttachments.filter(a => a.mimeType && a.mimeType.startsWith("image/"));
+    
+    const viewerImages = await Promise.all(
+      imageAttachments.map(async (a) => {
+        if (a.downloadUrl) {
+          return { url: a.downloadUrl, fileName: a.originalName };
+        }
+        try {
+          const { url } = await uploadsApi.getAttachmentDownloadUrl(a.id);
+          return { url, fileName: a.originalName };
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    const validImages = viewerImages.filter(Boolean) as { url: string; fileName: string }[];
+    
+    // Find the clicked image in the resulting array
+    let clickedUrl = attachment.downloadUrl;
+    if (!clickedUrl) {
+      const fallbackUrl = validImages.find(img => img.fileName === attachment.originalName)?.url;
+      clickedUrl = fallbackUrl;
+    }
+    
+    const initialIndex = validImages.findIndex(img => img.url === clickedUrl);
+    
+    setViewingGallery({ 
+      images: validImages, 
+      initialIndex: Math.max(0, initialIndex) 
+    });
   };
 
   return (
@@ -315,21 +399,32 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
                                 </button>
                               )}
                               <MarkdownRenderer content={msg.content} />
+                              {msg.isEdited && !isDeleted && (
+                                <span className="text-xs text-muted-foreground ml-2 align-middle leading-none">(edited)</span>
+                              )}
+                              {isMyMessage && !isDeleted && (
+                                <span className="inline-flex items-center ml-1.5 align-middle leading-none">
+                                  <MessageStatus
+                                    messageId={msg.id}
+                                    isPending={msg.pending}
+                                    partnerLastReadMessageId={partnerLastReadMessageId}
+                                    readCount={isChannel && members ? computeReadCount(msg.id, currentUserId, members) : undefined}
+                                    isChannel={isChannel}
+                                  />
+                                </span>
+                              )}
+                              {msg.attachments && msg.attachments.length > 0 && (
+                                <div className="mt-2 mb-1 block w-full">
+                                  <AttachmentList
+                                    attachments={msg.attachments}
+                                    onDownload={(id) => {
+                                      const att = msg.attachments?.find((a: unknown) => (a as { id: string }).id === id);
+                                      if (att) handleAttachmentClick(att as { id: string; mimeType: string; downloadUrl?: string; originalName: string }, msg.attachments || []);
+                                    }}
+                                  />
+                                </div>
+                              )}
                             </>
-                          )}
-                          {msg.isEdited && !isDeleted && (
-                            <span className="text-xs text-muted-foreground ml-2 align-middle leading-none">(edited)</span>
-                          )}
-                          {isMyMessage && !isDeleted && (
-                            <span className="inline-flex items-center ml-1.5 align-middle leading-none">
-                              <MessageStatus
-                                messageId={msg.id}
-                                isPending={msg.pending}
-                                partnerLastReadMessageId={partnerLastReadMessageId}
-                                readCount={isChannel && members ? computeReadCount(msg.id, currentUserId, members) : undefined}
-                                isChannel={isChannel}
-                              />
-                            </span>
                           )}
                         </span>
                         {!isDeleted && !msg.pending && !msg.optimistic && (
@@ -526,7 +621,14 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
         </AlertDialogContent>
       </AlertDialog>
 
-      { }
+      {viewingGallery && (
+        <ImageViewer
+          images={viewingGallery.images}
+          initialIndex={viewingGallery.initialIndex}
+          onClose={() => setViewingGallery(null)}
+        />
+      )}
+
       {openMenuId && contextMenuTarget && (
         <DropdownMenu
           open={true}
@@ -618,7 +720,7 @@ export function MessageGroupItem({ group, currentUserId, partnerLastReadMessageI
       )}
     </>
   );
-}
+});
 
 
 function computeReadCount(
