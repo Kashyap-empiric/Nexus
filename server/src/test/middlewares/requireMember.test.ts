@@ -64,7 +64,7 @@ describe("requireConversationMember middleware", () => {
   });
 
   it("returns 400 when conversationId is missing", async () => {
-    req = { params: {} };
+    req = { user: { id: "user-1" }, params: {} };
 
     await handler(req as unknown as AuthRequest, res as Response, next);
 
