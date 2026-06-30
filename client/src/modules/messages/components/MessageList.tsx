@@ -3,12 +3,15 @@
 import { useEffect, useRef } from "react";
 import { useMessagesInfiniteQuery } from "@/modules/messages/hooks/useMessages";
 import { useMarkConversationReadMutation } from "@/modules/conversations/hooks/useConversations";
+import * as conversationsApi from "@/modules/conversations/api/conversations.api";
 import { useMessageScroll } from "@/modules/chat/hooks/useMessageScroll";
 import { MessageGroupItem } from "./MessageGroupItem";
 import { groupMessages, type MessageGroup } from "@/modules/chat/utils/groupMessages";
 import { MessageListSkeleton } from "./MessageListSkeleton";
 import { TypingIndicator } from "./TypingIndicator";
 import { ChevronDown, Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import type { Conversation } from "@/modules/conversations/types/conversation";
 import { Button } from "@/shared/components/ui/button";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
 import React from "react";
@@ -31,7 +34,8 @@ interface MessageListProps {
 
 export function MessageList({ conversationId, currentUserId, myLastReadMessageId, partnerLastReadMessageId, members, isChannel, otherMember, onReply, onOpenThread, highlightMessageId, canPin = true }: MessageListProps) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } = useMessagesInfiniteQuery(conversationId);
-  const { mutate: markRead } = useMarkConversationReadMutation();
+  const markRead = useMarkConversationReadMutation().mutate;
+  const queryClient = useQueryClient();
 
   const latestMessage = data?.pages?.[0]?.data?.[0];
   const latestMessageId = latestMessage?.id;
@@ -63,20 +67,39 @@ export function MessageList({ conversationId, currentUserId, myLastReadMessageId
   const latestMessageIdRef = useRef(latestMessageId);
   const myLastReadMessageRef = useRef(myLastReadMessageId);
   const markReadFnRef = useRef(markRead);
+  const queryClientRef = useRef(queryClient);
 
   useEffect(() => {
     conversationIdRef.current = conversationId;
     latestMessageIdRef.current = latestMessageId;
     myLastReadMessageRef.current = myLastReadMessageId;
     markReadFnRef.current = markRead;
+    queryClientRef.current = queryClient;
   });
 
   useEffect(() => {
     return () => {
       const msgId = latestMessageIdRef.current;
       const lastReadId = myLastReadMessageRef.current;
+      const convId = conversationIdRef.current;
       if (msgId && msgId !== lastReadId && !msgId.startsWith("temp-")) {
-        markReadFnRef.current({ conversationId: conversationIdRef.current, messageId: msgId });
+        // Run API call directly so it isn't cancelled by React Query unmounting
+        conversationsApi.markConversationRead(convId, msgId).catch(console.error);
+        
+        // Optimistically clear the unread count directly to avoid mutation rollbacks
+        const qc = queryClientRef.current;
+        const updateCache = (oldData: Conversation[] | undefined) => {
+          if (!Array.isArray(oldData)) return oldData;
+          return oldData.map((conv: Conversation) =>
+            conv.id === convId ? { ...conv, unreadCount: 0 } : conv
+          );
+        };
+        qc.setQueryData(["conversations"], updateCache);
+        
+        const queries = qc.getQueriesData<Conversation[]>({ queryKey: ["workspace-channels"] });
+        queries.forEach(([queryKey]) => {
+          qc.setQueryData(queryKey, updateCache);
+        });
       }
     };
   }, [conversationId]);
