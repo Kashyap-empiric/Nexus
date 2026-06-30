@@ -232,10 +232,10 @@ updateMessageBodySchema = z.object({
 - TipTap rich text editor with Markdown support.
 - Formatting toolbar: Bold, Italic, Code, Strike, Bullet List, Ordered List, Emoji.
 - Enter to submit (Shift+Enter for newline).
-- Draft persistence via Zustand store.
+- Draft persistence via Zustand store across conversation switches.
 - Reply preview bar.
 - Typing indicator emission (start/stop with 1.5s debounce).
-- @mention autocomplete via Tiptap Mention extension.
+- @mention autocomplete via Tiptap Mention extension (`MentionList` + `mentionSuggestion`).
 
 ---
 
@@ -261,6 +261,7 @@ updateMessageBodySchema = z.object({
 | Message search full-text index | ❌ | Uses `LIKE %query%` |
 | Channel read receipts | ⚠️ | `partnerLastReadMessageId` undefined for channels |
 | Message reactions | ❌ | Schema exists, no endpoints or UI |
+| @mention autocomplete | ✅ | Tiptap Mention extension, MentionList dropdown, mentionSuggestion plugin |
 | Client-side message rendering | ✅ | MarkdownRenderer, LazyMarkdown |
 
 ---

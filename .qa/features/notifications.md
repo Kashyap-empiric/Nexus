@@ -230,6 +230,8 @@ enum NotificationType {
 | Channel message notification toggle | ❌ | `channelNotifications` preference exists but UI default is OFF |
 | THREAD_REPLY notifications | ✅ | Type exists in enum, preference maps to `replyNotifications` |
 | MENTIONED_IN_MESSAGE notifications | ✅ | Type exists, dispatched from messages.service.ts |
+| Desktop notification preference gating | ✅ | Thread replies check replyNotifications; channels check mentionNotifications + channelNotifications; DMs check dmNotifications |
+| Preference auto-fetch on socket event | ✅ | Preferences fetched from API if not in cache on message:new |
 
 ---
 

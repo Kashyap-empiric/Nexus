@@ -9,10 +9,10 @@ Allow users to create threaded conversations from any message, view and reply wi
 ## Current Status
 
 ```
-Mostly Implemented
+Implemented
 ```
 
-Thread creation, reply, panel UI, channel/workspace-level browsing, optimistic updates, and notifications are all implemented. Thread subscriptions (follow/unfollow) and unread indicators are deferred.
+Thread creation, reply, panel UI, channel/workspace-level browsing, optimistic updates, thread participants (follow/unfollow with notification levels), and notifications are all implemented. Thread unread indicators are deferred.
 
 ---
 
@@ -26,7 +26,7 @@ Thread creation, reply, panel UI, channel/workspace-level browsing, optimistic u
 - Optimistic replies: appear immediately with 70% opacity, replaced on server confirmation.
 - `isThreadBroadcast` flag for broadcasting thread replies to the main channel.
 - THREAD_REPLY notification type exists but is NOT dispatched anywhere in the codebase.
-- Thread subscriptions (explicit follow/unfollow) and unread indicators are not implemented.
+- Thread subscriptions implemented via `ThreadParticipant` model with follow/unfollow API and notification levels (ALL/MENTIONS/MUTED). Unread indicators are not implemented.
 
 ---
 
@@ -199,7 +199,7 @@ interface ThreadSummary {
 | Thread reply count button | ✅ | "X replies, Last reply X ago" button |
 | THREAD_REPLY notification type | ✅ | Exists in enum and category map |
 | THREAD_REPLY dispatch | ❌ | No createAndDispatch with THREAD_REPLY found |
-| Thread subscriptions (follow/unfollow) | ❌ | Deferred |
+| Thread subscriptions (follow/unfollow) | ✅ | ThreadParticipant model with follow/unfollow API, notification levels, auto-subscribe for root authors and repliers |
 | Thread unread indicators | ❌ | Deferred |
 
 ---

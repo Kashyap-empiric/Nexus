@@ -54,6 +54,7 @@
     "@next/bundle-analyzer": "^16.2.9",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6",
+    "dotenv": "^17.4.2",
     "@testing-library/react": "^16",
     "@types/node": "^20",
     "@types/react": "^19",

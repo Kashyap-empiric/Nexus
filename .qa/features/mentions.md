@@ -12,7 +12,7 @@ Allow users to mention other users in messages using `@username` syntax, with au
 Mostly Implemented
 ```
 
-Mention parsing, database persistence (`MessageMention` table), notifications (`MENTIONED_IN_MESSAGE`), client-side autocomplete with Tiptap Mention extension, and rendering are all implemented. Message editing does not re-parse mentions.
+Mention parsing, database persistence (`MessageMention` table), notifications (`MENTIONED_IN_MESSAGE`), client-side autocomplete with Tiptap Mention extension (`MentionList` + `mentionSuggestion`), and rendering are all implemented. Message editing does not re-parse mentions.
 
 ---
 
