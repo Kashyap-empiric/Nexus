@@ -1,4 +1,10 @@
 import type { User } from "@/modules/conversations/types/conversation";
+import type { AttachmentResponseDto } from "@/modules/uploads/api/uploads.api";
+
+export type ClientAttachment = AttachmentResponseDto & {
+  file?: File;
+  localId?: string;
+};
 
 export interface ReplyTo {
   id: string;
@@ -25,6 +31,7 @@ export interface Message {
   isThreadBroadcast?: boolean;
   pending?: boolean;
   optimistic?: boolean;
+  attachments?: ClientAttachment[];
 }
 
 export interface PinnedMessage {

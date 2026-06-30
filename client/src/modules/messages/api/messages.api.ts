@@ -56,8 +56,8 @@ export const getWorkspaceThreads = async (workspaceId: string) => {
   return response.data.data;
 };
 
-export const createMessage = async (conversationId: string, content: string, replyToId?: string | null, threadRootId?: string | null) => {
-  const response = await api.post<{ data: Message }>(API_ROUTES.CONVERSATIONS.MESSAGES(conversationId), { content, replyToId, threadRootId });
+export const createMessage = async (conversationId: string, content: string, replyToId?: string | null, threadRootId?: string | null, isThreadBroadcast?: boolean, attachmentIds?: string[]) => {
+  const response = await api.post<{ data: Message }>(API_ROUTES.CONVERSATIONS.MESSAGES(conversationId), { content, replyToId, threadRootId, isThreadBroadcast, attachmentIds });
   return response.data.data;
 };
 

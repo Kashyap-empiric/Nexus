@@ -83,6 +83,13 @@ export const handleMessageNew = (queryClient: QueryClient) => {
 
         return;
       }
+      const currentUser = getAuthUser();
+      const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
+      const isViewingConversation =
+        typeof window !== "undefined" &&
+        currentPath.includes(message.conversationId);
+      
+      const shouldIncrementUnread = !isViewingConversation && message.userId !== currentUser?.id;
 
       queryClient.setQueryData<Conversation[]>(
         queryKeys.conversations,
@@ -91,11 +98,10 @@ export const handleMessageNew = (queryClient: QueryClient) => {
 
           return oldData.map((conv) => {
             if (conv.id !== message.conversationId) return conv;
-            const currentUser = getAuthUser();
 
             return {
               ...conv,
-              unreadCount: (conv.unreadCount || 0) + (message.userId !== currentUser?.id ? 1 : 0),
+              unreadCount: (conv.unreadCount || 0) + (shouldIncrementUnread ? 1 : 0),
             };
           });
         }
@@ -106,16 +112,14 @@ export const handleMessageNew = (queryClient: QueryClient) => {
         if (!Array.isArray(oldData)) return;
         queryClient.setQueryData(queryKey, oldData.map((conv) => {
           if (conv.id !== message.conversationId) return conv;
-          const currentUser = getAuthUser();
           return {
             ...conv,
-            unreadCount: (conv.unreadCount || 0) + (message.userId !== currentUser?.id ? 1 : 0),
+            unreadCount: (conv.unreadCount || 0) + (shouldIncrementUnread ? 1 : 0),
           };
         }));
       });
 
-      const currentUser = getAuthUser();
-      if (message.userId !== currentUser?.id) {
+      if (shouldIncrementUnread) {
         const channelQueries = queryClient.getQueriesData<Conversation[]>({ queryKey: ["workspace-channels"] });
         for (const [, channels] of channelQueries) {
           if (!Array.isArray(channels)) continue;
@@ -140,13 +144,9 @@ export const handleMessageNew = (queryClient: QueryClient) => {
 
       if (currentUser && message.userId === currentUser.id) return;
 
-      const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
-      const isViewingConversation =
-        typeof window !== "undefined" &&
-        currentPath.includes(message.conversationId) &&
-        document.hasFocus();
+      const isViewingAndFocused = isViewingConversation && document.hasFocus();
 
-      if (!isViewingConversation) {
+      if (!isViewingAndFocused) {
         const originalTitle = document.title.replace(/^\(\d+\) New Message! - /, "");
         document.title = `(1) New Message! - ${originalTitle}`;
 

@@ -27,6 +27,7 @@ export const findMessages = async (
       replyTo: {
         select: { id: true, content: true, deletedAt: true, user: { select: { username: true } } },
       },
+      attachments: true,
     },
   });
 };
@@ -46,6 +47,7 @@ export const findById = async (messageId: string) => {
           latestMessageId: true,
         },
       },
+      attachments: true,
     },
   });
 };
@@ -66,6 +68,7 @@ export const searchMessages = async (query: string, userId: string, limit: numbe
       conversation: {
         select: { id: true, name: true, type: true, workspaceId: true },
       },
+      attachments: true,
     },
     orderBy: { createdAt: "desc" },
     take: limit,
@@ -82,6 +85,7 @@ export const getPinnedMessages = async (conversationId: string) => {
           user: {
             select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
           },
+          attachments: true,
         },
       },
       pinnedByUser: {
@@ -101,6 +105,7 @@ export const createPin = async (messageId: string, conversationId: string, pinne
           user: {
             select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
           },
+          attachments: true,
         },
       },
       pinnedByUser: {
@@ -146,8 +151,9 @@ export const createMessageTransaction = async (
   avatarSnapshot: string | null,
   replyToId?: string | null,
   threadRootId?: string | null,
-  isThreadBroadcast?: boolean
-): Promise<[Prisma.MessageGetPayload<{ include: { user: { select: { id: true; username: true; fullName: true; avatarUrl: true; avatarPath: true } }; replyTo: { select: { id: true; content: true; deletedAt: true; user: { select: { username: true } } } } } }>, { id: string; name: string | null; updatedAt: Date; latestMessageId: string | null }]> => {
+  isThreadBroadcast?: boolean,
+  attachmentIds?: string[]
+): Promise<[Prisma.MessageGetPayload<{ include: { user: { select: { id: true; username: true; fullName: true; avatarUrl: true; avatarPath: true } }; replyTo: { select: { id: true; content: true; deletedAt: true; user: { select: { username: true } } } }; attachments: true } }>, { id: string; name: string | null; updatedAt: Date; latestMessageId: string | null }]> => {
   const operations: Prisma.PrismaPromise<unknown>[] = [];
 
   const baseCreateInput: Prisma.MessageUncheckedCreateInput = {
@@ -172,6 +178,7 @@ export const createMessageTransaction = async (
           replyTo: {
             select: { id: true, content: true, deletedAt: true, user: { select: { username: true } } },
           },
+          attachments: true,
         },
       }),
       prisma.message.update({
@@ -193,8 +200,18 @@ export const createMessageTransaction = async (
           replyTo: {
             select: { id: true, content: true, deletedAt: true, user: { select: { username: true } } },
           },
+          attachments: true,
         },
       }),
+    );
+  }
+
+  if (attachmentIds && attachmentIds.length > 0) {
+    operations.push(
+      prisma.attachment.updateMany({
+        where: { id: { in: attachmentIds }, createdBy: userId, messageId: null },
+        data: { messageId }
+      })
     );
   }
 
@@ -221,7 +238,7 @@ export const createMessageTransaction = async (
     }),
   );
 
-  return prisma.$transaction(operations) as unknown as Promise<[Prisma.MessageGetPayload<{ include: { user: { select: { id: true; username: true; fullName: true; avatarUrl: true; avatarPath: true } }; replyTo: { select: { id: true; content: true; deletedAt: true; user: { select: { username: true } } } } } }>, { id: string; name: string | null; updatedAt: Date; latestMessageId: string | null }]>;
+  return prisma.$transaction(operations) as unknown as Promise<[Prisma.MessageGetPayload<{ include: { user: { select: { id: true; username: true; fullName: true; avatarUrl: true; avatarPath: true } }; replyTo: { select: { id: true; content: true; deletedAt: true; user: { select: { username: true } } } }; attachments: true } }>, { id: string; name: string | null; updatedAt: Date; latestMessageId: string | null }]>;
 };
 
 export const findThreadMessages = async (threadRootId: string) => {
@@ -238,6 +255,7 @@ export const findThreadMessages = async (threadRootId: string) => {
       replyTo: {
         select: { id: true, content: true, deletedAt: true, user: { select: { username: true } } },
       },
+      attachments: true,
     },
   });
   return messages;

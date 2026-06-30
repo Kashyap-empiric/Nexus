@@ -39,7 +39,7 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
   socket.on(
     SOCKET_EVENTS.MESSAGE_SEND,
     async (
-      payload: { tempId: string; conversationId: string; content: string; replyToId?: string; threadRootId?: string },
+      payload: { tempId: string; conversationId: string; content: string; replyToId?: string; threadRootId?: string; isThreadBroadcast?: boolean; attachmentIds?: string[] },
       callback: MessageSendCallback
     ) => {
       try {
@@ -56,7 +56,10 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
           });
         }
 
-        if (!payload?.content || !payload?.conversationId) {
+        const hasContent = typeof payload?.content === "string" && payload.content.trim().length > 0;
+        const hasAttachments = Array.isArray(payload?.attachmentIds) && payload.attachmentIds.length > 0;
+
+        if (!payload?.conversationId || (!hasContent && !hasAttachments)) {
           return callback?.({
             success: false,
             error: {
@@ -84,7 +87,9 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
           userId,
           payload.content,
           payload.replyToId,
-          payload.threadRootId
+          payload.threadRootId,
+          payload.isThreadBroadcast,
+          payload.attachmentIds
         );
 
         dispatchMessageEvent("NEW", payload.conversationId, message, conversationMetadata);
@@ -97,6 +102,7 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
           payload.content,
           parentMessageUserId
         );
+
 
         return callback?.({
           success: true,

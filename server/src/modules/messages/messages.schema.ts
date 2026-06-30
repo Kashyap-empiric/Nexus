@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { UPLOAD_RULES } from "../uploads/uploads.constants.js";
 
 export const getMessagesQuerySchema = z.object({
   cursor: z.uuid().optional(),
@@ -19,6 +20,7 @@ export const createMessageBodySchema = z.object({
   replyToId: z.uuid().optional(),
   threadRootId: z.uuid().optional(),
   isThreadBroadcast: z.boolean().optional(),
+  attachmentIds: z.array(z.string().cuid()).max(UPLOAD_RULES.MAX_ATTACHMENTS_PER_MESSAGE).optional(),
 });
 
 export const updateMessageBodySchema = z.object({

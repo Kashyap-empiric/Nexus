@@ -28,6 +28,9 @@ export const useMessagesInfiniteQuery = (conversationId: string) => {
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialPageParam: null as string | null,
     enabled: !!conversationId,
+    // Safely beat the 1-hour expiry of signed URLs
+    staleTime: 55 * 60 * 1000, 
+    gcTime: 65 * 60 * 1000, 
   });
 };
 
@@ -35,9 +38,9 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ content, tempId, replyToId, threadRootId, isThreadBroadcast }: MessageSendPayload) => {
+    mutationFn: ({ content, tempId, replyToId, threadRootId, isThreadBroadcast, attachmentIds }: MessageSendPayload) => {
       return new Promise<Message>((resolve, reject) => {
-        socket.emit(SOCKET_EVENTS.MESSAGE_SEND, { conversationId, content, tempId, replyToId, threadRootId, isThreadBroadcast }, (response: SocketResponse<Message>) => {
+        socket.emit(SOCKET_EVENTS.MESSAGE_SEND, { conversationId, content, tempId, replyToId, threadRootId, isThreadBroadcast, attachmentIds }, (response: SocketResponse<Message>) => {
           if (response?.error) {
             const errorMsg = typeof response.error === 'string'
               ? response.error
@@ -51,7 +54,7 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
         });
       });
     },
-    onMutate: async ({ content, tempId, threadRootId, isThreadBroadcast }) => {
+    onMutate: async ({ content, tempId, threadRootId, isThreadBroadcast, optimisticAttachments }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.messages(conversationId) });
 
       const userId = currentUser?.id || "me";
@@ -72,6 +75,7 @@ export const useSendMessageMutation = (conversationId: string, currentUser?: Use
         deletedAt: null,
         pending: true,
         isThreadBroadcast,
+        attachments: (optimisticAttachments || []) as import("../types/message").ClientAttachment[],
       };
 
       if (threadRootId) {

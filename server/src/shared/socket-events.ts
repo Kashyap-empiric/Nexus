@@ -35,6 +35,8 @@ export interface MessageSendPayload {
   content: string;
   replyToId?: string;
   threadRootId?: string;
+  isThreadBroadcast?: boolean;
+  attachmentIds?: string[];
 }
 
 export interface TypingStartClientPayload {
@@ -86,6 +88,7 @@ export interface ConversationUpdatePayload {
         username: string;
         fullName: string | null;
       };
+      attachments?: { id: string; originalName: string; size: number; mimeType: string; extension: string; storagePath: string; }[];
     } | null;
   };
 }

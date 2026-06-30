@@ -20,6 +20,8 @@ export interface MessageSendPayload {
   replyToId?: string | null;
   threadRootId?: string | null;
   isThreadBroadcast?: boolean;
+  attachmentIds?: string[];
+  optimisticAttachments?: import("@/modules/messages/types/message").ClientAttachment[];
 }
 
 export interface MessageNewPayload {
