@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { timeAgo, formatNotificationTime } from "@/modules/notifications/utils/notifications-ui";
+import { render } from "@testing-library/react";
+import { timeAgo, formatNotificationTime, NotificationIcon } from "@/modules/notifications/utils/notifications-ui";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -77,5 +78,22 @@ describe("formatNotificationTime", () => {
     const older = new Date("2025-06-10T09:15:00Z").toISOString();
     const result = formatNotificationTime(older);
     expect(result).toMatch(/Jun 10 \d{1,2}:\d{2} (AM|PM)/);
+  });
+});
+
+describe("NotificationIcon", () => {
+  it("renders AtSign icon for MENTIONED_IN_MESSAGE", () => {
+    const { container } = render(<NotificationIcon type="MENTIONED_IN_MESSAGE" />);
+    expect(container.innerHTML).toContain("at-sign");
+  });
+
+  it("renders Bell icon for unknown type", () => {
+    const { container } = render(<NotificationIcon type="UNKNOWN_TYPE" />);
+    expect(container.innerHTML).toContain("bell");
+  });
+
+  it("renders Mail icon for INVITE_RECEIVED", () => {
+    const { container } = render(<NotificationIcon type="INVITE_RECEIVED" />);
+    expect(container.innerHTML).toContain("mail");
   });
 });

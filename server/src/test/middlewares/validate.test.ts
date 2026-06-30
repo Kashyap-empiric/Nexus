@@ -1,15 +1,16 @@
 import { describe, it, expect, vi } from "vitest";
-import { z } from "zod";
+import { z, type ZodType } from "zod";
+import type { Request, Response, NextFunction } from "express";
 
 const { validate } = await import("@/middlewares/validate.js");
 
 function mockReqRes() {
-  const req: any = { params: {}, query: {}, body: {} };
-  const res: any = {
+  const req: Partial<Request> = { params: {}, query: {}, body: {} };
+  const res: Partial<Response> = {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
   };
-  const next = vi.fn();
+  const next: NextFunction = vi.fn();
   return { req, res, next };
 }
 
@@ -20,7 +21,7 @@ describe("validate middleware", () => {
     const { req, res, next } = mockReqRes();
     req.body = { name: "Alice" };
 
-    handler(req, res, next);
+    handler(req as Request, res as Response, next);
 
     expect(next).toHaveBeenCalled();
     expect(res.status).not.toHaveBeenCalled();
@@ -33,7 +34,7 @@ describe("validate middleware", () => {
     const { req, res, next } = mockReqRes();
     req.body = { name: "" };
 
-    handler(req, res, next);
+    handler(req as Request, res as Response, next);
 
     expect(next).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(400);
@@ -48,7 +49,7 @@ describe("validate middleware", () => {
     const { req, res, next } = mockReqRes();
     req.params = { id: "550e8400-e29b-41d4-a716-446655440000" };
 
-    handler(req, res, next);
+    handler(req as Request, res as Response, next);
 
     expect(next).toHaveBeenCalled();
     expect(req.params.id).toBe("550e8400-e29b-41d4-a716-446655440000");
@@ -60,7 +61,7 @@ describe("validate middleware", () => {
     const { req, res, next } = mockReqRes();
     req.params = { id: "not-a-uuid" };
 
-    handler(req, res, next);
+    handler(req as Request, res as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(400);
   });
@@ -71,7 +72,7 @@ describe("validate middleware", () => {
     const { req, res, next } = mockReqRes();
     req.query = { limit: "50" };
 
-    handler(req, res, next);
+    handler(req as Request, res as Response, next);
 
     expect(next).toHaveBeenCalled();
     expect(req.query.limit).toBe(50);
@@ -83,7 +84,7 @@ describe("validate middleware", () => {
     const { req, res, next } = mockReqRes();
     req.query = {};
 
-    handler(req, res, next);
+    handler(req as Request, res as Response, next);
 
     expect(next).toHaveBeenCalled();
     expect(req.query.limit).toBe(50);
@@ -97,13 +98,13 @@ describe("validate middleware", () => {
       parse: vi.fn().mockImplementation(() => {
         throw new Error("DB connection lost");
       }),
-    } as any;
+    } as unknown as ZodType;
 
     const badHandler = validate({ body: badSchema });
     const { req, res, next } = mockReqRes();
     req.body = { name: "test" };
 
-    badHandler(req, res, next);
+    badHandler(req as unknown as Request, res as unknown as Response, next);
 
     expect(next).toHaveBeenCalled();
   });
@@ -119,7 +120,7 @@ describe("validate middleware", () => {
     req.params = { conversationId: "550e8400-e29b-41d4-a716-446655440000" };
     req.query = {};
 
-    handler(req, res, next);
+    handler(req as Request, res as Response, next);
 
     expect(next).toHaveBeenCalled();
   });
@@ -133,7 +134,7 @@ describe("validate middleware", () => {
     req.body = { content: "Hello" };
     req.params = { conversationId: "bad-id" };
 
-    handler(req, res, next);
+    handler(req as Request, res as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(next).not.toHaveBeenCalled();

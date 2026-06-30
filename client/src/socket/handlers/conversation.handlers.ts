@@ -18,7 +18,7 @@ export const handleMessageRead = (queryClient: QueryClient) => {
       return oldData.map((conv) => {
         if (conv.id !== data.conversationId) return conv;
 
-        const updatedMembers = conv.members.map((member) => {
+        const updatedMembers = conv.members?.map((member) => {
           if (member.userId !== data.userId) return member;
 
           if (
@@ -32,7 +32,7 @@ export const handleMessageRead = (queryClient: QueryClient) => {
 
         return { 
           ...conv, 
-          members: updatedMembers,
+          members: updatedMembers || [],
           unreadCount: isCurrentUser ? 0 : conv.unreadCount
         };
       });
@@ -50,6 +50,24 @@ export const handleMessageRead = (queryClient: QueryClient) => {
         (oldData) => updateCache(oldData)
       );
     });
+
+    queryClient.setQueryData<Conversation>(
+      queryKeys.conversation(data.conversationId),
+      (oldData) => {
+        if (!oldData) return oldData;
+        const updatedMembers = oldData.members?.map((member) => {
+          if (member.userId !== data.userId) return member;
+          if (
+            !member.lastReadMessageId ||
+            data.lastReadMessageId > member.lastReadMessageId
+          ) {
+            return { ...member, lastReadMessageId: data.lastReadMessageId };
+          }
+          return member;
+        });
+        return { ...oldData, members: updatedMembers || [] };
+      }
+    );
 
     if (isCurrentUser) {
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });

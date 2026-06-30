@@ -1,6 +1,7 @@
 import { InviteType } from "@prisma/client";
 import type { Invite } from "@prisma/client";
 import type { CreateNotificationInput } from "../notifications/notifications.types.js";
+import type { ConversationWithMembers } from "../../socket/socket.dispatcher.js";
 
 export interface ResolveInviteParams {
   token: string;
@@ -14,8 +15,7 @@ export interface DomainEvent {
   workspaceId?: string;
   channelId?: string;
   member?: { userId: string };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  payload?: any;
+  payload?: ConversationWithMembers;
 }
 
 export interface ResolveInviteResult {

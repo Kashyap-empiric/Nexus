@@ -87,11 +87,9 @@ export const useMarkConversationReadMutation = () => {
         });
       }
     },
-    onSettled: () => {
-      // Invalidate as a fallback to sync with server state
-      queryClient.invalidateQueries({ queryKey: queryKeys.conversations });
-      queryClient.invalidateQueries({ queryKey: ["workspace-channels"] });
-      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
-    },
+    // No onSettled invalidation: the server emits message:read via socket after the DB
+    // write completes. handleMessageRead in conversation.handlers.ts picks that up and
+    // sets unreadCount: 0. An immediate refetch here races the DB write and restores
+    // the stale count, causing the badge to reappear on every channel visit.
   });
 };

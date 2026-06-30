@@ -9,6 +9,7 @@ import type { NotificationType } from "@prisma/client";
 enum NotificationCategory {
   INVITES = "INVITES",
   REPLIES = "REPLIES",
+  MENTIONS = "MENTIONS",
   WORKSPACE_ACTIVITY = "WORKSPACE_ACTIVITY",
   SYSTEM_CRITICAL = "SYSTEM_CRITICAL",
 }
@@ -19,28 +20,31 @@ const NOTIFICATION_CATEGORY_MAP: Record<NotificationType, NotificationCategory> 
   INVITE_DECLINED: NotificationCategory.INVITES,
 
   MESSAGE_REPLIED: NotificationCategory.REPLIES,
+  THREAD_REPLY: NotificationCategory.REPLIES,
+
+  MENTIONED_IN_MESSAGE: NotificationCategory.MENTIONS,
 
   MEMBER_JOINED: NotificationCategory.WORKSPACE_ACTIVITY,
   ROLE_CHANGED: NotificationCategory.WORKSPACE_ACTIVITY,
-  WORKSPACE_DELETED: NotificationCategory.SYSTEM_CRITICAL,
   CHANNEL_CREATED: NotificationCategory.WORKSPACE_ACTIVITY,
   CHANNEL_MEMBER_ADDED: NotificationCategory.WORKSPACE_ACTIVITY,
+
+  WORKSPACE_DELETED: NotificationCategory.SYSTEM_CRITICAL,
   MEMBER_REMOVED: NotificationCategory.SYSTEM_CRITICAL,
   CHANNEL_MEMBER_REMOVED: NotificationCategory.SYSTEM_CRITICAL,
-
-  MENTIONED_IN_MESSAGE: NotificationCategory.REPLIES,
-  THREAD_REPLY: NotificationCategory.REPLIES,
 };
 
 const CATEGORY_PREFERENCE_MAP = {
   [NotificationCategory.INVITES]: "inviteNotifications",
   [NotificationCategory.REPLIES]: "replyNotifications",
+  [NotificationCategory.MENTIONS]: "mentionNotifications",
   [NotificationCategory.WORKSPACE_ACTIVITY]: "workspaceActivityNotifications",
 } as const;
 
 type UserPreferences = {
   inviteNotifications: boolean;
   replyNotifications: boolean;
+  mentionNotifications: boolean;
   workspaceActivityNotifications: boolean;
 };
 
@@ -103,6 +107,7 @@ export const createAndDispatch = async (input: CreateNotificationInput) => {
     select: {
       inviteNotifications: true,
       replyNotifications: true,
+      mentionNotifications: true,
       workspaceActivityNotifications: true,
     },
   });

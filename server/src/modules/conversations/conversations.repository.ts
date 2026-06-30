@@ -157,13 +157,6 @@ export const findChannelByWorkspaceId = async (workspaceId: string, userId?: str
   return prisma.conversation.findMany({
     where,
     include: {
-      members: {
-        include: {
-          user: {
-            select: { id: true, username: true, fullName: true, avatarUrl: true, avatarPath: true },
-          },
-        },
-      },
       latestMessage: {
         select: {
           id: true,

@@ -18,8 +18,8 @@ export const handleNotificationNew = (queryClient: QueryClient) => {
         (oldCount) => (oldCount ?? 0) + 1
       );
 
-      
-      
+
+
       if (SUPPRESS_DESKTOP_TYPES.has(notification.type)) return;
 
       if (

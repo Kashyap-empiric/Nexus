@@ -8,6 +8,12 @@ import type { Workspace } from "@/modules/workspaces/types/workspace";
 import { getAuthUser } from "@/modules/auth/store/useAuthStore";
 import { showMessageNotification } from "@/shared/lib/notifications";
 import { useThreadStore } from "@/modules/threads/store/threadStore";
+import type { NotificationPreference } from "@/modules/notifications/types/notification";
+import { api } from "@/shared/lib/api";
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 export const handleMessageNew = (queryClient: QueryClient) => {
   return (message: Message) => {
@@ -51,17 +57,39 @@ export const handleMessageNew = (queryClient: QueryClient) => {
           const titleMessage = `New reply in thread`;
           const senderName = message.user?.username || "Someone";
           if (typeof document !== "undefined" && !document.hasFocus()) {
-            showMessageNotification(
-              senderName,
-              message.content,
-              message.conversationId,
-              titleMessage,
-            );
+            const fetchPrefs = async () => {
+              let prefs = queryClient.getQueryData<NotificationPreference>(queryKeys.notificationPreferences);
+              if (!prefs) {
+                try {
+                  const response = await api.get<NotificationPreference>("/notifications/preferences");
+                  prefs = response.data;
+                  queryClient.setQueryData(queryKeys.notificationPreferences, prefs);
+                } catch {
+                  return; // silent fail
+                }
+              }
+              if (!prefs || prefs.replyNotifications) {
+                showMessageNotification(
+                  senderName,
+                  message.content,
+                  message.conversationId,
+                  titleMessage,
+                );
+              }
+            };
+            fetchPrefs();
           }
         }
 
         return;
       }
+      const currentUser = getAuthUser();
+      const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
+      const isViewingConversation =
+        typeof window !== "undefined" &&
+        currentPath.includes(message.conversationId);
+      
+      const shouldIncrementUnread = !isViewingConversation && message.userId !== currentUser?.id;
 
       queryClient.setQueryData<Conversation[]>(
         queryKeys.conversations,
@@ -70,11 +98,10 @@ export const handleMessageNew = (queryClient: QueryClient) => {
 
           return oldData.map((conv) => {
             if (conv.id !== message.conversationId) return conv;
-            const currentUser = getAuthUser();
 
             return {
               ...conv,
-              unreadCount: (conv.unreadCount || 0) + (message.userId !== currentUser?.id ? 1 : 0),
+              unreadCount: (conv.unreadCount || 0) + (shouldIncrementUnread ? 1 : 0),
             };
           });
         }
@@ -85,16 +112,14 @@ export const handleMessageNew = (queryClient: QueryClient) => {
         if (!Array.isArray(oldData)) return;
         queryClient.setQueryData(queryKey, oldData.map((conv) => {
           if (conv.id !== message.conversationId) return conv;
-          const currentUser = getAuthUser();
           return {
             ...conv,
-            unreadCount: (conv.unreadCount || 0) + (message.userId !== currentUser?.id ? 1 : 0),
+            unreadCount: (conv.unreadCount || 0) + (shouldIncrementUnread ? 1 : 0),
           };
         }));
       });
 
-      const currentUser = getAuthUser();
-      if (message.userId !== currentUser?.id) {
+      if (shouldIncrementUnread) {
         const channelQueries = queryClient.getQueriesData<Conversation[]>({ queryKey: ["workspace-channels"] });
         for (const [, channels] of channelQueries) {
           if (!Array.isArray(channels)) continue;
@@ -119,13 +144,9 @@ export const handleMessageNew = (queryClient: QueryClient) => {
 
       if (currentUser && message.userId === currentUser.id) return;
 
-      const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
-      const isViewingConversation =
-        typeof window !== "undefined" &&
-        currentPath.includes(message.conversationId) &&
-        document.hasFocus();
+      const isViewingAndFocused = isViewingConversation && document.hasFocus();
 
-      if (!isViewingConversation) {
+      if (!isViewingAndFocused) {
         const originalTitle = document.title.replace(/^\(\d+\) New Message! - /, "");
         document.title = `(1) New Message! - ${originalTitle}`;
 
@@ -138,13 +159,51 @@ export const handleMessageNew = (queryClient: QueryClient) => {
         if (typeof document !== "undefined" && !document.hasFocus()) {
           const senderName = message.user?.username || "Someone";
           const conversationName = extractConversationName(queryClient, message.conversationId);
+          const isChannel = isConversationChannel(queryClient, message.conversationId);
+          
+          const notify = async () => {
+            let prefs = queryClient.getQueryData<NotificationPreference>(queryKeys.notificationPreferences);
+            if (!prefs) {
+              try {
+                const response = await api.get<NotificationPreference>("/notifications/preferences");
+                prefs = response.data;
+                queryClient.setQueryData(queryKeys.notificationPreferences, prefs);
+              } catch {
+                return;
+              }
+            }
 
-          showMessageNotification(
-            senderName,
-            message.content,
-            message.conversationId,
-            conversationName,
-          );
+            if (!prefs) return;
+
+            let shouldNotify = false;
+            
+            if (isChannel) {
+              const profile = queryClient.getQueryData<{ username: string }>(["users", "me"]);
+              const username = profile?.username;
+              const isMentioned = username && new RegExp(`@${escapeRegex(username)}\\b`).test(message.content);
+              
+              if (prefs.mentionNotifications && isMentioned) {
+                shouldNotify = true;
+              } else if (prefs.channelNotifications) {
+                shouldNotify = true;
+              }
+            } else {
+              if (prefs.dmNotifications) {
+                shouldNotify = true;
+              }
+            }
+
+            if (shouldNotify) {
+              showMessageNotification(
+                senderName,
+                message.content,
+                message.conversationId,
+                conversationName,
+              );
+            }
+          };
+          
+          notify();
         }
       }
     } catch (err) {
@@ -320,4 +379,24 @@ function extractConversationName(queryClient: QueryClient, conversationId: strin
   const currentUser = getAuthUser();
   const otherMember = conversation.members?.find((m: ConversationMember) => m.userId !== currentUser?.id);
   return otherMember?.user?.username || null;
+}
+
+function isConversationChannel(queryClient: QueryClient, conversationId: string): boolean {
+  const conversations = queryClient.getQueryData<Conversation[]>(queryKeys.conversations);
+  let conversation = Array.isArray(conversations) ? conversations.find((c) => c.id === conversationId) : undefined;
+  
+  if (!conversation) {
+    const queries = queryClient.getQueriesData<Conversation[]>({ queryKey: ["workspace-channels"] });
+    for (const [, oldData] of queries) {
+      if (Array.isArray(oldData)) {
+        const found = oldData.find((c) => c.id === conversationId);
+        if (found) {
+          conversation = found;
+          break;
+        }
+      }
+    }
+  }
+
+  return conversation?.type === "CHANNEL";
 }

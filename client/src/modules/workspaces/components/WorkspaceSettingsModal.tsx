@@ -59,6 +59,7 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
   const [activeTab, setActiveTab] = useState<"general" | "members">("general");
   const [showMobileMenu, setShowMobileMenu] = useState(true);
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const { data: workspaceData, isLoading: workspaceLoading } = useWorkspaceDetails(workspaceId);
   const { data: members, isLoading: membersLoading } = useWorkspaceMembersQuery(workspaceId);
   const { mutateAsync: updateWorkspace, isPending: isUpdating } = useUpdateWorkspaceMutation();
@@ -164,6 +165,7 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
     try {
       await leaveWorkspace({ workspaceId });
       toast.success("You left the workspace.");
+      setShowLeaveDialog(false);
       onClose();
       router.push("/conversations");
     } catch (error: unknown) {
@@ -247,7 +249,7 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent fullscreenMobile size="2xl" className="w-[90vw] md:!w-[800px] lg:!w-[1000px] sm:h-[80vh] p-0 bg-background md:flex-row overflow-hidden">
+      <DialogContent fullscreenMobile size="2xl" className="w-[90vw] md:!w-[800px] lg:!w-[1000px] md:h-[80vh] md:min-h-[550px] p-0 bg-background md:flex-row overflow-hidden">
         <DialogHeader className="sr-only">
           <DialogTitle>Workspace Settings</DialogTitle>
           <DialogDescription>Manage workspace settings</DialogDescription>
@@ -426,10 +428,30 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                   <p className="text-[11px] font-bold tracking-wider text-destructive uppercase mb-3">DANGER ZONE</p>
                   <hr className="border-border mb-4" />
                   <div className="flex flex-col sm:flex-row gap-2">
-                    <Button variant="outline" onClick={handleLeave} disabled={isLeaving} className="text-destructive hover:text-destructive border-destructive/30 hover:border-destructive/50">
-                      <ArrowLeftFromLine className="h-4 w-4 mr-2" />
-                      {isLeaving ? "Leaving..." : "Leave Workspace"}
-                    </Button>
+                    <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
+                      <AlertDialogTrigger disabled={isLeaving} render={
+                        <Button variant="outline" className="text-destructive hover:text-destructive border-destructive/30 hover:border-destructive/50">
+                          <ArrowLeftFromLine className="h-4 w-4 mr-2" />
+                          {isLeaving ? "Leaving..." : "Leave Workspace"}
+                        </Button>
+                      } />
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogMedia><ArrowLeftFromLine className="size-5 text-destructive" /></AlertDialogMedia>
+                          <AlertDialogTitle>Leave Workspace</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to leave <strong>{workspace?.name}</strong>? 
+                            You will need a new invite to rejoin.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction variant="destructive" disabled={isLeaving} onClick={handleLeave}>
+                            {isLeaving ? "Leaving..." : "Leave Workspace"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                     <AlertDialog>
                       <AlertDialogTrigger disabled={isDeleting} render={<Button variant="destructive"><Trash className="h-4 w-4 mr-2" />{isDeleting ? "Deleting..." : "Delete Workspace"}</Button>} />
                       <AlertDialogContent>
@@ -521,10 +543,30 @@ export function WorkspaceSettingsModal({ isOpen, workspaceId, onClose }: Workspa
                 )}
 
                 <div className="pt-4">
-                  <Button variant="outline" onClick={handleLeave} disabled={isLeaving} className="text-destructive hover:text-destructive">
-                    <ArrowLeftFromLine className="h-4 w-4 mr-2" />
-                    {isLeaving ? "Leaving..." : "Leave Workspace"}
-                  </Button>
+                  <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
+                    <AlertDialogTrigger disabled={isLeaving} render={
+                      <Button variant="outline" className="text-destructive hover:text-destructive">
+                        <ArrowLeftFromLine className="h-4 w-4 mr-2" />
+                        {isLeaving ? "Leaving..." : "Leave Workspace"}
+                      </Button>
+                    } />
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogMedia><ArrowLeftFromLine className="size-5 text-destructive" /></AlertDialogMedia>
+                        <AlertDialogTitle>Leave Workspace</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to leave <strong>{workspace?.name}</strong>? 
+                          You will need a new invite to rejoin.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction variant="destructive" disabled={isLeaving} onClick={handleLeave}>
+                          {isLeaving ? "Leaving..." : "Leave Workspace"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
             )}

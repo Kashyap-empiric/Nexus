@@ -1,6 +1,6 @@
 # Nexus — System Architecture
 
-> **Last Updated:** 2026-06-26
+> **Last Updated:** 2026-06-29
 > **Purpose:** Visual and textual description of system architecture, component relationships, and communication patterns.
 
 ---
@@ -224,10 +224,23 @@ flowchart TB
         TH_I[Thread Input]
     end
 
-    subgraph IP_Content["InfoPanel (toggleable)"]
+    subgraph IP_Content["RightPanel (toggleable)"]
         IP_A[About Section]
         IP_M[Member List]
         IP_P[Pinned Messages]
+        IP_T[Threads Browser]
+    end
+
+    subgraph MN_Content["@Mention Autocomplete"]
+        MN_S[mentionSuggestion.ts<br/>Filters members by query]
+        MN_L[MentionList.tsx<br/>Dropdown with avatars]
+        MN_T[Tippy.js popup]
+    end
+
+    subgraph TH_PART["Thread Participants"]
+        TP_FO[Follow/Unfollow API]
+        TP_LEV[Notification Level<br/>ALL / MENTIONS / MUTED]
+        TP_AUTO[Auto-subscribe<br/>Root author + repliers]
     end
 ```
 

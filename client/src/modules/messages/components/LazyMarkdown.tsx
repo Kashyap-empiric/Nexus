@@ -9,18 +9,34 @@ interface LazyMarkdownProps {
   content: string;
 }
 
+// Pre-process content to convert @username into a dummy markdown link for our custom renderer
+// Uses lookbehind-equivalent by replacing only when preceded by space or start of string
+export function processMentions(content: string): string {
+  return content.replace(/(^|\s)@([a-zA-Z0-9_.-]+)/g, '$1[@$2](#mention)');
+}
+
 export function LazyMarkdown({ content }: LazyMarkdownProps) {
   const components: Partial<Components> = {
-    a: ({ children, ...props }) => (
-      <a
-        {...props}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-primary hover:underline font-medium break-all"
-      >
-        {children}
-      </a>
-    ),
+    a: ({ children, href, ...props }) => {
+      if (href === "#mention") {
+        return (
+          <span className="mention-chip text-brand font-medium bg-brand/10 px-1 rounded-sm">
+            {children}
+          </span>
+        );
+      }
+      return (
+        <a
+          {...props}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline font-medium break-all"
+        >
+          {children}
+        </a>
+      );
+    },
     p: ({ children, ...props }) => (
       <p {...props} className="whitespace-pre-wrap m-0 inline-block w-full [&:not(:last-child)]:mb-1 last:inline">
         {children}
@@ -92,13 +108,15 @@ export function LazyMarkdown({ content }: LazyMarkdownProps) {
     ),
   };
 
+  const processedContent = processMentions(content);
+
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       rehypePlugins={[rehypeHighlight]}
       components={components}
     >
-      {content}
+      {processedContent}
     </ReactMarkdown>
   );
 }

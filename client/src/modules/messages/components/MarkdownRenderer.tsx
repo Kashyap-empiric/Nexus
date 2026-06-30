@@ -10,7 +10,7 @@ interface MarkdownRendererProps {
   className?: string;
 }
 
-const MARKDOWN_CHARS = /[*_`>~\-\[\]#]/;
+const MARKDOWN_CHARS = /[*_`>~\-\[\]#@]/;
 
 export const MarkdownRenderer = memo(({ content, className }: MarkdownRendererProps) => {
   if (!MARKDOWN_CHARS.test(content)) {

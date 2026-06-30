@@ -16,7 +16,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
               if (status && status >= 400 && status < 500) return false;
               return failureCount < 2;
             },
-            staleTime: 30_000,
+            staleTime: 5 * 60 * 1000,
           },
         },
       })

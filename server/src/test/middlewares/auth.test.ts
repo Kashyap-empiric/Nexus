@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { Request, Response, NextFunction } from "express";
+import type { AuthRequest } from "@/types/shared.js";
 
 process.env.SUPABASE_URL = "https://test-project.supabase.co";
 
@@ -10,7 +12,9 @@ const { authMiddleware } = await import("@/middlewares/auth.js");
 const { verifyToken } = await import("@/utils/jwt.js");
 
 describe("authMiddleware", () => {
-  let req: any, res: any, next: any;
+  let req: Partial<AuthRequest>;
+  let res: Partial<Response>;
+  let next: NextFunction;
 
   beforeEach(() => {
     req = { headers: {} };
@@ -26,7 +30,7 @@ describe("authMiddleware", () => {
     req.headers = { authorization: "Bearer valid-token" };
     vi.mocked(verifyToken).mockResolvedValueOnce({ id: "user-123" });
 
-    await authMiddleware(req, res, next);
+    await authMiddleware(req as AuthRequest, res as Response, next);
 
     expect(req.user).toEqual({ id: "user-123" });
     expect(next).toHaveBeenCalled();
@@ -36,7 +40,7 @@ describe("authMiddleware", () => {
   it("returns 401 when authorization header is missing", async () => {
     req.headers = {};
 
-    await authMiddleware(req, res, next);
+    await authMiddleware(req as AuthRequest, res as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith(
@@ -48,7 +52,7 @@ describe("authMiddleware", () => {
   it("returns 401 when auth header does not start with Bearer", async () => {
     req.headers = { authorization: "Basic abc123" };
 
-    await authMiddleware(req, res, next);
+    await authMiddleware(req as AuthRequest, res as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(next).not.toHaveBeenCalled();
@@ -58,7 +62,7 @@ describe("authMiddleware", () => {
     req.headers = { authorization: "Bearer bad-token" };
     vi.mocked(verifyToken).mockRejectedValueOnce(new Error("Invalid token"));
 
-    await authMiddleware(req, res, next);
+    await authMiddleware(req as AuthRequest, res as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith(
@@ -71,7 +75,7 @@ describe("authMiddleware", () => {
     req.headers = { authorization: "Bearer expired-token" };
     vi.mocked(verifyToken).mockRejectedValueOnce(new Error("JWT expired"));
 
-    await authMiddleware(req, res, next);
+    await authMiddleware(req as AuthRequest, res as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(next).not.toHaveBeenCalled();
@@ -82,7 +86,7 @@ describe("authMiddleware", () => {
 
     vi.mocked(verifyToken).mockRejectedValueOnce(new Error("Invalid token"));
 
-    await authMiddleware(req, res, next);
+    await authMiddleware(req as AuthRequest, res as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
   });

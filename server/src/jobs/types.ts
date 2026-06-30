@@ -60,7 +60,7 @@ export type BatchInviteJob = {
 };
 
 export type CleanupJobData = {
-  type: "expired-invites" | "expired-reset-tokens" | "soft-deleted-messages";
+  type: "expired-invites" | "expired-reset-tokens" | "soft-deleted-messages" | "orphaned-uploads";
 };
 
 export type DeleteAccountJob = {

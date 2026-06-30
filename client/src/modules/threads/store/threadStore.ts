@@ -4,6 +4,7 @@ import type { Message } from "@/modules/messages/types/message";
 export interface ThreadData {
   root: Message;
   replies: Message[];
+  participant: { isFollowing: boolean; notificationLevel: "ALL" | "MENTIONS" | "MUTED" } | null;
 }
 
 interface ThreadState {

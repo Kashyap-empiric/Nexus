@@ -24,6 +24,7 @@ export const SOCKET_EVENTS = {
   CHANNEL_MEMBER_REMOVED: "channel:member-removed",
   MESSAGE_PIN: "message:pin",
   MESSAGE_UNPIN: "message:unpin",
+  PRESENCE_UPDATE: "presence:update",
 } as const;
 
 export type Visibility = "PUBLIC" | "PRIVATE";
@@ -35,6 +36,8 @@ export interface MessageSendPayload {
   content: string;
   replyToId?: string;
   threadRootId?: string;
+  isThreadBroadcast?: boolean;
+  attachmentIds?: string[];
 }
 
 export interface TypingStartClientPayload {
@@ -86,6 +89,7 @@ export interface ConversationUpdatePayload {
         username: string;
         fullName: string | null;
       };
+      attachments?: { id: string; originalName: string; size: number; mimeType: string; extension: string; storagePath: string; }[];
     } | null;
   };
 }

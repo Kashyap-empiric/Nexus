@@ -8,7 +8,7 @@ import { BellPopover } from "@/modules/notifications/components/BellPopover";
 import { MessageSearchPopover } from "@/modules/messages/components/MessageSearchPopover";
 import { useChatStore } from "@/modules/chat/store/chatStore";
 import { useRouteState } from "@/shared/hooks/useRouteState";
-import { useWorkspaceMembersQuery } from "@/modules/workspaces/hooks/useWorkspaces";
+import { useWorkspaceDetails } from "@/modules/workspaces/hooks/useWorkspaces";
 import { cn } from "@/shared/lib/utils";
 import { Hash, Users, ArrowLeft } from "lucide-react";
 import { UserAvatar } from "@/shared/components/ui/user-avatar";
@@ -31,8 +31,8 @@ function HeaderPresenceText({ userId }: { userId: string }) {
 }
 
 function MemberCountBadge({ workspaceId }: { workspaceId: string }) {
-  const { data: members } = useWorkspaceMembersQuery(workspaceId);
-  const count = members?.length ?? 0;
+  const { data: workspaceData } = useWorkspaceDetails(workspaceId);
+  const count = workspaceData?.workspace?.members?.length ?? 0;
   return (
     <div className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded-md border border-border/40 select-none">
       <Users className="h-3.5 w-3.5 text-muted-foreground" />
@@ -97,15 +97,16 @@ function AppLayoutShellInner({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     requestAnimationFrame(() => {
       setMounted(true);
-      if (window.innerWidth >= 1024) {
-        setRightPanelOpen(true);
-      }
     });
 
     if ("serviceWorker" in navigator) {
       const handleMessage = (event: MessageEvent) => {
         if (event.data && event.data.type === 'NAVIGATE' && event.data.url) {
-          router.push(event.data.url);
+          try {
+            router.push(event.data.url);
+          } catch (err) {
+            console.error("Failed to parse navigation URL:", err);
+          }
         }
       };
       navigator.serviceWorker.addEventListener("message", handleMessage);

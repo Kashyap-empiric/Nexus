@@ -131,13 +131,6 @@ export function NotificationSettings() {
               onChange={() => handleToggle("dmNotifications")}
             />
             <ToggleRow
-              label="Mentions"
-              description="Notify me when someone mentions me in a channel"
-              checked={preferences?.mentionNotifications ?? true}
-              disabled={isUpdating}
-              onChange={() => handleToggle("mentionNotifications")}
-            />
-            <ToggleRow
               label="All Channel Messages"
               description="Notify me for every message in channels I'm in"
               checked={preferences?.channelNotifications ?? false}
@@ -152,11 +145,25 @@ export function NotificationSettings() {
               onChange={() => handleToggle("inviteNotifications")}
             />
             <ToggleRow
+              label="Mentions"
+              description="Notify me when someone mentions me in a channel"
+              checked={preferences?.mentionNotifications ?? true}
+              disabled={isUpdating}
+              onChange={() => handleToggle("mentionNotifications")}
+            />
+            <ToggleRow
               label="Replies"
               description="Notify me when someone replies to my messages"
               checked={preferences?.replyNotifications ?? true}
               disabled={isUpdating}
               onChange={() => handleToggle("replyNotifications")}
+            />
+            <ToggleRow
+              label="Thread Replies"
+              description="Notify me when someone replies to a thread I'm following"
+              checked={preferences?.threadNotifications ?? true}
+              disabled={isUpdating}
+              onChange={() => handleToggle("threadNotifications")}
             />
             <ToggleRow
               label="Workspace Activity"

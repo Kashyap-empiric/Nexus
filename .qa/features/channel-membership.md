@@ -1,124 +1,262 @@
 # Feature: Channel Membership
 
-## Positive Tests
-- [ ] Can create public channel (all workspace members auto-joined)
-- [ ] Can create private channel (only creator initially)
-- [ ] Can add member to channel via Manage Members modal
-- [ ] Can remove member from channel
-- [ ] Creator remains member
-- [ ] Members list updates in real-time (socket)
+## Goal
 
-## Negative Tests
-- [ ] Non-admin cannot add members
-- [ ] Non-member cannot access private channel
-- [ ] Cannot add duplicate member
-- [ ] Cannot remove the last admin/owner from channel (if enforced)
-- [ ] Regular member cannot delete channel
+Allow workspace members to be added to and removed from channels, with real-time socket updates and appropriate permission enforcement.
 
-## API Verification
-- [ ] `POST /api/workspaces/:id/channels/:channelId/members` returns 201
-- [ ] `DELETE /api/workspaces/:id/channels/:channelId/members/:userId` returns 200
-- [ ] `GET /api/workspaces/:id/channels/:channelId/members` returns 200
-- [ ] 403 returned for unauthorized access
+---
 
-## Database Verification
-- [ ] ConversationMember rows created for added members
-- [ ] ConversationMember rows deleted for removed members
-- [ ] Auto-join creates rows for all workspace members on public channel creation
+## Current Status
 
-## UI Verification
-- [ ] Desktop layout (≥1024px)
-- [ ] Tablet layout (768-1023px)
-- [ ] Mobile layout (<768px)
-- [ ] Manage Members modal renders correctly
-- [ ] Member list updates without refresh
-- [ ] Dark mode
-- [ ] No browser console errors (check DevTools console)
+```
+Implemented
+```
 
-## Error Verification
-- [ ] API 400 errors show user-friendly message
-- [ ] API 403 errors show permission denied
-- [ ] API 404 errors show not found
-- [ ] Duplicate member addition rejected gracefully
+Full channel member management with add/remove operations, permission checks, socket room management, and notification dispatch.
 
-## Demo Preparation
+---
 
-### Demo Flow
-1. Create a public channel — all workspace members auto-joined
-2. Create a private channel — only creator initially
-3. Add member to private channel via Manage Members modal
-4. Remove member from channel
-5. Verify non-member cannot access private channel
+## High-Level Summary
 
-### Test Accounts
-- Workspace ADMIN account
-- Workspace MEMBER account (non-admin)
-- User not in workspace
+- Channel membership tracked via `ConversationMember` table.
+- PUBLIC channels auto-join all workspace members on creation.
+- PRIVATE channels require explicit `ConversationMember` row.
+- Add/remove members performed via workspace controller endpoints.
+- Socket rooms dynamically joined/left on add/remove (no reconnect needed).
+- Permission checks: OWNER, ADMIN, or channel creator can manage members.
+- Self-removal allowed but blocked if user is the last manager.
+- Notifications sent for CHANNEL_MEMBER_ADDED and CHANNEL_MEMBER_REMOVED.
 
-### Expected Results
-- Public channel auto-joins all workspace members
-- Private channel requires explicit member addition
-- Non-members blocked from private channel access
-- Socket events update member lists in real-time
+---
 
-## Architecture Explanation
+## Code Locations
 
-### Design Decisions
-- Channels reuse Conversation model with `type: CHANNEL` — all message infrastructure shared with DMs
-- PUBLIC channels auto-join via bulk ConversationMember insert on creation
-- PRIVATE channels require explicit ConversationMember rows
+```
+Backend
 
-### Data Flow
-Client → REST → Controller → Service → Repository → ConversationMember + Socket dispatcher → room join/leave
+server/src/modules/workspaces/workspaces.service.ts     — addMembersToChannel, removeMemberFromChannel, getChannelMembers
+server/src/modules/workspaces/workspaces.controller.ts  — addChannelMembers, removeChannelMember, getChannelMembers
+server/src/modules/workspaces/workspaces.repository.ts  — getChannelMembers, addChannelMembers, removeChannelMember
+server/src/modules/workspaces/workspaces.schema.ts      — addChannelMembersSchema
+server/src/socket/socket.dispatcher.ts                  — dispatchChannelMemberUpdate
 
-### API Flow
-- `POST /api/workspaces/:id/channels` — create
-- `POST .../channels/:channelId/members` — add members
-- `DELETE .../channels/:channelId/members/:userId` — remove
+Database
 
-### Database Interactions
-- `Conversation` with `type: CHANNEL` and `workspaceId` FK
-- `ConversationMember` rows for explicit membership (private) or auto-join (public)
-- `visibility` field: PUBLIC or PRIVATE
+server/prisma/schema.prisma
 
-### Permission Model
-- Workspace members can access PUBLIC channels
-- PRIVATE channels require ConversationMember record
-- ADMIN/OWNER can change visibility
+Frontend
 
-### Tradeoffs
-- Visibility toggle is one-way PUBLIC→PRIVATE (PRIVATE→PUBLIC requires manual re-add)
+client/src/modules/workspaces/components/ManageChannelMembersModal.tsx  — Member management UI
+client/src/modules/workspaces/components/MemberListPanel.tsx            — Member list panel
+client/src/modules/socket/handlers/workspace.handlers.ts               — Socket handlers
+```
+
+---
+
+## Database
+
+```prisma
+model ConversationMember {
+  id                String       @id @default(cuid())
+  conversationId    String
+  userId            String
+  lastReadMessageId String?
+  joinedAt          DateTime     @default(now())
+  conversation      Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  lastReadMessage   Message?     @relation("ConversationMemberLastRead", fields: [lastReadMessageId], references: [id])
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId, conversationId])
+}
+```
+
+- Composite unique constraint `(conversationId, userId)` prevents duplicate members.
+- Cascade delete on conversation or user deletion.
+
+---
+
+## API
+
+### Endpoints
+
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| POST | `/api/workspaces/:id/channels/:channelId/members` | Required | Add members to channel |
+| DELETE | `/api/workspaces/:id/channels/:channelId/members/:userId` | Required | Remove member from channel |
+| GET | `/api/workspaces/:id/channels/:channelId/members` | Required | List channel members |
+
+### Request Validation
+
+```typescript
+addChannelMembersSchema = z.object({
+  userIds: z.array(z.string().uuid()).min(1).max(50),
+});
+```
+
+### Permissions
+
+- Add members: OWNER, ADMIN, or channel creator.
+- Remove members: OWNER, ADMIN, or channel creator (and self-removal).
+- Cannot remove last manager from channel.
+- Only workspace members can be added.
+
+---
+
+## Backend Implementation
+
+### addMembersToChannel (`server/src/modules/workspaces/workspaces.service.ts`)
+
+1. Verifies workspace membership and channel existence.
+2. Checks caller has manage permission (`canManageChannel`).
+3. Filters target user IDs to only valid workspace members not already in channel.
+4. Creates `ConversationMember` rows via `prisma.conversationMember.createMany`.
+5. Returns added users with profile info.
+
+### removeMemberFromChannel (`server/src/modules/workspaces/workspaces.service.ts`)
+
+1. Verifies workspace membership and channel existence.
+2. Checks caller has manage permission (unless self-removal).
+3. Verifies target is a channel member.
+4. Last-manager protection: prevents removing the last member with manage permission.
+5. Deletes `ConversationMember` row.
+
+### Socket Dispatch (`server/src/socket/socket.dispatcher.ts`)
+
+- `dispatchChannelMemberUpdate()`:
+  - ADDED: joins added members' sockets to `conversation:{channelId}` room, broadcasts to channel and individual users.
+  - REMOVED: leaves removed member's sockets from room, broadcasts to channel and individual user.
+
+### Notifications
+
+- `CHANNEL_MEMBER_ADDED`: fan-out notification sent to added members.
+- `CHANNEL_MEMBER_REMOVED`: notification sent to removed member.
+
+---
+
+## Frontend Implementation
+
+### ManageChannelMembersModal (`client/src/modules/workspaces/components/ManageChannelMembersModal.tsx`)
+
+- Searchable user list of workspace members not already in channel.
+- Add members via `POST /api/workspaces/:id/channels/:channelId/members`.
+- Remove members via AlertDialog confirmation.
+- Real-time updates via socket events.
+
+### MemberListPanel (`client/src/modules/workspaces/components/MemberListPanel.tsx`)
+
+- Displays channel members with status indicators.
+
+---
+
+## Existing vs Missing
+
+| Aspect | Status | Evidence |
+|--------|--------|----------|
+| Add members to channel | ✅ | `addMembersToChannel` in service |
+| Remove members from channel | ✅ | `removeMemberFromChannel` in service |
+| List channel members | ✅ | `getChannelMembers` in service |
+| Permission enforcement | ✅ | `canManageChannel` check |
+| Self-removal | ✅ | `isSelfRemoval` flag |
+| Last manager protection | ✅ | Manager count check |
+| Socket room join on add | ✅ | `dispatchChannelMemberUpdate("ADDED")` |
+| Socket room leave on remove | ✅ | `dispatchChannelMemberUpdate("REMOVED")` |
+| Validation (max 50 per batch) | ✅ | Zod schema max 50 |
+| Filter non-workspace members | ✅ | `workspaceMemberIds` filter |
+| Duplicate prevention | ✅ | Filter existing members + `skipDuplicates` |
+| Notification on add | ✅ | CHANNEL_MEMBER_ADDED fan-out |
+| Notification on remove | ✅ | CHANNEL_MEMBER_REMOVED dispatch |
+| Batch member removal | ❌ | Only one at a time |
+
+---
+
+## Expected Behavior Matrix
+
+| Scenario | Expected Behavior | Current Behavior | Status |
+|----------|-------------------|------------------|--------|
+| ADMIN adds member to private channel | Member added, socket join, notification | `addMembersToChannel` → channel create → socket join → notification | ✅ |
+| ADMIN adds already-member | Silently skipped | `skipDuplicates: true`, filtered | ✅ |
+| ADMIN adds non-workspace user | 400 error, not added | Only workspace member IDs used | ✅ |
+| ADMIN removes member from channel | Member removed, socket leave, notification | `removeMemberFromChannel` → socket leave → notification | ✅ |
+| Member removes self from channel | Removed, socket leave | `isSelfRemoval` in permission check | ✅ |
+| Last manager tries to remove self | 403 forbidden | Manager count <= 1 check | ✅ |
+| MEMBER tries to add someone | 403 forbidden | `canManageChannel` returns false | ✅ |
+| MEMBER tries to remove someone | 403 forbidden | `canManageChannel` returns false | ✅ |
+| Get channel members | List returned with user profiles | `getChannelMembers` → `conversationMember.findMany` | ✅ |
+| Add 50 members at once | All added | Batch `createMany` | ✅ |
+| Add 51 members at once | 400 validation error | Zod max 50 | ✅ |
+
+---
+
+## Current Flow
+
+```
+Add members:
+  POST /api/workspaces/:id/channels/:channelId/members
+  → Validate workspace membership
+  → Check canManageChannel permission
+  → Filter to valid workspace members not already in channel
+  → ConversationMember.createMany (skipDuplicates)
+  → dispatchChannelMemberUpdate("ADDED") → socket join + broadcast
+  → Fan-out CHANNEL_MEMBER_ADDED notifications
+  → Return added users
+
+Remove member:
+  DELETE /api/workspaces/:id/channels/:channelId/members/:userId
+  → Validate workspace membership
+  → Check canManageChannel (or self-removal)
+  → Check last manager constraint
+  → ConversationMember.delete
+  → dispatchChannelMemberUpdate("REMOVED") → socket leave + broadcast
+  → Create CHANNEL_MEMBER_REMOVED notification
+  → Return removed userId
+```
+
+---
+
+## Missing Pieces
+
+```
+□ Batch member removal (currently one at a time)
+□ Channel member role/permissions (e.g., channel moderator)
+□ Mute channel (user-level notification override)
+□ Channel invite link for private channels
+```
+
+---
+
+## Edge Cases
+
+| Edge Case | Current | Status |
+|-----------|---------|--------|
+| Remove last manager from channel | Blocked (manager count check) | ✅ |
+| Add member who left and rejoined | Works (no unique conflict due to delete) | ✅ |
+| Remove member who was never added | 404 "Member not found in this channel" | ✅ |
+| Self-removal as only member | Allowed if not a manager | ✅ |
+| Add to deleted workspace | 404 workspace not found | ✅ |
+| Add to deleted channel | 404 channel not found | ✅ |
+
+---
 
 ## Known Limitations
 
-| Limitation | Reason Deferred | Introduced |
-|---|---|---|
-| Visibility toggle not reversible (PRIVATE → PUBLIC) | Would require re-adding all members | 2026-06-12 |
+- No batch removal — members must be removed one at a time.
+- No channel-specific role/permissions system — only workspace-level roles.
+- Add member validation iterates all workspace members — could be slow for 10K+ member workspaces.
+- No "mute channel" feature for per-channel notification control.
 
-## AI Usage Report
+---
 
-### Scope
-Channel membership — public/private channels, auto-join, member management
+## Files Inspected
 
-### Files Modified
-- Channel components, modals (client)
-- Channel routes, service, repository (server)
-
-### Decisions Made
-- PUBLIC auto-join via bulk insert for performance
-- Socket room membership synced on add/remove
-
-### Risks
-- Visibility toggle is one-way — no migration path for PRIVATE→PUBLIC
-
-### Follow-up Work
-- Add PRIVATE→PUBLIC visibility migration with member re-join
-
-## Agent Self QA
-Status: PASS
-
-## Human QA
-Status: PENDING
-
-## Review Status
-Status: READY_FOR_REVIEW
+```
+server/src/modules/workspaces/workspaces.service.ts
+server/src/modules/workspaces/workspaces.controller.ts
+server/src/modules/workspaces/workspaces.repository.ts
+server/src/modules/workspaces/workspaces.schema.ts
+server/src/socket/socket.dispatcher.ts
+server/prisma/schema.prisma
+client/src/modules/workspaces/components/ManageChannelMembersModal.tsx
+client/src/modules/workspaces/components/MemberListPanel.tsx
+client/src/socket/handlers/workspace.handlers.ts
+```

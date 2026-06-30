@@ -146,7 +146,7 @@ export function AboutPanel({ isDM, userId, channelName, description, visibility,
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
             Members
           </h4>
-          <MemberListPanel workspaceId={workspaceId} channelId={channelId} />
+          <MemberListPanel workspaceId={workspaceId} channelId={channelId} isGeneral={channelName === "general"} />
         </div>
       )}
     </div>

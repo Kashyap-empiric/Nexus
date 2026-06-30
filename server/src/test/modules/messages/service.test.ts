@@ -21,7 +21,7 @@ vi.mock("@/modules/notifications/notifications.service.js", () => ({
 
 vi.mock("@/jobs/queues.js", () => ({
   notificationQueue: {
-    add: vi.fn(),
+    add: vi.fn().mockResolvedValue(undefined),
   },
   emailQueue: null,
   cleanupQueue: null,
@@ -130,6 +130,44 @@ describe("messages service", () => {
         messagesService.createMessage("conv-1", "user-1", "Reply", "parent-msg")
       ).rejects.toThrow("Cannot reply to a message in a different conversation.");
     });
+    it("throws when attachments are not found or duplicate", async () => {
+      mockPrisma.attachment.findMany.mockResolvedValueOnce([{ id: "att-1", size: 1000, conversationId: "conv-1", messageId: null }]);
+      
+      await expect(
+        messagesService.createMessage("conv-1", "user-1", "Text", undefined, undefined, false, ["att-1", "att-nonexistent"])
+      ).rejects.toThrow("One or more attachments could not be found.");
+    });
+
+    it("throws when total attachment size exceeds 10MB limit", async () => {
+      mockPrisma.attachment.findMany.mockResolvedValueOnce([
+        { id: "att-1", size: 6 * 1024 * 1024, conversationId: "conv-1", messageId: null },
+        { id: "att-2", size: 5 * 1024 * 1024, conversationId: "conv-1", messageId: null },
+      ]);
+      
+      await expect(
+        messagesService.createMessage("conv-1", "user-1", "Text", undefined, undefined, false, ["att-1", "att-2"])
+      ).rejects.toThrow("Total attachment size exceeds the 10MB limit.");
+    });
+
+    it("throws when attachment belongs to a different conversation", async () => {
+      mockPrisma.attachment.findMany.mockResolvedValueOnce([
+        { id: "att-1", size: 1000, conversationId: "different-conv", messageId: null },
+      ]);
+      
+      await expect(
+        messagesService.createMessage("conv-1", "user-1", "Text", undefined, undefined, false, ["att-1"])
+      ).rejects.toThrow("Cannot link an attachment from a different conversation.");
+    });
+
+    it("throws when attachment is already linked to a message", async () => {
+      mockPrisma.attachment.findMany.mockResolvedValueOnce([
+        { id: "att-1", size: 1000, conversationId: "conv-1", messageId: "existing-msg-id" },
+      ]);
+      
+      await expect(
+        messagesService.createMessage("conv-1", "user-1", "Text", undefined, undefined, false, ["att-1"])
+      ).rejects.toThrow("Attachment is already linked to another message.");
+    });
   });
 
 
@@ -223,6 +261,10 @@ describe("messages service", () => {
             id: "conv-1",
             latestMessageId: null,
           }),
+        },
+        attachment: {
+          findMany: vi.fn().mockResolvedValue([]),
+          deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
         },
       };
 
@@ -359,7 +401,7 @@ describe("messages service", () => {
       const { notificationQueue } = await import("@/jobs/queues.js");
       const add = notificationQueue!.add as ReturnType<typeof vi.fn>;
 
-      await messagesService.sendMessageNotifications("conv-1", "user-1", "alice", "Hello!");
+      messagesService.sendMessageNotifications("conv-1", "user-1", "alice", "Hello!");
 
       expect(add).toHaveBeenCalledTimes(1);
       expect(add).toHaveBeenCalledWith("push-to-members", {

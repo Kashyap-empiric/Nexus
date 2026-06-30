@@ -1,6 +1,6 @@
 # Agent Context
 
-> **Last Updated:** 2026-06-26
+> **Last Updated:** 2026-06-29
 > **Purpose:** Single source-of-truth context file for AI agents working on Nexus. All other `.agents/` files are local-only policy references. The authoritative TL-authored rules are in `Rules_Expectations.md` (project root).
 
 ---
@@ -39,6 +39,47 @@ The top-level rules file covers:
 | 10 | Final Submission Requirements — 8-item completion gate |
 
 ---
+
+## Recent Addition: RightPanel, @Mentions, Thread Participants (June 29)
+
+### RightPanel (replaces InfoPanel)
+- Modular `RightPanel` component with dynamic pane support (About, Members, Pins, Threads)
+- `AboutPanel` showing channel description, creator, creation date, member count with formatted timestamps
+- Scroll position restoration when toggling right panel (`useMessageScroll` updated)
+- Draft persistence in `MessageInput` across conversation switches using Zustand store
+- Slide-in/out CSS transform animation using `data-[state=open]` attributes
+
+### @Mention Autocomplete
+- `MentionList` component (keyboard-navigable: ArrowUp/Down, Enter/Tab/Escape)
+- `mentionSuggestion` plugin — Tiptap Mention extension integration with `ConversationMember[]` data
+- Tippy.js popup positioned at cursor, avatar + username + full name display
+- `MentionList.test.tsx`, `mentionSuggestion.test.ts` tests added
+
+### Thread Participants
+- `ThreadParticipant` model (`[threadRootId, userId]` composite PK)
+- `isFollowing` boolean, `ThreadNotificationLevel` enum (ALL/MENTIONS/MUTED), `joinedAt`
+- Prisma migration `20260629114200_add_thread_participants` with backfill
+- API: `POST .../thread/follow`, `DELETE .../thread/follow`, `PATCH .../thread/notifications`
+- Client hooks: `useFollowThread`, `useUnfollowThread`, `useUpdateThreadNotifications`
+
+### Desktop Notification Gating
+- Thread reply notifications gate on `replyNotifications` preference
+- Channel notifications gate on `mentionNotifications` (when @mentioned) and `channelNotifications`
+- DM notifications gate on `dmNotifications` preference
+- Preferences auto-fetched from API if not in cache
+
+### TypeScript Cleanup
+- All `any` type casts removed across 36 files (client + server)
+- Server: email, transaction, errorHandler, socket middlewares, repositories, services
+- Client: MessageInput, MessageList, useMessages, AppLayoutShell, ThreadPanel, etc.
+
+### AlertDialog Migration
+- WorkspaceSettingsModal: Leave Workspace confirmation
+- WorkspaceChannelItem: Delete, Leave, Change Visibility confirmations
+- All destructive actions now use shadcn AlertDialog with destructive styling
+
+### Socket Events
+- Added `PRESENCE_UPDATE` event constant
 
 ## Recent Addition: Message Threads (June 24–25)
 

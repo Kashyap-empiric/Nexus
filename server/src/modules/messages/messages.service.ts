@@ -8,27 +8,53 @@ import { notificationQueue } from "@/jobs/queues.js";
 import { dispatchPinEvent } from "@/socket/socket.dispatcher.js";
 import { prisma } from "@/lib/db.js";
 import { findWorkspaceMember } from "../auth/auth.repository.js";
+import { StorageService } from "../uploads/storage.service.js";
+
+async function enrichMessagesWithAttachments(messages: any[]) {
+  const paths = Array.from(new Set(
+    messages.flatMap(m => m.attachments?.map((a: any) => a.storagePath) || [])
+  )).filter(Boolean) as string[];
+
+  if (paths.length === 0) return messages;
+
+  const urlMap = await StorageService.createSignedUrls("attachments", paths, 3600);
+
+  for (const msg of messages) {
+    if (msg.attachments) {
+      for (const att of msg.attachments) {
+        if (att.storagePath) {
+          att.downloadUrl = urlMap.get(att.storagePath) || null;
+        }
+      }
+    }
+  }
+
+  return messages;
+}
 
 
-export const sendMessageNotifications = async (
+export const sendMessageNotifications = (
   conversationId: string,
   senderId: string,
   senderUsername: string,
   content: string,
   excludeUserId?: string | null
-): Promise<void> => {
+): void => {
   if (!notificationQueue) return;
-  await notificationQueue.add("push-to-members", {
+  notificationQueue.add("push-to-members", {
     conversationId,
     senderId,
     senderUsername,
     content,
     excludeUserId: excludeUserId ?? null,
+  }).catch((err) => {
+    console.error("[Push Queue] Failed to enqueue notification:", err);
   });
 };
 
 export const getMessages = async (conversationId: string, cursor: string | undefined, limit: number) => {
   const messages = await messagesRepo.findMessages(conversationId, cursor, limit);
+  await enrichMessagesWithAttachments(messages);
 
   const hasNextPage = messages.length > limit;
 
@@ -47,7 +73,7 @@ export const getMessages = async (conversationId: string, cursor: string | undef
   };
 };
 
-export const createMessage = async (conversationId: string, userId: string, content: string, replyToId?: string | null, threadRootId?: string | null, isThreadBroadcast?: boolean) => {
+export const createMessage = async (conversationId: string, userId: string, content: string, replyToId?: string | null, threadRootId?: string | null, isThreadBroadcast?: boolean, attachmentIds?: string[]) => {
   const messageId = uuidv7();
 
   const user = await prisma.user.findUnique({
@@ -69,6 +95,7 @@ export const createMessage = async (conversationId: string, userId: string, cont
     parentMessageUserId = parentMessage.userId;
   }
 
+  let threadRootUserId: string | null = null;
   if (threadRootId) {
     const rootMessage = await messagesRepo.findById(threadRootId);
     if (!rootMessage) {
@@ -83,6 +110,33 @@ export const createMessage = async (conversationId: string, userId: string, cont
     if (rootMessage.threadRootId) {
       throw new BadRequestError("Cannot nest threads. Thread root must be a top-level message.");
     }
+    threadRootUserId = rootMessage.userId;
+  }
+
+  if (attachmentIds && attachmentIds.length > 0) {
+    const attachments = await prisma.attachment.findMany({
+      where: { id: { in: attachmentIds } },
+      select: { size: true, conversationId: true, messageId: true }
+    });
+    
+    if (attachments.length !== attachmentIds.length) {
+      throw new BadRequestError("One or more attachments could not be found.");
+    }
+
+    const totalSize = attachments.reduce((sum, att) => sum + att.size, 0);
+    // 10MB is the combined limit
+    if (totalSize > 10 * 1024 * 1024) {
+      throw new BadRequestError(`Total attachment size exceeds the 10MB limit.`);
+    }
+    
+    for (const att of attachments) {
+      if (att.conversationId !== conversationId) {
+        throw new ForbiddenError("Cannot link an attachment from a different conversation.");
+      }
+      if (att.messageId) {
+        throw new ConflictError("Attachment is already linked to another message.");
+      }
+    }
   }
 
   const [message, conversation] = await messagesRepo.createMessageTransaction(
@@ -94,8 +148,18 @@ export const createMessage = async (conversationId: string, userId: string, cont
     avatarSnapshot,
     replyToId,
     threadRootId,
-    isThreadBroadcast
+    isThreadBroadcast,
+    attachmentIds
   );
+
+  if (attachmentIds && attachmentIds.length > 0) {
+    const linkedAttachments = await prisma.attachment.findMany({
+      where: { messageId: message.id }
+    });
+    message.attachments = linkedAttachments;
+  }
+
+  await enrichMessagesWithAttachments([message]);
 
   const conversationMetadata = {
     ...conversation,
@@ -106,7 +170,7 @@ export const createMessage = async (conversationId: string, userId: string, cont
       deletedAt: message.deletedAt,
       createdAt: message.createdAt,
       user: {
-        username: message.user.username
+        username: message.user!.username
       }
     }
   };
@@ -125,14 +189,14 @@ export const createMessage = async (conversationId: string, userId: string, cont
       await createAndDispatch({
         userId: parentMessageUserId,
         type: "MESSAGE_REPLIED",
-        title: `Reply from ${message.user.username}`,
+        title: `Reply from ${message.user!.username}`,
         body: message.content,
         link: notificationLink,
         metadata: {
           conversationId,
           messageId: message.id,
           replyToId,
-          username: message.user.username,
+          username: message.user!.username,
         },
       });
     } catch (err) {
@@ -140,6 +204,66 @@ export const createMessage = async (conversationId: string, userId: string, cont
     }
   }
 
+  if (threadRootId && message.user) {
+    // Notify the thread root author (unless they're the one replying)
+    if (threadRootUserId && threadRootUserId !== userId) {
+      try {
+        const conversation = await conversationsRepo.findById(conversationId);
+        const channelName = conversation?.name;
+        const isChannel = conversation?.type === "CHANNEL";
+
+        const notificationLink = isChannel && conversation?.workspaceId
+          ? `/workspaces/${conversation.workspaceId}/channels/${conversationId}?highlight=${message.id}`
+          : `/conversations/${conversationId}?highlight=${message.id}`;
+
+        await createAndDispatch({
+          userId: threadRootUserId,
+          type: "THREAD_REPLY",
+          title: `Thread reply from ${message.user.username}`,
+          body: message.content,
+          link: notificationLink,
+          metadata: {
+            conversationId,
+            messageId: message.id,
+            threadRootId,
+            username: message.user.username,
+          },
+        });
+      } catch (err) {
+        console.error("[Thread Reply Notification] Failed to notify thread root author:", err);
+      }
+    }
+
+    // Notify other thread participants (excluding sender and root author)
+    try {
+      const participantIds = await messagesRepo.findThreadParticipants(threadRootId);
+      const notifyUserIds = participantIds.filter(
+        (pid) => pid !== userId && pid !== threadRootUserId
+      );
+
+      if (notifyUserIds.length > 0) {
+        await Promise.allSettled(
+          notifyUserIds.map((participantId) =>
+            createAndDispatch({
+              userId: participantId,
+              type: "THREAD_REPLY",
+              title: `Thread reply from ${message.user!.username}`,
+              body: message.content,
+              link: `/conversations/${conversationId}?highlight=${message.id}`,
+              metadata: {
+                conversationId,
+                messageId: message.id,
+                threadRootId,
+                username: message.user!.username,
+              },
+            })
+          )
+        );
+      }
+    } catch (err) {
+      console.error("[Thread Reply Notification] Failed to notify thread participants:", err);
+    }
+  }
 
   return { message, conversationMetadata, parentMessageUserId };
 };
@@ -157,11 +281,14 @@ export const getThreadMessages = async (conversationId: string, messageId: strin
   }
 
   const replies = await messagesRepo.findThreadMessages(messageId);
+  await enrichMessagesWithAttachments([root, ...replies]);
   return { root, replies };
 };
 
 export const searchMessages = async (query: string, userId: string, limit: number) => {
-  return messagesRepo.searchMessages(query, userId, limit);
+  const messages = await messagesRepo.searchMessages(query, userId, limit);
+  await enrichMessagesWithAttachments(messages);
+  return messages;
 };
 
 function mapToThreadSummary(threadRoot: {
@@ -276,11 +403,15 @@ export const unpinMessage = async (messageId: string, conversationId: string, us
 };
 
 export const getPinnedMessages = async (conversationId: string) => {
-  return messagesRepo.getPinnedMessages(conversationId);
+  const pins = await messagesRepo.getPinnedMessages(conversationId);
+  await enrichMessagesWithAttachments(pins.map(p => p.message));
+  return pins;
 };
 
 export const getMessageById = async (messageId: string) => {
-  return messagesRepo.findById(messageId);
+  const message = await messagesRepo.findById(messageId);
+  if (message) await enrichMessagesWithAttachments([message]);
+  return message;
 };
 
 export const editMessage = async (messageId: string, conversationId: string, userId: string, content: string) => {
@@ -299,6 +430,7 @@ export const editMessage = async (messageId: string, conversationId: string, use
   }
 
   const updatedMessage = await messagesRepo.updateMessage(messageId, content);
+  await enrichMessagesWithAttachments([updatedMessage]);
 
   let conversationMetadata = null;
   if (message.conversation?.latestMessageId === messageId) {
@@ -353,6 +485,18 @@ export const deleteMessage = async (messageId: string, conversationId: string, u
     }
 
     const updatedMessage = await messagesRepo.softDeleteMessageInTransaction(tx, messageId);
+
+    // Delete attachments (Option A)
+    const attachments = await tx.attachment.findMany({ where: { messageId } });
+    if (attachments.length > 0) {
+      await tx.attachment.deleteMany({ where: { messageId } });
+      const paths = attachments.map(a => a.storagePath);
+      try {
+        await StorageService.remove("attachments", paths);
+      } catch (error) {
+        console.error("[MessagesService] Failed to delete attachments from storage:", error);
+      }
+    }
 
     if (message.threadRootId) {
       await tx.message.update({

@@ -15,6 +15,7 @@ import notificationsRoutes from "./modules/notifications/notifications.routes.js
 import onboardingRoutes from "./modules/onboarding/onboarding.routes.js";
 import messagesSearchRoutes from "./modules/messages/messages.search.routes.js";
 import resetPasswordRoutes from "./modules/auth/reset-password.routes.js";
+import uploadsRoutes from "./modules/uploads/uploads.routes.js";
 
 import { ExpressAdapter } from "@bull-board/express";
 import { createBullBoard } from "@bull-board/api";
@@ -58,6 +59,7 @@ app.use("/api/workspaces", workspacesRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/onboarding", onboardingRoutes);
 app.use("/api/messages/search", messagesSearchRoutes);
+app.use("/api/uploads", uploadsRoutes);
 app.use("/api", resetPasswordRoutes);
 
 
