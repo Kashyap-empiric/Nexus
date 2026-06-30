@@ -33,23 +33,33 @@ import { toast } from "sonner";
 interface ManageChannelMembersModalProps {
   workspaceId: string;
   channelId: string;
+  channelName?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function ManageChannelMembersModal({ workspaceId, channelId, open, onOpenChange }: ManageChannelMembersModalProps) {
-  const { data: channelMembers, isLoading: membersLoading } = useChannelMembersQuery(workspaceId, channelId);
+export function ManageChannelMembersModal({ workspaceId, channelId, channelName, open, onOpenChange }: ManageChannelMembersModalProps) {
+  const isGeneral = channelName === "general";
+  const { data: channelMembers, isLoading: membersLoading } = useChannelMembersQuery(
+    open ? workspaceId : null,
+    open && !isGeneral ? channelId : null
+  );
   const { data: workspaceMembers } = useWorkspaceMembersQuery(workspaceId);
   const { mutate: addMembers, isPending: isAdding } = useAddChannelMembersMutation();
   const { mutate: removeMember, isPending: isRemoving } = useRemoveChannelMemberMutation();
   const currentUser = useUser();
+
+  const resolvedChannelMembers = useMemo(
+    () => isGeneral ? (workspaceMembers ?? []) : (channelMembers ?? []),
+    [isGeneral, workspaceMembers, channelMembers]
+  );
 
   const [showAdd, setShowAdd] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [pendingRemove, setPendingRemove] = useState<{ userId: string; username: string } | null>(null);
 
-  const channelMemberIds = useMemo(() => new Set(channelMembers?.map(m => m.userId) || []), [channelMembers]);
+  const channelMemberIds = useMemo(() => new Set(resolvedChannelMembers.map(m => m.userId)), [resolvedChannelMembers]);
 
   const availableMembers = useMemo(() => {
     if (!workspaceMembers) return [];
@@ -83,6 +93,7 @@ export function ManageChannelMembersModal({ workspaceId, channelId, open, onOpen
   };
 
   const handleAddSelected = () => {
+    if (isGeneral) return;
     const userIds = Array.from(selectedIds);
     if (userIds.length === 0) {
       toast.error("No users selected");
@@ -104,7 +115,7 @@ export function ManageChannelMembersModal({ workspaceId, channelId, open, onOpen
   };
 
   const confirmRemoveMember = () => {
-    if (!pendingRemove) return;
+    if (isGeneral || !pendingRemove) return;
     const { userId, username } = pendingRemove;
     removeMember({ workspaceId, channelId, userId }, {
       onSuccess: () => {
@@ -135,7 +146,7 @@ export function ManageChannelMembersModal({ workspaceId, channelId, open, onOpen
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-sm font-medium text-muted-foreground">
-                    Current members ({channelMembers?.length || 0})
+                    Current members ({resolvedChannelMembers.length})
                   </h4>
                   <Button
                     variant="outline"
@@ -147,25 +158,26 @@ export function ManageChannelMembersModal({ workspaceId, channelId, open, onOpen
                       setShowAdd(!showAdd);
                       setSearchQuery("");
                     }}
+                    disabled={isGeneral}
                   >
                     <UserPlus className="h-4 w-4 mr-1" />
                     {showAdd ? "Cancel" : "Add members"}
                   </Button>
                 </div>
 
-                {membersLoading ? (
+                {membersLoading && !isGeneral ? (
                   <div className="space-y-2">
                     {[1, 2, 3].map(i => (
                       <div key={i} className="h-10 bg-muted animate-pulse rounded" />
                     ))}
                   </div>
-                ) : channelMembers?.length === 0 ? (
+                ) : resolvedChannelMembers.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">
                     No members in this channel yet.
                   </p>
                 ) : (
                   <div className="space-y-1">
-                    {channelMembers?.map(member => (
+                    {resolvedChannelMembers.map(member => (
                       <div key={member.userId} className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-muted/50 group">
                         <div className="flex items-center gap-2.5 min-w-0">
                           <UserAvatar
@@ -185,7 +197,7 @@ export function ManageChannelMembersModal({ workspaceId, channelId, open, onOpen
                             )}
                           </div>
                         </div>
-                        {member.userId !== currentUser?.id && (
+                        {!isGeneral && member.userId !== currentUser?.id && (
                           <button
                             onClick={() => setPendingRemove({ userId: member.userId, username: member.user?.username || "User" })}
                             disabled={isRemoving}

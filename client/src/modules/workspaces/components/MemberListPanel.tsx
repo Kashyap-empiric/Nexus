@@ -28,11 +28,15 @@ import type { ConversationMember } from "@/modules/conversations/types/conversat
 interface MemberListPanelProps {
   workspaceId: string;
   channelId?: string;
+  isGeneral?: boolean;
 }
 
-export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps) {
+export function MemberListPanel({ workspaceId, channelId, isGeneral }: MemberListPanelProps) {
   const { data: wsMembers, isLoading: wsLoading } = useWorkspaceMembersQuery(workspaceId);
-  const { data: chMembers, isLoading: chLoading } = useChannelMembersQuery(workspaceId, channelId || null);
+  const { data: chMembers, isLoading: chLoading } = useChannelMembersQuery(
+    workspaceId,
+    isGeneral ? null : (channelId || null)
+  );
   const { mutate: updateRole } = useUpdateMemberRole();
   const removeMemberMutation = useRemoveMember();
   const currentUser = useUser();
@@ -43,7 +47,7 @@ export function MemberListPanel({ workspaceId, channelId }: MemberListPanelProps
   const [isRemoving, setIsRemoving] = useState(false);
   const [memberToPromote, setMemberToPromote] = useState<WorkspaceMember | null>(null);
 
-  const isChannelView = !!channelId;
+  const isChannelView = !!channelId && !isGeneral;
   const members = isChannelView ? chMembers : wsMembers;
   const isLoading = isChannelView ? chLoading : wsLoading;
 

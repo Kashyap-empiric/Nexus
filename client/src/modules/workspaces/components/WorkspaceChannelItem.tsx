@@ -340,6 +340,7 @@ export function WorkspaceChannelItem({ channel, isActive, workspaceId, canManage
       <ManageChannelMembersModal
         workspaceId={workspaceId}
         channelId={channel.id}
+        channelName={channel.name ?? undefined}
         open={modalType === "members"}
         onOpenChange={handleCloseModal}
       />
