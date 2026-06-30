@@ -18,7 +18,6 @@ export const useUnreadCount = () => {
   return useQuery({
     queryKey: queryKeys.unreadCount,
     queryFn: () => notificationsApi.getUnreadCount().then((r) => r.count),
-    refetchInterval: 30000, 
   });
 };
 
